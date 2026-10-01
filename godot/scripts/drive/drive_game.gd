@@ -149,6 +149,7 @@ func _setup_input() -> void:
 	_add_action("shift_down", [KEY_Z])
 	_add_action("back_to_menu", [KEY_F10])
 	_add_action("quick_save", [KEY_F5])
+	_add_action("gps_fuel", [KEY_G])
 	_add_action("debug_mode", [KEY_F3])
 	_add_action("indicate_left", [KEY_COMMA])
 	_add_action("indicate_right", [KEY_PERIOD])
@@ -1029,6 +1030,10 @@ func _process(delta: float) -> void:
 	if _autosave_t > AUTOSAVE_SECS and not arrived:
 		_autosave_t = 0.0
 		_save_game(false)
+	if Input.is_action_just_pressed("gps_fuel") and map_ui and towns and not towns.bunks.is_empty():
+		var fb := _nearest_bunk()
+		map_ui.set_destination(fb["pos"], fb["name"])
+		_message("GPS set to the nearest fuel bunk: %s. Follow the pink line." % fb["name"], 5.0)
 	if Input.is_action_just_pressed("quick_save"):
 		_save_game(true)
 	Prof.add("game_hud_cam", _p1)
@@ -1544,7 +1549,7 @@ func _build_ui() -> void:
 	ui_message.modulate.a = 0.0
 
 	ui_help = _label(root, 15, Color(1, 1, 1, 0.85))
-	ui_help.text = "W/S accelerate · brake/reverse   A/D steer   Space handbrake   H horn   L headlights   M manual gears (X up, Z down)   , . indicators   / hazards\nV camera (chase · cockpit · bonnet)   R back on road   E interact   F get out / in   Tab map + GPS   F5 save   F10 save + menu   F1 hide"
+	ui_help.text = "W/S accelerate · brake/reverse   A/D steer   Space handbrake   H horn   L headlights   M manual gears (X up, Z down)   , . indicators   / hazards\nV camera (chase · cockpit · bonnet)   R back on road   E interact   F get out / in   Tab map + GPS   G nearest fuel   F5 save   F10 save + menu   F1 hide"
 	ui_help.position = Vector2(28, 50)
 	ui_debug = _label(root, 14, Color(0.6, 1.0, 0.7))
 	ui_debug.set_anchors_and_offsets_preset(Control.PRESET_TOP_RIGHT, Control.PRESET_MODE_KEEP_SIZE, 24)

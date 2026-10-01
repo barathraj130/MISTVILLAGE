@@ -130,7 +130,7 @@ func _build_controls() -> void:
 	_full.draw.connect(_draw_full)
 	_full.gui_input.connect(_full_input)
 	_info = Label.new()
-	_info.text = "MAP   ·   wheel: zoom   ·   drag: pan   ·   click a place or road: set GPS   ·   right-click: clear   ·   Tab: close"
+	_info.text = "MAP   ·   scroll / pinch / + −: zoom   ·   drag: pan   ·   click a place or road: set GPS   ·   right-click: clear   ·   Tab: close"
 	_info.add_theme_font_size_override("font_size", 15)
 	_info.position = Vector2(24, 18)
 	_full.add_child(_info)
@@ -170,6 +170,7 @@ func toggle_full() -> void:
 	if full_open:
 		var f: Array = focus.call()
 		full_centre = Vector2(f[0].x, f[0].z)
+		full_scale = maxf(full_scale, 0.35)             # open on your streets, not the whole route
 		Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 
 
@@ -346,16 +347,42 @@ func _kind_colour(kind: String) -> Color:
 		"Market": return Color(0.9, 0.3, 0.6)
 		"Railway station": return Color(0.6, 0.4, 1.0)
 		"Hospital": return Color(1.0, 0.25, 0.25)
+		"Petrol bunk": return Color(0.1, 0.9, 0.95)
 		_: return Color(1.0, 1.0, 0.7)
 
 
 # ----------------------------------------------------------------------------- input on the full map
+func _unhandled_input(ev: InputEvent) -> void:
+	if not full_open or not (ev is InputEventKey and ev.pressed):
+		return
+	if ev.keycode in [KEY_EQUAL, KEY_PLUS, KEY_KP_ADD]:
+		_zoom(1.4, _full.size * 0.5)
+	elif ev.keycode in [KEY_MINUS, KEY_KP_SUBTRACT]:
+		_zoom(1.0 / 1.4, _full.size * 0.5)
+
+
+## Zoom by `factor`, keeping the map point under `at` (screen position) where it is.
+func _zoom(factor: float, at: Vector2) -> void:
+	var sz := _full.size
+	var world_at := full_centre + (at - sz * 0.5) / full_scale
+	full_scale = clampf(full_scale * factor, 0.01, 3.0)
+	full_centre = world_at - (at - sz * 0.5) / full_scale
+	_full.queue_redraw()
+
+
 func _full_input(ev: InputEvent) -> void:
+	# Mac trackpad: two-finger scroll and pinch arrive as gestures, not wheel clicks
+	if ev is InputEventPanGesture:
+		_zoom(pow(1.08, -ev.delta.y), ev.position)
+		return
+	if ev is InputEventMagnifyGesture:
+		_zoom(ev.factor, ev.position)
+		return
 	if ev is InputEventMouseButton and ev.pressed:
 		if ev.button_index == MOUSE_BUTTON_WHEEL_UP:
-			full_scale = minf(full_scale * 1.25, 3.0)
+			_zoom(1.25, ev.position)
 		elif ev.button_index == MOUSE_BUTTON_WHEEL_DOWN:
-			full_scale = maxf(full_scale / 1.25, 0.01)
+			_zoom(1.0 / 1.25, ev.position)
 		elif ev.button_index == MOUSE_BUTTON_RIGHT:
 			clear_destination()
 		elif ev.button_index == MOUSE_BUTTON_LEFT:

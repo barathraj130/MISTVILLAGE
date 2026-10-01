@@ -371,7 +371,11 @@ func _fit_model_interior(_sp: Dictionary) -> void:
 		_screen_speed.visible = true
 	var centre := model.find_child("INT_CenterScreen", true, false) as Node3D
 	if centre:
-		_screen_info.position = _rel(centre, self).origin + Vector3(0, 0.0, -0.02)
+		# the big centre screen: speed on top, gear and revs below (the cluster hides behind the wheel hub)
+		_screen_speed.position = _rel(centre, self).origin + Vector3(0, 0.05, -0.025)
+		_screen_speed.rotation = Vector3(deg_to_rad(-14.0), PI, 0.0)
+		_screen_speed.font_size = 96
+		_screen_info.position = _rel(centre, self).origin + Vector3(0, -0.05, -0.03)
 		_screen_info.rotation = Vector3(deg_to_rad(-14.0), PI, 0.0)
 		_screen_info.visible = true
 	var mirror := _cab_parts[_cab_parts.size() - 1] as Node3D
