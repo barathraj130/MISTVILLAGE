@@ -1122,6 +1122,10 @@ func _update_camera(delta: float) -> void:
 			cam.global_transform = Transform3D(face * Basis(Vector3.RIGHT, deg_to_rad(-4.0)), jt * jeep.seat)
 		2:
 			cam.global_transform = Transform3D(face, jt * (Vector3(0, 0.98, 1.25) if jeep.is_coupe else Vector3(0, 1.32, 1.6)))
+		4:
+			# debug side view (--cam=4): 4.5 m off the left flank, at rider height
+			cam.global_position = jt.origin + jt.basis.x.normalized() * 4.5 + Vector3.UP * 1.2
+			cam.look_at(jt.origin + Vector3.UP * 0.9)
 		3:
 			# debug overhead (--cam=3): high above, looking down at the jeep
 			cam.global_position = jt.origin - flat * 70.0 + Vector3(0.0, 75.0, 0.0)

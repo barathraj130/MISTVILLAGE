@@ -8,6 +8,7 @@ extends Node3D
 const Prof := preload("res://scripts/drive/prof.gd")
 const MB := preload("res://scripts/drive/mesh_builder.gd")
 const StreetLife := preload("res://scripts/drive/street_life.gd")
+const RiderPose := preload("res://scripts/drive/rider_pose.gd")
 const KENNEY := "res://assets/drive/models/kenney/"
 const POOL := 34
 const NEAR := 300.0                # recycle beyond this
@@ -79,7 +80,12 @@ func _visual(spec: Array, helper, seed_i: int) -> Node3D:
 			mi.material_override = m
 		root.add_child(mi)
 		if kind != "auto":
-			root.add_child(_rider())
+			var r := RiderPose.make(seed_i, 0.6 if kind == "bike" else 0.5)
+			r.position = Vector3(0, 0.28, -0.38 if kind == "bike" else -0.3)
+			for m in r.find_children("*", "MeshInstance3D", true, false):
+				(m as MeshInstance3D).cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+				(m as MeshInstance3D).visibility_range_end = 160.0
+			root.add_child(r)
 		return root
 	if kind == "bus":
 		var mb := MB.new()

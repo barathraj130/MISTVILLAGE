@@ -11,6 +11,7 @@ extends VehicleBody3D
 
 const Prof := preload("res://scripts/drive/prof.gd")
 const MB := preload("res://scripts/drive/mesh_builder.gd")
+const RiderPose := preload("res://scripts/drive/rider_pose.gd")
 const FWD := 1.0                   # VehicleBody3D drives along +Z with positive engine force
 const BRAKE := 55.0
 const MAX_STEER := 0.6             # at a crawl; shrinks with speed
@@ -121,6 +122,7 @@ var torque_mul := 1.0
 var wheel_r := WHEEL_R
 var _steer_base := Basis(Vector3.RIGHT, deg_to_rad(-65.0))
 var _cab_parts: Array = []         # procedural dash/wheel/labels/mirror
+var _rider: Node3D                 # you, astride a two-wheeler
 
 
 func _init() -> void:
@@ -158,6 +160,7 @@ func configure(kind: String) -> void:
 	_coupe_wheels.clear()
 	_cab_parts.clear()
 	_glass = null
+	_rider = null
 	_steer_base = Basis(Vector3.RIGHT, deg_to_rad(-65.0))
 	vehicle = kind
 	var sp: Dictionary = SPECS[kind]
@@ -181,7 +184,12 @@ func configure(kind: String) -> void:
 	if sp.get("rider", false):
 		for c in _cab_parts:
 			c.visible = false
-		seat = Vector3(0, float(sp["h"]) + 0.15, -0.25)
+		# a person on it: seated, feet on the pegs, hands on the bars
+		_rider = RiderPose.make(randi() % 7, 0.6 if kind == "bike" else 0.5)
+		_rider.name = "Rider"
+		_rider.position = Vector3(0, 0.28, -0.38 if kind == "bike" else -0.3)
+		add_child(_rider)
+		seat = Vector3(0, 1.62, -0.2)
 	elif sp.get("interior", false):
 		_fit_model_interior(sp)
 	else:
@@ -386,7 +394,9 @@ func _build_generic(sp: Dictionary) -> void:
 	var L: float = sp["len"]
 	var W: float = sp["w"]
 	var H: float = sp["h"]
-	_add_boxes([[Vector3(W, H * 0.75, L), Vector3(0, H * 0.45 + 0.1, 0)]])
+	var bottom := float(sp["radius"]) + 0.14
+	var bh := maxf(H - bottom - 0.1, 0.4)
+	_add_boxes([[Vector3(W, bh, L * 0.92), Vector3(0, bottom + bh * 0.5, 0)]])
 	add_child(visual_for(vehicle))
 	_lamp_mat = _emitter(Color(0.9, 0.9, 0.95), Color(1.0, 0.97, 0.9), 0.0)
 	_tail_mat = _emitter(Color(0.5, 0.0, 0.0), Color(1.0, 0.03, 0.01), 0.0)
@@ -717,6 +727,8 @@ func set_cockpit(on: bool) -> void:
 	cockpit = on
 	if _driver:
 		_driver.visible = not on
+	if _rider:
+		_rider.visible = not on
 	if _glass:
 		_glass.visible = not on          # from inside, the tinted glass would veil the view
 	_mirror_vp.render_target_update_mode = SubViewport.UPDATE_ALWAYS if on else SubViewport.UPDATE_DISABLED
