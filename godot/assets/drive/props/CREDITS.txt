@@ -1,0 +1,5 @@
+Poly Haven (CC0 1.0, https://polyhaven.com), converted by tools/make_game_props.py:
+power_pole = modular_electricity_poles (preset 02) · road_barrier = concrete_road_barrier
+street_lamp_head = street_lamp_02 · shutter / shutter_graffiti = rollershutter_door
+monobloc_chair = plastic_monobloc_chair_01 · utility_box = utility_box_01 · fern = fern_02
+shrub_a–d = shrub_02 · mossy_rock_1–6 = rock_moss_set_01

@@ -1,0 +1,3 @@
+ambientCG CC0 1.0 textures (https://ambientcg.com):
+asphalt=Asphalt031 grass=Grass004 dry_grass=Ground037 red_soil=Ground107 forest_floor=Ground078
+rock=Rock030 gravel=Gravel023 plaster=Plaster002 tin_roof=CorrugatedSteel005 concrete=Concrete034

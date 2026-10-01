@@ -1,0 +1,12 @@
+# Godot cache / imports (rebuilt on open)
+godot/.godot/
+*.import.tmp
+# Blender backups
+*.blend1
+*.blend2
+# raw downloads (OSM, SRTM, Poly Haven sources): re-fetched by the tools
+mapdata/
+# OS / editor
+.DS_Store
+__pycache__/
+*.pyc
