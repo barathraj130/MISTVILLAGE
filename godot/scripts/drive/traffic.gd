@@ -5,6 +5,7 @@ extends Node3D
 const Prof := preload("res://scripts/drive/prof.gd")
 const Route := preload("res://scripts/drive/route.gd")
 const MB := preload("res://scripts/drive/mesh_builder.gd")
+const Fleet := preload("res://scripts/drive/fleet.gd")
 const LANE := 1.8
 const KENNEY := "res://assets/drive/models/kenney/"
 ## Kenney Car Kit (CC0) models per traffic kind, with the real length they're scaled to.
@@ -63,7 +64,14 @@ func _spawn(kind: String, dir: int, d0: float, d1: float, cruise: float, start: 
 	cs.shape = bx
 	cs.position = Vector3(0, size.y * 0.5 + 0.1, 0)
 	body.add_child(cs)
-	var model := _kenney(kind, vehicles.size())
+	# the Blender fleet where there is one (cars alternate hatchback / sedan), else the old models
+	var fleet_kind: String = kind
+	if kind == "car":
+		fleet_kind = "hatchback" if vehicles.size() % 2 == 0 else "sedan"
+	var rng := RandomNumberGenerator.new()
+	rng.seed = vehicles.size() * 7919
+	var paint := Fleet.paint_for(fleet_kind, rng)
+	var model: Node3D = Fleet.model(fleet_kind, paint) if Fleet.has(fleet_kind) else _kenney(kind, vehicles.size())
 	if model:
 		body.add_child(model)
 	else:
@@ -82,12 +90,12 @@ func _spawn(kind: String, dir: int, d0: float, d1: float, cruise: float, start: 
 		dest.visibility_range_end = 80.0
 		body.add_child(dest)
 	add_child(body)
-	var model_name: String = kind
-	if MODELS.has(kind):
+	var model_name: String = fleet_kind
+	if not Fleet.has(fleet_kind) and MODELS.has(kind):
 		var opts: Array = MODELS[kind]
 		model_name = opts[vehicles.size() % opts.size()][0]
 	vehicles.append({"body": body, "d": start, "dir": dir, "d0": d0, "d1": d1, "cruise": cruise,
-		"speed": cruise, "half": size.z * 0.5, "model": model_name, "taken": false})
+		"speed": cruise, "half": size.z * 0.5, "model": model_name, "taken": false, "paint": paint})
 
 
 ## You hopped in: it leaves the traffic for good (you're driving it now).

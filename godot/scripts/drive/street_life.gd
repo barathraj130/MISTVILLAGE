@@ -4,14 +4,15 @@ extends Node3D
 ## inside a junction, never perfectly aligned. One MultiMesh per model per 256 m tile.
 
 const MB := preload("res://scripts/drive/mesh_builder.gd")
+const Fleet := preload("res://scripts/drive/fleet.gd")
 const KENNEY := "res://assets/drive/models/kenney/"
 const TILE := 256.0
 const MARKED := ["trunk", "primary", "secondary", "tertiary"]
 ## model, length (m), weight on main roads, weight on side streets, gets a collider
 const FLEET := [
 	["bike", 2.0, 30, 30, false], ["scooter", 1.8, 22, 25, false], ["auto", 2.65, 12, 6, true],
-	["sedan", 4.4, 12, 10, true], ["suv", 4.5, 8, 8, true], ["taxi", 4.3, 4, 2, true],
-	["van", 4.6, 5, 4, true], ["delivery", 5.2, 4, 1, true],
+	["hatchback", 3.85, 16, 16, true], ["sedan", 4.4, 10, 7, true], ["suv", 4.5, 4, 4, true],
+	["taxi", 4.4, 4, 2, true], ["van", 4.6, 3, 2, true], ["delivery", 5.2, 3, 1, true],
 ]
 
 const BIKE_PAINT := [Color(0.08, 0.08, 0.09), Color(0.7, 0.07, 0.06), Color(0.1, 0.2, 0.6), Color(0.75, 0.75, 0.78),
@@ -83,13 +84,17 @@ func build(town: String, streets: Array, graph, body: StaticBody3D, shop_points:
 					var y := c.y + (0.06 if main else 0.0)
 					var xf := Transform3D(Basis(Vector3.UP, yaw + _rng.randf_range(-0.12, 0.12) * float(two_wheeler)), Vector3(at.x, y, at.z))
 					var key := Vector2i(floori(at.x / TILE), floori(at.z / TILE))
+					# the Blender fleet comes in many paints: one MultiMesh per model + colour
+					var vkey := model
+					if Fleet.has(model):
+						vkey = model + "|" + Fleet.paint_for(model, _rng).to_html()
 					if not by_tile.has(key):
 						by_tile[key] = {}
-					if not by_tile[key].has(model):
-						by_tile[key][model] = []
-					by_tile[key][model].append(xf)
+					if not by_tile[key].has(vkey):
+						by_tile[key][vkey] = []
+					by_tile[key][vkey].append(xf)
 					count += 1
-					var entry := {"model": model, "xf": xf, "key": key, "index": by_tile[key][model].size() - 1, "cs": null, "taken": false}
+					var entry := {"model": model, "vkey": vkey, "xf": xf, "key": key, "index": by_tile[key][vkey].size() - 1, "cs": null, "taken": false}
 					entries.append(entry)
 					var g := Vector2i(floori(at.x / 12.0), floori(at.z / 12.0))
 					if not _grid.has(g):
@@ -105,14 +110,16 @@ func build(town: String, streets: Array, graph, body: StaticBody3D, shop_points:
 						entry["cs"] = cs
 				d += len_m + _rng.randf_range(0.6, 3.0) + (row - 1) * 0.95
 	for key in by_tile:
-		for model in by_tile[key]:
-			for part in _parts(model):
+		for vkey in by_tile[key]:
+			var model: String = vkey.get_slice("|", 0)
+			var parts: Array = Fleet.parts(model, Color.html(vkey.get_slice("|", 1))) if "|" in vkey else _parts(model)
+			for part in parts:
 				var mm := MultiMesh.new()
 				mm.transform_format = MultiMesh.TRANSFORM_3D
 				var tint: bool = model in ["bike", "scooter"]
 				mm.use_colors = tint
 				mm.mesh = part[0]
-				var list: Array = by_tile[key][model]
+				var list: Array = by_tile[key][vkey]
 				mm.instance_count = list.size()
 				for i in list.size():
 					mm.set_instance_transform(i, list[i] * part[1])
@@ -125,9 +132,9 @@ func build(town: String, streets: Array, graph, body: StaticBody3D, shop_points:
 				add_child(mmi)
 				if not _mmis.has(key):
 					_mmis[key] = {}
-				if not _mmis[key].has(model):
-					_mmis[key][model] = []
-				_mmis[key][model].append(mmi)
+				if not _mmis[key].has(vkey):
+					_mmis[key][vkey] = []
+				_mmis[key][vkey].append(mmi)
 	return count
 
 
@@ -151,7 +158,7 @@ func nearest(p: Vector3, r: float) -> Dictionary:
 ## You drove off in it: remove it from the street (and its collider).
 func take(e: Dictionary) -> void:
 	e["taken"] = true
-	for mmi in _mmis.get(e["key"], {}).get(e["model"], []):
+	for mmi in _mmis.get(e["key"], {}).get(e["vkey"], []):
 		(mmi as MultiMeshInstance3D).multimesh.set_instance_transform(e["index"],
 			Transform3D(Basis().scaled(Vector3.ONE * 0.001), Vector3(0, -900, 0)))
 	if e["cs"]:

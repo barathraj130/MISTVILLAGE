@@ -9,6 +9,7 @@ const Prof := preload("res://scripts/drive/prof.gd")
 const MB := preload("res://scripts/drive/mesh_builder.gd")
 const StreetLife := preload("res://scripts/drive/street_life.gd")
 const RiderPose := preload("res://scripts/drive/rider_pose.gd")
+const Fleet := preload("res://scripts/drive/fleet.gd")
 const KENNEY := "res://assets/drive/models/kenney/"
 const POOL := 34
 const NEAR := 300.0                # recycle beyond this
@@ -18,8 +19,8 @@ const MAIN := ["trunk", "primary", "secondary", "tertiary"]
 ## kind, length, width, height, cruise on main roads (m/s), weight
 const KINDS := [
 	["auto", 2.7, 1.35, 1.75, 8.5, 26], ["bike", 2.0, 0.8, 1.4, 10.0, 24], ["scooter", 1.8, 0.75, 1.4, 8.5, 18],
-	["sedan", 4.4, 1.75, 1.5, 11.0, 14], ["suv", 4.5, 1.85, 1.7, 11.0, 8], ["taxi", 4.3, 1.75, 1.5, 10.5, 5],
-	["van", 4.6, 1.8, 2.0, 9.5, 4], ["bus", 10.5, 2.5, 3.1, 8.0, 3],
+	["hatchback", 3.85, 1.73, 1.53, 11.0, 14], ["sedan", 4.4, 1.75, 1.5, 11.0, 9], ["suv", 4.5, 1.85, 1.7, 11.0, 4],
+	["taxi", 4.4, 1.75, 1.5, 10.5, 5], ["van", 4.6, 1.8, 2.0, 9.5, 2], ["bus", 10.5, 2.5, 3.1, 8.0, 3],
 ]
 
 var graph
@@ -51,8 +52,11 @@ func build(g, p: Node3D) -> void:
 		body.add_child(_visual(spec, helper, k))
 		body.visible = false
 		add_child(body)
+		var meshes := body.find_children("*", "GeometryInstance3D", true, false)
+		for m in meshes:
+			(m as GeometryInstance3D).cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 		cars.append({"body": body, "kind": spec[0], "len": spec[1], "cruise": spec[4], "si": -1, "fwd": true,
-			"s": 0.0, "speed": 0.0, "pos": Vector3.ZERO, "dir": Vector3.FORWARD})
+			"s": 0.0, "speed": 0.0, "pos": Vector3.ZERO, "dir": Vector3.FORWARD, "meshes": meshes, "shadow": false})
 	helper.free()
 
 
@@ -71,6 +75,12 @@ func _pick_kind() -> Array:
 func _visual(spec: Array, helper, seed_i: int) -> Node3D:
 	var kind: String = spec[0]
 	var root := Node3D.new()
+	if Fleet.has(kind):
+		# the Blender fleet: real proportions, glass, lamps, a paint of its own
+		var p := Fleet.paint_for(kind, _rng)
+		root.add_child(Fleet.model(kind, p))
+		root.set_meta("paint", p)
+		return root
 	if kind in ["auto", "bike", "scooter"]:
 		var mi := MeshInstance3D.new()
 		mi.mesh = helper._built(kind)
@@ -81,7 +91,7 @@ func _visual(spec: Array, helper, seed_i: int) -> Node3D:
 		root.add_child(mi)
 		if kind != "auto":
 			var r := RiderPose.make(seed_i, 0.6 if kind == "bike" else 0.5)
-			r.position = Vector3(0, 0.28, -0.38 if kind == "bike" else -0.3)
+			r.position = RiderPose.seat_offset(kind)
 			for m in r.find_children("*", "MeshInstance3D", true, false):
 				(m as MeshInstance3D).cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 				(m as MeshInstance3D).visibility_range_end = 160.0
@@ -149,6 +159,13 @@ func _drive(delta: float) -> void:
 	var pp := player.global_position
 	# one empty or far vehicle per frame looks for a new street near the player
 	_scan = (_scan + 1) % cars.size()
+	# only vehicles near you cast shadows (where grounding shows; far ones just cost draw calls)
+	var cz: Dictionary = cars[(_scan * 5) % cars.size()]
+	var want: bool = cz["si"] >= 0 and cz["pos"].distance_to(pp) < 35.0
+	if want != cz["shadow"]:
+		cz["shadow"] = want
+		for m in cz["meshes"]:
+			(m as GeometryInstance3D).cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON if want else GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	var c0: Dictionary = cars[_scan]
 	if c0["si"] < 0 or c0["pos"].distance_to(pp) > NEAR:
 		_respawn(c0, pp)

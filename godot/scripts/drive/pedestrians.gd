@@ -1,14 +1,14 @@
 extends Node3D
-## People on the town pavements (Quaternius CC0/CC-BY animated characters, recoloured per person:
+## People on the town pavements (our own characters from tools/people.py, recoloured per person:
 ## South Indian skin tones, dark hair, everyday clothes). They walk the same road graph the cars
 ## and GPS use, on the pavement or the street edge, stand at shopfronts, chat in pairs and wave;
 ## more of them on busy main roads near shops, few on side streets, none out on the open highway.
 ## A recycled pool around the player keeps it cheap; nobody pops up in front of you.
 
 const Prof := preload("res://scripts/drive/prof.gd")
-const DIR := "res://assets/drive/people/"
-const MODELS := ["man_casual", "man_farmer", "man_worker", "man_business", "man_beach", "man_hoodie",
-	"woman_a", "woman_b", "woman_worker", "woman_suit"]
+const DIR := "res://assets/people/person_"
+## our own Blender-made people (tools/people.py); weights = how often you meet them in town
+const MODELS := {"man_shirt": 26, "man_lungi": 20, "elder": 9, "woman_saree": 20, "woman_kurta": 16, "schoolkid": 9}
 const POOL := 36
 const NEAR := 120.0
 const SPAWN_MIN := 35.0
@@ -19,7 +19,7 @@ const SKIN := [Color(0.42, 0.27, 0.17), Color(0.36, 0.22, 0.13), Color(0.48, 0.3
 const CLOTH := [Color(0.85, 0.85, 0.82), Color(0.15, 0.22, 0.45), Color(0.55, 0.1, 0.12), Color(0.12, 0.35, 0.25),
 	Color(0.75, 0.55, 0.15), Color(0.45, 0.15, 0.4), Color(0.3, 0.3, 0.32), Color(0.85, 0.45, 0.1), Color(0.6, 0.75, 0.85),
 	Color(0.9, 0.8, 0.6), Color(0.08, 0.08, 0.1), Color(0.7, 0.2, 0.35)]
-const KEEP := ["Eye", "Eyebrows", "Black", "Gold", "Earrings", "Moustache", "Suit", "Tie"]
+const KEEP := ["Shoes"]
 
 var graph
 var player: Node3D
@@ -35,24 +35,25 @@ func build(g, p: Node3D) -> void:
 	player = p
 	_rng.randomize()
 	var scenes := {}
+	var bag: Array = []
 	for m in MODELS:
 		if ResourceLoader.exists(DIR + m + ".glb"):
 			scenes[m] = load(DIR + m + ".glb")
+			for w in MODELS[m]:
+				bag.append(m)
 	if scenes.is_empty():
 		return
-	var keys: Array = scenes.keys()
 	for k in POOL:
-		var model: String = keys[k % keys.size()]
+		var model: String = bag[_rng.randi() % bag.size()]
 		var node := (scenes[model] as PackedScene).instantiate() as Node3D
 		node.visible = false
 		add_child(node)
 		var ap := node.find_children("*", "AnimationPlayer", true, false)[0] as AnimationPlayer
-		for a in ["CharacterArmature|Walk", "CharacterArmature|Idle", "CharacterArmature|Idle_Neutral", "CharacterArmature|Interact", "CharacterArmature|Wave"]:
+		for a in ["Walk", "Idle", "Talk", "Run"]:
 			if ap.has_animation(a):
 				ap.get_animation(a).loop_mode = Animation.LOOP_LINEAR
-		var h := _rng.randf_range(1.5, 1.66) if model.begins_with("woman") else _rng.randf_range(1.6, 1.78)
-		node.scale = Vector3.ONE * (h / _model_height(node))
-		_dress(node)
+		node.scale = Vector3.ONE * _rng.randf_range(0.94, 1.06)        # built at real height; a little variety
+		_dress(node, model)
 		var meshes := node.find_children("*", "MeshInstance3D", true, false)
 		for m in meshes:
 			(m as MeshInstance3D).cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
@@ -79,8 +80,9 @@ func _model_height(node: Node3D) -> float:
 
 
 ## Per-person colours: one skin tone for every skin surface, black hair, and fresh clothing colours.
-func _dress(node: Node3D) -> void:
+func _dress(node: Node3D, model := "") -> void:
 	var skin: Color = SKIN[_rng.randi() % SKIN.size()]
+	var grey := model == "elder"
 	var swaps := {}
 	for m in node.find_children("*", "MeshInstance3D", true, false):
 		var mi := m as MeshInstance3D
@@ -93,7 +95,9 @@ func _dress(node: Node3D) -> void:
 			if name.begins_with("Skin"):
 				col = skin * (0.88 if name.contains("Darker") else 1.0)
 			elif name.begins_with("Hair"):
-				col = Color(0.05, 0.04, 0.035)
+				col = Color(0.68, 0.68, 0.66) if grey else Color(0.03, 0.025, 0.02)
+			elif model == "elder" or (model == "schoolkid"):
+				continue                       # white veshti / school uniform stay as designed
 			elif name in KEEP:
 				continue
 			else:
@@ -152,7 +156,7 @@ func _update(delta: float) -> void:
 				var rel: Vector3 = q["pos"] - pp
 				var car_close := player.has_method("forward") and rel.length() < 7.0 and absf(player.get("speed")) > 1.5
 				if car_close:
-					_anim(q, "CharacterArmature|Idle", 1.0)
+					_anim(q, "Idle", 1.0)
 					continue
 				q["s"] += q["speed"] * delta
 				var cum := _lengths(q["si"])
@@ -163,7 +167,7 @@ func _update(delta: float) -> void:
 						continue
 					q["s"] = 0.0
 				_place(q)
-				_anim(q, "CharacterArmature|Walk", q["speed"] / 1.25)
+				_anim(q, "Walk", q["speed"] / 1.25)
 				if q["timer"] <= 0.0:
 					q["timer"] = _rng.randf_range(8.0, 25.0)
 					if _rng.randf() < 0.25:
@@ -173,7 +177,7 @@ func _update(delta: float) -> void:
 						var away: Vector3 = Vector3(q["dir"].z, 0, -q["dir"].x) * q["side"]
 						q["node"].global_transform.basis = Basis.looking_at(-away, Vector3.UP).scaled(q["node"].scale)
 			"pause":
-				_anim(q, "CharacterArmature|Interact" if q["timer"] > 2.0 else "CharacterArmature|Idle_Neutral", 1.0)
+				_anim(q, "Talk" if q["timer"] > 2.0 else "Idle", 1.0)
 				if q["timer"] <= 0.0:
 					q["state"] = "walk"
 					q["timer"] = _rng.randf_range(8.0, 25.0)
@@ -184,7 +188,7 @@ func _update(delta: float) -> void:
 func _anim(q: Dictionary, name: String, speed: float) -> void:
 	var ap: AnimationPlayer = q["ap"]
 	if not ap.has_animation(name):
-		name = "CharacterArmature|Idle"
+		name = "Idle"
 	if ap.current_animation != name:
 		ap.play(name, 0.25)
 	ap.speed_scale = speed
@@ -241,7 +245,7 @@ func _respawn(q: Dictionary, pp: Vector3, anywhere := false) -> void:
 		var roll := _rng.randf()
 		if roll < 0.18:
 			q["state"] = "stand"                     # waiting, chatting, watching the street
-			q["idle_anim"] = "CharacterArmature|Wave" if roll < 0.03 else ("CharacterArmature|Idle_Neutral" if roll < 0.1 else "CharacterArmature|Idle")
+			q["idle_anim"] = "Talk" if roll < 0.03 else ("Idle" if roll < 0.1 else "Idle")
 		else:
 			q["state"] = "walk"
 		q["timer"] = _rng.randf_range(5.0, 20.0)

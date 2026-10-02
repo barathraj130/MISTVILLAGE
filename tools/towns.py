@@ -177,11 +177,24 @@ def _street_graph(osm, to_game, c, radius, near_route, nearest_route, route_xz, 
                         k = seg[0] if side == 0 else seg[-1]
                         ends.append(node("junction" if use[k] > 1 else "end", p_end[0], p_end[1], key=k))
                     elif on_hw[nxt]:
-                        # meets the highway: run on to its edge
-                        ri = nearest_route(p_end)
-                        rp = route_xz[ri]
-                        d = p_end - rp
-                        edge = rp + d / max(np.linalg.norm(d), 1e-6) * (HIGHWAY_HALF - 0.4)
+                        # meets the highway: carry straight on along the street's own heading until
+                        # it reaches the highway's edge (no sideways kink into the junction)
+                        prev = pts[min(idx + 1, n - 1)] if side == 0 else pts[max(idx - 1, 0)]
+                        heading = p_end - prev
+                        hn = np.linalg.norm(heading)
+                        heading = heading / max(hn, 1e-6)
+                        edge = None
+                        for step in (np.arange(0.25, 14.0, 0.25) if hn > 0.1 else []):
+                            q = p_end + heading * step
+                            ri = nearest_route(q)
+                            if np.linalg.norm(q - route_xz[ri]) < HIGHWAY_HALF - 0.4:
+                                edge = q
+                                break
+                        if edge is None:                  # running alongside: fall back to the nearest edge point
+                            ri = nearest_route(p_end)
+                            rp = route_xz[ri]
+                            d = p_end - rp
+                            edge = rp + d / max(np.linalg.norm(d), 1e-6) * (HIGHWAY_HALF - 0.4)
                         if side == 0:
                             run.insert(0, edge)
                         else:

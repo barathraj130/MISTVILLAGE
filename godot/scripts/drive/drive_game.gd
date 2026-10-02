@@ -72,6 +72,14 @@ var _debug_t := 0.0
 var _debug_report := ""
 var _surface_t := 0.0
 var _cam_prev_speed := 0.0
+var _head_yaw := 0.0               # cockpit: where you're looking (mouse), radians
+var _head_pitch := 0.0
+var _head_glance := 0.0
+var _head_sway := Vector3.ZERO
+var _head_prev_v := Vector3.ZERO
+var _drops: MeshInstance3D         # rain on the windscreen (inside views)
+var _drops_amount := 0.0
+var _last_wipe := 0.0
 var _cam_acc := 0.0
 var env: Environment
 var sun: DirectionalLight3D
@@ -114,6 +122,9 @@ func _ready() -> void:
 		if a.begins_with("--timescale="):
 			Engine.time_scale = float(a.get_slice("=", 1))
 	_setup_input()
+	var cf := ConfigFile.new()
+	if cf.load("user://settings.cfg") == OK:
+		Jeep.steer_sens = float(cf.get_value("driving", "steer_sens", Jeep.steer_sens))
 	_build_ui()
 	await _build_world()
 	_start()
@@ -150,6 +161,10 @@ func _setup_input() -> void:
 	_add_action("back_to_menu", [KEY_F10])
 	_add_action("quick_save", [KEY_F5])
 	_add_action("gps_fuel", [KEY_G])
+	_add_action("look_center", [KEY_C])
+	_add_action("steer_less", [KEY_BRACKETLEFT])
+	_add_action("steer_more", [KEY_BRACKETRIGHT])
+	_add_action("free_mouse", [KEY_ALT])
 	_add_action("debug_mode", [KEY_F3])
 	_add_action("indicate_left", [KEY_COMMA])
 	_add_action("indicate_right", [KEY_PERIOD])
@@ -253,6 +268,7 @@ func _build_world() -> void:
 	details.name = "Details"
 	add_child(details)
 	details.build(route, terrain, road.bumps)
+	potholes = details.potholes
 	if route.is_real and FileAccess.file_exists("res://assets/drive/towns.json"):
 		towns = Towns.new()
 		towns.name = "Towns"
@@ -498,6 +514,20 @@ func _start() -> void:
 				Vector3(sp[0], sp[1] + 0.4, sp[2]))
 		jeep.set_lights(bool(_saved_pose.get("lights", false)))
 		_message("Welcome back · Day %d, %s" % [sim.day, Sim.clock_text(sim.minute)], 4.0)
+	# --pothole : park 9 m before the first pothole past the start (to look at one)
+	if "--pothole" in args and not potholes.is_empty():
+		var best: Array = potholes[0]
+		var bd := INF
+		for ph in potholes:
+			var dd: float = (ph[0] as Vector3).distance_to(jeep.global_position)
+			if dd < bd:
+				bd = dd
+				best = ph
+		var pi: int = route.nearest_global(best[0])
+		_place_jeep(maxf(route.dist[pi] - 7.0, 5.0))
+		var jt := jeep.global_transform
+		var lat: float = (best[0] - route.pts[pi]).dot(route.left(pi))
+		jeep.global_transform = Transform3D(jt.basis, jt.origin + route.left(pi) * (lat - Route.LANE))
 	# your second car waits on the shoulder just behind you: get out (F), walk over, F again
 	var spare := "coupe" if jeep.vehicle != "coupe" else "luxury_suv"
 	if Jeep._available(spare) and not "--nospare" in args:
@@ -624,6 +654,7 @@ func _physics_process(delta: float) -> void:
 		_autopilot()
 	_events(delta)
 	_fuel(delta)
+	_pothole_hits(delta)
 	_surface_t -= delta
 	if _surface_t <= 0.0 and walker == null:
 		_surface_t = 0.1
@@ -729,6 +760,28 @@ func _debug_update(delta: float) -> void:
 	_debug_lines.mesh = im
 
 
+## A wheel dropping into a pothole kicks that corner of the car down (harder the faster you
+## hit it); the suspension does the rest.
+func _pothole_hits(delta: float) -> void:
+	if walker or potholes.is_empty() or absf(jeep.speed) < 2.0:
+		return
+	var jp: Vector3 = jeep.global_position
+	for wi in jeep._wheels.size():
+		_pothole_cd[wi] = maxf(float(_pothole_cd.get(wi, 0.0)) - delta, 0.0)
+		if _pothole_cd[wi] > 0.0:
+			continue
+		var wp: Vector3 = (jeep._wheels[wi] as Node3D).global_position
+		for ph in potholes:
+			var c: Vector3 = ph[0]
+			if absf(c.x - wp.x) > 1.0 or absf(c.z - wp.z) > 1.0:
+				continue
+			if Vector2(c.x - wp.x, c.z - wp.z).length() < float(ph[1]) * 0.8:
+				var k := clampf(absf(jeep.speed) / 12.0, 0.3, 2.0)
+				jeep.apply_impulse(Vector3(0, -jeep.mass * 0.9 * k, 0), wp - jp)
+				_pothole_cd[wi] = 0.5
+				break
+
+
 ## Diesel: burns with throttle and revs while you're in the car. Low tank → GPS to the nearest bunk.
 func _fuel(delta: float) -> void:
 	if walker == null:
@@ -831,7 +884,9 @@ func _save_game(announce: bool) -> void:
 
 
 var _saved_pose := {}
-var left_behind: Array = []        # cars you got out of and left parked: {kind, body}
+var left_behind: Array = []
+var potholes: Array = []           # [centre, radius] from details.gd
+var _pothole_cd := {}              # wheel index → time left before it can jolt again        # cars you got out of and left parked: {kind, body}
 
 
 # ----------------------------------------------------------------------------- GTA-style: drive anything
@@ -841,17 +896,17 @@ func _vehicle_near(p: Vector3) -> Dictionary:
 	var best := {}
 	var reach := func(kind: String) -> float:
 		return 2.6 + float(Jeep.SPECS[kind].get("len", 4.6)) * 0.5
-	var consider := func(kind: String, pos: Vector3, xf: Transform3D, type: String, ref) -> void:
+	var consider := func(kind: String, pos: Vector3, xf: Transform3D, type: String, ref, paint := Color(0, 0, 0, 0)) -> void:
 		if not Jeep.SPECS.has(kind):
 			return
 		var dd := pos.distance_to(p)
 		if dd < reach.call(kind) and (best.is_empty() or dd < best["dist"]):
 			best.clear()
-			best.merge({"kind": kind, "xf": xf, "type": type, "ref": ref, "dist": dd})
+			best.merge({"kind": kind, "xf": xf, "type": type, "ref": ref, "dist": dd, "paint": paint})
 	consider.call(jeep.vehicle, jeep.global_position, jeep.global_transform, "current", null)
 	for lb in left_behind:
 		var b: Node3D = lb["body"]
-		consider.call(lb["kind"], b.global_position, b.global_transform, "left", lb)
+		consider.call(lb["kind"], b.global_position, b.global_transform, "left", lb, lb.get("paint", Color(0, 0, 0, 0)))
 	if towns:
 		for life in towns.lives:
 			var e: Dictionary = life.nearest(p, 7.0)
@@ -859,17 +914,21 @@ func _vehicle_near(p: Vector3) -> Dictionary:
 				var xf: Transform3D = e["xf"]
 				if e["model"] in ["bike", "scooter"]:
 					xf = Transform3D(xf.basis, xf.origin)
-				consider.call(e["model"], xf.origin, xf, "parked", [life, e])
+				var pc := Color(0, 0, 0, 0)
+				if "|" in String(e.get("vkey", "")):
+					pc = Color.html(String(e["vkey"]).get_slice("|", 1))
+				consider.call(e["model"], xf.origin, xf, "parked", [life, e], pc)
 	if town_traffic:
 		for c in town_traffic.cars:
 			if c["si"] >= 0:
 				var b: Node3D = c["body"]
-				consider.call(c["kind"], b.global_position, b.global_transform, "towntraffic", c)
+				var vis: Node = b.get_child(b.get_child_count() - 1)
+				consider.call(c["kind"], b.global_position, b.global_transform, "towntraffic", c, vis.get_meta("paint", Color(0, 0, 0, 0)))
 	for v in traffic.vehicles:
 		if not v["taken"]:
 			var b: Node3D = v["body"]
 			var kind: String = v["model"] if Jeep.SPECS.has(v["model"]) else ("lorry" if v["model"] == "lorry" else v["model"])
-			consider.call(kind, b.global_position, b.global_transform, "traffic", v)
+			consider.call(kind, b.global_position, b.global_transform, "traffic", v, v.get("paint", Color(0, 0, 0, 0)))
 	return best
 
 
@@ -879,7 +938,7 @@ func _take_vehicle(c: Dictionary) -> void:
 	var old_kind: String = jeep.vehicle
 	var old_xf: Transform3D = jeep.global_transform
 	if c["type"] != "current":
-		_park_left_behind(old_kind, old_xf)
+		_park_left_behind(old_kind, old_xf, jeep._paint)
 		match c["type"]:
 			"left":
 				left_behind.erase(c["ref"])
@@ -890,7 +949,7 @@ func _take_vehicle(c: Dictionary) -> void:
 				town_traffic.take(c["ref"])
 			"traffic":
 				traffic.take(c["ref"])
-		jeep.configure(c["kind"])
+		jeep.configure(c["kind"], c.get("paint", Color(0, 0, 0, 0)))
 		var xf: Transform3D = c["xf"]
 		jeep.global_transform = Transform3D(xf.basis.orthonormalized(), xf.origin + Vector3(0, 0.4, 0))
 		jeep.linear_velocity = Vector3.ZERO
@@ -899,7 +958,7 @@ func _take_vehicle(c: Dictionary) -> void:
 		_message("You're driving the %s." % Jeep.SPECS[c["kind"]]["name"], 3.0)
 
 
-func _park_left_behind(kind: String, xf: Transform3D) -> void:
+func _park_left_behind(kind: String, xf: Transform3D, paint := Color(0, 0, 0, 0)) -> void:
 	var body := StaticBody3D.new()
 	body.name = "Parked_%s" % kind
 	var sp: Dictionary = Jeep.SPECS[kind]
@@ -916,10 +975,10 @@ func _park_left_behind(kind: String, xf: Transform3D) -> void:
 		cs.shape = shape
 		cs.position = bx[1]
 		body.add_child(cs)
-	body.add_child(jeep.visual_for(kind))
+	body.add_child(jeep.visual_for(kind, paint))
 	add_child(body)
 	body.global_transform = Transform3D(xf.basis.orthonormalized(), xf.origin - xf.basis.y.normalized() * 0.02)
-	left_behind.append({"kind": kind, "body": body})
+	left_behind.append({"kind": kind, "body": body, "paint": paint})
 
 ## Called from _start when the menu asked to continue. Returns the saved road distance or -1.
 func _load_game() -> float:
@@ -938,6 +997,65 @@ var _bench_frames := 0
 var _bench_proc := 0.0
 var _bench_phys := 0.0
 var _bench_hidden := false
+
+
+## Cockpit head look with the mouse (captured while you're in the cockpit view).
+func _unhandled_input(ev: InputEvent) -> void:
+	if ev is InputEventMouseMotion and cam_mode == 1 and walker == null and Input.mouse_mode == Input.MOUSE_MODE_CAPTURED:
+		_head_yaw = clampf(_head_yaw - ev.relative.x * 0.0035, -2.3, 2.3)
+		_head_pitch = clampf(_head_pitch - ev.relative.y * 0.0035, -0.7, 0.5)
+
+
+## Rain beading on the windscreen in the inside views, cleared each time the wipers pass.
+func _update_drops(delta: float) -> void:
+	if _drops == null:
+		_drops = MeshInstance3D.new()
+		var q := QuadMesh.new()
+		q.size = Vector2(0.36, 0.22)
+		_drops.mesh = q
+		var m := StandardMaterial3D.new()
+		m.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+		m.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+		m.albedo_texture = _drop_texture()
+		m.albedo_color = Color(1, 1, 1, 0)
+		_drops.material_override = m
+		_drops.position = Vector3(0, 0, -0.12)
+		_drops.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		cam.add_child(_drops)
+	var inside := walker == null and (cam_mode == 1 or cam_mode == 2)
+	var rain: float = sim.wx["rain"]
+	_drops_amount = clampf(_drops_amount + rain * delta * 0.35 - (0.0 if rain > 0.05 else delta * 0.05), 0.0, 1.0)
+	if jeep.kit:
+		var ph: float = jeep.kit._wipe_phase
+		if ph > 0.45 and ph < 0.55 and _t - _last_wipe > 0.3:
+			_last_wipe = _t
+			_drops_amount *= 0.15
+	_drops.visible = inside and _drops_amount > 0.01
+	(_drops.material_override as StandardMaterial3D).albedo_color = Color(1, 1, 1, _drops_amount * 0.9)
+
+
+func _drop_texture() -> ImageTexture:
+	var n := 512
+	var img := Image.create(n, n, false, Image.FORMAT_RGBA8)
+	img.fill(Color(1, 1, 1, 0))
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 77
+	for k in 260:
+		var cx := rng.randi_range(0, n - 1)
+		var cy := rng.randi_range(0, n - 1)
+		var r := rng.randf_range(2.0, 9.0)
+		for y in range(maxi(cy - int(r) - 1, 0), mini(cy + int(r) + 2, n)):
+			for x in range(maxi(cx - int(r) - 1, 0), mini(cx + int(r) + 2, n)):
+				var d := Vector2(x - cx, y - cy).length() / r
+				if d > 1.0:
+					continue
+				# a bead: dark rim, bright highlight up-left, clear middle
+				var a := smoothstep(1.0, 0.75, d) * 0.55
+				var hl := smoothstep(0.45, 0.0, Vector2(x - cx + r * 0.35, y - cy + r * 0.35).length() / r)
+				var c := Color(0.75, 0.8, 0.85).lerp(Color(1, 1, 1), hl)
+				img.set_pixel(x, y, Color(c.r, c.g, c.b, maxf(a, hl * 0.9)))
+	img.generate_mipmaps()
+	return ImageTexture.create_from_image(img)
 
 
 ## The resort keeps particles, lights and animated water running even out of sight, so it only exists
@@ -1041,11 +1159,32 @@ func _process(delta: float) -> void:
 		_toggle_on_foot()
 	if Input.is_action_just_pressed("open_map") and map_ui:
 		map_ui.toggle_full()
-		if not map_ui.full_open and walker:
+		if not map_ui.full_open and (walker or cam_mode == 1):
 			Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
-	if Input.is_action_just_pressed("camera_view"):
+	if Input.is_action_just_pressed("camera_view") and walker == null:
 		cam_mode = (cam_mode + 1) % 3
 		jeep.set_cockpit(cam_mode == 1)
+		_head_yaw = 0.0
+		_head_pitch = 0.0
+		Input.mouse_mode = Input.MOUSE_MODE_CAPTURED if cam_mode == 1 else Input.MOUSE_MODE_VISIBLE
+	if Input.is_action_just_pressed("free_mouse") and cam_mode == 1:
+		Input.mouse_mode = Input.MOUSE_MODE_VISIBLE if Input.mouse_mode == Input.MOUSE_MODE_CAPTURED else Input.MOUSE_MODE_CAPTURED
+	if Input.is_action_just_pressed("steer_less") or Input.is_action_just_pressed("steer_more"):
+		var dv := -0.1 if Input.is_action_just_pressed("steer_less") else 0.1
+		Jeep.steer_sens = clampf(snappedf(Jeep.steer_sens + dv, 0.1), 0.4, 1.5)
+		_message("Steering sensitivity %d%%  ( [ less · ] more )" % roundi(Jeep.steer_sens * 100.0), 2.5)
+		var cf := ConfigFile.new()
+		cf.set_value("driving", "steer_sens", Jeep.steer_sens)
+		cf.save("user://settings.cfg")
+	if Input.is_action_just_pressed("look_center"):
+		_head_yaw = 0.0
+		_head_pitch = 0.0
+	jeep.night = 1.0 - sim.daylight()
+	jeep.map_ui = map_ui
+	jeep.clock_text = Sim.clock_text(sim.minute)
+	jeep.fuel_frac = sim.fuel_frac()
+	jeep.wiping = sim.wx["rain"] > 0.25 and walker == null
+	_update_drops(delta)
 	if Input.is_action_just_pressed("reset_vehicle"):
 		_place_jeep(maxf(d, 5.0))
 		_message("Back on the road.")
@@ -1108,8 +1247,8 @@ func _update_camera(delta: float) -> void:
 			var acc: float = (jeep.speed - _cam_prev_speed) / maxf(delta, 0.001)
 			_cam_prev_speed = jeep.speed
 			_cam_acc = lerpf(_cam_acc, clampf(acc, -8.0, 4.0), 1.0 - exp(-delta * 3.0))
-			var back := 8.6 + _cam_acc * 0.12
-			var want := jt.origin - flat * back + Vector3.UP * (2.9 - minf(_cam_acc, 0.0) * -0.04)
+			var back: float = jeep.chase_back + _cam_acc * 0.12
+			var want := jt.origin - flat * back + Vector3.UP * (jeep.chase_up - minf(_cam_acc, 0.0) * -0.04)
 			cam.global_position = cam.global_position.lerp(want, 1.0 - exp(-delta * 2.4))
 			var ground: float = terrain.height_at(cam.global_position.x, cam.global_position.z)
 			cam.global_position.y = maxf(cam.global_position.y, ground + 1.2)
@@ -1119,14 +1258,36 @@ func _update_camera(delta: float) -> void:
 			var hit := get_world_3d().direct_space_state.intersect_ray(q)
 			if not hit.is_empty():
 				cam.global_position = hit["position"] + (pivot - hit["position"]).normalized() * 0.4
-			cam.look_at(jt.origin + Vector3.UP * 1.4 + flat * 4.0 + Vector3.DOWN * maxf(-_cam_acc, 0.0) * 0.05)
+			cam.look_at(jt.origin + Vector3.UP * (jeep.chase_up * 0.48) + flat * 4.0 + Vector3.DOWN * maxf(-_cam_acc, 0.0) * 0.05)
 			cam.fov = lerpf(cam.fov, 66.0 + clampf(absf(jeep.speed) / 30.0, 0.0, 1.0) * 8.0, 1.0 - exp(-delta * 1.5))
 		1:
-			cam.fov = 68.0
-			# driver's eyes, tilted slightly down towards the gauges
-			cam.global_transform = Transform3D(face * Basis(Vector3.RIGHT, deg_to_rad(-4.0)), jt * jeep.seat)
+			cam.fov = 74.0
+			# Euro Truck-style head: the mouse turns it (mirrors, side windows), it glances into
+			# the bend you're steering into, and it sways with braking, acceleration and corners
+			var v: Vector3 = jeep.linear_velocity
+			var acc_w: Vector3 = (v - _head_prev_v) / maxf(delta, 0.001)
+			_head_prev_v = v
+			var acc_l: Vector3 = jt.basis.inverse() * acc_w
+			_head_sway = _head_sway.lerp(Vector3(clampf(-acc_l.x * 0.006, -0.05, 0.05), clampf(-acc_l.y * 0.003, -0.03, 0.03),
+				clampf(-acc_l.z * 0.008, -0.06, 0.06)), 1.0 - exp(-delta * 4.0))
+			var glance: float = clampf(jeep.steering * 1.1, -0.45, 0.45) * clampf(absf(jeep.speed) / 4.0, 0.0, 1.0)
+			_head_glance = lerpf(_head_glance, glance, 1.0 - exp(-delta * 2.5))
+			var head := Basis(Vector3.UP, _head_yaw + _head_glance) * Basis(Vector3.RIGHT, _head_pitch - deg_to_rad(5.0))
+			var eye: Vector3 = jeep.seat + _head_sway + Vector3(_head_yaw * -0.06, 0, 0)    # lean towards where you look
+			cam.global_transform = Transform3D(face * head, jt * eye)
 		2:
-			cam.global_transform = Transform3D(face, jt * (Vector3(0, 0.98, 1.25) if jeep.is_coupe else Vector3(0, 1.32, 1.6)))
+			cam.global_transform = Transform3D(face, jt * jeep.bonnet)
+		5:
+			# debug: look at the nearest pothole from 2 m away (--cam=5)
+			var best: Vector3 = jt.origin
+			var bd := INF
+			for ph in potholes:
+				var dd: float = (ph[0] as Vector3).distance_to(jt.origin)
+				if dd < bd:
+					bd = dd
+					best = ph[0]
+			cam.global_position = best + flat.cross(Vector3.UP).normalized() * 2.2 + Vector3.UP * 1.5 - flat * 1.5
+			cam.look_at(best)
 		4:
 			# debug side view (--cam=4): 4.5 m off the left flank, at rider height
 			cam.global_position = jt.origin + jt.basis.x.normalized() * 4.5 + Vector3.UP * 1.2
@@ -1241,6 +1402,8 @@ func _toggle_on_foot() -> void:
 		jeep.in_handbrake = false
 		jeep.autopilot = "--autodrive" in args
 		jeep.set_cockpit(cam_mode == 1)
+		if cam_mode == 1:
+			Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
 
 
 ## Sun, sky, fog and rain from the clock, the weather and the altitude (the ghat's cloud band).
@@ -1449,6 +1612,13 @@ func _snap() -> void:
 					if walker:
 						_toggle_on_foot()
 					print("SWAP now driving %s (left behind: %d)" % [jeep.vehicle, left_behind.size()])
+	# --walk : get out after 3 s and walk forward (tests the on-foot character)
+	if "--walk" in args and _t > 3.0 and not has_meta("walked"):
+		set_meta("walked", true)
+		jeep.linear_velocity = Vector3.ZERO
+		jeep.speed = 0.0
+		_toggle_on_foot()
+		Input.action_press("move_forward")
 	# --save : write the save file 3 s in (tests the Continue path)
 	if "--save" in args and _t > 3.0 and not has_meta("saved_once"):
 		set_meta("saved_once", true)
@@ -1549,7 +1719,7 @@ func _build_ui() -> void:
 	ui_message.modulate.a = 0.0
 
 	ui_help = _label(root, 15, Color(1, 1, 1, 0.85))
-	ui_help.text = "W/S accelerate · brake/reverse   A/D steer   Space handbrake   H horn   L headlights   M manual gears (X up, Z down)   , . indicators   / hazards\nV camera (chase · cockpit · bonnet)   R back on road   E interact   F get out / in   Tab map + GPS   G nearest fuel   F5 save   F10 save + menu   F1 hide"
+	ui_help.text = "W/S accelerate · brake/reverse   A/D steer   Space handbrake   H horn   L headlights   M manual gears (X up, Z down)   [ ] steering sensitivity   , . indicators   / hazards\nV camera (chase · cockpit: mouse looks, C centre, Alt frees mouse · bonnet)   R back on road   E interact   F get out / in   Tab map + GPS   G nearest fuel   F5 save   F10 save + menu   F1 hide"
 	ui_help.position = Vector2(28, 50)
 	ui_debug = _label(root, 14, Color(0.6, 1.0, 0.7))
 	ui_debug.set_anchors_and_offsets_preset(Control.PRESET_TOP_RIGHT, Control.PRESET_MODE_KEEP_SIZE, 24)

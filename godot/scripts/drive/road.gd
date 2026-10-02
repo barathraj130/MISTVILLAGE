@@ -42,6 +42,7 @@ func build(r, t) -> void:
 	labels = Node3D.new()
 	labels.name = "Signs"
 	add_child(labels)
+	_load_junctions()
 	_surface()
 	_walls()
 	_bridge()
@@ -116,6 +117,37 @@ func _add(mb, mat: Material, collide: bool, node_name := "") -> MeshInstance3D:
 	return mi
 
 
+## Where town streets join the highway (from the road graph in towns.json): [distance along the
+## road, side (+1 left / -1 right), half-width of the mouth]. The shoulder and edge line give way
+## to a flat asphalt mouth there.
+var junctions: Array = []
+
+func _load_junctions() -> void:
+	var path := "res://assets/drive/towns.json"
+	if not route.is_real or not FileAccess.file_exists(path):
+		return
+	var data: Dictionary = JSON.parse_string(FileAccess.get_file_as_string(path))
+	for tname in data:
+		var tw: Dictionary = data[tname]
+		var nodes: Dictionary = tw.get("nodes", {})
+		for st in tw["streets"]:
+			for end in ["a", "b"]:
+				var nd: Dictionary = nodes.get(st.get(end, ""), {})
+				if nd.get("kind", "") != "highway":
+					continue
+				var i: int = nd["route_i"]
+				var p := Vector3(nd["x"], 0, nd["z"])
+				var side := signf((p - route.pts[i]).dot(route.left(i)))
+				junctions.append([route.dist[i], side, float(st["width"]) * 0.5 + 2.5])
+
+
+func _mouth(d: float, side: float) -> bool:
+	for j in junctions:
+		if j[1] == side and absf(d - j[0]) < j[2]:
+			return true
+	return false
+
+
 # ----------------------------------------------------------------------------- surface + markings
 func _surface() -> void:
 	var n: int = route.pts.size()
@@ -140,6 +172,12 @@ func _surface() -> void:
 			for s in [1.0, -1.0]:
 				var e0: Vector3 = ci + li * HALF * s
 				var e1: Vector3 = cj + lj * HALF * s
+				if _mouth(di, s) or _mouth(dj, s):
+					# a street joins here: the asphalt carries on flat into its mouth
+					var m0: Vector3 = ci + li * (HALF + SHOULDER + 0.6) * s
+					var m1: Vector3 = cj + lj * (HALF + SHOULDER + 0.6) * s
+					asphalt.quad(e0, m0, m1, e1, Color.WHITE, Vector3.UP)
+					continue
 				var o0: Vector3 = ci + li * (HALF + SHOULDER) * s + Vector3(0, -0.4, 0)
 				var o1: Vector3 = cj + lj * (HALF + SHOULDER) * s + Vector3(0, -0.4, 0)
 				shoulder.quad(e0, o0, o1, e1, DIRT, Vector3.UP)

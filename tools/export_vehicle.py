@@ -15,6 +15,41 @@ for s in scripts:
     exec(compile(open(s).read(), s, "exec"), {"__name__": "__main__"})
 
 SKIP = ("ArchCutter", "INT_CabinCutter", "Plane", "Target", "INT_CamTarget")
+# parts the game drives itself stay separate; everything else is merged into a few meshes so a
+# car is a handful of draw calls instead of 160 (modifiers are applied first)
+KEEP = ("Greenhouse", "Canopy", "Glass", "Headlight", "FogDRL", "TailCorner", "TailStrip", "TailBar",
+        "INT_SteeringRim", "INT_SteeringHub", "INT_SteeringSpoke", "INT_SteeringBadge", "INT_Cluster",
+        "INT_CenterScreen")
+for o in list(bpy.data.objects):
+    if o.type == 'MESH' and not o.name.startswith(SKIP):
+        bpy.context.view_layer.objects.active = o
+        for m in list(o.modifiers):
+            try:
+                bpy.ops.object.modifier_apply(modifier=m.name)
+            except RuntimeError:
+                o.modifiers.remove(m)
+groups = {}
+for o in bpy.data.objects:
+    if o.type != 'MESH' or o.parent is not None or o.name.startswith(SKIP) or o.name.startswith(KEEP):
+        continue
+    groups.setdefault("Interior" if o.name.startswith("INT_") else "Body", []).append(o)
+for name, objs in groups.items():
+    if len(objs) < 2:
+        continue
+    bpy.ops.object.select_all(action='DESELECT')
+    for o in objs:
+        o.select_set(True)
+    bpy.context.view_layer.objects.active = objs[0]
+    bpy.ops.object.join()
+    bpy.context.view_layer.objects.active.name = name
+for root in [o for o in bpy.data.objects if o.type == 'EMPTY' and o.name.startswith("Wheel_")]:
+    kids = [c for c in root.children if c.type == 'MESH']
+    if len(kids) > 1:
+        bpy.ops.object.select_all(action='DESELECT')
+        for k in kids:
+            k.select_set(True)
+        bpy.context.view_layer.objects.active = kids[0]
+        bpy.ops.object.join()
 bpy.ops.object.select_all(action='DESELECT')
 picked = []
 for o in bpy.data.objects:

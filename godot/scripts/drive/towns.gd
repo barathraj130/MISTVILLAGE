@@ -145,6 +145,10 @@ func _streets(town: String, streets: Array) -> void:
 		var main: bool = s["class"] in MARKED or s["class"] == "trunk_link" or s["class"] == "primary_link"
 		var edge_a := clear_a if clear_a > 0.0 else 0.0
 		var edge_b := clear_b if clear_b > 0.0 else 0.0
+		if joined and graph.nodes.has(s.get("a", "")) and graph.nodes[s["a"]]["kind"] == "highway":
+			edge_a = 4.0 / 0.7
+		if joined and graph.nodes.has(s.get("b", "")) and graph.nodes[s["b"]]["kind"] == "highway":
+			edge_b = 4.0 / 0.7
 		var dist := 0.0
 		var marked: bool = s["class"] in MARKED
 		for i in n - 1:
@@ -179,7 +183,7 @@ func _streets(town: String, streets: Array) -> void:
 			dist += seg
 	var tj0 := Time.get_ticks_msec()
 	if graph and graph.has_graph():
-		_junctions(town, roads)
+		_junctions(town, roads, walks, verges)
 	var tj1 := Time.get_ticks_msec()
 	if "--trace" in OS.get_cmdline_user_args():
 		print("    streets: polylines %d ms, junctions %d ms" % [tj0 - ts0, tj1 - tj0])
@@ -249,7 +253,7 @@ func _strip(mb, a: Vector3, b: Vector3, sa: Vector3, sb: Vector3, o0: float, o1:
 ## One continuous asphalt surface where streets meet: a disc (a half disc where a street joins
 ## the highway) fitted to the meeting streets' slope, laid just above them so their overlapping
 ## ends and edges disappear under it.
-func _junctions(town: String, roads: Dictionary) -> void:
+func _junctions(town: String, roads: Dictionary, walks: Dictionary = {}, verges: Dictionary = {}) -> void:
 	for id in graph.nodes:
 		var nd: Dictionary = graph.nodes[id]
 		if not graph.is_junction(id):
@@ -272,12 +276,31 @@ func _junctions(town: String, roads: Dictionary) -> void:
 			var rp: Vector3 = graph.route.pts[nd["route_i"]]
 			samples.append(rp)
 			out = Vector3(c.x - rp.x, 0, c.z - rp.z).normalized()
-		# least-squares plane y = a + b·dx + c·dz through the samples
+		# least-squares plane y = a + b·dx + c·dz through the samples; where a street meets the
+		# highway the patch lies flat at the highway's level instead (no hump onto the carriageway)
 		var plane := _fit_plane(c, samples)
+		if nd["kind"] == "highway":
+			plane = Vector3(c.y, 0.0, 0.0)
+			lift = 0.02
 		var key := _tile(c)
 		if not roads.has(key):
 			roads[key] = MB.new()
+		if not walks.has(key):
+			walks[key] = MB.new()
+			verges[key] = MB.new()
 		var mb = roads[key]
+		if not walks.is_empty():
+			var hw_arms: Array = []
+			if nd["kind"] == "highway":
+				# the highway as two arms running away along its edge (its shoulder line sits
+				# HALF + shoulder from the centre, the node 3.2 m from it)
+				var ri: int = nd["route_i"]
+				var tan: Vector3 = graph.route.tangents[ri]
+				tan = Vector3(tan.x, 0, tan.z).normalized()
+				for sgn in [1.0, -1.0]:
+					hw_arms.append({"dir": tan * sgn, "half": 1.8, "main": false, "hw": true, "clear": 7.0,
+						"ang": atan2(tan.z * sgn, tan.x * sgn)})
+			_corners(id, c, plane, lift, walks[key], verges[key], hw_arms)
 		var segs := 20
 		var ring: Array = []
 		for k in segs + 1:
@@ -295,6 +318,103 @@ func _junctions(town: String, roads: Dictionary) -> void:
 			var a: Vector3 = ring[k]
 			var b: Vector3 = ring[k + 1]
 			mb.tri(cc, a, b, Color.WHITE, Vector3.UP, Vector2(cc.x, cc.z) / 6.0, Vector2(a.x, a.z) / 6.0, Vector2(b.x, b.z) / 6.0)
+
+
+## Rounded corners between neighbouring streets at a junction: the drain, kerb and pavement (or a
+## dirt edge on small streets) sweep round from one street's footpath to the next, as built.
+func _corners(id: String, c: Vector3, plane: Vector3, lift: float, wm, vm, extra_arms: Array = []) -> void:
+	var arms: Array = extra_arms.duplicate()
+	var at_highway := not extra_arms.is_empty()
+	for si in graph.nodes[id]["edges"]:
+		var st: Dictionary = graph.streets[si]
+		var p1 := _along(st, id, 3.0)
+		var dir := Vector3(p1.x - c.x, 0, p1.z - c.z).normalized()
+		if dir == Vector3.ZERO:
+			continue
+		arms.append({"dir": dir, "half": float(st["width"]) * 0.5, "main": st["class"] in MARKED,
+			"ang": atan2(dir.z, dir.x), "clear": 4.0 if at_highway else float(st["width"]) * 0.5 * 1.54 + 3.0})
+	if arms.size() < 2:
+		return
+	arms.sort_custom(func(a, b): return a["ang"] < b["ang"])
+	var height := func(q: Vector3) -> float:
+		return plane.x + plane.y * (q.x - c.x) + plane.z * (q.z - c.z) + lift + 0.004
+	for k in arms.size():
+		var A: Dictionary = arms[k]
+		var B: Dictionary = arms[(k + 1) % arms.size()]
+		var turn := wrapf(float(B["ang"]) - float(A["ang"]), 0.0, TAU)
+		if A.get("hw", false) and B.get("hw", false):
+			continue                                   # that side is the highway itself
+		if turn > PI * 1.1 or turn < 0.15:
+			continue                                   # an open side or two streets on top of each other
+		var mid := Vector3(cos(float(A["ang"]) + turn * 0.5), 0, sin(float(A["ang"]) + turn * 0.5))
+		var pa := Vector3(-A["dir"].z, 0, A["dir"].x)
+		if pa.dot(mid) < 0.0:
+			pa = -pa
+		var pb := Vector3(-B["dir"].z, 0, B["dir"].x)
+		if pb.dot(mid) < 0.0:
+			pb = -pb
+		var ca: float = A["clear"]
+		var cb: float = B["clear"]
+		var main: bool = A["main"] or B["main"]
+		var bands: Array = [[0.0, 0.45, -0.12, 2, Color(0.32, 0.31, 0.29)], [0.45, 0.7, 0.16, 0, Color(0.78, 0.77, 0.73)],
+			[0.7, 1.9, 0.15, 3, Color(0.66, 0.63, 0.58)]] if main else [[-0.05, 1.0, -0.03, 0, Color(0.52, 0.47, 0.40)]]
+		for band in bands:
+			var inner := _corner_curve(c, A, B, pa, pb, ca, cb, band[0])
+			var outer := _corner_curve(c, A, B, pa, pb, ca, cb, band[1])
+			var target = wm if main else vm
+			for i in inner.size() - 1:
+				var a0: Vector3 = inner[i]
+				var a1: Vector3 = outer[i]
+				var b0: Vector3 = inner[i + 1]
+				var b1: Vector3 = outer[i + 1]
+				var h0: float = height.call(a0)
+				var h1: float = height.call(b0)
+				a0.y = h0 + band[2]
+				a1.y = h0 + band[2]
+				b0.y = h1 + band[2]
+				b1.y = h1 + band[2]
+				target.quad(a0, a1, b1, b0, band[4], Vector3.UP)
+				if band[3] == 2:                       # drain wall down from the road
+					target.quad(Vector3(a0.x, h0, a0.z), a0, b0, Vector3(b0.x, h1, b0.z), band[4] * 0.7, a0 - a1)
+				elif band[3] == 3:                     # pavement's outer edge into the ground
+					target.quad(a1, a1 - Vector3(0, 0.4, 0), b1 - Vector3(0, 0.4, 0), b1, band[4] * 0.85, a1 - a0)
+			if main and band[3] == 2:
+				# kerb face rising from the drain to the kerb top
+				for i in outer.size() - 1:
+					var o0: Vector3 = outer[i]
+					var o1: Vector3 = outer[i + 1]
+					var y0: float = height.call(o0)
+					var y1: float = height.call(o1)
+					wm.quad(Vector3(o0.x, y0 - 0.12, o0.z), Vector3(o0.x, y0 + 0.16, o0.z), Vector3(o1.x, y1 + 0.16, o1.z),
+						Vector3(o1.x, y1 - 0.12, o1.z), Color(0.7, 0.69, 0.66), (o0 - c).normalized() * -1.0)
+
+
+## The corner line `extra` metres outside both streets' edges: along street A, round a curve
+## whose control point is where the two edge lines cross, and out along street B.
+func _corner_curve(c: Vector3, A: Dictionary, B: Dictionary, pa: Vector3, pb: Vector3, ca: float, cb: float, extra: float) -> PackedVector3Array:
+	var oa: float = A["half"] + extra
+	var ob: float = B["half"] + extra
+	var da: Vector3 = A["dir"]
+	var db: Vector3 = B["dir"]
+	var start: Vector3 = c + da * ca + pa * oa
+	var finish: Vector3 = c + db * cb + pb * ob
+	# the two edge lines: c + pa*oa + t*dirA and c + pb*ob + u*dirB
+	var p := Vector2(c.x + pa.x * oa, c.z + pa.z * oa)
+	var q := Vector2(c.x + pb.x * ob, c.z + pb.z * ob)
+	var r := Vector2(da.x, da.z)
+	var sv := Vector2(db.x, db.z)
+	var den := r.cross(sv)
+	var ctrl: Vector3 = (start + finish) * 0.5
+	if absf(den) > 0.05:
+		var t := (q - p).cross(sv) / den
+		t = clampf(t, 0.0, ca)
+		ctrl = Vector3(p.x + r.x * t, c.y, p.y + r.y * t)
+	var out := PackedVector3Array()
+	var n := 10
+	for i in n + 1:
+		var u := float(i) / n
+		out.append(start.lerp(ctrl, u).lerp(ctrl.lerp(finish, u), u))
+	return out
 
 
 ## Point `d` metres into a street from its node end.

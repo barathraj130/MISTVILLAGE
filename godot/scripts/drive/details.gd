@@ -28,6 +28,8 @@ var mat_vc: StandardMaterial3D
 var mat_glow: StandardMaterial3D
 var _segs := {}                             # segment index → MB (matte details)
 var _glow := {}                             # segment index → MB (road studs)
+var potholes: Array = []                    # [Vector3 centre, radius]: the car feels these
+var _pothole_tex: Array = []                # [albedo, normal] variants
 
 
 func build(r: Route, t: Terrain, bumps: Array) -> void:
@@ -135,18 +137,9 @@ func _road_surface(bumps: Array) -> void:
 			mb.quad(c - l * w * 0.5 - t * patch_len * 0.5, c + l * w * 0.5 - t * patch_len * 0.5, c + l * w * 0.5 + t * patch_len * 0.5,
 				c - l * w * 0.5 + t * patch_len * 0.5, col, Vector3.UP)
 		elif kind < 0.7 and not _in_town(d):
-			# pothole: dark irregular ring with a muddy rim
-			var r := rng.randf_range(0.25, 0.6)
-			var n := 9
-			for k in n:
-				var a0 := TAU * k / n
-				var a1 := TAU * (k + 1) / n
-				var r0 := r * rng.randf_range(0.75, 1.15)
-				var r1 := r * rng.randf_range(0.75, 1.15)
-				var p0 := c + (l * cos(a0) + t * sin(a0)) * r0
-				var p1 := c + (l * cos(a1) + t * sin(a1)) * r1
-				mb.tri(c - Vector3(0, 0.004, 0), p1, p0, Color(0.015, 0.012, 0.01), Vector3.UP)
-				mb.tri(p0, p1, c + (l * cos(a1) + t * sin(a1)) * r1 * 1.25, Color(0.22, 0.14, 0.08), Vector3.UP)
+			# pothole: a decal projected onto the road, so it follows the camber and the slope
+			var r := rng.randf_range(0.45, 1.0)
+			_pothole(f.origin + l * lane, f.basis, r)
 		else:
 			# a sealed crack across the lane
 			var w2 := rng.randf_range(1.5, 3.5)
@@ -156,6 +149,98 @@ func _road_surface(bumps: Array) -> void:
 			mb.quad(a - t * 0.05, (a + b) * 0.5 + wob - t * 0.05, (a + b) * 0.5 + wob + t * 0.05, a + t * 0.05, BLACK, Vector3.UP)
 			mb.quad((a + b) * 0.5 + wob - t * 0.05, b - t * 0.05, b + t * 0.05, (a + b) * 0.5 + wob + t * 0.05, BLACK, Vector3.UP)
 		d += rng.randf_range(18.0, 55.0)
+
+
+func _pothole(at: Vector3, basis: Basis, r: float) -> void:
+	if _pothole_tex.is_empty():
+		for v in 4:
+			_pothole_tex.append(_make_pothole_texture(v))
+	var tex: Array = _pothole_tex[rng.randi() % _pothole_tex.size()]
+	var dec := Decal.new()
+	dec.texture_albedo = tex[0]
+	dec.texture_normal = tex[1]
+	dec.size = Vector3(r * 2.2, 0.8, r * 2.2 * rng.randf_range(0.8, 1.35))
+	dec.albedo_mix = 1.0
+	dec.texture_orm = tex[2]
+	dec.normal_fade = 0.35
+	dec.upper_fade = 0.2
+	dec.lower_fade = 0.2
+	dec.distance_fade_enabled = true
+	dec.distance_fade_begin = 70.0
+	dec.distance_fade_length = 25.0
+	dec.cull_mask = 1
+	dec.transform = Transform3D(basis.rotated(Vector3.UP, rng.randf() * TAU), at)
+	add_child(dec)
+	potholes.append([at, r])
+
+
+## A pothole texture: a ragged hole broken out of the tarmac with cracks running off it, a
+## crumbled lighter rim, and a dark, damp bottom of gravel and mud; normal and roughness maps give
+## it depth and a wet sheen in the dip.
+func _make_pothole_texture(variant: int) -> Array:
+	var N := 256
+	var noise := FastNoiseLite.new()
+	noise.seed = 101 + variant * 17
+	noise.frequency = 0.05
+	noise.fractal_octaves = 2
+	var chips := FastNoiseLite.new()
+	chips.seed = 303 + variant
+	chips.frequency = 0.08
+	chips.fractal_octaves = 1
+	var grit := FastNoiseLite.new()
+	grit.seed = 7 + variant
+	grit.frequency = 0.35
+	var cracks := FastNoiseLite.new()
+	cracks.seed = 55 + variant
+	cracks.noise_type = FastNoiseLite.TYPE_CELLULAR
+	cracks.cellular_return_type = FastNoiseLite.RETURN_DISTANCE2_SUB
+	cracks.frequency = 0.03
+	var height := PackedFloat32Array()
+	height.resize(N * N)
+	var alb := Image.create(N, N, false, Image.FORMAT_RGBA8)
+	var orm := Image.create(N, N, false, Image.FORMAT_RGBA8)
+	for y in N:
+		for x in N:
+			var u := (x - N * 0.5) / (N * 0.5)
+			var v := (y - N * 0.5) / (N * 0.5)
+			var ang := atan2(v, u)
+			var rad := sqrt(u * u + v * v)
+			# ragged outline: low-frequency lobes plus sharp chips
+			var edge := 0.55 + 0.16 * noise.get_noise_2d(cos(ang) * 14.0, sin(ang) * 14.0) \
+				+ 0.035 * chips.get_noise_2d(x, y)
+			var inside := smoothstep(edge + 0.012, edge - 0.012, rad)          # crisp broken edge
+			var g := grit.get_noise_2d(x, y)
+			# cracks radiating into the surrounding tarmac
+			var cr := 1.0 - smoothstep(0.0, 0.035, absf(cracks.get_noise_2d(x, y)))
+			cr *= smoothstep(edge + 0.35, edge + 0.04, rad) * (1.0 - inside) * 0.8
+			var rim := smoothstep(edge + 0.12, edge + 0.01, rad) * (1.0 - inside)
+			var depth := inside * (0.6 + 0.4 * smoothstep(edge, edge * 0.4, rad)) + g * 0.06 * inside
+			height[y * N + x] = -depth - cr * 0.15 + rim * 0.04
+			var mud := Color(0.05, 0.042, 0.035).lerp(Color(0.13, 0.11, 0.085), clampf(g * 1.5 + 0.5, 0.0, 1.0))
+			var stones := Color(0.36, 0.34, 0.31)
+			var bottom := mud.lerp(stones, smoothstep(0.62, 0.75, g + 0.5))
+			# the broken wall of the hole: a dark band just inside the edge
+			bottom = bottom.lerp(Color(0.02, 0.02, 0.02), smoothstep(edge - 0.1, edge - 0.01, rad) * 0.8)
+			var col := Color(0.42, 0.41, 0.39).lerp(Color(0.3, 0.29, 0.27), clampf(g + 0.5, 0.0, 1.0))  # crumbled rim
+			col = col.lerp(Color(0.04, 0.04, 0.04), cr)
+			col = col.lerp(bottom, inside)
+			var a := clampf(inside + rim * 0.9 + cr * 0.95, 0.0, 1.0)
+			alb.set_pixel(x, y, Color(col.r, col.g, col.b, a))
+			# occlusion / roughness / metal: damp and darker in the dip
+			var wet := inside * smoothstep(0.1, 0.5, depth)
+			orm.set_pixel(x, y, Color(1.0 - depth * 0.5, lerpf(0.9, 0.25, wet), 0.0, 1.0))
+	var nrm := Image.create(N, N, false, Image.FORMAT_RGBA8)
+	for y in N:
+		for x in N:
+			var hl := height[y * N + maxi(x - 1, 0)]
+			var hr := height[y * N + mini(x + 1, N - 1)]
+			var hu := height[maxi(y - 1, 0) * N + x]
+			var hd := height[mini(y + 1, N - 1) * N + x]
+			var n := Vector3((hl - hr) * 9.0, (hu - hd) * 9.0, 1.0).normalized()
+			nrm.set_pixel(x, y, Color(n.x * 0.5 + 0.5, n.y * 0.5 + 0.5, n.z * 0.5 + 0.5, 1.0))
+	for img in [alb, nrm, orm]:
+		img.generate_mipmaps()
+	return [ImageTexture.create_from_image(alb), ImageTexture.create_from_image(nrm), ImageTexture.create_from_image(orm)]
 
 
 ## Reflective road studs along the ghat and misty stretches: they glow when your headlights hit them.

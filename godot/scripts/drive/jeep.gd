@@ -12,10 +12,19 @@ extends VehicleBody3D
 const Prof := preload("res://scripts/drive/prof.gd")
 const MB := preload("res://scripts/drive/mesh_builder.gd")
 const RiderPose := preload("res://scripts/drive/rider_pose.gd")
+const Fleet := preload("res://scripts/drive/fleet.gd")
+const CockpitKit := preload("res://scripts/drive/cockpit.gd")
+const CarScreens := preload("res://scripts/drive/car_screens.gd")
+## where the wipers park (centre of their pivots) and how long they are, per vehicle
+const WIPERS := {"luxury_suv": [Vector3(0, 1.12, 1.06), 0.62], "coupe": [Vector3(0, 0.84, 0.74), 0.5],
+	"xuv": [Vector3(0, 1.2, 1.22), 0.6], "hatchback": [Vector3(0, 0.9, 0.9), 0.52], "sedan": [Vector3(0, 0.9, 0.96), 0.52],
+	"taxi": [Vector3(0, 0.9, 0.96), 0.52], "bus": [Vector3(0, 1.62, 5.18), 1.0], "lorry": [Vector3(0, 1.98, 4.42), 0.9]}
 const FWD := 1.0                   # VehicleBody3D drives along +Z with positive engine force
 const BRAKE := 55.0
 const MAX_STEER := 0.6             # at a crawl; shrinks with speed
-const HIGH_SPEED_STEER := 0.065    # at ~110 km/h
+const HIGH_SPEED_STEER := 0.045    # at ~110 km/h
+## Steering sensitivity, 0.4 (very calm) … 1.5 (quick). [ and ] change it in the game; it's saved.
+static var steer_sens := 0.7
 const TOP_SPEED := 44.0            # m/s ≈ 160 km/h, governed
 const DRIVER_SEAT := Vector3(-0.42, 1.5, -0.08)    # right-hand seat (+X is the car's left)
 ## The player's sports coupe, built in Blender by tools/coupe.py → tools/export_coupe.py.
@@ -90,7 +99,7 @@ var _horn_time := 0.0
 const SPECS := {
 	"luxury_suv": {"name": "Luxury SUV", "glb": "res://assets/vehicles/luxury_suv.glb", "mass": 2150.0,
 		"com": Vector3(0, 0.5, 0.05), "radius": 0.40, "rest": 0.2, "travel": 0.22, "stiff": 34.0, "torque": 1.15,
-		"top": 50.0, "seat": Vector3(-0.42, 1.43, -0.18), "interior": true, "glass": "Greenhouse",
+		"top": 50.0, "seat": Vector3(-0.42, 1.47, -0.3), "interior": true, "glass": "Greenhouse",
 		"head": ["Headlight", "FogDRL"], "tail": ["TailCorner", "TailStrip"], "lamp": Vector3(0.7, 0.99, 2.55),
 		"boxes": [[Vector3(2.0, 0.9, 5.0), Vector3(0, 0.75, 0)], [Vector3(1.7, 0.7, 3.4), Vector3(0, 1.5, -0.65)]],
 		"ind": [Vector3(0.9, 0.99, 2.47), Vector3(0.82, 1.2, -2.5), Vector3(0.82, 0.62, -2.5)]},
@@ -102,17 +111,49 @@ const SPECS := {
 		"ind": [Vector3(0.74, 0.42, 2.12), Vector3(0.62, 0.62, -2.25), Vector3(0.45, 0.5, -2.27)]},
 	"xuv": {"name": "SUV", "procedural": true, "mass": 2000.0, "com": Vector3(0, 0.42, 0.05), "radius": 0.36,
 		"torque": 1.0, "top": 44.0, "seat": DRIVER_SEAT, "lamp": Vector3(0.72, 0.98, 2.3)},
-	"sedan": {"name": "Sedan", "kenney": "sedan", "len": 4.4, "w": 1.75, "h": 1.5, "mass": 1200.0, "radius": 0.32, "torque": 0.6, "top": 45.0},
+	"hatchback": {"name": "Hatchback", "glb": "res://assets/vehicles/fleet_hatchback.glb", "mass": 1000.0,
+		"com": Vector3(0, 0.45, 0), "radius": 0.29, "rest": 0.16, "travel": 0.16, "stiff": 40.0, "torque": 0.55,
+		"top": 42.0, "seat": Vector3(-0.36, 1.27, -0.05), "cabin": Vector3(0, -0.21, 0.05), "cab_scale": 0.78, "glass": "Glass",
+		"head": ["Headlight"], "tail": ["TailBar"], "lamp": Vector3(0.6, 0.64, 1.95),
+		"boxes": [[Vector3(1.7, 0.72, 3.8), Vector3(0, 0.6, 0)], [Vector3(1.4, 0.55, 2.4), Vector3(0, 1.17, -0.3)]],
+		"ind": [Vector3(0.7, 0.5, 1.9), Vector3(0.62, 0.78, -1.92), Vector3(0.4, 0.45, -1.93)]},
+	"sedan": {"name": "Sedan", "glb": "res://assets/vehicles/fleet_sedan.glb", "mass": 1150.0,
+		"com": Vector3(0, 0.45, 0), "radius": 0.30, "rest": 0.16, "travel": 0.16, "stiff": 40.0, "torque": 0.65,
+		"top": 46.0, "seat": Vector3(-0.36, 1.26, 0.0), "cabin": Vector3(0, -0.22, 0.1), "cab_scale": 0.78, "glass": "Glass",
+		"head": ["Headlight"], "tail": ["TailBar"], "lamp": Vector3(0.6, 0.64, 2.24),
+		"boxes": [[Vector3(1.74, 0.72, 4.35), Vector3(0, 0.6, 0)], [Vector3(1.4, 0.55, 2.4), Vector3(0, 1.15, -0.2)]],
+		"ind": [Vector3(0.7, 0.5, 2.18), Vector3(0.62, 0.78, -2.2), Vector3(0.4, 0.45, -2.21)]},
+	"taxi": {"name": "Taxi", "glb": "res://assets/vehicles/fleet_sedan.glb", "mass": 1150.0,
+		"com": Vector3(0, 0.45, 0), "radius": 0.30, "rest": 0.16, "travel": 0.16, "stiff": 40.0, "torque": 0.6,
+		"top": 42.0, "seat": Vector3(-0.36, 1.26, 0.0), "cabin": Vector3(0, -0.22, 0.1), "cab_scale": 0.78, "glass": "Glass",
+		"head": ["Headlight"], "tail": ["TailBar"], "lamp": Vector3(0.6, 0.64, 2.24),
+		"boxes": [[Vector3(1.74, 0.72, 4.35), Vector3(0, 0.6, 0)], [Vector3(1.4, 0.55, 2.4), Vector3(0, 1.15, -0.2)]],
+		"ind": [Vector3(0.7, 0.5, 2.18), Vector3(0.62, 0.78, -2.2), Vector3(0.4, 0.45, -2.21)]},
+	"auto": {"name": "Auto-rickshaw", "glb": "res://assets/vehicles/fleet_auto.glb", "mass": 450.0,
+		"com": Vector3(0, 0.45, -0.2), "radius": 0.22, "rest": 0.14, "travel": 0.12, "stiff": 30.0, "torque": 0.2,
+		"top": 15.0, "seat": Vector3(0, 1.45, 0.3), "nocab": true, "glass": "Glass",
+		"head": ["Headlight"], "tail": ["TailBar"], "lamp": Vector3(0.0, 0.82, 1.4),
+		"boxes": [[Vector3(1.3, 1.3, 2.6), Vector3(0, 0.95, 0)]],
+		"ind": [Vector3(0.5, 0.9, 1.25), Vector3(0.62, 0.62, -1.33), Vector3(0.3, 0.5, -1.34)]},
+	"bus": {"name": "Bus", "glb": "res://assets/vehicles/fleet_bus.glb", "mass": 11000.0,
+		"com": Vector3(0, 1.1, 0), "radius": 0.5, "rest": 0.25, "travel": 0.2, "stiff": 30.0, "torque": 4.5,
+		"top": 22.0, "seat": Vector3(-0.75, 2.25, 2.92), "cabin": Vector3(-0.33, 0.75, 3.0), "glass": "Glass",
+		"head": ["Headlight"], "tail": ["TailBar"], "lamp": Vector3(0.95, 0.95, 5.35),
+		"boxes": [[Vector3(2.5, 2.7, 10.5), Vector3(0, 1.75, 0)]],
+		"ind": [Vector3(1.15, 0.95, 5.3), Vector3(1.1, 1.5, -5.3), Vector3(0.6, 0.7, -5.31)]},
+	"lorry": {"name": "Lorry", "glb": "res://assets/vehicles/fleet_lorry.glb", "mass": 12000.0,
+		"com": Vector3(0, 1.0, 0.5), "radius": 0.52, "rest": 0.25, "travel": 0.2, "stiff": 30.0, "torque": 5.0,
+		"top": 20.0, "seat": Vector3(-0.6, 2.35, 3.52), "cabin": Vector3(-0.2, 0.9, 3.0), "glass": "Glass",
+		"head": ["Headlight"], "tail": ["TailBar"], "lamp": Vector3(0.85, 1.25, 4.65),
+		"boxes": [[Vector3(2.5, 1.0, 9.2), Vector3(0, 1.0, 0)], [Vector3(2.5, 2.2, 2.0), Vector3(0, 2.0, 3.6)],
+			[Vector3(2.5, 1.8, 6.9), Vector3(0, 1.9, -1.0)]],
+		"ind": [Vector3(1.15, 1.25, 4.6), Vector3(1.1, 0.95, -4.52), Vector3(0.6, 0.8, -4.52)]},
 	"suv": {"name": "Compact SUV", "kenney": "suv", "len": 4.5, "w": 1.85, "h": 1.75, "mass": 1650.0, "radius": 0.36, "torque": 0.85, "top": 44.0},
-	"taxi": {"name": "Taxi", "kenney": "taxi", "len": 4.3, "w": 1.75, "h": 1.5, "mass": 1150.0, "radius": 0.32, "torque": 0.55, "top": 40.0},
 	"van": {"name": "Van", "kenney": "van", "len": 4.6, "w": 1.85, "h": 2.0, "mass": 1800.0, "radius": 0.34, "torque": 0.7, "top": 36.0},
 	"delivery": {"name": "Delivery truck", "kenney": "delivery", "len": 5.2, "w": 1.95, "h": 2.3, "mass": 2400.0, "radius": 0.36, "torque": 0.8, "top": 32.0},
 	"tractor": {"name": "Tractor", "kenney": "tractor", "len": 3.9, "w": 1.9, "h": 2.4, "mass": 2500.0, "radius": 0.5, "torque": 1.0, "top": 9.0},
-	"auto": {"name": "Auto-rickshaw", "built": "auto", "len": 2.65, "w": 1.3, "h": 1.75, "mass": 450.0, "radius": 0.22, "torque": 0.2, "top": 15.0},
 	"bike": {"name": "Motorbike", "built": "bike", "len": 2.0, "w": 0.8, "h": 1.4, "mass": 230.0, "radius": 0.31, "torque": 0.16, "top": 26.0, "rider": true},
 	"scooter": {"name": "Scooter", "built": "scooter", "len": 1.8, "w": 0.75, "h": 1.4, "mass": 190.0, "radius": 0.25, "torque": 0.11, "top": 21.0, "rider": true},
-	"bus": {"name": "Bus", "traffic": "bus", "len": 10.5, "w": 2.5, "h": 3.1, "mass": 11000.0, "radius": 0.48, "torque": 4.5, "top": 22.0},
-	"lorry": {"name": "Lorry", "traffic": "lorry", "len": 10.2, "w": 2.55, "h": 4.1, "mass": 14000.0, "radius": 0.5, "torque": 5.0, "top": 20.0},
 }
 const START_VEHICLE := "luxury_suv"
 
@@ -123,6 +164,15 @@ var wheel_r := WHEEL_R
 var _steer_base := Basis(Vector3.RIGHT, deg_to_rad(-65.0))
 var _cab_parts: Array = []         # procedural dash/wheel/labels/mirror
 var _rider: Node3D                 # you, astride a two-wheeler
+var _paint := Color(0, 0, 0, 0)    # body colour of the car you took (alpha 0: the model's own)
+var kit: CockpitKit                # analog cluster, live door mirrors, wipers
+var night := 0.0                   # set by the game: dial backlighting
+var fuel_frac := 1.0
+var wiping := false
+var screens: Array = []            # SubViewports of the dash screens (drawn only in the cockpit view)
+var map_ui                         # set by the game: the nav screen draws from it
+var clock_text := ""
+var _nav: Control
 
 
 func _init() -> void:
@@ -148,7 +198,8 @@ static func _available(kind: String) -> bool:
 
 
 ## Rebuild this car as another vehicle (GTA-style: you just got into it).
-func configure(kind: String) -> void:
+func configure(kind: String, paint := Color(0, 0, 0, 0)) -> void:
+	_paint = paint
 	for c in get_children():
 		if c == _engine or c == _horn:
 			continue
@@ -159,6 +210,9 @@ func configure(kind: String) -> void:
 	_headlights.clear()
 	_coupe_wheels.clear()
 	_cab_parts.clear()
+	screens.clear()
+	_cluster_ui = null
+	_nav = null
 	_glass = null
 	_rider = null
 	_steer_base = Basis(Vector3.RIGHT, deg_to_rad(-65.0))
@@ -181,26 +235,128 @@ func configure(kind: String) -> void:
 	else:
 		_build_generic(sp)
 	_track_cab(func(): _build_cockpit())
+	if not sp.get("interior", false) and _steering_wheel:
+		for ch in _steering_wheel.get_children():
+			(ch as Node3D).visible = false
+		var mw := MeshInstance3D.new()
+		mw.mesh = modern_wheel(0.18)
+		mw.material_override = MB.vertex_color_material(0.55)
+		mw.rotation.y = PI                      # third spoke down
+		_steering_wheel.add_child(mw)
 	if sp.get("rider", false):
 		for c in _cab_parts:
 			c.visible = false
 		# a person on it: seated, feet on the pegs, hands on the bars
 		_rider = RiderPose.make(randi() % 7, 0.6 if kind == "bike" else 0.5)
 		_rider.name = "Rider"
-		_rider.position = Vector3(0, 0.28, -0.38 if kind == "bike" else -0.3)
+		_rider.position = RiderPose.seat_offset(kind)
 		add_child(_rider)
 		seat = Vector3(0, 1.62, -0.2)
 	elif sp.get("interior", false):
 		_fit_model_interior(sp)
+	elif ResourceLoader.exists(CABINS % _cabin_name(kind)):
+		_fit_cabin(kind)
+	elif sp.get("nocab", false):
+		for c in _cab_parts:
+			c.visible = false
 	else:
 		var shift: Vector3 = sp.get("cabin", _generic_cabin(sp))
+		var cs: float = sp.get("cab_scale", 1.0)          # narrower cars: a narrower dash
 		for c in _cab_parts:
-			(c as Node3D).position += shift
+			var n3 := c as Node3D
+			n3.position = Vector3(n3.position.x * cs, n3.position.y, n3.position.z) + shift
+			n3.scale.x *= cs
 		if not sp.has("seat"):
 			seat = DRIVER_SEAT + shift
+	if not sp.get("rider", false) and not sp.get("nocab", false):
+		_build_kit(sp)
+	else:
+		kit = null
+	_camera_rig(sp)
 	_build_lights()
 	set_lights(lights_on)
 	_apply_grip()
+
+
+const CABINS := "res://assets/vehicles/interior_%s.glb"
+
+func _cabin_name(kind: String) -> String:
+	return kind
+
+
+## Each vehicle's own cabin from tools/interiors.py: the stand-in dash goes, the driver's eyes come
+## from the cabin's "Eye" marker and its own steering wheel (or handlebar) turns with you.
+func _fit_cabin(kind: String) -> void:
+	for c in _cab_parts:
+		c.visible = false
+	var cab := (load(CABINS % _cabin_name(kind)) as PackedScene).instantiate() as Node3D
+	cab.name = "Cabin"
+	cab.rotation.y = -PI * 0.5                  # Blender +X nose → +Z
+	add_child(cab)
+	for mi in cab.find_children("*", "MeshInstance3D", true, false):
+		(mi as MeshInstance3D).cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	var eye := cab.find_child("Eye", true, false) as Node3D
+	if eye:
+		seat = _rel(eye, self).origin
+	var piv := cab.find_child("SteeringPivot", true, false) as Node3D
+	if piv:
+		_steering_wheel = piv
+		_steer_base = piv.basis
+	if _driver:
+		_driver.visible = false
+	_screen_speed.visible = false
+	_screen_info.visible = false
+
+
+## Camera framing for this vehicle: a bike close behind, a bus or lorry far back and high.
+var chase_back := 8.6
+var chase_up := 2.9
+var bonnet := Vector3(0, 1.32, 1.6)
+
+func _camera_rig(sp: Dictionary) -> void:
+	var L := 4.5
+	var H := 1.6
+	if sp.has("len"):
+		L = float(sp["len"])
+		H = float(sp.get("h", 1.6))
+	elif sp.has("boxes"):
+		for b in sp["boxes"]:
+			L = maxf(L if L != 4.5 else 0.0, float(b[0].z))
+			H = maxf(H if H != 1.6 else 0.0, float(b[1].y) + float(b[0].y) * 0.5)
+	chase_back = clampf(2.6 + L * 1.15, 4.2, 17.0)
+	chase_up = clampf(0.9 + H * 0.9, 1.9, 6.0)
+	bonnet = Vector3(0, H * 0.72 + 0.1, L * 0.5 - 0.5)
+	if sp.get("rider", false):
+		bonnet = Vector3(0, 1.45, 0.3)
+
+
+func _build_kit(sp: Dictionary) -> void:
+	kit = CockpitKit.new()
+	kit.name = "CockpitKit"
+	add_child(kit)
+	var half_w := 0.92
+	if sp.has("w"):
+		half_w = float(sp["w"]) * 0.5
+	elif sp.has("boxes"):
+		half_w = float(sp["boxes"][0][0].x) * 0.5
+	var wp: Array = WIPERS.get(vehicle, [seat + Vector3(0, -0.33, 1.0), 0.5])
+	var cluster_at = null
+	if has_node("Cabin"):
+		var ce := get_node("Cabin").find_child("Cluster", true, false) as Node3D
+		if ce:
+			cluster_at = _rel(ce, self).origin + Vector3(0, 0, -0.02)
+			_screen_speed.visible = false
+			_screen_info.visible = false
+	if cluster_at == null and has_node("Model"):
+		var cl := get_node("Model").find_child("INT_Cluster", true, false) as Node3D
+		if cl:
+			cluster_at = _rel(cl, self).origin + Vector3(0.0, 0.04, -0.11)
+	if cluster_at == null and _steering_wheel and _steering_wheel.visible:
+		cluster_at = _steering_wheel.position + Vector3(0, 0.16, 0.2)
+		# the analog cluster replaces the stand-in digital screens in these cars
+		_screen_speed.visible = false
+		_screen_info.visible = false
+	kit.build(self, seat, half_w, wp[0], wp[1], cluster_at, not sp.get("interior", false))
 
 
 ## Runs a builder and remembers the 3D nodes it added (the procedural cabin parts).
@@ -247,17 +403,40 @@ func _build_glb(sp: Dictionary) -> void:
 			m.material_override = _lamp_mat
 		elif _starts(nm, sp["tail"]):
 			m.material_override = _tail_mat
-	for wn in ["Wheel_FL", "Wheel_FR", "Wheel_RL", "Wheel_RR"]:
-		var w := model.find_child(wn, true, false) as Node3D
-		if w == null:
-			continue
+	# glTF from Blender is double-sided; from the driver's seat that walls you in. One-sided surfaces
+	# let you see out (shells face outward), like any car interior made of panels.
+	for mi in model.find_children("*", "MeshInstance3D", true, false):
+		var gi := mi as MeshInstance3D
+		for si in gi.mesh.get_surface_count():
+			var bm := gi.get_surface_override_material(si) as BaseMaterial3D
+			if bm == null:
+				bm = gi.mesh.surface_get_material(si) as BaseMaterial3D
+			if bm and bm.cull_mode != BaseMaterial3D.CULL_BACK and not String(sp["glb"]).contains("luxury"):
+				var one := bm.duplicate() as BaseMaterial3D
+				one.cull_mode = BaseMaterial3D.CULL_BACK
+				gi.set_surface_override_material(si, one)
+	if _paint.a > 0.0:
+		for mi in model.find_children("*", "MeshInstance3D", true, false):
+			var inst := mi as MeshInstance3D
+			for si in inst.mesh.get_surface_count():
+				var mat := inst.mesh.surface_get_material(si) as BaseMaterial3D
+				if mat and mat.resource_name == "Paint":
+					var v := mat.duplicate() as BaseMaterial3D
+					v.albedo_color = _paint
+					v.cull_mode = BaseMaterial3D.CULL_BACK
+					inst.set_surface_override_material(si, v)
+	var wheel_nodes: Array = []
+	for n in model.find_children("Wheel_*", "Node3D", true, false):
+		wheel_nodes.append(n)
+	for w in wheel_nodes:
+		var wn := String(w.name)
 		var xf: Transform3D = model.transform * w.transform
 		w.owner = null
 		for d in w.find_children("*", "", true, false):
 			d.owner = null
 		w.get_parent().remove_child(w)
 		w.transform = Transform3D(xf.basis, Vector3.ZERO)
-		_coupe_wheels.append([w, xf, wn.contains("F")])
+		_coupe_wheels.append([w, xf, wn.substr(6, 1) == "F"])
 	_corner_lamps(sp["ind"][0], sp["ind"][1], sp["ind"][2])
 	_add_driver(sp["seat"])
 
@@ -364,23 +543,97 @@ func _fit_model_interior(_sp: Dictionary) -> void:
 			pivot.add_child(part)
 		_steering_wheel = pivot
 		_steer_base = pxf.basis
+		# a modern three-spoke wheel with button pads in place of the plain one
+		for part in pivot.get_children():
+			(part as Node3D).visible = false
+		var mw := MeshInstance3D.new()
+		mw.mesh = modern_wheel(0.19)
+		mw.rotation.y = -PI * 0.5                  # spokes at 9 and 3 o'clock, the third one down
+		mw.material_override = MB.vertex_color_material(0.55)
+		pivot.add_child(mw)
+	_dark_cabin(model)
+	_screen_speed.visible = false
+	_screen_info.visible = false
+	for old in ["INT_Cluster", "INT_CenterScreen", "INT_ScreenFrame"]:
+		var o := model.find_child(old, true, false) as Node3D
+		if o:
+			o.visible = false
 	var cluster := model.find_child("INT_Cluster", true, false) as Node3D
 	if cluster:
-		_screen_speed.position = _rel(cluster, self).origin + Vector3(0.05, 0.0, -0.02)
-		_screen_speed.rotation = Vector3(deg_to_rad(-10.0), PI, 0.0)
-		_screen_speed.visible = true
+		# the digital driver display, a little wider than the panel it sits on
+		var cp := _rel(cluster, self).origin + Vector3(0.0, 0.03, -0.035)
+		var face := (seat - cp)
+		var xf := Transform3D(Basis.looking_at(-face.normalized(), Vector3.UP), cp)
+		var cl := CarScreens.Cluster.new()
+		cl.car = self
+		screens.append(CarScreens.screen(self, cl, Vector2i(640, 240), xf, 0.4, 0.15))
+		_cluster_ui = cl
 	var centre := model.find_child("INT_CenterScreen", true, false) as Node3D
 	if centre:
-		# the big centre screen: speed on top, gear and revs below (the cluster hides behind the wheel hub)
-		_screen_speed.position = _rel(centre, self).origin + Vector3(0, 0.05, -0.025)
-		_screen_speed.rotation = Vector3(deg_to_rad(-14.0), PI, 0.0)
-		_screen_speed.font_size = 96
-		_screen_info.position = _rel(centre, self).origin + Vector3(0, -0.05, -0.03)
-		_screen_info.rotation = Vector3(deg_to_rad(-14.0), PI, 0.0)
-		_screen_info.visible = true
+		var sp2 := _rel(centre, self)
+		var cpos := sp2.origin + Vector3(0, 0, -0.012)
+		var face2 := seat + Vector3(0.3, 0, 0) - cpos
+		var xf2 := Transform3D(Basis.looking_at(-face2.normalized(), Vector3.UP), cpos)
+		_nav = CarScreens.Nav.new()
+		_nav.map_ui = map_ui
+		screens.append(CarScreens.screen(self, _nav, Vector2i(560, 300), xf2, 0.42, 0.22))
 	var mirror := _cab_parts[_cab_parts.size() - 1] as Node3D
 	mirror.position = Vector3(0.0, 1.66, 0.62)
 	mirror.visible = true
+
+
+var _cluster_ui: Control
+
+## Dark leather and trim, like a modern cab, instead of the light grey upholstery.
+func _dark_cabin(model: Node3D) -> void:
+	var colors := {"INT_Leather": Color(0.15, 0.1, 0.075), "INT_DarkLeather": Color(0.03, 0.03, 0.032),
+		"INT_Headliner": Color(0.14, 0.14, 0.15), "INT_Carpet": Color(0.03, 0.03, 0.03),
+		"INT_Wood": Color(0.11, 0.055, 0.03)}         # Blender's procedural grain doesn't export: dark walnut
+	for mi in model.find_children("*", "MeshInstance3D", true, false):
+		var inst := mi as MeshInstance3D
+		for si in inst.mesh.get_surface_count():
+			var mat := inst.mesh.surface_get_material(si) as BaseMaterial3D
+			if mat and colors.has(mat.resource_name):
+				var v := mat.duplicate() as BaseMaterial3D
+				v.albedo_color = colors[mat.resource_name] if not "--redcab" in OS.get_cmdline_user_args() else Color(1, 0, 0)
+				v.roughness = 0.62
+				inst.set_surface_override_material(si, v)
+
+
+## A modern three-spoke steering wheel (ring in the local XZ plane, driver on +Y): thick leather
+## rim, silver-trimmed spokes with button pads, and a padded centre.
+static func modern_wheel(r: float) -> Mesh:
+	var mb := MB.new()
+	var leather := Color(0.05, 0.045, 0.04)
+	var segs := 36
+	for k in segs:
+		var a0 := TAU * k / segs
+		var a1 := TAU * (k + 1) / segs
+		var p0 := Vector3(cos(a0), 0, sin(a0)) * r
+		var p1 := Vector3(cos(a1), 0, sin(a1)) * r
+		var grip := 0.019 if absf(sin((a0 + a1) * 0.5)) < 0.75 else 0.016   # fatter at 9 and 3 o'clock
+		mb.box(Transform3D(Basis.looking_at(p1 - p0, Vector3.UP), (p0 + p1) * 0.5), Vector3(grip * 2.0, grip * 2.0, p0.distance_to(p1) * 1.08), leather)
+	# spokes at 9, 3 and 6 o'clock (+X is the car's left)
+	for ang in [0.0, PI, PI * 0.5]:
+		var d := Vector3(cos(ang), 0, sin(ang))
+		var mid := d * r * 0.55
+		var long := r * 0.78 if ang != PI * 0.5 else r * 0.7
+		var bas := Basis.looking_at(d, Vector3.UP)
+		mb.box(Transform3D(bas, mid + Vector3(0, 0.004, 0)), Vector3(0.05 if ang != PI * 0.5 else 0.035, 0.016, long), Color(0.05, 0.05, 0.055))
+		for edge in [-1.0, 1.0]:                      # thin satin-silver edges
+			var w := 0.025 if ang != PI * 0.5 else 0.0175
+			mb.box(Transform3D(bas, mid + bas * Vector3(edge * w, 0.012, 0)), Vector3(0.004, 0.004, long * 0.85), Color(0.42, 0.43, 0.45))
+		mb.box(Transform3D(bas, mid + Vector3(0, 0.013, 0)), Vector3(0.008, 0.004, long * 0.9), Color(0.42, 0.43, 0.45))
+		if ang != PI * 0.5:
+			# button pad: a dark panel with a ring of small keys
+			var pad := d * r * 0.5 + Vector3(0, 0.017, 0)
+			mb.box(Transform3D(bas, pad), Vector3(0.05, 0.004, 0.06), Color(0.03, 0.03, 0.035))
+			for bx in [-0.014, 0.014]:
+				for bz in [-0.016, 0.0, 0.016]:
+					mb.box(Transform3D(bas, pad + bas * Vector3(bx, 0.003, bz)), Vector3(0.011, 0.003, 0.01), Color(0.2, 0.2, 0.22))
+	mb.ellipsoid(Transform3D(Basis(), Vector3(0, 0.01, 0.0)), Vector3(0.065, 0.025, 0.055), Color(0.045, 0.045, 0.05), 5, 12)
+	mb.box(Transform3D(Basis(), Vector3(0, 0.035, 0)), Vector3(0.05, 0.003, 0.012), Color(0.55, 0.56, 0.58))   # a plain trim strip (no badge)
+	return mb.commit()
 
 
 func _rel(n: Node, root: Node) -> Transform3D:
@@ -432,11 +685,14 @@ func _build_generic(sp: Dictionary) -> void:
 var _helpers := {}
 
 ## A standalone model of any vehicle kind (also used for the cars you leave parked).
-func visual_for(kind: String) -> Node3D:
+func visual_for(kind: String, paint := Color(0, 0, 0, 0)) -> Node3D:
 	var sp: Dictionary = SPECS[kind]
 	var root := Node3D.new()
 	root.name = "Visual"
-	if sp.has("glb"):
+	if Fleet.has(kind) and String(sp.get("glb", "")).contains("fleet_"):
+		var p: Color = paint if paint.a > 0.0 else Fleet.paint_for(kind, RandomNumberGenerator.new())
+		root.add_child(Fleet.model(kind, p))
+	elif sp.has("glb"):
 		var model := (load(sp["glb"]) as PackedScene).instantiate() as Node3D
 		model.rotation.y = -PI * 0.5
 		root.add_child(model)
@@ -662,8 +918,8 @@ func _build_cockpit() -> void:
 	for seat_x in [-0.42, 0.42]:
 		mb.box(at.call(Vector3(seat_x, 0.72, -0.25)), Vector3(0.52, 0.14, 0.52), Color(0.16, 0.13, 0.11))
 		mb.box(at.call(Vector3(seat_x, 1.08, -0.52)), Vector3(0.52, 0.66, 0.12), Color(0.16, 0.13, 0.11))
-	# the long twin-screen panel, driver's side to the centre
-	mb.box(Transform3D(Basis(Vector3.RIGHT, deg_to_rad(-18.0)), Vector3(-0.22, 1.16, 0.7)), Vector3(0.98, 0.13, 0.03),
+	# a centre infotainment screen (the analog cluster sits in front of the driver)
+	mb.box(Transform3D(Basis(Vector3.RIGHT, deg_to_rad(-18.0)), Vector3(0.18, 1.16, 0.7)), Vector3(0.36, 0.17, 0.03),
 		Color(0.01, 0.015, 0.03))
 	var dash := MeshInstance3D.new()
 	dash.mesh = mb.commit()
@@ -733,6 +989,12 @@ func set_cockpit(on: bool) -> void:
 		_driver.visible = not on
 	if _rider:
 		_rider.visible = not on
+	if kit:
+		kit.set_active(on)
+	for vp in screens:
+		(vp as SubViewport).render_target_update_mode = SubViewport.UPDATE_ALWAYS if on else SubViewport.UPDATE_DISABLED
+	if _engine:
+		_engine.volume_db = -7.0 if on else 0.0        # muffled inside the cabin
 	if _glass:
 		_glass.visible = not on          # from inside, the tinted glass would veil the view
 	_mirror_vp.render_target_update_mode = SubViewport.UPDATE_ALWAYS if on else SubViewport.UPDATE_DISABLED
@@ -919,10 +1181,12 @@ func _physics_process_body(delta: float) -> void:
 		target_steer = Input.get_axis("steer_right", "steer_left")
 		in_handbrake = Input.is_action_pressed("handbrake")
 		# Euro Truck-style: pedals and steering ramp instead of snapping
-		_thr = move_toward(_thr, in_throttle, delta * (1.4 if in_throttle > _thr else 3.0))
+		_thr = move_toward(_thr, in_throttle, delta * (1.0 if in_throttle > _thr else 3.0))
 		_brk = move_toward(_brk, in_brake, delta * (2.2 if in_brake > _brk else 5.0))
 		var turning_in := absf(target_steer) > absf(_steer_in) and signf(target_steer) == signf(_steer_in)
-		var rate := 0.75 if (turning_in or _steer_in == 0.0) else 2.2   # gentle in, quicker back to centre
+		# gentle in (slower still at speed), quicker back to centre
+		var calm := lerpf(1.0, 0.55, smoothstep(5.0, 25.0, absf(speed)))
+		var rate := (0.6 * steer_sens * calm) if (turning_in or _steer_in == 0.0) else 1.8
 		_steer_in = move_toward(_steer_in, target_steer, rate * delta)
 	else:
 		_thr = in_throttle
@@ -967,9 +1231,10 @@ func _physics_process_body(delta: float) -> void:
 	if v > 0.3:
 		apply_central_force(-linear_velocity / v * (280.0 + 0.95 * v * v + _surface_drag * minf(v, 12.0)))
 	# speed-sensitive steering: full lock at a crawl, a few degrees at highway speed
-	var s := smoothstep(0.0, 30.0, absf(speed))
-	var max_s := lerpf(MAX_STEER, HIGH_SPEED_STEER, s)
-	steering = move_toward(steering, _steer_in * max_s, delta * (1.6 if not autopilot else 2.5))
+	# full lock only at a crawl (hairpins, parking); it falls away quickly once you're moving
+	var s := smoothstep(0.0, 18.0, absf(speed))
+	var max_s := lerpf(MAX_STEER, HIGH_SPEED_STEER, sqrt(s)) * (lerpf(1.0, steer_sens, s) if not autopilot else 1.0)
+	steering = move_toward(steering, _steer_in * max_s, delta * (1.0 if not autopilot else 2.5))
 
 
 func _process(delta: float) -> void:
@@ -1003,6 +1268,14 @@ func _process_body(delta: float) -> void:
 		_mirror_cam.global_transform = Transform3D(Basis.looking_at(-forward(), Vector3.UP),
 			global_transform * Vector3(-0.02, 1.62, 0.2))
 	_update_lamps(delta)
+	if kit:
+		kit.wiping = wiping
+		kit.update(delta, night, fuel_frac)
+	if _cluster_ui:
+		_cluster_ui.fuel = fuel_frac
+		_cluster_ui.clock = clock_text
+	if _nav and _nav.map_ui == null:
+		_nav.map_ui = map_ui
 	_fill_engine()
 	_fill_horn(delta)
 
