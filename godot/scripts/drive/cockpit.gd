@@ -21,7 +21,8 @@ var temp := 0.0                    # engine temperature 0..1 (warms up)
 var active := false
 
 
-func build(c, eye: Vector3, half_width: float, wiper_at: Vector3, wiper_len: float, cluster_at = null, analog := true) -> void:
+func build(c, eye: Vector3, half_width: float, wiper_at: Vector3, wiper_len: float, cluster_at = null, analog := true,
+		model_mirrors: Array = []) -> void:
 	car = c
 	var at: Vector3 = cluster_at if cluster_at != null else eye + Vector3(0, -0.27, 0.62)
 	if analog:
@@ -30,8 +31,12 @@ func build(c, eye: Vector3, half_width: float, wiper_at: Vector3, wiper_len: flo
 		_speed_needle = null
 	_build_roof(eye)
 	# door mirrors: driver's (right, -X) and passenger's (left, +X), just outside the A-pillars
-	_add_mirror(Vector3(-half_width - 0.08, eye.y - 0.22, eye.z + 0.78), eye, -1.0)
-	_add_mirror(Vector3(half_width + 0.08, eye.y - 0.22, eye.z + 0.82), eye, 1.0)
+	if model_mirrors.is_empty():
+		_add_mirror(Vector3(-half_width - 0.1, eye.y - 0.22, eye.z + 0.78), eye, -1.0, true)
+		_add_mirror(Vector3(half_width + 0.1, eye.y - 0.22, eye.z + 0.82), eye, 1.0, true)
+	else:
+		for m in model_mirrors:
+			_add_mirror(m[0], eye, m[1], false)
 	for sx in [-0.28, 0.32]:
 		_add_wiper(wiper_at + Vector3(sx * wiper_len * 1.6, 0, 0), wiper_len)
 	set_active(false)
@@ -191,31 +196,34 @@ func _build_roof(eye: Vector3) -> void:
 
 
 # ----------------------------------------------------------------------------- mirrors
-func _add_mirror(pos: Vector3, eye: Vector3, outward: float) -> void:
+## A door mirror: landscape like a real one (wider than tall). `housing`: build our own shell;
+## false when the car model already has one and only needs the live glass on its back.
+func _add_mirror(pos: Vector3, eye: Vector3, outward: float, housing_on := true) -> void:
 	var vp := SubViewport.new()
-	vp.size = Vector2i(170, 300)
+	vp.size = Vector2i(320, 200)
 	vp.render_target_update_mode = SubViewport.UPDATE_DISABLED
 	add_child(vp)
 	var cam := Camera3D.new()
-	cam.fov = 44.0
+	cam.fov = 34.0
 	cam.far = 600.0
 	vp.add_child(cam)
 	var mirror := Node3D.new()
 	mirror.position = pos
+	# faces backwards, angled a little towards the driver, like a real adjusted door mirror
 	var to_eye := (eye - pos)
-	to_eye.y = 0.0
-	mirror.basis = Basis.looking_at(-to_eye.normalized(), Vector3.UP)
+	mirror.basis = Basis(Vector3.UP, lerp_angle(PI, atan2(to_eye.x, to_eye.z), 0.3))
 	add_child(mirror)
-	var housing := MB.new()
-	housing.box(Transform3D(Basis(), Vector3(0, 0, -0.03)), Vector3(0.19, 0.33, 0.06), Color(0.03, 0.03, 0.035))
-	housing.box(Transform3D(Basis(), Vector3(-outward * 0.12, -0.02, -0.03)), Vector3(0.08, 0.03, 0.03), Color(0.03, 0.03, 0.035))
-	var hmi := MeshInstance3D.new()
-	hmi.mesh = housing.commit()
-	hmi.material_override = MB.vertex_color_material(0.6)
-	mirror.add_child(hmi)
+	if housing_on:
+		var housing := MB.new()
+		housing.box(Transform3D(Basis(), Vector3(0, 0, -0.05)), Vector3(0.28, 0.18, 0.1), Color(0.03, 0.03, 0.035))
+		housing.box(Transform3D(Basis(), Vector3(-outward * 0.16, -0.04, -0.05)), Vector3(0.08, 0.04, 0.05), Color(0.03, 0.03, 0.035))
+		var hmi := MeshInstance3D.new()
+		hmi.mesh = housing.commit()
+		hmi.material_override = MB.vertex_color_material(0.6)
+		mirror.add_child(hmi)
 	var glass := MeshInstance3D.new()
 	var q := QuadMesh.new()
-	q.size = Vector2(0.17, 0.31)
+	q.size = Vector2(0.25, 0.155) if housing_on else Vector2(0.21, 0.13)
 	glass.mesh = q
 	var gm := StandardMaterial3D.new()
 	gm.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED

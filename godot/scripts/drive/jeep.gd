@@ -356,7 +356,21 @@ func _build_kit(sp: Dictionary) -> void:
 		# the analog cluster replaces the stand-in digital screens in these cars
 		_screen_speed.visible = false
 		_screen_info.visible = false
-	kit.build(self, seat, half_w, wp[0], wp[1], cluster_at, not sp.get("interior", false))
+	# a model with its own door mirrors gets the live glass on their backs instead of stand-ins
+	var mirrors: Array = []
+	if has_node("Model"):
+		for n in get_node("Model").find_children("Mirror*", "MeshInstance3D", true, false):
+			if String(n.name).begins_with("MirrorArm"):
+				continue
+			var mi := n as MeshInstance3D
+			var bb := mi.get_aabb()
+			var xf := _rel(mi, self)
+			var c := xf * bb.get_center()
+			var lo := INF
+			for k in 8:
+				lo = minf(lo, (xf * bb.get_endpoint(k)).z)
+			mirrors.append([Vector3(c.x, c.y, lo - 0.004), signf(c.x)])
+	kit.build(self, seat, half_w, wp[0], wp[1], cluster_at, not sp.get("interior", false), mirrors)
 
 
 ## Runs a builder and remembers the 3D nodes it added (the procedural cabin parts).
@@ -385,9 +399,9 @@ func _build_glb(sp: Dictionary) -> void:
 	_tail_mat = _emitter(Color(0.5, 0.0, 0.0), Color(1.0, 0.03, 0.01), 0.3)
 	_rev_mat = _emitter(Color(0.8, 0.8, 0.8), Color(1, 1, 0.95), 0.0)
 	var glass := StandardMaterial3D.new()
-	glass.albedo_color = Color(0.02, 0.025, 0.03, 0.72)
+	glass.albedo_color = Color(0.015, 0.02, 0.025, 0.86)     # dark privacy tint, mirror-like
 	glass.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-	glass.metallic = 0.2
+	glass.metallic = 0.55
 	glass.roughness = 0.04
 	glass.metallic_specular = 0.9
 	for mi in model.find_children("*", "MeshInstance3D", true, false):

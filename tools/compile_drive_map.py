@@ -257,6 +257,16 @@ def main():
     # --- open-world towns: real streets, buildings and landmarks ------------------------------
     tgrid = townlib.Grid(natural, carved, prox, gx0, gz0, CELL)
     towns_out = townlib.build_towns(towns, tgrid, np.column_stack([gx, gz]), os.path.join(ROOT, "mapdata"), route_y=gy)
+    # no ground may rise through any road: town streets, parking lots and the highway (+ its shoulders)
+    segs = townlib.town_road_segments(towns_out) + [(np.column_stack([gx, gz]), np.asarray(gy), 3.6 + 1.4)]
+    before = townlib.road_pokes(tgrid, segs)
+    f0 = townlib.road_floats(tgrid, segs[:-1])
+    townlib.sink_under_roads(tgrid, segs[:-1], margin=6.0, clearance=0.3)
+    f1 = townlib.road_floats(tgrid, segs[:-1])
+    townlib.sink_under_roads(tgrid, segs[-1:], margin=6.0, clearance=0.45)
+    print(f"floats: before {f0}, after streets {f1}, after highway {townlib.road_floats(tgrid, segs[:-1])}")
+    print(f"ground through roads: {before} samples before, {townlib.road_pokes(tgrid, segs)} after; "
+          f"streets >0.8 m above ground: {townlib.road_floats(tgrid, segs[:-1])}")
     json.dump(towns_out, open(os.path.join(OUT, "towns.json"), "w"), separators=(",", ":"))
     for nm, tw in towns_out.items():
         print(f"  town {nm:13s} {tw['stats']}")

@@ -219,14 +219,20 @@ box("Roof", (-0.85, 0, 1.855), (2.95, 1.62, 0.05), MAT_PAINT, bev=0.025)
 
 # Body-colour pillars (A is the windshield frame edge, B, C, D)
 for side in (1, -1):
-    for x, w in ((0.85, 0.08), (-0.15, 0.10), (-1.35, 0.10), (-2.30, 0.14)):
+    for x, w in ((-0.15, 0.10), (-1.35, 0.10), (-2.30, 0.14)):
         box("Pillar", (x, side * 0.84, 1.47), (w, 0.03, 0.74), MAT_PAINT, bev=0.008)
+    # A pillar: raked along the windscreen edge, not upright
+    _a = math.atan2(1.80 - 1.13, 1.08 - 0.38)
+    box("Pillar", ((1.08 + 0.38) / 2, side * 0.845, (1.13 + 1.80) / 2), (math.hypot(0.7, 0.67) + 0.04, 0.035, 0.09),
+        MAT_PAINT, bev=0.008, rot=(0, _a, 0))
     # belt-line chrome strip
     box("BeltTrim", (-0.6, side * 0.92, 1.12), (3.4, 0.02, 0.015), MAT_ACCENT, bev=0.004)
     # side cladding between the wheels
     box("SideSkirt", (0.05, side * 0.97, 0.40), (2.0, 0.05, 0.12), MAT_CLAD, bev=0.02)
     # side mirror
-    box("Mirror", (0.92, side * 1.05, 1.24), (0.16, 0.14, 0.11), MAT_BLACK, bev=0.03)
+    # (real proportions: wider than tall, on a short arm; the game puts a live mirror on its back)
+    box("Mirror", (0.88, side * 1.1, 1.2), (0.12, 0.27, 0.17), MAT_BLACK, bev=0.03)
+    box("MirrorArm", (0.9, side * 0.97, 1.16), (0.07, 0.07, 0.04), MAT_BLACK, bev=0.01)
     # door shut lines (thin dark strips)
     for x in (0.70, -0.30, -1.10):
         box("DoorGap", (x, side * 1.0, 0.75), (0.006, 0.015, 0.75), MAT_CLAD, bev=0)

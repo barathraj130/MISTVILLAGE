@@ -226,6 +226,364 @@ def _street_graph(osm, to_game, c, radius, near_route, nearest_route, route_xz, 
     return out, nodes
 
 
+# ----------------------------------------------------------------------------- network repair
+def _slen(pts):
+    p = np.asarray(pts)[:, [0, 2]]
+    return float(np.linalg.norm(np.diff(p, axis=0), axis=1).sum())
+
+
+def _repair_network(st_out, nodes, grid, town):
+    """Make the street graph drivable everywhere: drop stubs that stop in a field at the edge of
+    the mapped area, join dead ends that stop just short of another street, link stray street
+    groups to the main network (or drop them if they're far from everything)."""
+    stats = {"pruned_edge": 0, "pruned_stub": 0, "joined_ends": 0, "linked_islands": 0, "dropped_islands": 0}
+
+    def degree():
+        d = {}
+        for st in st_out:
+            for e in (st["a"], st["b"]):
+                d[e] = d.get(e, 0) + 1
+        return d
+
+    # 1) streets that run off the mapped area into fields, and tiny dead-end stubs
+    deg = degree()
+    keep = []
+    for st in st_out:
+        L = _slen(st["pts"])
+        leaf_edge = any(nodes[e]["kind"] == "edge" and deg.get(e, 0) == 1 for e in (st["a"], st["b"]))
+        leaf_end = any(nodes[e]["kind"] == "end" and deg.get(e, 0) == 1 for e in (st["a"], st["b"]))
+        if leaf_edge and L < 160.0:
+            stats["pruned_edge"] += 1
+            continue
+        if leaf_end and L < 18.0 and not all(deg.get(e, 0) == 1 for e in (st["a"], st["b"])):
+            stats["pruned_stub"] += 1
+            continue
+        keep.append(st)
+    st_out[:] = keep
+
+    def bucket():
+        b = {}
+        for si, st in enumerate(st_out):
+            for k, q in enumerate(st["pts"]):
+                b.setdefault((int(q[0] // 10), int(q[2] // 10)), []).append((si, k))
+        return b
+
+    def nearest(p, exclude, bk, r=15.0):
+        best, bd = None, r
+        kx, kz = int(p[0] // 10), int(p[1] // 10)
+        rr = int(r // 10) + 1
+        for dx in range(-rr, rr + 1):
+            for dz in range(-rr, rr + 1):
+                for si, k in bk.get((kx + dx, kz + dz), ()):
+                    if si in exclude:
+                        continue
+                    q = st_out[si]["pts"][k]
+                    d = math.hypot(q[0] - p[0], q[2] - p[1])
+                    if d < bd:
+                        best, bd = (si, k), d
+        return best, bd
+
+    def split(si, k):
+        """Return a node id at vertex k of street si, splitting the street there if needed."""
+        st = st_out[si]
+        n = len(st["pts"])
+        if k <= 1:
+            return st["a"]
+        if k >= n - 2:
+            return st["b"]
+        q = st["pts"][k]
+        nid = "%s%d" % (town[0], len(nodes) + 1000)
+        while nid in nodes:
+            nid += "x"
+        nodes[nid] = {"x": q[0], "z": q[2], "kind": "junction", "y": q[1]}
+        a_part = dict(st, pts=st["pts"][:k + 1], b=nid)
+        b_part = dict(st, pts=st["pts"][k:], a=nid)
+        st_out[si] = a_part
+        st_out.append(b_part)
+        return nid
+
+    def connector(na, nb, like):
+        a, b = nodes[na], nodes[nb]
+        A, B = np.array([a["x"], a["z"]]), np.array([b["x"], b["z"]])
+        pts = _resample(np.array([A, B]), 3.0)
+        y = grid.h(pts[:, 0], pts[:, 1], grid.natural)
+        st_out.append({"name": "", "class": like["class"] if like["class"] not in ("trunk", "primary") else "residential",
+                       "width": min(like["width"], 6.0), "oneway": False, "a": na, "b": nb,
+                       "pts": np.round(np.column_stack([pts[:, 0], y + 0.02, pts[:, 1]]), 2).tolist()})
+
+    # 2) dead ends that stop within 15 m of another street: join them up
+    deg = degree()
+    bk = bucket()
+    plans = []
+    for si, st in enumerate(st_out):
+        for end in ("a", "b"):
+            nid = st[end]
+            if nodes[nid]["kind"] not in ("end", "edge") or deg.get(nid, 0) != 1:
+                continue
+            p = (nodes[nid]["x"], nodes[nid]["z"])
+            hit, d = nearest(p, {si}, bk, 15.0)
+            if hit and d > 0.5:
+                plans.append((nid, hit, si))
+    done = set()
+    for nid, (ti, k), si in sorted(plans, key=lambda t: (t[1][0], -t[1][1])):
+        if nid in done:
+            continue
+        like = st_out[si]
+        target = split(ti, k)
+        if target != nid:
+            connector(nid, target, like)
+            nodes[nid]["kind"] = "junction"
+            done.add(nid)
+            stats["joined_ends"] += 1
+
+    # 2b) dead ends pointing at a street up to 35 m ahead: carry them on to it (as the street would)
+    deg = degree()
+    bk = bucket()
+    plans = []
+    for si, st in enumerate(st_out):
+        for end in ("a", "b"):
+            nid = st[end]
+            if nodes[nid]["kind"] not in ("end", "edge") or deg.get(nid, 0) != 1 or len(st["pts"]) < 3:
+                continue
+            P = st["pts"]
+            tip, prev = (P[0], P[2]) if end == "a" else (P[-1], P[-3])
+            head = np.array([tip[0] - prev[0], tip[2] - prev[2]])
+            head = head / max(np.linalg.norm(head), 1e-6)
+            best = None
+            for step in np.arange(3.0, 36.0, 3.0):
+                q = (tip[0] + head[0] * step, tip[2] + head[1] * step)
+                hit, d = nearest(q, {si}, bk, 4.0)
+                if hit:
+                    best = hit
+                    break
+            if best:
+                plans.append((nid, best, si))
+    for nid, (ti, k), si in sorted(plans, key=lambda t: (t[1][0], -t[1][1])):
+        if nid in done or ti >= len(st_out) or k >= len(st_out[ti]["pts"]):
+            continue
+        target = split(ti, k)
+        if target != nid:
+            connector(nid, target, st_out[si])
+            nodes[nid]["kind"] = "junction"
+            done.add(nid)
+            stats["joined_ends"] += 1
+
+    # 3) stray street groups: link to the main (highway-connected) network, or drop them
+    for _round in range(3):
+        adj = {}
+        for si, st in enumerate(st_out):
+            adj.setdefault(st["a"], []).append(si)
+            adj.setdefault(st["b"], []).append(si)
+        comp_of, comps = {}, []
+        for start in adj:
+            if start in comp_of:
+                continue
+            stack, members, streets = [start], [start], set()
+            comp_of[start] = len(comps)
+            while stack:
+                x = stack.pop()
+                for si in adj[x]:
+                    streets.add(si)
+                    for y in (st_out[si]["a"], st_out[si]["b"]):
+                        if y not in comp_of:
+                            comp_of[y] = len(comps)
+                            stack.append(y)
+                            members.append(y)
+            comps.append((members, streets))
+        main = {ci for ci, (m, _) in enumerate(comps) if any(nodes[x]["kind"] == "highway" for x in m)}
+        if not main or len(comps) == len(main):
+            break
+        main_streets = set().union(*(comps[ci][1] for ci in main))
+        mb = {}
+        for si in main_streets:
+            for k, q in enumerate(st_out[si]["pts"]):
+                mb.setdefault((int(q[0] // 10), int(q[2] // 10)), []).append((si, k))
+        drop = set()
+        links = []
+        for ci, (members, streets) in enumerate(comps):
+            if ci in main:
+                continue
+            best = None
+            for si in streets:
+                for k, q in enumerate(st_out[si]["pts"]):
+                    hit, d = nearest((q[0], q[2]), streets, mb, 70.0)
+                    if hit and (best is None or d < best[0]):
+                        best = (d, si, k, hit)
+            if best:
+                links.append(best)
+            else:
+                drop |= streets
+        for d, si, k, (ti, tk) in sorted(links, key=lambda t: -t[1]):
+            na = split(si, k)
+            nb = split(ti, tk)
+            if na != nb:
+                connector(na, nb, st_out[si])
+                stats["linked_islands"] += 1
+        if drop:
+            stats["dropped_islands"] += len(drop)
+            st_out[:] = [st for i, st in enumerate(st_out) if i not in drop]
+    used = {st["a"] for st in st_out} | {st["b"] for st in st_out}
+    for nid in list(nodes):
+        if nid not in used:
+            del nodes[nid]
+    print("  network", town, stats)
+    return stats
+
+
+# ----------------------------------------------------------------------------- parking
+LOT_SIZE = {"Hospital": (26, 16), "Bus stand": (30, 18), "Market": (26, 16), "Temple": (22, 14), "Cinema": (26, 16),
+            "College": (24, 16), "School": (20, 12), "Railway station": (30, 18), "Town hall": (22, 14),
+            "Hotel": (18, 12), "Guest House": (14, 10), "Bank": (16, 10), "Restaurant": (16, 10), "Café": (12, 9),
+            "Police": (16, 10), "Theatre": (22, 14)}
+
+
+def _lot_poly(o, t, n, along, depth):
+    return np.array([o - t * along / 2, o + t * along / 2, o + t * along / 2 + n * depth, o - t * along / 2 + n * depth])
+
+
+def _place_lot(st_out, si, k_hint, side_pt, size, occ, grid, kind, name):
+    """Try to fit a lot beside street si near vertex k_hint, on the side facing side_pt."""
+    st = st_out[si]
+    P = np.array(st["pts"])
+    n = len(P)
+    cum = np.concatenate([[0], np.cumsum(np.linalg.norm(np.diff(P[:, [0, 2]], axis=0), axis=1))])
+    along, depth = size
+    for shift in (0, 8, -8, 16, -16, 26, -26, 38, -38, 52, -52):
+        k = int(np.clip(np.searchsorted(cum, cum[k_hint] + shift), 1, n - 2))
+        if cum[k] < along / 2 + 6 or cum[-1] - cum[k] < along / 2 + 6:
+            continue
+        c = P[k, [0, 2]]
+        t = P[min(k + 1, n - 1), [0, 2]] - P[max(k - 1, 0), [0, 2]]
+        t = t / max(np.linalg.norm(t), 1e-6)
+        nrm = np.array([-t[1], t[0]])
+        sides = [1.0, -1.0] if np.dot(nrm, np.asarray(side_pt) - c) >= 0 else [-1.0, 1.0]
+        for sd in sides:
+            nn = nrm * sd
+            o = c + nn * (st["width"] * 0.5 + 0.4)
+            poly = _lot_poly(o, t, nn, along, depth)
+            test = _lot_poly(o + nn * 1.4, t, nn, along - 1.0, depth - 1.4)
+            if occ.hits(test):
+                continue
+            occ.mark_poly(poly)
+            y = float(P[k, 1]) - 0.02
+            _flatten(grid, poly, y)
+            return {"poly": np.round(poly, 2).tolist(), "y": round(y, 2), "street": si, "side": sd,
+                    "s0": round(float(cum[k] - along / 2), 1), "s1": round(float(cum[k] + along / 2), 1),
+                    "t": [round(float(t[0]), 4), round(float(t[1]), 4)], "n": [round(float(nn[0]), 4), round(float(nn[1]), 4)],
+                    "kind": kind, "name": name}
+    return None
+
+
+def _flatten(grid, poly, y):
+    lo = ((poly.min(0) - 4.0) / grid.cell).astype(int) - [grid.gx0, grid.gz0]
+    hi = ((poly.max(0) + 4.0) / grid.cell).astype(int) - [grid.gx0, grid.gz0] + 1
+    lo = np.clip(lo, 0, [grid.nx - 1, grid.nz - 1])
+    hi = np.clip(hi, 0, [grid.nx - 1, grid.nz - 1])
+    X, Z = np.meshgrid((np.arange(lo[0], hi[0]) + grid.gx0) * grid.cell, (np.arange(lo[1], hi[1]) + grid.gz0) * grid.cell)
+    inside = _points_in_poly(X, Z, poly)
+    cur = grid.carved[lo[1]:hi[1], lo[0]:hi[0]]
+    grid.carved[lo[1]:hi[1], lo[0]:hi[0]] = np.where(inside & ~np.isnan(cur), y - 0.08, cur)
+    grid.prox[lo[1]:hi[1], lo[0]:hi[0]] = np.where(inside, 1.0, grid.prox[lo[1]:hi[1], lo[0]:hi[0]])
+
+
+def _street_index(st_out):
+    b = {}
+    for si, st in enumerate(st_out):
+        for k, q in enumerate(st["pts"]):
+            b.setdefault((int(q[0] // 20), int(q[2] // 20)), []).append((si, k))
+    return b
+
+
+def _nearest_street(b, st_out, p, r=60.0, classes=None):
+    best, bd = None, r
+    kx, kz = int(p[0] // 20), int(p[1] // 20)
+    rr = int(r // 20) + 1
+    for dx in range(-rr, rr + 1):
+        for dz in range(-rr, rr + 1):
+            for si, k in b.get((kx + dx, kz + dz), ()):
+                if classes and st_out[si]["class"] not in classes:
+                    continue
+                q = st_out[si]["pts"][k]
+                d = math.hypot(q[0] - p[0], q[2] - p[1])
+                if d < bd:
+                    best, bd = (si, k), d
+    return best
+
+
+# ----------------------------------------------------------------------------- keep the ground under the asphalt
+def _bilinear(grid, x, z):
+    return grid.h(np.asarray(x), np.asarray(z))
+
+
+def road_pokes(grid, segments):
+    """How many road samples (centre and both edges) have ground above the surface."""
+    n = 0
+    for xz, ys, half in segments:
+        if len(xz) < 2:
+            continue
+        t = np.gradient(xz, axis=0)
+        t /= np.maximum(np.linalg.norm(t, axis=1, keepdims=True), 1e-6)
+        nrm = np.column_stack([-t[:, 1], t[:, 0]])
+        for off in (0.0, half * 0.9, -half * 0.9):
+            q = xz + nrm * off
+            g = _bilinear(grid, q[:, 0], q[:, 1])
+            n += int(np.sum(np.nan_to_num(g, nan=-1e9) > ys - 0.02))
+    return n
+
+
+def sink_under_roads(grid, segments, margin=6.0, clearance=0.3):
+    """Every ground point within half-width + margin of a road goes to at least `clearance` below
+    the road surface right beside it (measured to the nearest point on the road's centreline, so
+    steep streets keep their slope). The ground mesh is linear between 4 m grid points, so a single
+    high point beside a narrow street would otherwise lift grass up through the asphalt. Beyond the
+    edge the limit rises 15 cm per metre, so a neighbouring road's ground isn't dragged down."""
+    cell = grid.cell
+    for xz, ys, half in segments:
+        r = half + margin
+        rr = int(r / cell) + 2
+        for i in range(len(xz) - 1):
+            a, b = xz[i], xz[i + 1]
+            ya, yb = ys[i], ys[i + 1]
+            mid = (a + b) * 0.5
+            cx, cz = int(round(mid[0] / cell)) - grid.gx0, int(round(mid[1] / cell)) - grid.gz0
+            i0, i1, j0, j1 = max(cx - rr, 0), min(cx + rr + 1, grid.nx), max(cz - rr, 0), min(cz + rr + 1, grid.nz)
+            if i0 >= i1 or j0 >= j1:
+                continue
+            X, Z = np.meshgrid((np.arange(i0, i1) + grid.gx0) * cell, (np.arange(j0, j1) + grid.gz0) * cell)
+            ab = b - a
+            L2 = max(float(ab @ ab), 1e-9)
+            t = np.clip(((X - a[0]) * ab[0] + (Z - a[1]) * ab[1]) / L2, 0.0, 1.0)
+            px, pz = a[0] + ab[0] * t, a[1] + ab[1] * t
+            d = np.hypot(X - px, Z - pz)
+            yroad = ya + (yb - ya) * t
+            lim = yroad - clearance + 0.15 * np.maximum(d - half, 0.0)
+            cur = grid.carved[j0:j1, i0:i1]
+            grid.carved[j0:j1, i0:i1] = np.where((d <= r) & ~np.isnan(cur) & (cur > lim), lim, cur)
+
+
+def road_floats(grid, segments, gap=0.8):
+    n = 0
+    for xz, ys, half in segments:
+        g = _bilinear(grid, xz[:, 0], xz[:, 1])
+        n += int(np.sum(np.nan_to_num(ys - g, nan=0.0) > gap))
+    return n
+
+
+def town_road_segments(towns_out):
+    segs = []
+    for tw in towns_out.values():
+        for st in tw["streets"]:
+            p = np.array(st["pts"])
+            if len(p) >= 2:
+                segs.append((p[:, [0, 2]], p[:, 1], st["width"] * 0.5))
+        for lot in tw.get("parking", []):
+            poly = np.array(lot["poly"])
+            c = poly.mean(0)
+            pts = np.array([c, (poly[0] + poly[2]) / 2, (poly[1] + poly[3]) / 2] + list(poly))
+            segs.append((pts, np.full(len(pts), lot["y"]), 4.0))
+    return segs
+
+
 def _settle_streets(st_out, nodes, grid):
     """Crossing streets re-carve each other's beds, so after carving every street (and its nodes)
     takes its height from the final ground: the surface always sits on the terrain it drew."""
@@ -286,11 +644,29 @@ def build_towns(towns, grid, route_xz, data_dir, rng_seed=7, route_y=None):
             return best
         st_out, nodes = _street_graph(osm, to_game, c, radius, near_route, nearest_route, route_xz,
                                       route_y if route_y is not None else np.zeros(len(route_xz)), grid, name)
+        net_stats = _repair_network(st_out, nodes, grid, name)
         for s_ in st_out:
             p = np.array(s_["pts"])
             _carve(grid, p[:, [0, 2]], p[:, 1] - 0.02, s_["width"])
         _settle_streets(st_out, nodes, grid)
 
+        # ---- landmarks ------------------------------------------------------------------------
+        pois = []
+        for e in osm:
+            tg = e.get("tags", {})
+            kind = tg.get("amenity") or ("station" if tg.get("railway") == "station" else None) or tg.get("tourism")
+            if not kind or not tg.get("name"):
+                continue
+            if e["type"] == "node":
+                g = to_game(e["lat"], e["lon"])
+            elif e.get("geometry"):
+                g = np.mean([to_game(q["lat"], q["lon"]) for q in e["geometry"]], axis=0)
+            else:
+                continue
+            if np.hypot(*(g - c)) > radius:
+                continue
+            pois.append({"name": tg["name"], "kind": POI_KINDS.get(kind, kind.replace("_", " ").title()),
+                         "x": round(float(g[0]), 1), "y": round(float(grid.h(g[0], g[1])), 1), "z": round(float(g[1]), 1)})
         # ---- buildings ------------------------------------------------------------------------
         occ = _Occupancy(c, radius + 60.0)
         for s in st_out:
@@ -320,6 +696,36 @@ def build_towns(towns, grid, route_xz, data_dir, rng_seed=7, route_y=None):
             buildings.append(_building(poly, grid, lv, tw["style"], rng, "osm"))
             occ.mark_poly(poly)
         n_osm = len(buildings)
+        # ---- parking: a lot beside every shop-type place, plus public lots along main roads -----
+        lots = []
+        sb = _street_index(st_out)
+        drivable = {"trunk", "primary", "secondary", "tertiary", "unclassified", "residential", "living_street", "road"}
+        for poi in pois:
+            hit = _nearest_street(sb, st_out, (poi["x"], poi["z"]), 70.0, drivable)
+            if not hit:
+                continue
+            size = LOT_SIZE.get(poi["kind"], (14, 10))
+            # full lot, then a smaller one, then a few bays: dense blocks still get somewhere to stop
+            for sz in (size, (max(size[0] * 0.6, 10), max(size[1] * 0.7, 7)), (8, 6)):
+                lot = _place_lot(st_out, hit[0], hit[1], (poi["x"], poi["z"]), sz, occ, grid, poi["kind"], poi["name"])
+                if lot:
+                    lots.append(lot)
+                    break
+        for si, st in enumerate(st_out):
+            if st["class"] not in ("primary", "secondary", "tertiary", "trunk"):
+                continue
+            L = _slen(st["pts"])
+            k = 0
+            d = 120.0
+            P = np.array(st["pts"])
+            cum = np.concatenate([[0], np.cumsum(np.linalg.norm(np.diff(P[:, [0, 2]], axis=0), axis=1))])
+            while d < L - 60.0:
+                k = int(np.searchsorted(cum, d))
+                side_pt = P[k, [0, 2]] + rng.choice([-1, 1]) * np.array([1.0, 1.0])
+                lot = _place_lot(st_out, si, k, side_pt, (20, 12), occ, grid, "Parking", "Public parking")
+                if lot:
+                    lots.append(lot)
+                d += 280.0
         # fill thinly-mapped towns along their real streets
         if True:                                   # every town: OSM alone leaves whole blocks empty
             for s in st_out:
@@ -360,23 +766,6 @@ def build_towns(towns, grid, route_xz, data_dir, rng_seed=7, route_y=None):
             hi = np.clip(hi, 0, [grid.nx - 1, grid.nz - 1])
             grid.prox[lo[1]:hi[1], lo[0]:hi[0]] = 1.0
 
-        # ---- landmarks ------------------------------------------------------------------------
-        pois = []
-        for e in osm:
-            tg = e.get("tags", {})
-            kind = tg.get("amenity") or ("station" if tg.get("railway") == "station" else None) or tg.get("tourism")
-            if not kind or not tg.get("name"):
-                continue
-            if e["type"] == "node":
-                g = to_game(e["lat"], e["lon"])
-            elif e.get("geometry"):
-                g = np.mean([to_game(q["lat"], q["lon"]) for q in e["geometry"]], axis=0)
-            else:
-                continue
-            if np.hypot(*(g - c)) > radius:
-                continue
-            pois.append({"name": tg["name"], "kind": POI_KINDS.get(kind, kind.replace("_", " ").title()),
-                         "x": round(float(g[0]), 1), "y": round(float(grid.h(g[0], g[1])), 1), "z": round(float(g[1]), 1)})
         rails = []
         for e in osm:
             tg = e.get("tags", {})
@@ -386,9 +775,9 @@ def build_towns(towns, grid, route_xz, data_dir, rng_seed=7, route_y=None):
                 if len(pts) > 1:
                     rails.append(np.round(pts, 1).tolist())
         out[name] = {"centre": [round(float(c[0]), 1), round(float(c[1]), 1)], "radius": radius, "style": tw["style"],
-                     "streets": st_out, "nodes": nodes, "buildings": buildings, "pois": pois, "rails": rails,
+                     "streets": st_out, "nodes": nodes, "buildings": buildings, "parking": lots, "pois": pois, "rails": rails,
                      "stats": {"streets": len(st_out), "osm_buildings": n_osm, "generated": len(buildings) - n_osm,
-                               "pois": len(pois)}}
+                               "pois": len(pois), "parking": len(lots), **net_stats}}
     return out
 
 

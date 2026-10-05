@@ -277,6 +277,17 @@ cyl("INT_CupHolder", (0.20, 0, 0.93), 0.045, 0.012, MAT_DARK)
 # DOOR TRIMS
 # =====================================================================
 for s in (1, -1):
+    # A-pillar trim along each windscreen edge (raked, the width of a real pillar), headliner fabric
+    ax0, az0, ax1, az1 = 1.08, 1.13, 0.38, 1.80
+    th = math.atan2(az1 - az0, ax0 - ax1)
+    hard_box("INT_APillar", ((ax0 + ax1) / 2, s * 0.79, (az0 + az1) / 2 - 0.01),
+             (math.hypot(ax0 - ax1, az1 - az0) + 0.04, 0.12, 0.05), MAT_DARK, rot=(0, th, 0))
+    # the door card itself: closes the cabin side from the floor up to the window line
+    hard_box("INT_DoorCard", (-0.55, s * 0.875, 0.72), (2.62, 0.03, 0.66), MAT_DARK)
+    hard_box("INT_DoorSill", (-0.55, s * 0.87, 1.065), (2.62, 0.07, 0.035), MAT_DARK)
+    hard_box("INT_DoorPocket", (-0.55, s * 0.855, 0.5), (2.4, 0.05, 0.12), MAT_DARK)
+    for x in (0.32, -0.78):
+        hard_box("INT_DoorPull", (x, s * 0.84, 0.93), (0.16, 0.02, 0.03), MAT_METAL)
     soft_box("INT_DoorArmrest", (-0.55, s * 0.83, 0.86), (2.60, 0.07, 0.05), MAT_LEATHER, bev=0.02, sub=1)
     hard_box("INT_DoorWood", (-0.55, s * 0.845, 1.00), (2.60, 0.02, 0.03), MAT_WOOD)
     hard_box("INT_DoorAmbient", (-0.55, s * 0.838, 0.975), (2.60, 0.006, 0.005), MAT_AMBIENT)

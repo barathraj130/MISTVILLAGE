@@ -47,6 +47,29 @@ func build(r) -> void:
 		["car", 1, st["kotagiri"]["start"], L - 120.0, 8.0, st["kotagiri"]["start"] + 160.0],
 		["auto", -1, st["kotagiri"]["start"], L - 90.0, 7.0, st["kotagiri"]["start"] + 300.0],
 	]
+	# steady two-way traffic the whole way up: roughly one vehicle every 300 m in each direction,
+	# the mix changing with the road (city autos and cars, plains lorries, ghat buses, hill jeeps)
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 2026
+	var d := 250.0
+	var dir := 1
+	while d < L - 200.0:
+		var stage: String = route.stage_at(d)["id"]
+		var mix: Array
+		match stage:
+			"coimbatore", "mettupalayam", "kotagiri":
+				mix = ["car", "car", "auto", "auto", "bus", "car", "lorry"]
+			"plains", "foothills":
+				mix = ["car", "car", "lorry", "lorry", "bus", "tractor", "auto"]
+			_:
+				mix = ["car", "car", "bus", "lorry", "car"]
+		var kind: String = mix[rng.randi() % mix.size()]
+		var cruise: float = {"car": 13.0, "auto": 8.0, "bus": 10.0, "lorry": 8.5, "tractor": 5.0}[kind]
+		if stage in ["ghat", "mist"]:
+			cruise *= 0.7
+		specs.append([kind, dir, maxf(d - 1400.0, 60.0), minf(d + 1400.0, L - 90.0), cruise * rng.randf_range(0.85, 1.1), d])
+		dir = -dir
+		d += rng.randf_range(120.0, 200.0)
 	for s in specs:
 		_spawn(s[0], s[1], s[2], s[3], s[4], s[5])
 
@@ -111,12 +134,29 @@ func _physics_process(delta: float) -> void:
 	Prof.add("traffic", _p0)
 
 
+const ACTIVE := 900.0               # vehicles further than this along the road pause, out of sight
+
 func _physics_process_body(delta: float) -> void:
+	var near: Array = []
 	for v in vehicles:
 		if v["taken"]:
 			continue
+		var far: bool = absf(float(v["d"]) - jeep_d) > ACTIVE
+		if far != v.get("far", false):
+			v["far"] = far
+			v["body"].visible = not far
+		if not far:
+			near.append(v)
+	for v in near:
 		var dir: int = v["dir"]
 		var target: float = v["cruise"]
+		# keep a safe gap behind the vehicle ahead in the same lane
+		for o in near:
+			if o == v or int(o["dir"]) != dir:
+				continue
+			var gap: float = (float(o["d"]) - float(v["d"])) * dir - float(o["half"]) - float(v["half"])
+			if gap > -1.0 and gap < 35.0:
+				target = minf(target, maxf(0.0, (gap - 6.0) * 0.6))
 		# keep a gap behind the jeep when it's in our lane
 		var ahead: float = (jeep_d - v["d"]) * dir - v["half"]
 		var in_lane: bool = jeep_lat * dir > -0.8 and absf(jeep_lat) < 5.0

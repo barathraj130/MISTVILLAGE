@@ -19,7 +19,7 @@ SKIP = ("ArchCutter", "INT_CabinCutter", "Plane", "Target", "INT_CamTarget")
 # car is a handful of draw calls instead of 160 (modifiers are applied first)
 KEEP = ("Greenhouse", "Canopy", "Glass", "Headlight", "FogDRL", "TailCorner", "TailStrip", "TailBar",
         "INT_SteeringRim", "INT_SteeringHub", "INT_SteeringSpoke", "INT_SteeringBadge", "INT_Cluster",
-        "INT_CenterScreen")
+        "INT_CenterScreen", "Mirror")
 for o in list(bpy.data.objects):
     if o.type == 'MESH' and not o.name.startswith(SKIP):
         bpy.context.view_layer.objects.active = o

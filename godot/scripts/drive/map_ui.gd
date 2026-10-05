@@ -348,6 +348,7 @@ func _kind_colour(kind: String) -> Color:
 		"Railway station": return Color(0.6, 0.4, 1.0)
 		"Hospital": return Color(1.0, 0.25, 0.25)
 		"Petrol bunk": return Color(0.1, 0.9, 0.95)
+		"Parking": return Color(0.25, 0.45, 1.0)
 		_: return Color(1.0, 1.0, 0.7)
 
 

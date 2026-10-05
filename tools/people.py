@@ -442,6 +442,9 @@ def animate(rig, spec):
 
 
 PEOPLE = [
+    # a bronze statue for junction islands (the game holds it in the raised-arm frame of "Talk")
+    {"name": "statue", "height": 1.75, "skin": (0.3, 0.2, 0.11), "top": (0.3, 0.2, 0.11), "bottom": (0.3, 0.2, 0.11),
+     "drape": (0.32, 0.21, 0.12), "hair_col": (0.27, 0.18, 0.1), "lower": "veshti", "sleeve": "full", "hair": "short"},
     {"name": "man_shirt", "height": 1.71, "skin": (0.36, 0.22, 0.14), "top": (0.82, 0.84, 0.86), "bottom": (0.12, 0.13, 0.18),
      "lower": "trousers", "sleeve": "full", "hair": "moustache"},
     {"name": "man_lungi", "height": 1.68, "skin": (0.3, 0.18, 0.11), "top": (0.25, 0.42, 0.62), "bottom": (0.55, 0.12, 0.1),

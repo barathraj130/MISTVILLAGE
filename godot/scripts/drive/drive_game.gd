@@ -22,6 +22,7 @@ const Sim := preload("res://scripts/drive/sim.gd")
 const RoadGraph := preload("res://scripts/drive/road_graph.gd")
 const TownTraffic := preload("res://scripts/drive/town_traffic.gd")
 const Pedestrians := preload("res://scripts/drive/pedestrians.gd")
+const Interiors := preload("res://scripts/drive/interiors.gd")
 const SKY_SHADER := preload("res://shaders/sky.gdshader")
 const MIST_SHADER := preload("res://shaders/mist_sheet.gdshader")
 const TERRAIN_SHADER := preload("res://shaders/terrain_drive.gdshader")
@@ -52,6 +53,7 @@ var towns: Towns                  # open-world Coimbatore, Mettupalayam and Kota
 var map_ui: MapUI
 var town_traffic: TownTraffic
 var pedestrians: Pedestrians
+var interiors: Interiors
 var graph := RoadGraph.new()      # the one road network: meshes, GPS, minimap, grip, validator
 var sim := Sim.new()               # clock, weather, wallet, fuel, save file
 var sky_mat: ShaderMaterial
@@ -280,8 +282,14 @@ func _build_world() -> void:
 		add_child(towns)
 		await towns.build("res://assets/drive/towns.json", road.mat_asphalt,
 			func(what: String, f: float): _progress(what, 0.93 + 0.05 * f))
+		interiors = Interiors.new()
+		interiors.name = "Interiors"
+		add_child(interiors)
+		interiors.build(towns)
 		if "--trace" in args or "--bench" in args:
-			print("TOWNS parked vehicles %d, fuel bunks %d" % [towns.parked, towns.bunks.size()])
+			print("ENTERABLE places %d" % interiors.doors.size())
+			print("TOWNS parked vehicles %d, fuel bunks %d, traffic islands %d" % [towns.parked, towns.bunks.size(), towns.islands])
+			print("TOWNS designed buildings %d, driveways %d, compound walls %d" % [towns.kit_count, towns.drive_count, towns.walled])
 	_mist_layers(ntex)
 
 	jeep = Jeep.new()
@@ -333,9 +341,23 @@ func _environment() -> void:
 	env.ambient_light_source = Environment.AMBIENT_SOURCE_SKY
 	env.ambient_light_energy = 0.5
 	env.tonemap_mode = Environment.TONE_MAPPER_AGX
-	env.tonemap_exposure = 0.95
+	env.tonemap_exposure = 0.9
+	env.adjustment_enabled = true
+	env.adjustment_contrast = 1.1
+	env.adjustment_saturation = 1.12
 	env.glow_enabled = true
 	env.glow_intensity = 0.4
+	# contact shadows and bounced light: what makes walls meet the ground, corners darken and sunlit
+	# plaster warm the street (screen space, so the cost doesn't grow with the size of the map)
+	env.ssao_enabled = true
+	env.ssao_radius = 1.6
+	env.ssao_intensity = 1.8
+	env.ssao_power = 1.4
+	env.ssao_detail = 0.6
+	env.ssao_light_affect = 0.15
+	env.ssil_enabled = true
+	env.ssil_radius = 5.0
+	env.ssil_intensity = 0.9
 	env.fog_enabled = true
 	env.fog_light_color = Color(0.74, 0.74, 0.76)
 	env.fog_density = 0.00015
@@ -350,8 +372,11 @@ func _environment() -> void:
 	sun.light_color = Color(1.0, 0.82, 0.62)
 	sun.light_energy = 1.6
 	sun.shadow_enabled = true
-	sun.directional_shadow_mode = DirectionalLight3D.SHADOW_PARALLEL_2_SPLITS
-	sun.directional_shadow_max_distance = 90.0
+	sun.directional_shadow_mode = DirectionalLight3D.SHADOW_PARALLEL_4_SPLITS
+	sun.directional_shadow_max_distance = 170.0
+	sun.directional_shadow_blend_splits = true
+	sun.light_angular_distance = 0.6               # soft-edged shadows, like a real sun
+	sun.shadow_blur = 1.2
 	add_child(sun)
 
 
@@ -636,10 +661,15 @@ func _place_jeep(at_d: float) -> void:
 func _apply_quality(level: String) -> void:
 	var low := level == "low"
 	var vp := get_viewport()
-	vp.scaling_3d_mode = Viewport.SCALING_3D_MODE_FSR if low else Viewport.SCALING_3D_MODE_BILINEAR
-	vp.scaling_3d_scale = 0.6 if low else 1.0
-	vp.msaa_3d = Viewport.MSAA_DISABLED if low else Viewport.MSAA_2X
-	vp.screen_space_aa = Viewport.SCREEN_SPACE_AA_FXAA if low else Viewport.SCREEN_SPACE_AA_DISABLED
+	# FSR 2 renders at a lower resolution and rebuilds a sharp, temporally anti-aliased image: on a
+	# Retina screen that pays for the ambient occlusion, bounce light and longer shadows
+	vp.scaling_3d_mode = Viewport.SCALING_3D_MODE_FSR2
+	vp.scaling_3d_scale = 0.5 if low else 0.67
+	vp.msaa_3d = Viewport.MSAA_DISABLED
+	vp.screen_space_aa = Viewport.SCREEN_SPACE_AA_DISABLED
+	if env:
+		env.ssil_enabled = not low
+		env.ssao_enabled = true
 	set_meta("quality", level)
 
 
@@ -820,6 +850,21 @@ func _interactions() -> void:
 		_near_vehicle = "" if near.is_empty() else ("your " if near["type"] in ["current", "left"] else "the ") + Jeep.SPECS[near["kind"]]["name"]
 	if walker and _near_vehicle != "":
 		_prompt = "Press F: drive %s" % _near_vehicle
+	if walker and interiors:
+		if not interiors.inside.is_empty():
+			_prompt = "Inside %s · walk to the doorway to go out" % interiors.inside["name"]
+			if interiors.at_exit(p):
+				_prompt = "Press E: go back outside"
+				if Input.is_action_just_pressed("interact"):
+					interiors.leave(walker)
+			return
+		var dr: Dictionary = interiors.door_near(p)
+		if not dr.is_empty():
+			_prompt = "Press E: go into %s" % dr["name"]
+			if Input.is_action_just_pressed("interact"):
+				interiors.enter(dr, walker)
+				_message("%s" % dr["name"], 3.0)
+			return
 	var still := walker != null or absf(jeep.speed) < 1.0
 	var action := Callable()
 	if towns:
@@ -1389,6 +1434,9 @@ func _toggle_on_foot() -> void:
 		jeep.set_cockpit(false)
 		_message("On foot. WASD walk · Shift run · Space jump · mouse to look · F by the car to drive again.", 6.0)
 	else:
+		if interiors and not interiors.inside.is_empty():
+			_message("Go back outside first (E at the doorway).")
+			return
 		var near := _vehicle_near(walker.global_position)
 		if near.is_empty():
 			_message("Walk up to a vehicle (yours, a parked one or one in traffic) and press F.")
@@ -1426,7 +1474,7 @@ func _update_mist(delta: float) -> void:
 	env.fog_density = 0.0 if "--nofog" in args else lerpf(0.00015, 0.011, f) + cloud * 0.0004 + wx["rain"] * 0.0015
 	var fog_col := Color(0.74, 0.74, 0.76).lerp(Color(0.80, 0.82, 0.85), f).lerp(Color(0.62, 0.64, 0.67), cloud * 0.6)
 	env.fog_light_color = fog_col * lerpf(0.06, 1.0, day)
-	env.ambient_light_energy = lerpf(0.05, 0.5, day) * (1.0 - 0.25 * cloud)
+	env.ambient_light_energy = lerpf(0.05, lerpf(0.3, 0.55, cloud), day)
 	# sun by day, a faint blue moon opposite it by night
 	var up := sd.y > -0.04
 	var light_dir: Vector3 = sd if up else Vector3(-sd.x, maxf(-sd.y, 0.25), sd.z).normalized()
@@ -1434,11 +1482,20 @@ func _update_mist(delta: float) -> void:
 		sun.basis = Basis.looking_at(-light_dir, Vector3.UP)
 	if up:
 		sun.light_color = Color(1.0, 0.72, 0.5).lerp(Color(1.0, 0.96, 0.9), smoothstep(0.08, 0.45, sd.y))
-		sun.light_energy = 1.6 * smoothstep(-0.04, 0.15, sd.y) * (1.0 - 0.7 * cloud) * lerpf(1.0, 0.35, f)
+		sun.light_energy = 3.0 * smoothstep(-0.04, 0.15, sd.y) * (1.0 - 0.75 * cloud) * lerpf(1.0, 0.35, f)
 	else:
 		sun.light_color = Color(0.55, 0.65, 1.0)
 		sun.light_energy = 0.07 * (1.0 - 0.8 * cloud)
 	sun.shadow_enabled = sun.light_energy > 0.2
+	if interiors and not interiors.inside.is_empty():
+		env.fog_density = 0.0              # indoors: no outdoor haze, lit by the room's own lamps
+		sun.light_energy = 0.0
+		env.ambient_light_energy = 0.25
+		env.glow_enabled = false
+		env.fog_aerial_perspective = 0.0
+	else:
+		env.glow_enabled = true
+		env.fog_aerial_perspective = 0.5
 	# the sky shader's radiance map is re-baked whenever it changes, so only every couple of seconds
 	_sky_t -= delta
 	if _sky_t <= 0.0:
@@ -1511,7 +1568,7 @@ func _build_rain() -> void:
 
 func _update_rain(_delta: float) -> void:
 	var r: float = sim.wx["rain"]
-	rain.emitting = r > 0.05
+	rain.emitting = r > 0.05 and (interiors == null or interiors.inside.is_empty())
 	if rain.emitting:
 		rain.amount_ratio = r
 		var c: Vector3 = cam.global_position
@@ -1612,6 +1669,27 @@ func _snap() -> void:
 					if walker:
 						_toggle_on_foot()
 					print("SWAP now driving %s (left behind: %d)" % [jeep.vehicle, left_behind.size()])
+	# --enter : get out, stand at the nearest shop door and go in (tests the interiors)
+	if "--enter" in args and _t > 3.0 and not has_meta("entered") and interiors:
+		set_meta("entered", true)
+		jeep.linear_velocity = Vector3.ZERO
+		jeep.speed = 0.0
+		if walker == null:
+			_toggle_on_foot()
+		var best: Dictionary = {}
+		var bd := INF
+		for dr in interiors.doors:
+			var dd: float = (dr["pos"] as Vector3).distance_to(jeep.global_position)
+			var want_room := ""
+			for a in args:
+				if a.begins_with("--room="):
+					want_room = a.get_slice("=", 1)
+			if dd < bd and (want_room == "" or want_room == dr["room"]):
+				bd = dd
+				best = dr
+		if not best.is_empty():
+			interiors.enter(best, walker)
+			print("ENTERED %s (%s) %.0f m away" % [best["name"], best["room"], bd])
 	# --walk : get out after 3 s and walk forward (tests the on-foot character)
 	if "--walk" in args and _t > 3.0 and not has_meta("walked"):
 		set_meta("walked", true)
@@ -1624,7 +1702,7 @@ func _snap() -> void:
 		set_meta("saved_once", true)
 		_save_game(true)
 		print("SAVED d=%.0f day=%d %s money=%d fuel=%.1f" % [d, sim.day, Sim.clock_text(sim.minute), sim.money, sim.fuel])
-	if _snapped or _t < 5.0:
+	if _snapped or _t < 12.0:
 		return
 	for a in args:
 		if a.begins_with("--snap="):

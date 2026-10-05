@@ -10,3 +10,6 @@ mapdata/
 .DS_Store
 __pycache__/
 *.pyc
+
+# generated full-map Blender file (tools/build_map_blend.py), too big for GitHub
+blender/

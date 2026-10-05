@@ -62,7 +62,7 @@ def make_mat(name, color, metallic=0.0, rough=0.5, coat=0.0, emission=None, stre
 
 def mats(paint):
     return {
-        "paint": make_mat("Paint", paint, metallic=0.5, rough=0.32, coat=0.8),
+        "paint": make_mat("Paint", paint, metallic=0.6, rough=0.28, coat=1.0),
         "glass": make_mat("Glass", (0.02, 0.025, 0.03), rough=0.04, coat=1.0),
         "black": make_mat("BlackPlastic", (0.015, 0.015, 0.016), rough=0.55),
         "chrome": make_mat("Chrome", (0.8, 0.8, 0.82), metallic=1.0, rough=0.15),
@@ -73,6 +73,12 @@ def mats(paint):
         "amber": make_mat("Amber", (0.9, 0.5, 0.05), rough=0.2),
         "plate": make_mat("Plate", (0.92, 0.92, 0.88), rough=0.5),
         "seat": make_mat("Seat", (0.12, 0.1, 0.09), rough=0.8),
+        "steel": make_mat("SteelWheel", (0.35, 0.36, 0.38), metallic=0.9, rough=0.35),
+        "disc": make_mat("BrakeDisc", (0.3, 0.3, 0.3), metallic=1.0, rough=0.45),
+        "caliper": make_mat("Caliper", (0.05, 0.05, 0.055), rough=0.5),
+        "trim": make_mat("GlossBlack", (0.006, 0.006, 0.007), rough=0.08, coat=1.0),
+        "lens": make_mat("Lens", (0.85, 0.87, 0.9), rough=0.02, coat=1.0),
+        "under": make_mat("Underbody", (0.02, 0.02, 0.02), rough=0.9),
     }
 
 
@@ -147,6 +153,15 @@ def box(name, loc, dims, mat, bev=0.01, rot=(0, 0, 0)):
     return o
 
 
+def beam(name, p0, p1, wid, hgt, mat):
+    """A bar from p0 to p1."""
+    p0, p1 = Vector(p0), Vector(p1)
+    d = p1 - p0
+    o = box(name, (p0 + p1) / 2, (d.length, wid, hgt), mat, bev=0)
+    o.rotation_euler = d.to_track_quat('X', 'Z').to_euler()
+    return o
+
+
 def cyl(name, loc, r, depth, mat, rot=(0, 0, 0), verts=24):
     bpy.ops.mesh.primitive_cylinder_add(vertices=verts, radius=r, depth=depth, location=loc, rotation=rot)
     o = bpy.context.active_object
@@ -168,32 +183,84 @@ def arch_cut(body, x, y_side, z, r, depth=0.5):
     return cutter
 
 
+def lathe(name, prof, mat, segs=48, ripple=None):
+    """Revolve a (radius, y) profile round the Y axis (the axle). ripple(i, k) -> radius scale lets
+    the tread carry blocks."""
+    bm = bmesh.new()
+    rings = []
+    for k, (r, y) in enumerate(prof):
+        ring = []
+        for i in range(segs):
+            a = 2 * math.pi * i / segs
+            rr = r * (ripple(i, k) if ripple else 1.0)
+            ring.append(bm.verts.new((rr * math.sin(a), y, rr * math.cos(a))))
+        rings.append(ring)
+    for r1, r2 in zip(rings, rings[1:]):
+        for i in range(segs):
+            j = (i + 1) % segs
+            bm.faces.new((r1[i], r1[j], r2[j], r2[i]))
+    bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
+    me = bpy.data.meshes.new(name)
+    bm.to_mesh(me)
+    bm.free()
+    o = link(bpy.data.objects.new(name, me))
+    o.data.materials.append(mat)
+    smooth(o)
+    return o
+
+
 def wheel(name, loc, R, width, M, outward_positive_y=True, spokes=5, hub_cap=False):
+    """A real wheel: lathed tyre with rounded shoulders, two circumferential grooves and shoulder tread
+    blocks; a dished alloy (twin spokes, concave) or a steel wheel with a cap; brake disc, caliper,
+    lug nuts. Outer face toward +Y of the wheel's empty."""
     root = link(bpy.data.objects.new(name, None))
     root.location = loc
     if not outward_positive_y:
         root.rotation_euler = (0, 0, math.pi)
+    W = width
+    rr = R * 0.66 if R < 0.4 else R * 0.6                 # rim radius (tyre sidewall below it)
     parts = []
-    bpy.ops.mesh.primitive_torus_add(major_radius=R - width * 0.42, minor_radius=width * 0.42,
-                                     major_segments=32, minor_segments=12, rotation=(math.pi / 2, 0, 0))
-    t = bpy.context.active_object
-    t.scale = (1, 1, 1.2)
-    t.data.materials.append(M["tyre"])
-    parts.append(t)
-    rim_r = R - width * 0.8
-    parts.append(cyl("Rim", (0, 0, 0), rim_r, width * 0.9, M["black" if hub_cap else "rim"], rot=(math.pi / 2, 0, 0), verts=24))
+    tyre_prof = [(rr * 0.98, -W * 0.43), (rr + (R - rr) * 0.35, -W * 0.5), (R - 0.03, -W * 0.5), (R - 0.008, -W * 0.44),
+                 (R, -W * 0.36), (R, -W * 0.2), (R - 0.012, -W * 0.18), (R - 0.012, -W * 0.13), (R, -W * 0.11),
+                 (R, W * 0.11), (R - 0.012, W * 0.13), (R - 0.012, W * 0.18), (R, W * 0.2), (R, W * 0.36),
+                 (R - 0.008, W * 0.44), (R - 0.03, W * 0.5), (rr + (R - rr) * 0.35, W * 0.5), (rr * 0.98, W * 0.43)]
+    blocks = {3, 4, 13, 14}
+    parts.append(lathe("Tyre", tyre_prof, M["tyre"], 64,
+                       lambda i, k: (0.985 if (i % 2 and k in blocks) else 1.0)))
+    rim_m = M["black" if hub_cap else "rim"] if not hub_cap else M["steel"]
+    # barrel (dark inside) and the outer lip
+    parts.append(lathe("Barrel", [(rr, W * 0.42), (rr * 0.96, W * 0.36), (rr * 0.96, -W * 0.4), (rr, -W * 0.44)], M["black"], 40))
+    parts.append(lathe("Lip", [(rr * 1.02, W * 0.44), (rr * 0.995, W * 0.47), (rr * 0.93, W * 0.43)], rim_m if not hub_cap else M["steel"], 48))
     if hub_cap:
-        parts.append(cyl("Cap", (0, width * 0.46, 0), rim_r * 0.9, 0.02, M["rim"], rot=(math.pi / 2, 0, 0)))
+        parts.append(lathe("Disc", [(rr * 0.93, W * 0.4), (rr * 0.7, W * 0.3), (rr * 0.25, W * 0.33), (0.001, W * 0.34)], M["steel"], 40))
+        for k in range(6):                                    # cooling holes look
+            th = 2 * math.pi * k / 6
+            parts.append(cyl("Hole", (rr * 0.5 * math.sin(th), W * 0.325, rr * 0.5 * math.cos(th)), rr * 0.09, 0.012,
+                             M["black"], rot=(math.pi / 2, 0, 0), verts=12))
+        parts.append(lathe("Cap", [(rr * 0.42, W * 0.36), (rr * 0.38, W * 0.42), (rr * 0.2, W * 0.45), (0.001, W * 0.455)], M["rim"], 32))
     else:
-        for k in range(spokes):
-            th = 2 * math.pi * k / spokes
-            sp = box("Spoke", (rim_r * 0.5 * math.sin(th), width * 0.45, rim_r * 0.5 * math.cos(th)),
-                     (0.045 * R / 0.3, 0.02, rim_r), M["rim"], bev=0, rot=(0, th, 0))
-            parts.append(sp)
-    parts.append(cyl("Hub", (0, width * 0.5, 0), 0.05 * R / 0.3, 0.03, M["chrome"], rot=(math.pi / 2, 0, 0), verts=12))
+        n = spokes or 5
+        for k in range(n):
+            for d in (-1, 1):                                 # twin spokes, concave toward the hub
+                th = 2 * math.pi * k / n + d * 0.09
+                p0 = Vector((0.07 * R / 0.3 * math.sin(th), W * 0.34, 0.07 * R / 0.3 * math.cos(th)))
+                pm = Vector((rr * 0.55 * math.sin(th), W * 0.37, rr * 0.55 * math.cos(th)))
+                p1 = Vector((rr * 0.95 * math.sin(th), W * 0.43, rr * 0.95 * math.cos(th)))
+                for qa, qb in ((p0, pm), (pm, p1)):
+                    dv = qb - qa
+                    sp = box("Spoke", (qa + qb) / 2, (dv.length, 0.028 * R / 0.3, 0.03), M["rim"], bev=0.004)
+                    sp.rotation_euler = dv.to_track_quat('X', 'Y').to_euler()
+        parts.append(lathe("Hub", [(0.085 * R / 0.3, W * 0.33), (0.08 * R / 0.3, W * 0.37), (0.04 * R / 0.3, W * 0.39), (0.001, W * 0.392)], M["rim"], 24))
+        parts.append(cyl("Badge", (0, W * 0.393, 0), 0.025 * R / 0.3, 0.004, M["black"], rot=(math.pi / 2, 0, 0)))
+    for k in range(5 if R < 0.45 else 8):                     # lug nuts
+        th = 2 * math.pi * k / (5 if R < 0.45 else 8)
+        rn = 0.055 * R / 0.3
+        parts.append(cyl("Nut", (rn * math.sin(th), W * 0.36, rn * math.cos(th)), 0.011 * R / 0.3, 0.03, M["chrome"],
+                         rot=(math.pi / 2, 0, 0), verts=6))
+    parts.append(cyl("BrakeDisc", (0, -W * 0.05, 0), rr * 0.82, 0.025, M["disc"], rot=(math.pi / 2, 0, 0), verts=32))
+    parts.append(box("Caliper", (-rr * 0.55, W * 0.02, rr * 0.45), (0.1 * R / 0.3, 0.07, 0.14 * R / 0.3), M["caliper"], bev=0.01))
     for p in parts:
         p.parent = root
-        smooth(p)
     return root
 
 
@@ -258,20 +325,76 @@ def car(kind, M):
         box("Handle", (-0.75, s * 0.87, 0.82), (0.14, 0.02, 0.025), M["chrome"], bev=0.005)
         box("DoorGap", (-0.3, s * 0.875, 0.55), (0.006, 0.01, 0.6), M["black"], bev=0)
         box("Skirt", ((wb_f + wb_r) / 2, s * 0.85, 0.27), (abs(wb_f - wb_r) - 0.7, 0.04, 0.07), M["black"], bev=0.01)
-    # front: grille, bumper, lamps, plate
-    box("Grille", (L2 - 0.02, 0, 0.5), (0.04, 0.62, 0.14), M["black"], bev=0.01)
-    box("GrilleChrome", (L2 - 0.0, 0, 0.58), (0.02, 0.6, 0.015), M["chrome"], bev=0)
-    box("BumperF", (L2 - 0.05, 0, 0.33), (0.08, 1.5, 0.1), M["black"], bev=0.02)
-    box("PlateF", (L2 + 0.0, 0, 0.36), (0.01, 0.5, 0.11), M["plate"], bev=0)
-    heads = lamp_pair(L2 - 0.08, 0.6, 0.64, (0.06, 0.22, 0.07), M, "Headlight", "head")
-    lamp_pair(L2 - 0.05, 0.62, 0.36, (0.03, 0.1, 0.03), M, "Fog", "amber")
-    # rear
-    box("BumperR", (-L2 + 0.04, 0, 0.36), (0.08, 1.5, 0.12), M["black"], bev=0.02)
-    box("PlateR", (-L2 - 0.0, 0, 0.55), (0.01, 0.5, 0.11), M["plate"], bev=0)
-    tails = lamp_pair(-L2 + 0.04, 0.62, 0.78, (0.05, 0.2, 0.09), M, "TailBar", "tail")
+    # ---- realism details ------------------------------------------------------------
+    x0, hw0 = cab_keys[0][0], cab_keys[0][1]
+    front_top = next(k for k in cab_keys if k[3] >= top_z - 0.07)
+    back_top = [k for k in cab_keys if k[3] >= top_z - 0.07][-1]
+    xr_end = cab_keys[-1][0]
+    box("Underbody", (0, 0, 0.21), (2 * L2 - 0.5, 1.5, 0.06), M["under"], bev=0)
+    for ax in (wb_f, wb_r):                                         # dark arch liners
+        for s in (1, -1):
+            ln = lathe("ArchLiner", [(R + 0.055, -0.16), (R + 0.055, 0.1)], M["under"], 32)
+            ln.location = (ax, s * track, R)
+            if s < 0:
+                ln.rotation_euler = (0, 0, math.pi)
     for s in (1, -1):
-        wheel("Wheel_F" + ("L" if s > 0 else "R"), (wb_f, s * track, R), R, 0.19, M, s > 0, spokes=5 if kind == "sedan" else 0, hub_cap=kind == "hatchback")
-        wheel("Wheel_R" + ("L" if s > 0 else "R"), (wb_r, s * track, R), R, 0.19, M, s > 0, spokes=5 if kind == "sedan" else 0, hub_cap=kind == "hatchback")
+        # A pillars along the windscreen edge, gloss-black window surround, chrome belt line, drip rail
+        beam("APillar", (x0, s * hw0 * 0.985, 0.9), (front_top[0], s * front_top[1] * 0.985, top_z - 0.01), 0.07, 0.05, M["paint"])
+        beam("CPillar", (back_top[0], s * back_top[1] * 0.99, top_z - 0.01), (xr_end + 0.02, s * cab_keys[-1][1] * 0.99, 0.93), 0.1, 0.05, M["paint"])
+        box("Belt", ((x0 + xr_end) / 2, s * 0.745, 0.885), (x0 - xr_end, 0.02, 0.02), M["chrome"], bev=0)
+        box("WinTrimLow", ((x0 + xr_end) / 2, s * 0.73, 0.9), (x0 - xr_end - 0.05, 0.015, 0.04), M["trim"], bev=0)
+        box("DripRail", ((front_top[0] + back_top[0]) / 2, s * front_top[1] * 1.0, top_z - 0.02),
+            (front_top[0] - back_top[0], 0.02, 0.02), M["trim"], bev=0)
+        # door shut lines and the sill
+        rear_edge = -1.18 if kind == "hatchback" else -1.12
+        for xl in (pillars[0][0] + 0.12, pillars[1][0], rear_edge):
+            box("ShutLine", (xl, s * 0.872, 0.6), (0.006, 0.012, 0.58), M["black"], bev=0)
+        box("ShutLineLow", ((pillars[0][0] + 0.12 + rear_edge) / 2, s * 0.866, 0.31), (pillars[0][0] + 0.12 - rear_edge, 0.012, 0.006), M["black"], bev=0)
+        box("FuelLid", (wb_r + 0.35, -0.873, 0.78), (0.16, 0.008, 0.12), M["paint"], bev=0.004) if s < 0 else None
+        box("MirrorGlass", (0.74, s * 0.92, 1.0), (0.01, 0.11, 0.065), M["chrome"], bev=0)
+        box("MirrorBlink", (0.81, s * 0.94, 0.99), (0.02, 0.07, 0.015), M["amber"], bev=0)
+    # wipers parked at the base of the windscreen
+    beam("Wiper", (x0 - 0.02, -0.62, 0.925), (x0 - 0.1, 0.02, 0.95), 0.018, 0.015, M["black"])
+    beam("Wiper", (x0 - 0.02, -0.05, 0.925), (x0 - 0.1, 0.55, 0.95), 0.018, 0.015, M["black"])
+    box("Cowl", (x0 + 0.02, 0, 0.905), (0.1, 1.3, 0.02), M["trim"], bev=0)
+    box("Antenna", (back_top[0] + 0.12, 0, top_z + 0.04), (0.16, 0.04, 0.06), M["trim"], bev=0.02)
+    # front: body-colour bumper, gloss-black grille with chrome slats, lower intake, skid plate
+    box("BumperF", (L2 - 0.07, 0, 0.4), (0.14, 1.56, 0.24), M["paint"], bev=0.05)
+    box("Grille", (L2 - 0.01, 0, 0.57), (0.04, 0.72, 0.15), M["trim"], bev=0.015)
+    for k in range(3):
+        box("GrilleSlat", (L2 + 0.012, 0, 0.53 + k * 0.04), (0.01, 0.68, 0.012), M["chrome"], bev=0)
+    box("Intake", (L2 + 0.0, 0, 0.32), (0.03, 0.9, 0.09), M["trim"], bev=0.01)
+    box("SkidPlate", (L2 - 0.02, 0, 0.25), (0.05, 0.7, 0.03), M["rim"], bev=0.005)
+    box("PlateBorderF", (L2 + 0.012, 0, 0.42), (0.008, 0.52, 0.13), M["black"], bev=0)
+    box("PlateF", (L2 + 0.018, 0, 0.42), (0.006, 0.5, 0.11), M["plate"], bev=0)
+    for s in (1, -1):
+        # headlamp cluster: black housing, two chrome reflector bowls with the lamps, a DRL strip
+        box("HLHousing", (L2 - 0.1, s * 0.57, 0.65), (0.12, 0.32, 0.12), M["trim"], bev=0.02)
+        for yy in (0.5, 0.65):
+            cyl("Reflector", (L2 - 0.035, s * yy, 0.66), 0.048, 0.03, M["chrome"], rot=(0, math.pi / 2, 0), verts=20)
+            cyl("Headlight", (L2 - 0.018, s * yy, 0.66), 0.03, 0.02, M["head"], rot=(0, math.pi / 2, 0), verts=16)
+        box("Headlight", (L2 - 0.03, s * 0.57, 0.605), (0.02, 0.28, 0.014), M["head"], bev=0)
+        box("Indicator", (L2 - 0.06, s * 0.71, 0.64), (0.04, 0.03, 0.06), M["amber"], bev=0.005)
+        cyl("FogBezel", (L2 - 0.02, s * 0.6, 0.33), 0.05, 0.03, M["trim"], rot=(0, math.pi / 2, 0), verts=20)
+        cyl("Fog", (L2 - 0.0, s * 0.6, 0.33), 0.032, 0.02, M["lens"], rot=(0, math.pi / 2, 0), verts=16)
+        # wrap-around tail lamp with darker inner segments and a reverse lamp
+        box("TailBar", (-L2 + 0.06, s * 0.62, 0.8), (0.08, 0.26, 0.12), M["tail"], bev=0.015)
+        box("TailInner", (-L2 + 0.015, s * 0.6, 0.8), (0.01, 0.14, 0.05), M["trim"], bev=0)
+        box("Reverse", (-L2 + 0.018, s * 0.69, 0.8), (0.01, 0.05, 0.04), M["lens"], bev=0)
+        box("TailBar", (-L2 + 0.25, s * 0.82, 0.8), (0.18, 0.06, 0.1), M["tail"], bev=0.01)
+        box("Reflector", (-L2 + 0.0, s * 0.62, 0.36), (0.01, 0.1, 0.025), M["tail"], bev=0)
+    # rear: body-colour bumper, black diffuser, plate, exhaust, third brake light
+    box("BumperR", (-L2 + 0.06, 0, 0.42), (0.14, 1.56, 0.24), M["paint"], bev=0.05)
+    box("Diffuser", (-L2 + 0.0, 0, 0.3), (0.04, 1.1, 0.08), M["trim"], bev=0.01)
+    box("PlateBorderR", (-L2 - 0.005, 0, 0.6), (0.008, 0.52, 0.13), M["black"], bev=0)
+    box("PlateR", (-L2 - 0.01, 0, 0.6), (0.006, 0.5, 0.11), M["plate"], bev=0)
+    cyl("Exhaust", (-L2 + 0.05, 0.45, 0.26), 0.03, 0.12, M["chrome"], rot=(0, math.pi / 2, 0), verts=16)
+    box("TailBar", (xr_end + 0.04, 0, top_z - 0.06), (0.03, 0.4, 0.025), M["tail"], bev=0)
+    if kind == "hatchback":
+        beam("RearWiper", (-L2 + 0.08, 0, 1.0), (-L2 + 0.12, 0.35, 1.12), 0.015, 0.015, M["black"])
+    for s in (1, -1):
+        wheel("Wheel_F" + ("L" if s > 0 else "R"), (wb_f, s * track, R), R, 0.19, M, s > 0, spokes=5 if kind == "sedan" else 6, hub_cap=False)
+        wheel("Wheel_R" + ("L" if s > 0 else "R"), (wb_r, s * track, R), R, 0.19, M, s > 0, spokes=5 if kind == "sedan" else 6, hub_cap=False)
     return cutters
 
 

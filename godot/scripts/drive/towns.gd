@@ -8,6 +8,9 @@ extends Node3D
 const MB := preload("res://scripts/drive/mesh_builder.gd")
 const StreetLife := preload("res://scripts/drive/street_life.gd")
 const BUILDING_SHADER := preload("res://shaders/building.gdshader")
+const Kit := preload("res://scripts/drive/building_kit.gd")
+const KIT_RANGE := 240.0                  # designed buildings within this; painted blocks beyond
+const KIT_TILE := 128.0
 const TILE := 256.0
 const FLOOR := 3.2
 const RANK := {"trunk": 0.07, "primary": 0.06, "secondary": 0.05, "tertiary": 0.04, "unclassified": 0.03,
@@ -30,6 +33,11 @@ var lamp_mat: StandardMaterial3D           # streetlight heads: glow after dusk
 var pool_mat: StandardMaterial3D           # the pools of light they throw on the road
 var _pools: Array = []
 var highway_gap: Callable
+var kit                                   # building_kit.gd: the designed buildings
+var kit_count := 0
+var drive_count := 0
+var wall_count := 0
+var walled := 0
 var graph                                 # road_graph.gd: built here from towns.json, shared with GPS etc.                 # (Vector3) -> metres to the main road's centreline
 
 
@@ -48,6 +56,9 @@ func build(path: String, asphalt: Material, progress: Callable) -> void:
 	body = StaticBody3D.new()
 	body.name = "TownCollision"
 	add_child(body)
+	kit = Kit.new()
+	if "--nokit" in OS.get_cmdline_user_args() or not kit.setup():
+		kit = null
 	var names := data.keys()
 	for i in names.size():
 		var tw: Dictionary = data[names[i]]
@@ -55,14 +66,19 @@ func build(path: String, asphalt: Material, progress: Callable) -> void:
 		await get_tree().process_frame
 		var tr := "--trace" in OS.get_cmdline_user_args()
 		var t0 := Time.get_ticks_msec()
-		_streets(names[i], tw["streets"])
+		var plan := _plan_kit(names[i], tw)
+		if tr: print("  TOWN %s kit plan %d ms: %d designed, %d driveways" % [names[i], Time.get_ticks_msec() - t0, plan["fits"].size(), plan["drives"]])
+		t0 = Time.get_ticks_msec()
+		_streets(names[i], tw["streets"], tw.get("parking", []), plan["gaps"])
+		_parking(names[i], tw.get("parking", []))
+		_islands(names[i])
 		if tr: print("  TOWN %s streets %d ms" % [names[i], Time.get_ticks_msec() - t0])
 		await get_tree().process_frame
 		t0 = Time.get_ticks_msec()
-		_buildings(names[i], tw["buildings"])
+		_buildings(names[i], tw["buildings"], plan["fits"])
 		if tr: print("  TOWN %s buildings %d ms" % [names[i], Time.get_ticks_msec() - t0])
 		t0 = Time.get_ticks_msec()
-		_rooftops(names[i], tw["buildings"])
+		_rooftops(names[i], tw["buildings"], plan["fits"])
 		_utilities(names[i], tw["streets"])
 		if tr: print("  TOWN %s utilities %d ms" % [names[i], Time.get_ticks_msec() - t0])
 		t0 = Time.get_ticks_msec()
@@ -73,7 +89,7 @@ func build(path: String, asphalt: Material, progress: Callable) -> void:
 		var life := StreetLife.new()
 		life.name = "%sParked" % names[i]
 		add_child(life)
-		parked += life.build(names[i], tw["streets"], graph, body, shops)
+		parked += life.build(names[i], tw["streets"], graph, body, shops, tw.get("parking", []))
 		lives.append(life)
 		if tr: print("  TOWN %s parked %d ms" % [names[i], Time.get_ticks_msec() - t0])
 		_fuel_bunks(names[i], tw)
@@ -81,6 +97,8 @@ func build(path: String, asphalt: Material, progress: Callable) -> void:
 
 
 func set_wet(w: float) -> void:
+	if kit:
+		kit.set_wet(w)
 	for k in _edge_mats:
 		var m: StandardMaterial3D = _edge_mats[k]
 		m.roughness = lerpf(0.9, 0.45, w)
@@ -90,6 +108,8 @@ func set_wet(w: float) -> void:
 func set_night(v: float) -> void:
 	if mat_building:
 		mat_building.set_shader_parameter("night", v)
+	if kit:
+		kit.set_night(v)
 	if lamp_mat:
 		lamp_mat.emission_energy_multiplier = 4.0 * smoothstep(0.3, 0.7, v)
 	if pool_mat:
@@ -106,17 +126,27 @@ func _tile(p: Vector3) -> Vector2i:
 
 
 # ----------------------------------------------------------------------------- streets
-func _streets(town: String, streets: Array) -> void:
+func _streets(town: String, streets: Array, lots: Array = [], extra_gaps: Dictionary = {}) -> void:
 	var ts0 := Time.get_ticks_msec()
+	# driveways: where a parking lot or a house's drive meets a street, the kerb and pavement give way
+	var gaps := extra_gaps.duplicate(true)
+	for lot in lots:
+		var gsi := int(lot["street"])
+		if not gaps.has(gsi):
+			gaps[gsi] = []
+		gaps[gsi].append([-float(lot["side"]), float(lot["s0"]) - 1.5, float(lot["s1"]) + 1.5])
+	var si := -1
 	var roads := {}
 	var lines := {}
 	var walks := {}                            # kerbs, drains and sidewalks (concrete)
 	var verges := {}                           # gravel shoulders on small streets
 	for s in streets:
+		si += 1
 		var raw: Array = s["pts"]
 		var n := raw.size()
 		if n < 2:
 			continue
+		var my_gaps: Array = gaps.get(si, [])
 		var pts := PackedVector3Array()
 		for q in raw:
 			pts.append(Vector3(q[0], q[1] + RANK.get(s["class"], 0.02), q[2]))
@@ -169,13 +199,19 @@ func _streets(town: String, streets: Array) -> void:
 				var tj := pts[mini(j + 1, n - 1)] - pts[maxi(j - 1, 0)]
 				var lj := Vector3(tj.z, 0, -tj.x).normalized()
 				for side in [1.0, -1.0]:
+					var open := false
+					for gp in my_gaps:
+						if gp[0] == side and dist + seg * 2.0 > gp[1] and dist < gp[2]:
+							open = true
+					if open:
+						continue
 					if main:
 						# drain channel, kerb and a raised pavement, like a city main road
 						_strip(wm, a, b2, la * side, lj * side, half, half + 0.45, -0.12, -0.12, Color(0.32, 0.31, 0.29), 2)
 						_strip(wm, a, b2, la * side, lj * side, half + 0.45, half + 0.7, 0.16, 0.16, Color(0.78, 0.77, 0.73) if i % 4 == 0 or s["class"] == "tertiary" else Color(0.12, 0.12, 0.12), 0)
 						_strip(wm, a, b2, la * side, lj * side, half + 0.7, half + 1.9, 0.15, 0.15, Color(0.66, 0.63, 0.58), 3)
 					else:
-						_strip(vm, a, b2, la * side, lj * side, half - 0.05, half + 1.0, -0.01, -0.06, Color(0.52, 0.47, 0.40))
+						_strip(vm, a, b2, la * side, lj * side, half - 0.05, half + 1.0, -0.01, -0.06, Color(0.52, 0.47, 0.40), 3)
 			if marked and fmod(dist, 8.0) < 4.0 and dist > clear_a and dist + seg < total - clear_b:
 				var up := Vector3(0, 0.015, 0)
 				lm.quad(a + la * 0.06 + up, a - la * 0.06 + up, b - lb * 0.06 + up, b + lb * 0.06 + up,
@@ -320,6 +356,221 @@ func _junctions(town: String, roads: Dictionary, walks: Dictionary = {}, verges:
 			mb.tri(cc, a, b, Color.WHITE, Vector3.UP, Vector2(cc.x, cc.z) / 6.0, Vector2(a.x, a.z) / 6.0, Vector2(b.x, b.z) / 6.0)
 
 
+## Parking lots: a paved apron level with the street, white bay lines, a low kerb round the
+## back and sides, and a blue P sign at the entrance. Listed on the map as Parking.
+func _parking(town: String, lots: Array) -> void:
+	if lots.is_empty():
+		return
+	var slab := MB.new()
+	var paint := MB.new()
+	var kerb := MB.new()
+	var signs := MB.new()
+	for lot in lots:
+		var P: Array = []
+		for q in lot["poly"]:
+			P.append(Vector3(q[0], float(lot["y"]) + 0.03, q[1]))
+		var t := Vector3(lot["t"][0], 0, lot["t"][1])
+		var nrm := Vector3(lot["n"][0], 0, lot["n"][1])
+		slab.quad(P[0], P[1], P[2], P[3], Color(0.36, 0.36, 0.37), Vector3.UP)
+		var along: float = float(lot["s1"]) - float(lot["s0"])
+		var depth: float = (P[3] - P[0]).length()
+		var pitch := 1.2 if depth < 8.0 else 2.6
+		var up := Vector3(0, 0.012, 0)
+		var b := 0.0
+		while b <= along + 0.01:
+			var a0: Vector3 = P[0] + t * b + nrm * 1.0 + up
+			var a1: Vector3 = P[0] + t * b + nrm * (depth - 0.4) + up
+			paint.quad(a0 - t * 0.05, a0 + t * 0.05, a1 + t * 0.05, a1 - t * 0.05, Color(0.85, 0.85, 0.8), Vector3.UP)
+			b += pitch
+		# back line and low kerb on the three closed sides
+		var back0: Vector3 = P[3] + up - nrm * 0.4
+		var back1: Vector3 = P[2] + up - nrm * 0.4
+		paint.quad(back0, back1, back1 + nrm * 0.1, back0 + nrm * 0.1, Color(0.85, 0.85, 0.8), Vector3.UP)
+		for e in [[P[3], P[2]], [P[0], P[3]], [P[1], P[2]]]:
+			var e0: Vector3 = e[0]
+			var e1: Vector3 = e[1]
+			var mid := (e0 + e1) * 0.5
+			var len := e0.distance_to(e1)
+			kerb.box(Transform3D(Basis.looking_at((e1 - e0).normalized(), Vector3.UP), mid + Vector3(0, 0.06, 0)), Vector3(0.18, 0.14, len), Color(0.7, 0.69, 0.66))
+		# P sign on a post at the entrance corner
+		var sp: Vector3 = P[1] + nrm * 0.6 - t * 0.4
+		signs.box(Transform3D(Basis(), sp + Vector3(0, 1.2, 0)), Vector3(0.08, 2.4, 0.08), Color(0.6, 0.6, 0.62))
+		var face := Basis.looking_at(-nrm, Vector3.UP) if false else Basis.looking_at(t, Vector3.UP)
+		signs.box(Transform3D(face, sp + Vector3(0, 2.45, 0)), Vector3(0.6, 0.6, 0.05), Color(0.08, 0.3, 0.75))
+		var lbl := Label3D.new()
+		lbl.text = "P"
+		lbl.font_size = 96
+		lbl.pixel_size = 0.005
+		lbl.outline_size = 0
+		lbl.modulate = Color.WHITE
+		lbl.transform = Transform3D(face, sp + Vector3(0, 2.45, 0) - t * 0.035)
+		lbl.visibility_range_end = 160.0
+		lbl.double_sided = true
+		add_child(lbl)
+		pois.append({"name": "Parking · %s" % lot["name"] if lot["kind"] != "Parking" else "Public parking", "kind": "Parking",
+			"pos": (P[0] + P[2]) * 0.5, "town": town})
+	for pair in [[slab, mat_road, 600.0, true], [paint, mat_lines, 250.0, false], [kerb, MB.vertex_color_material(0.8), 300.0, false],
+			[signs, MB.vertex_color_material(0.6), 300.0, false]]:
+		var mi := MeshInstance3D.new()
+		mi.name = "%sParking" % town
+		mi.mesh = pair[0].commit()
+		mi.material_override = pair[1]
+		mi.visibility_range_end = pair[2]
+		mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		add_child(mi)
+		if pair[3]:
+			var cs := CollisionShape3D.new()
+			cs.shape = mi.mesh.create_trimesh_shape()
+			body.add_child(cs)
+
+
+## Where a street leaves the highway at a sharp angle, the wedge between the two roads becomes a
+## proper traffic island: a raised kerb, a grass top and, where there's room, a bronze statue on a
+## stone pedestal (our own figure from tools/people.py) — no bare dirt or grass left in the junction.
+var islands := 0
+const STATUE := "res://assets/people/person_statue.glb"
+
+func _islands(town: String) -> void:
+	if graph == null or not graph.has_graph():
+		return
+	var route = graph.route
+	var mb := MB.new()
+	var grass := MB.new()
+	var plinths: Array = []
+	for id in graph.nodes:
+		var nd: Dictionary = graph.nodes[id]
+		if nd["kind"] != "highway" or nd["edges"].is_empty() or graph.streets[nd["edges"][0]]["town"] != town:
+			continue
+		var c: Vector3 = nd["pos"]
+		var ri: int = nd["route_i"]
+		var rp: Vector3 = route.pts[ri]
+		var ht: Vector3 = route.tangents[ri]
+		ht = Vector3(ht.x, 0, ht.z).normalized()
+		var out := Vector3(c.x - rp.x, 0, c.z - rp.z).normalized()       # from the highway towards the street side
+		for si in nd["edges"]:
+			var st: Dictionary = graph.streets[si]
+			var p1 := _along(st, id, 14.0)
+			var sd := Vector3(p1.x - c.x, 0, p1.z - c.z).normalized()
+			for sgn in [1.0, -1.0]:
+				var hd: Vector3 = ht * sgn
+				var ang := acos(clampf(sd.dot(hd), -1.0, 1.0))
+				if ang > deg_to_rad(58.0) or ang < deg_to_rad(8.0):
+					continue
+				# the wedge lies between the highway's edge (on the street's side) and the street's edge
+				# facing the highway
+				var h_edge := rp + out * (3.6 + 1.2)
+				var s_side := Vector3(-sd.z, 0, sd.x)
+				if s_side.dot(hd) > 0.0:
+					s_side = -s_side
+				var s_edge := c + s_side * (float(st["width"]) * 0.5 + 0.6)
+				# apex: where those two edge lines meet
+				var den := hd.x * sd.z - hd.z * sd.x
+				if absf(den) < 1e-3:
+					continue
+				var w := s_edge - h_edge
+				var t := (w.x * sd.z - w.z * sd.x) / den
+				var apex := h_edge + hd * t
+				var reach := clampf(9.0 / maxf(sin(ang), 0.2), 12.0, 34.0)
+				var a2 := apex + hd * reach
+				var b2 := apex + sd * reach
+				if apex.distance_to(c) > 40.0:
+					continue
+				var y: float = maxf(c.y, rp.y) + 0.02
+				var P := [Vector3(apex.x, y, apex.z), Vector3(a2.x, y, a2.z), Vector3(b2.x, y, b2.z)]
+				# shrink a little so the kerb sits off the asphalt
+				var cen: Vector3 = (P[0] + P[1] + P[2]) / 3.0
+				for k in 3:
+					P[k] = cen + (P[k] - cen) * 0.88
+				for k in 3:
+					var e0: Vector3 = P[k]
+					var e1: Vector3 = P[(k + 1) % 3]
+					var len: float = e0.distance_to(e1)
+					mb.box(Transform3D(Basis.looking_at((e1 - e0).normalized(), Vector3.UP), (e0 + e1) * 0.5 + Vector3(0, 0.09, 0)),
+						Vector3(0.25, 0.22, len), Color(0.85, 0.83, 0.78) if k % 2 == 0 else Color(0.1, 0.1, 0.1))
+				var top := Vector3(0, 0.17, 0)
+				grass.tri(P[0] + top, P[1] + top, P[2] + top, Color(1, 1, 1), Vector3.UP)
+				islands += 1
+				var e1v: Vector3 = P[1] - P[0]
+				var e2v: Vector3 = P[2] - P[0]
+				var area: float = 0.5 * e1v.cross(e2v).length()
+				var left_km: float = (route.real_length - route.real_distance(route.dist[ri])) / 1000.0 if route.is_real else 0.0
+				if "--trace" in OS.get_cmdline_user_args():
+					print("  ISLAND %s %.1f,%.1f area %.0f  Kotagiri %.1f km  alt %.0f" % [town, cen.x, cen.z, area, left_km, route.real_altitude(route.dist[ri])])
+				# the junction you asked for (Kotagiri 5 km, ~1,910 m) always gets one
+				# the junction you asked for: the HUD read "Kotagiri 5 km · 1,910 m" there
+				var asked: bool = left_km > 4.0 and left_km <= 5.0 and absf(route.real_altitude(route.dist[ri]) - 1910.0) < 5.0
+				if area > 22.0:
+					plinths.append([cen + Vector3(0, 0.17, 0), hd, area, asked])
+	if mb.is_empty():
+		return
+	var kerb := MeshInstance3D.new()
+	kerb.mesh = mb.commit()
+	kerb.material_override = MB.vertex_color_material(0.8)
+	add_child(kerb)
+	var gi := MeshInstance3D.new()
+	gi.mesh = grass.commit()
+	var gm := MB.cc0_material("grass", 2.0, 0.95, false)
+	gi.material_override = gm
+	add_child(gi)
+	var cs := CollisionShape3D.new()
+	cs.shape = kerb.mesh.create_trimesh_shape()
+	body.add_child(cs)
+	# a statue on the three biggest islands in town (a landmark, not one at every corner)
+	plinths.sort_custom(func(a, b): return a[2] > b[2])
+	var chosen: Array = []
+	for pl in plinths:                     # the biggest island at your junction first
+		if pl[3]:
+			chosen.append(pl)
+			break
+	for pl in plinths:
+		if chosen.size() >= 3:
+			break
+		if not pl in chosen and (chosen.is_empty() or (pl[0] as Vector3).distance_to(chosen[0][0]) > 150.0):
+			chosen.append(pl)
+	for pl in chosen:
+		_statue(pl[0], pl[1])
+		if "--trace" in OS.get_cmdline_user_args():
+			print("  STATUE %s at %.1f,%.1f facing %.2f,%.2f" % [town, pl[0].x, pl[0].z, pl[1].x, pl[1].z])
+
+
+func _statue(at: Vector3, facing: Vector3) -> void:
+	var mb := MB.new()
+	var stone := Color(0.62, 0.6, 0.56)
+	mb.box(Transform3D(Basis(), at + Vector3(0, 0.25, 0)), Vector3(2.4, 0.5, 2.4), stone * 0.85)
+	mb.box(Transform3D(Basis(), at + Vector3(0, 0.75, 0)), Vector3(1.8, 0.5, 1.8), stone)
+	mb.box(Transform3D(Basis(), at + Vector3(0, 1.75, 0)), Vector3(1.1, 1.5, 1.1), stone * 1.05)
+	mb.box(Transform3D(Basis(), at + Vector3(0, 2.56, 0)), Vector3(1.3, 0.12, 1.3), stone * 0.9)
+	var mi := MeshInstance3D.new()
+	mi.mesh = mb.commit()
+	mi.material_override = MB.vertex_color_material(0.85)
+	add_child(mi)
+	var cs := CollisionShape3D.new()
+	var bx := BoxShape3D.new()
+	bx.size = Vector3(2.4, 2.6, 2.4)
+	cs.shape = bx
+	cs.position = at + Vector3(0, 1.3, 0)
+	body.add_child(cs)
+	if not ResourceLoader.exists(STATUE):
+		return
+	var fig := (load(STATUE) as PackedScene).instantiate() as Node3D
+	fig.scale = Vector3.ONE * 1.5
+	add_child(fig)
+	fig.global_position = at + Vector3(0, 2.62, 0)
+	var f := Vector3(-facing.x, 0, -facing.z)          # face the traffic coming up the highway
+	fig.rotation.y = atan2(f.x, f.z)
+	var bronze := StandardMaterial3D.new()
+	bronze.albedo_color = Color(0.36, 0.24, 0.12)
+	bronze.metallic = 0.85
+	bronze.roughness = 0.38
+	for m in fig.find_children("*", "MeshInstance3D", true, false):
+		(m as MeshInstance3D).material_override = bronze
+	var ap := fig.find_children("*", "AnimationPlayer", true, false)[0] as AnimationPlayer
+	fig.ready.connect(func() -> void:
+		ap.play("Talk")
+		ap.seek(0.5, true)                          # the raised-arm moment, held
+		ap.pause())
+
+
 ## Rounded corners between neighbouring streets at a junction: the drain, kerb and pavement (or a
 ## dirt edge on small streets) sweep round from one street's footpath to the next, as built.
 func _corners(id: String, c: Vector3, plane: Vector3, lift: float, wm, vm, extra_arms: Array = []) -> void:
@@ -451,11 +702,19 @@ func _fit_plane(c: Vector3, pts: Array) -> Vector3:
 
 
 # ----------------------------------------------------------------------------- buildings
-func _buildings(town: String, list: Array) -> void:
+## Painted blocks for every footprint. Footprints that got a designed building (see _plan_kit) keep
+## their block only as the far view (beyond KIT_RANGE); near, the designed building stands in it.
+## Collision always follows the footprint.
+func _buildings(town: String, list: Array, fits: Dictionary = {}) -> void:
 	var tiles := {}                            # key → [verts, normals, colors, uv, uv2, idx, faces]
+	var far := {}                              # KIT_TILE key → same arrays, blocks of designed buildings
+	var kit_tiles := {}                        # KIT_TILE key → {variant: [Transform3D]}
+	var drives := {}                           # KIT_TILE key → [[F, E, width]]
+	var walls := {}                            # KIT_TILE key → MB of compound walls
 	var rng := RandomNumberGenerator.new()
 	rng.seed = hash(town)
-	for b in list:
+	for bi in list.size():
+		var b: Dictionary = list[bi]
 		var raw: Array = b["poly"]
 		var n := raw.size()
 		if n < 3:
@@ -478,7 +737,27 @@ func _buildings(town: String, list: Array) -> void:
 		if not tiles.has(key):
 			tiles[key] = [PackedVector3Array(), PackedVector3Array(), PackedColorArray(), PackedVector2Array(),
 				PackedVector2Array(), PackedInt32Array(), PackedVector3Array()]
-		var t: Array = tiles[key]
+		var col: Array = tiles[key]
+		var t: Array = col
+		if fits.has(bi):
+			var fit: Dictionary = fits[bi]
+			var k2 := Vector2i(floori(centre.x / KIT_TILE), floori(centre.y / KIT_TILE))
+			if not far.has(k2):
+				far[k2] = [PackedVector3Array(), PackedVector3Array(), PackedColorArray(), PackedVector2Array(),
+					PackedVector2Array(), PackedInt32Array(), PackedVector3Array()]
+				kit_tiles[k2] = {}
+				drives[k2] = []
+			t = far[k2]
+			if not kit_tiles[k2].has(fit["name"]):
+				kit_tiles[k2][fit["name"]] = []
+			kit_tiles[k2][fit["name"]].append(fit["xf"])
+			if fit.has("drive"):
+				drives[k2].append(fit["drive"])
+			if fit.has("walls"):
+				if not walls.has(k2):
+					walls[k2] = MB.new()
+				for wb in fit["walls"]:
+					walls[k2].box(wb[0], wb[1], wb[2])
 		var along := 0.0
 		for i in n:
 			var p0 := poly[i]
@@ -497,7 +776,7 @@ func _buildings(town: String, list: Array) -> void:
 			var d := Vector3(p0.x, top, p0.y)
 			_quad(t, a, bb, cc, d, nrm, wall, Vector2(along, -0.5), Vector2(along + edge_len, -0.5),
 				Vector2(along + edge_len, top - base), Vector2(along, top - base), Vector2(rnd, shop))
-			t[6].append_array([a, bb, cc, a, cc, d])
+			col[6].append_array([a, bb, cc, a, cc, d])
 			along += edge_len
 		# roof
 		var tris := Geometry2D.triangulate_polygon(poly)
@@ -510,32 +789,378 @@ func _buildings(town: String, list: Array) -> void:
 			var r1 := Vector3(poly[tris[k + 1]].x, roof_y, poly[tris[k + 1]].y)
 			var r2 := Vector3(poly[tris[k + 2]].x, roof_y, poly[tris[k + 2]].y)
 			_tri(t, r0, r1, r2, Vector3.UP, rc)
-	for key in tiles:
-		var t: Array = tiles[key]
-		if t[0].is_empty():
+	for pair in [[tiles, 0.0], [far, KIT_RANGE]]:
+		var dict: Dictionary = pair[0]
+		for key in dict:
+			var t: Array = dict[key]
+			if not t[0].is_empty():
+				var arr := []
+				arr.resize(Mesh.ARRAY_MAX)
+				arr[Mesh.ARRAY_VERTEX] = t[0]
+				arr[Mesh.ARRAY_NORMAL] = t[1]
+				arr[Mesh.ARRAY_COLOR] = t[2]
+				arr[Mesh.ARRAY_TEX_UV] = t[3]
+				arr[Mesh.ARRAY_TEX_UV2] = t[4]
+				arr[Mesh.ARRAY_INDEX] = t[5]
+				var mesh := ArrayMesh.new()
+				mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arr)
+				var mi := MeshInstance3D.new()
+				mi.name = "%sBuildings_%d_%d%s" % [town, key.x, key.y, "_far" if pair[1] > 0.0 else ""]
+				mi.mesh = mesh
+				mi.material_override = mat_building
+				mi.visibility_range_begin = pair[1]
+				mi.visibility_range_end = 1400.0
+				add_child(mi)
+			if not t[6].is_empty():
+				var cs := CollisionShape3D.new()
+				var shape := ConcavePolygonShape3D.new()
+				shape.set_faces(t[6])
+				shape.backface_collision = true
+				cs.shape = shape
+				body.add_child(cs)
+	# the designed buildings: one MultiMesh per variant per KIT_TILE
+	for k2 in kit_tiles:
+		for vname in kit_tiles[k2]:
+			var m: Mesh = kit.mesh(vname)
+			if m == null:
+				continue
+			var xs: Array = kit_tiles[k2][vname]
+			var mm := MultiMesh.new()
+			mm.transform_format = MultiMesh.TRANSFORM_3D
+			mm.mesh = m
+			mm.instance_count = xs.size()
+			for i in xs.size():
+				mm.set_instance_transform(i, xs[i])
+			var mmi := MultiMeshInstance3D.new()
+			mmi.name = "%sKit_%d_%d_%s" % [town, k2.x, k2.y, vname]
+			mmi.multimesh = mm
+			mmi.visibility_range_end = KIT_RANGE + 20.0
+			add_child(mmi)
+			kit_count += xs.size()
+		if not drives[k2].is_empty():
+			_driveways(drives[k2])
+	for k2 in walls:
+		var wmi := MeshInstance3D.new()
+		wmi.mesh = walls[k2].commit()
+		wmi.material_override = kit.material
+		wmi.visibility_range_end = KIT_RANGE + 20.0
+		add_child(wmi)
+		var wcs := CollisionShape3D.new()
+		wcs.shape = wmi.mesh.create_trimesh_shape()
+		body.add_child(wcs)
+		wall_count += 1
+
+
+## Paved drives from a designed building's front to the street edge, with skirts down to the ground.
+func _driveways(list: Array) -> void:
+	var st := SurfaceTool.new()
+	st.begin(Mesh.PRIMITIVE_TRIANGLES)
+	for dv in list:
+		var F: Vector3 = dv[0]
+		var E: Vector3 = dv[1]
+		var hw: float = dv[2] * 0.5
+		var dir := Vector3(E.x - F.x, 0, E.z - F.z).normalized()
+		var side := Vector3(dir.z, 0, -dir.x) * hw
+		var q := [F - side, F + side, E + side, E - side]
+		var down := Vector3(0, -0.45, 0)
+		_st_quad(st, q[0], q[1], q[2], q[3])
+		_st_quad(st, q[1] + down, q[2] + down, q[2], q[1])      # skirts
+		_st_quad(st, q[3] + down, q[0] + down, q[0], q[3])
+		drive_count += 1
+	st.generate_normals()
+	var mi := MeshInstance3D.new()
+	mi.mesh = st.commit()
+	mi.material_override = _drive_mat()
+	mi.visibility_range_end = KIT_RANGE + 60.0
+	mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	add_child(mi)
+
+
+func _st_quad(st: SurfaceTool, a: Vector3, b: Vector3, c: Vector3, d: Vector3) -> void:
+	# wound to face up / outwards (Godot front faces are clockwise)
+	if (b - a).cross(c - a).y > 0.0:
+		st.add_vertex(a); st.add_vertex(c); st.add_vertex(b)
+		st.add_vertex(a); st.add_vertex(d); st.add_vertex(c)
+	else:
+		st.add_vertex(a); st.add_vertex(b); st.add_vertex(c)
+		st.add_vertex(a); st.add_vertex(c); st.add_vertex(d)
+
+
+var _dmat: StandardMaterial3D
+
+func _drive_mat() -> StandardMaterial3D:
+	if _dmat == null:
+		_dmat = StandardMaterial3D.new()
+		_dmat.albedo_texture = load("res://assets/models/textures/parking_pavers_base.jpg")
+		_dmat.normal_enabled = true
+		_dmat.normal_texture = load("res://assets/models/textures/parking_pavers_normal.png")
+		_dmat.roughness = 0.85
+		_dmat.uv1_triplanar = true
+		_dmat.uv1_world_triplanar = true
+		_dmat.uv1_scale = Vector3(0.5, 0.5, 0.5)
+		_dmat.cull_mode = BaseMaterial3D.CULL_DISABLED
+	return _dmat
+
+
+## Which footprints get a designed building, how it stands, and its drive to the street.
+## A footprint qualifies when it's close to a rectangle of house size near a street: the design is
+## turned to face that street, scaled into the rectangle, and given a paved drive across to the
+## kerb (which opens there) if the way is clear of other buildings.
+func _plan_kit(town: String, tw: Dictionary) -> Dictionary:
+	var fits := {}
+	var gaps := {}
+	var n_drives := 0
+	if kit == null or graph == null or not graph.has_graph():
+		return {"fits": fits, "gaps": gaps, "drives": 0}
+	var off := -1
+	for k in graph.streets.size():
+		if graph.streets[k]["town"] == town:
+			off = k
+			break
+	var list: Array = tw["buildings"]
+	var polys: Array = []
+	var grid := {}
+	for i in list.size():
+		var pg := PackedVector2Array()
+		for q in list[i]["poly"]:
+			pg.append(Vector2(q[0], q[1]))
+		polys.append(pg)
+		if pg.size() >= 3:
+			var ck := Vector2i(floori(pg[0].x / 24.0), floori(pg[0].y / 24.0))
+			if not grid.has(ck):
+				grid[ck] = []
+			grid[ck].append(i)
+	var rng := RandomNumberGenerator.new()
+	rng.seed = hash(town + "kit")
+	var hill := town == "Kotagiri"
+	for i in list.size():
+		var poly: PackedVector2Array = polys[i]
+		if poly.size() < 3:
 			continue
-		var arr := []
-		arr.resize(Mesh.ARRAY_MAX)
-		arr[Mesh.ARRAY_VERTEX] = t[0]
-		arr[Mesh.ARRAY_NORMAL] = t[1]
-		arr[Mesh.ARRAY_COLOR] = t[2]
-		arr[Mesh.ARRAY_TEX_UV] = t[3]
-		arr[Mesh.ARRAY_TEX_UV2] = t[4]
-		arr[Mesh.ARRAY_INDEX] = t[5]
-		var mesh := ArrayMesh.new()
-		mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arr)
-		var mi := MeshInstance3D.new()
-		mi.name = "%sBuildings_%d_%d" % [town, key.x, key.y]
-		mi.mesh = mesh
-		mi.material_override = mat_building
-		mi.visibility_range_end = 1400.0
-		add_child(mi)
-		var cs := CollisionShape3D.new()
-		var shape := ConcavePolygonShape3D.new()
-		shape.set_faces(t[6])
-		shape.backface_collision = true
-		cs.shape = shape
-		body.add_child(cs)
+		var r := _min_rect(poly)
+		if r.is_empty():
+			continue
+		var C: Vector2 = r[0]
+		var u: Vector2 = r[1]
+		var v := Vector2(-u.y, u.x)
+		var wu: float = r[2]
+		var wv: float = r[3]
+		if _poly_area(poly) / (wu * wv) < 0.72 or minf(wu, wv) < 4.5 or maxf(wu, wv) > 36.0:
+			continue
+		var near := _street_near(C, 45.0)
+		if near.is_empty():
+			continue
+		var sp: Vector3 = near["pt"]
+		var ds := (Vector2(sp.x, sp.z) - C).normalized()
+		var cands := [[u, wu, wv], [-u, wu, wv], [v, wv, wu], [-v, wv, wu]]
+		var ci := 0
+		for c in 4:
+			if (cands[c][0] as Vector2).dot(ds) > (cands[ci][0] as Vector2).dot(ds):
+				ci = c
+		var best: Vector2 = cands[ci][0]
+		var depth: float = cands[ci][1]
+		var front_w: float = cands[ci][2]
+		var b: Dictionary = list[i]
+		var floors := int(b["floors"])
+		var kind := "city_house"
+		if hill:
+			kind = "hill_cottage" if floors <= 2 else ("apartment" if floors >= 4 else "city_house")
+		elif b.get("shop", false):
+			kind = "shop_house" if floors <= 4 else "apartment"
+		elif floors <= 1:
+			kind = "bungalow"
+		elif floors >= 4:
+			kind = "hotel" if front_w * depth > 280.0 and rng.randf() < 0.15 else "apartment"
+		var vname: String = kit.pick(kind, floors, front_w, depth)
+		if vname == "":
+			continue
+		var ex: Array = kit.extent(vname)
+		var size: Vector3 = ex[1]
+		var sx := front_w / size.x
+		var sz := depth / size.z
+		if sx < 0.6 or sx > 1.6 or sz < 0.6 or sz > 1.6:
+			continue
+		var nz := Vector3(best.x, 0, best.y)
+		var nx := Vector3(nz.z, 0, -nz.x)
+		var basis := Basis(nx * sx, Vector3.UP, nz * sz)
+		var base: float = b["base"]
+		var origin := Vector3(C.x, base, C.y) - basis * (ex[0] as Vector3)
+		var fit := {"xf": Transform3D(basis, origin), "name": vname}
+		fits[i] = fit
+		# the drive: from the middle of the front to the street edge, if nothing's in the way
+		var F2 := C + best * (depth * 0.5)
+		var sn := _street_near(F2 + best * 0.5, 32.0)
+		if sn.is_empty():
+			continue
+		var S3: Vector3 = sn["pt"]
+		var S2 := Vector2(S3.x, S3.z)
+		var to := S2 - F2
+		var L := to.length() - float(sn["width"]) * 0.5
+		if L < 0.4 or L > 28.0 or to.normalized().dot(best) < 0.3:
+			continue
+		var E2 := F2 + to.normalized() * L
+		var dw := 3.0 if kind in ["city_house", "bungalow", "hill_cottage"] else minf(front_w * 0.8, 10.0)
+		var clear := true
+		for k in range(1, 6):
+			var q := F2.lerp(E2, k / 5.0)
+			var ck := Vector2i(floori(q.x / 24.0), floori(q.y / 24.0))
+			for dx in range(-1, 2):
+				for dz in range(-1, 2):
+					for j in grid.get(Vector2i(ck.x + dx, ck.y + dz), []):
+						if j != i and Geometry2D.is_point_in_polygon(q, polys[j]):
+							clear = false
+		if not clear:
+			continue
+		var lift: float = RANK.get(graph.streets[sn["si"]]["class"], 0.02) + 0.02
+		fit["drive"] = [Vector3(F2.x, base + 0.04, F2.y), Vector3(E2.x, S3.y + lift, E2.y), dw]
+		if kind in ["city_house", "bungalow", "hill_cottage"] and L > 2.6:
+			var walls := _compound(F2, E2, front_w, dw, base, S3.y, polys, grid, i, rng)
+			if not walls.is_empty():
+				fit["walls"] = walls
+				walled += 1
+		n_drives += 1
+		if off >= 0:
+			var local: int = int(sn["si"]) - off
+			var pts: PackedVector3Array = graph.streets[sn["si"]]["pts"]
+			var k0: int = sn["k"]
+			var t3 := pts[k0 + 1] - pts[k0]
+			var la := Vector3(t3.z, 0, -t3.x).normalized()
+			var side := 1.0 if la.dot(Vector3(F2.x, S3.y, F2.y) - S3) > 0.0 else -1.0
+			if not gaps.has(local):
+				gaps[local] = []
+			gaps[local].append([side, float(sn["s"]) - dw * 0.5 - 1.0, float(sn["s"]) + dw * 0.5 + 1.0])
+	return {"fits": fits, "gaps": gaps, "drives": n_drives}
+
+
+## A compound wall in front of a house: stone, 1.5 m with a coping, short returns back to the house,
+## and two gate pillars with lamps either side of the drive. [] if it would run into a neighbour.
+## Boxes are [Transform3D, size, Color] where the colour carries the kit shader's layer in alpha.
+func _compound(F2: Vector2, E2: Vector2, front_w: float, dw: float, y_house: float, y_street: float,
+		polys: Array, grid: Dictionary, own: int, rng: RandomNumberGenerator) -> Array:
+	var dir := (E2 - F2).normalized()
+	var t := Vector2(-dir.y, dir.x)
+	var L := F2.distance_to(E2)
+	var back := L - 1.0                        # the wall stands 1 m in from the street edge
+	var half := front_w * 0.5 + 0.3
+	var gate := dw * 0.5 + 0.3
+	var W := F2 + dir * back
+	var y := lerpf(y_house, y_street, back / L)
+	# the runs: two front pieces either side of the gate, two returns to the house front;
+	# a run that would cut into a neighbouring building is left out (houses often share a side)
+	var all_runs := [[W - t * half, W - t * gate], [W + t * gate, W + t * half],
+		[W - t * half, F2 - t * half], [W + t * half, F2 + t * half]]
+	var runs: Array = []
+	for r in all_runs:
+		var a: Vector2 = r[0]
+		var b: Vector2 = r[1]
+		var ok := true
+		var n := int(ceil(a.distance_to(b) / 1.0))
+		for k in n + 1:
+			var q := a.lerp(b, float(k) / maxf(n, 1))
+			var ck := Vector2i(floori(q.x / 24.0), floori(q.y / 24.0))
+			for dx in range(-1, 2):
+				for dz in range(-1, 2):
+					for j in grid.get(Vector2i(ck.x + dx, ck.y + dz), []):
+						if j != own and Geometry2D.is_point_in_polygon(q, polys[j]):
+							ok = false
+		if ok:
+			runs.append(r)
+	if runs.size() < 2:
+		return []
+	var stone := Color(1, 1, 1, 2.0 / 255.0)
+	var coping := Color(1, 1, 1, 3.0 / 255.0)
+	var plaster: Color = [Color(0.95, 0.93, 0.88, 5.0 / 255.0), Color(0.9, 0.75, 0.48, 5.0 / 255.0)][rng.randi() % 2]
+	var face: Color = stone if rng.randf() < 0.6 else plaster
+	var boxes: Array = []
+	for r in runs:
+		var a: Vector2 = r[0]
+		var b: Vector2 = r[1]
+		var len := a.distance_to(b)
+		if len < 0.3:
+			continue
+		var m := (a + b) * 0.5
+		var u := (b - a) / len
+		var ya := lerpf(y_house, y_street, clampf((a - F2).dot(dir) / L, 0.0, 1.0))
+		var yb := lerpf(y_house, y_street, clampf((b - F2).dot(dir) / L, 0.0, 1.0))
+		var ym := (ya + yb) * 0.5
+		var bs := Basis(Vector3(u.x, 0, u.y), Vector3.UP, Vector3(-u.y, 0, u.x))
+		boxes.append([Transform3D(bs, Vector3(m.x, ym + 0.5, m.y)), Vector3(len, 2.0, 0.26), face])
+		boxes.append([Transform3D(bs, Vector3(m.x, ym + 1.54, m.y)), Vector3(len + 0.06, 0.08, 0.36), coping])
+	for sgn in [-1.0, 1.0]:                    # gate pillars with lamp caps
+		var pp: Vector2 = W + t * gate * sgn
+		var bs := Basis(Vector3(t.x, 0, t.y), Vector3.UP, Vector3(dir.x, 0, dir.y))
+		boxes.append([Transform3D(bs, Vector3(pp.x, y + 0.6, pp.y)), Vector3(0.5, 2.4, 0.5), stone])
+		boxes.append([Transform3D(bs, Vector3(pp.x, y + 1.85, pp.y)), Vector3(0.62, 0.1, 0.62), coping])
+		boxes.append([Transform3D(bs, Vector3(pp.x, y + 2.03, pp.y)), Vector3(0.22, 0.26, 0.22), Color(1.0, 0.95, 0.85, 101.0 / 255.0)])
+	return boxes
+
+
+## Smallest-area rectangle round a polygon, aligned to one of its edges: [centre, u, extent along u,
+## extent along the perpendicular] (or [] for a degenerate polygon).
+func _min_rect(poly: PackedVector2Array) -> Array:
+	var best: Array = []
+	var ba := INF
+	var n := poly.size()
+	for i in n:
+		var e := poly[(i + 1) % n] - poly[i]
+		if e.length() < 0.5:
+			continue
+		var u := e.normalized()
+		var v := Vector2(-u.y, u.x)
+		var u0 := INF
+		var u1 := -INF
+		var v0 := INF
+		var v1 := -INF
+		for p in poly:
+			var a := p.dot(u)
+			var b := p.dot(v)
+			u0 = minf(u0, a)
+			u1 = maxf(u1, a)
+			v0 = minf(v0, b)
+			v1 = maxf(v1, b)
+		var area := (u1 - u0) * (v1 - v0)
+		if area < ba and area > 1.0:
+			ba = area
+			best = [u * (u0 + u1) * 0.5 + v * (v0 + v1) * 0.5, u, u1 - u0, v1 - v0]
+	return best
+
+
+func _poly_area(poly: PackedVector2Array) -> float:
+	var a := 0.0
+	for i in poly.size():
+		var p := poly[i]
+		var q := poly[(i + 1) % poly.size()]
+		a += p.x * q.y - q.x * p.y
+	return absf(a) * 0.5
+
+
+## Closest town-street centreline point within `radius`: {pt, si (graph index), k, s (along), width}.
+func _street_near(p: Vector2, radius: float) -> Dictionary:
+	var cell: float = graph.CELL
+	var reach := int(ceil(radius / cell))
+	var key := Vector2i(floori(p.x / cell), floori(p.y / cell))
+	var bd := radius
+	var out := {}
+	for dx in range(-reach, reach + 1):
+		for dz in range(-reach, reach + 1):
+			for e in graph._grid.get(Vector2i(key.x + dx, key.y + dz), []):
+				var pts: PackedVector3Array = graph.streets[e[0]]["pts"]
+				var a := Vector2(pts[e[1]].x, pts[e[1]].z)
+				var b := Vector2(pts[e[1] + 1].x, pts[e[1] + 1].z)
+				var q := Geometry2D.get_closest_point_to_segment(p, a, b)
+				var dd := p.distance_to(q)
+				if dd < bd:
+					bd = dd
+					var t := 0.0 if a.distance_to(b) < 0.001 else a.distance_to(q) / a.distance_to(b)
+					out = {"pt": pts[e[1]].lerp(pts[e[1] + 1], t), "si": e[0], "k": e[1], "width": graph.streets[e[0]]["width"]}
+	if out.is_empty():
+		return out
+	var pts2: PackedVector3Array = graph.streets[out["si"]]["pts"]
+	var s := 0.0
+	for k in int(out["k"]):
+		s += pts2[k].distance_to(pts2[k + 1])
+	out["s"] = s + pts2[out["k"]].distance_to(out["pt"])
+	return out
 
 
 ## Appends a quad, wound so it faces `nrm` (Godot's front faces are clockwise).
@@ -570,7 +1195,7 @@ func _tri(t: Array, a: Vector3, b: Vector3, c: Vector3, nrm: Vector3, col: Color
 ## What makes an Indian roofline and facade: black plastic water tanks on stands, stair-head
 ## rooms, the odd satellite dish on flat roofs; balconies with railings and split-AC units on
 ## the walls. Seeded per building, so every visit looks the same; one MultiMesh / mesh per tile.
-func _rooftops(town: String, list: Array) -> void:
+func _rooftops(town: String, list: Array, fits: Dictionary = {}) -> void:
 	var rng := RandomNumberGenerator.new()
 	rng.seed = hash(town + "roofs")
 	var tanks := {}
@@ -578,7 +1203,10 @@ func _rooftops(town: String, list: Array) -> void:
 	var dishes := {}
 	var acs := {}
 	var facades := {}                          # tile -> MB (balconies)
-	for b in list:
+	for bi in list.size():
+		if fits.has(bi):
+			continue                           # designed buildings carry their own
+		var b: Dictionary = list[bi]
 		var raw: Array = b["poly"]
 		var n := raw.size()
 		if n < 3:

@@ -11,9 +11,9 @@ const StreetLife := preload("res://scripts/drive/street_life.gd")
 const RiderPose := preload("res://scripts/drive/rider_pose.gd")
 const Fleet := preload("res://scripts/drive/fleet.gd")
 const KENNEY := "res://assets/drive/models/kenney/"
-const POOL := 34
+const POOL := 64
 const NEAR := 300.0                # recycle beyond this
-const SPAWN_MIN := 90.0
+const SPAWN_MIN := 70.0
 const SPAWN_MAX := 260.0
 const MAIN := ["trunk", "primary", "secondary", "tertiary"]
 ## kind, length, width, height, cruise on main roads (m/s), weight

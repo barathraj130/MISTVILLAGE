@@ -25,7 +25,7 @@ var _mmis := {}                     # tile -> model -> [MultiMeshInstance3D per 
 var _rng := RandomNumberGenerator.new()
 
 
-func build(town: String, streets: Array, graph, body: StaticBody3D, shop_points: Array) -> int:
+func build(town: String, streets: Array, graph, body: StaticBody3D, shop_points: Array, lots: Array = []) -> int:
 	_rng.seed = hash(town + "parked")
 	var shops := {}                # 20 m grid of shopfronts, to park more where there's business
 	for p in shop_points:
@@ -109,6 +109,52 @@ func build(town: String, streets: Array, graph, body: StaticBody3D, shop_points:
 						body.add_child(cs)
 						entry["cs"] = cs
 				d += len_m + _rng.randf_range(0.6, 3.0) + (row - 1) * 0.95
+	# parking lots: bays across the lot, a little over half of them taken, nosed in (some reversed in)
+	for lot in lots:
+		var t := Vector3(lot["t"][0], 0, lot["t"][1])
+		var nrm := Vector3(lot["n"][0], 0, lot["n"][1])
+		var p0 := Vector3(lot["poly"][0][0], float(lot["y"]), lot["poly"][0][1])
+		var along: float = float(lot["s1"]) - float(lot["s0"])
+		var depth := Vector2(lot["poly"][3][0] - lot["poly"][0][0], lot["poly"][3][1] - lot["poly"][0][1]).length()
+		var small := depth < 8.0
+		var bays := int(along / (1.2 if small else 2.6))
+		for b in bays:
+			if _rng.randf() > 0.58:
+				continue
+			var model: String
+			if small:
+				model = "bike" if _rng.randf() < 0.6 else "scooter"
+			else:
+				var r := _rng.randf()
+				model = "hatchback" if r < 0.4 else ("sedan" if r < 0.62 else ("suv" if r < 0.75 else ("auto" if r < 0.85 else "van")))
+			var pitch := 1.2 if small else 2.6
+			var at := p0 + t * (pitch * (b + 0.5)) + nrm * minf(depth * 0.55, _len(model) * 0.5 + 0.9)
+			var yaw := atan2(nrm.x, nrm.z) + (PI if _rng.randf() < 0.3 else 0.0) + _rng.randf_range(-0.05, 0.05)
+			var xf := Transform3D(Basis(Vector3.UP, yaw), at + Vector3(0, 0.04, 0))
+			var key := Vector2i(floori(at.x / TILE), floori(at.z / TILE))
+			var vkey := model
+			if Fleet.has(model):
+				vkey = model + "|" + Fleet.paint_for(model, _rng).to_html()
+			if not by_tile.has(key):
+				by_tile[key] = {}
+			if not by_tile[key].has(vkey):
+				by_tile[key][vkey] = []
+			by_tile[key][vkey].append(xf)
+			count += 1
+			var entry := {"model": model, "vkey": vkey, "xf": xf, "key": key, "index": by_tile[key][vkey].size() - 1, "cs": null, "taken": false}
+			entries.append(entry)
+			var g := Vector2i(floori(at.x / 12.0), floori(at.z / 12.0))
+			if not _grid.has(g):
+				_grid[g] = []
+			_grid[g].append(entry)
+			if _collides(model):
+				var cs := CollisionShape3D.new()
+				var bx := BoxShape3D.new()
+				bx.size = Vector3(1.7 if model != "auto" else 1.3, 1.4, _len(model) * 0.95)
+				cs.shape = bx
+				cs.transform = xf.translated_local(Vector3(0, 0.75, 0))
+				body.add_child(cs)
+				entry["cs"] = cs
 	for key in by_tile:
 		for vkey in by_tile[key]:
 			var model: String = vkey.get_slice("|", 0)
