@@ -183,21 +183,23 @@ def arch_cut(body, x, y_side, z, r, depth=0.5):
     return cutter
 
 
-def lathe(name, prof, mat, segs=48, ripple=None):
+def lathe(name, prof, mat, segs=48, ripple=None, arc=None):
     """Revolve a (radius, y) profile round the Y axis (the axle). ripple(i, k) -> radius scale lets
-    the tread carry blocks."""
+    the tread carry blocks. arc=(a0, a1): only that part of the turn (0 = straight up), left open."""
     bm = bmesh.new()
     rings = []
+    closed = arc is None
+    n = segs if closed else segs + 1
     for k, (r, y) in enumerate(prof):
         ring = []
-        for i in range(segs):
-            a = 2 * math.pi * i / segs
+        for i in range(n):
+            a = 2 * math.pi * i / segs if closed else arc[0] + (arc[1] - arc[0]) * i / segs
             rr = r * (ripple(i, k) if ripple else 1.0)
             ring.append(bm.verts.new((rr * math.sin(a), y, rr * math.cos(a))))
         rings.append(ring)
     for r1, r2 in zip(rings, rings[1:]):
         for i in range(segs):
-            j = (i + 1) % segs
+            j = (i + 1) % n
             bm.faces.new((r1[i], r1[j], r2[j], r2[i]))
     bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
     me = bpy.data.meshes.new(name)

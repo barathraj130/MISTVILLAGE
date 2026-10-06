@@ -13,7 +13,7 @@ import bpy
 from mathutils import Vector
 
 args = sys.argv[sys.argv.index("--") + 1:]
-out, glbs = os.path.abspath(args[0]), [os.path.abspath(a) for a in args[1:]]
+out, glbs = os.path.abspath(args[0]), [os.path.abspath(a) for a in args[1:] if not a.startswith("--")]
 HERE = os.path.dirname(os.path.abspath(__file__))
 TEX = os.path.join(HERE, "..", "godot", "assets", "drive", "tex")
 bpy.ops.wm.read_factory_settings(use_empty=True)
@@ -48,10 +48,12 @@ def tex_mat(name, stem, tile, tint=None):
 bpy.ops.mesh.primitive_plane_add(size=1, location=(0, 0, 0))
 road = bpy.context.active_object
 road.scale = (80, 14, 1)
+bpy.ops.object.transform_apply(scale=True)
 road.data.materials.append(tex_mat("Asphalt", "asphalt", 4.0, (0.38, 0.38, 0.4)))
 bpy.ops.mesh.primitive_plane_add(size=1, location=(0, 40, -0.02))
 g = bpy.context.active_object
 g.scale = (300, 60, 1)
+bpy.ops.object.transform_apply(scale=True)
 g.data.materials.append(tex_mat("Grass", "grass", 5.0, (0.8, 0.85, 0.7)))
 
 x = 0.0
@@ -113,3 +115,9 @@ sc.render.image_settings.file_format = 'JPEG'
 sc.render.filepath = out
 bpy.ops.render.render(write_still=True)
 print("PREVIEW", out)
+if "--rear" in sys.argv:
+    cam.location = (mid - dist * 0.55, dist * 0.9, 1.6 + dist * 0.12)
+    cam.rotation_euler = (Vector((mid, 0, 0.7)) - cam.location).to_track_quat('-Z', 'Y').to_euler()
+    sc.render.filepath = out.replace(".jpg", "_rear.jpg")
+    bpy.ops.render.render(write_still=True)
+    print("PREVIEW", sc.render.filepath)

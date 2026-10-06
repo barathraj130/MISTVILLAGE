@@ -160,7 +160,7 @@ func _setup_input() -> void:
 	_add_action("toggle_manual", [KEY_M])
 	_add_action("shift_up", [KEY_X])
 	_add_action("shift_down", [KEY_Z])
-	_add_action("back_to_menu", [KEY_F10])
+	_add_action("back_to_menu", [KEY_F10, KEY_ESCAPE])
 	_add_action("quick_save", [KEY_F5])
 	_add_action("gps_fuel", [KEY_G])
 	_add_action("look_center", [KEY_C])
@@ -182,7 +182,7 @@ func _setup_input() -> void:
 	_add_action("move_right", [KEY_D, KEY_RIGHT])
 	_add_action("jump", [KEY_SPACE])
 	_add_action("run", [KEY_SHIFT])
-	_add_action("release_mouse", [KEY_ESCAPE])
+	_add_action("release_mouse", [KEY_ALT])
 
 
 # ----------------------------------------------------------------------------- world
@@ -1256,7 +1256,9 @@ func _process(delta: float) -> void:
 			_message("Skipped to Kotagiri. The Mist Village gate is just ahead.")
 		elif resort == null:
 			_arrive(true)
-	if Input.is_action_just_pressed("back_to_menu"):
+	if Input.is_action_just_pressed("back_to_menu") and map_ui and map_ui.full_open and Input.is_key_pressed(KEY_ESCAPE):
+		map_ui.toggle_full()                          # Esc first closes the big map
+	elif Input.is_action_just_pressed("back_to_menu"):
 		_save_game(false)
 		Engine.time_scale = 1.0
 		get_tree().change_scene_to_file("res://scenes/start_menu.tscn")
@@ -1797,7 +1799,7 @@ func _build_ui() -> void:
 	ui_message.modulate.a = 0.0
 
 	ui_help = _label(root, 15, Color(1, 1, 1, 0.85))
-	ui_help.text = "W/S accelerate · brake/reverse   A/D steer   Space handbrake   H horn   L headlights   M manual gears (X up, Z down)   [ ] steering sensitivity   , . indicators   / hazards\nV camera (chase · cockpit: mouse looks, C centre, Alt frees mouse · bonnet)   R back on road   E interact   F get out / in   Tab map + GPS   G nearest fuel   F5 save   F10 save + menu   F1 hide"
+	ui_help.text = "W/S accelerate · brake/reverse   A/D steer   Space handbrake   H horn   L headlights   M manual gears (X up, Z down)   [ ] steering sensitivity   , . indicators   / hazards\nV camera (chase · cockpit: mouse looks, C centre, Alt frees mouse · bonnet)   R back on road   E interact   F get out / in   Tab map + GPS   G nearest fuel   F5 save   Esc / F10 save + main menu   F1 hide"
 	ui_help.position = Vector2(28, 50)
 	ui_debug = _label(root, 14, Color(0.6, 1.0, 0.7))
 	ui_debug.set_anchors_and_offsets_preset(Control.PRESET_TOP_RIGHT, Control.PRESET_MODE_KEEP_SIZE, 24)

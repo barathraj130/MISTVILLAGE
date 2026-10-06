@@ -2,7 +2,7 @@ extends Node3D
 ## Builds THE MIST VILLAGE at runtime from res://assets/scene.json,
 ## which export_godot.py writes next to the glTF models.
 ##
-## Keys: WASD move · Shift run · Space jump · N golden hour ↔ night · C replay intro · Esc free mouse
+## Keys: WASD move · Shift run · Space jump · N golden hour ↔ night · C replay intro · Esc main menu · Alt free mouse
 
 const SCENE_JSON := "res://assets/scene.json"
 const Player := preload("res://scripts/player.gd")
@@ -162,7 +162,7 @@ func _process(delta: float) -> void:
 			Performance.get_monitor(Performance.RENDER_TOTAL_DRAW_CALLS_IN_FRAME),
 			"shot %d" % (cinematic.frames[mini(int(cinematic.time * cinematic.fps), cinematic.frames.size() - 1)][0])
 				if cinematic and cinematic.playing else "player"])
-	if Input.is_action_just_pressed("back_to_menu"):
+	if Input.is_action_just_pressed("back_to_menu") and not (cinematic and cinematic.playing):   # Esc during the intro only skips it
 		Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 		get_tree().change_scene_to_file("res://scenes/start_menu.tscn")
 	if Input.is_action_just_pressed("toggle_quality"):
@@ -223,9 +223,9 @@ func _setup_input() -> void:
 	_add_action("toggle_night", [KEY_N])
 	_add_action("replay_intro", [KEY_C])
 	_add_action("skip_intro", [KEY_SPACE, KEY_ENTER, KEY_ESCAPE])
-	_add_action("release_mouse", [KEY_ESCAPE])
+	_add_action("release_mouse", [KEY_ALT])
 	_add_action("toggle_quality", [KEY_F2])
-	_add_action("back_to_menu", [KEY_F10])
+	_add_action("back_to_menu", [KEY_F10, KEY_ESCAPE])
 
 
 func _gradient_texture(stops: Array) -> GradientTexture1D:
@@ -915,7 +915,7 @@ func _on_intro_finished() -> void:
 
 # ----------------------------------------------------------------------------- quality presets
 func _hud_text() -> String:
-	return "WASD move · Shift run · Space jump · N day / night · C replay intro · F2 quality: %s · F10 menu · Esc free mouse" \
+	return "WASD move · Shift run · Space jump · N day / night · C replay intro · F2 quality: %s · Esc / F10 main menu · Alt free mouse" \
 		% quality.to_upper()
 
 
