@@ -25,7 +25,7 @@ var route: Route
 var terrain: Terrain
 var rng := RandomNumberGenerator.new()
 var mat_vc: StandardMaterial3D
-var mat_glow: StandardMaterial3D
+var mat_glow: ShaderMaterial
 var _segs := {}                             # segment index → MB (matte details)
 var _glow := {}                             # segment index → MB (road studs)
 var potholes: Array = []                    # [Vector3 centre, radius]: the car feels these
@@ -37,13 +37,11 @@ func build(r: Route, t: Terrain, bumps: Array) -> void:
 	terrain = t
 	rng.seed = 99
 	mat_vc = MB.vertex_color_material(0.85)
-	mat_glow = StandardMaterial3D.new()
-	mat_glow.vertex_color_use_as_albedo = true
-	mat_glow.emission_enabled = true
-	mat_glow.emission = Color(1.0, 0.75, 0.2)
-	mat_glow.emission_energy_multiplier = 0.9
+	mat_glow = ShaderMaterial.new()                     # retroreflective: lit by your own headlights
+	mat_glow.shader = preload("res://shaders/retroreflector.gdshader")
 	_road_surface(bumps)
 	_studs()
+	_delineators()
 	_chevrons()
 	_small_stones()
 	_guard_stones()
@@ -55,7 +53,7 @@ func build(r: Route, t: Terrain, bumps: Array) -> void:
 	for k in _segs:
 		_commit(_segs[k], "Details_%d" % k, mat_vc, 450.0)
 	for k in _glow:
-		_commit(_glow[k], "RoadStuds_%d" % k, mat_glow, 350.0)
+		_commit(_glow[k], "RoadStuds_%d" % k, mat_glow, 600.0)
 
 
 func _mb(d: float) -> Object:
@@ -255,6 +253,28 @@ func _studs() -> void:
 			var col := YELLOW if off == 0.0 else Color(0.9, 0.9, 0.85)
 			mb.box(Transform3D(f.basis, f.origin + Vector3(0, 0.03, 0)), Vector3(0.1, 0.03, 0.16), col)
 		d += 12.0
+
+
+## Delineator posts along the open road: a white post with a reflector facing each way of traffic
+## (amber on the left edge, white on the right), closer together on the ghat and in bends.
+func _delineators() -> void:
+	var d := 40.0
+	while d < route.length - 40.0:
+		var st: Dictionary = route.stage_at(d)
+		var hill: bool = st["id"] in ["ghat", "mist", "foothills"]
+		var bend := _bend(d, 20.0, 25.0) != 0.0
+		if not _in_town(d):
+			for side in [1.0, -1.0]:
+				var f: Transform3D = route.frame_at(d, (HALF + 1.15) * side)
+				var y := minf(_ground(f.origin), f.origin.y)
+				var base := Vector3(f.origin.x, y, f.origin.z)
+				_mb(d).box(Transform3D(f.basis, base + Vector3(0, 0.45, 0)), Vector3(0.1, 0.9, 0.1), Color(0.86, 0.86, 0.83))
+				_mb(d).box(Transform3D(f.basis, base + Vector3(0, 0.84, 0)), Vector3(0.105, 0.12, 0.105), Color(0.05, 0.05, 0.05))
+				var col := Color(1.0, 0.62, 0.12) if side > 0.0 else Color(0.95, 0.95, 0.9)
+				for face in [1.0, -1.0]:                     # a reflector facing each direction of traffic
+					_glow_mb(d).box(Transform3D(f.basis, base + Vector3(0, 0.72, 0) + f.basis.z * 0.056 * face),
+						Vector3(0.085, 0.18, 0.01), col)
+		d += 8.0 if bend else (14.0 if hill else 26.0)
 
 
 func _glow_mb(d: float) -> Object:
@@ -471,3 +491,11 @@ func _monkeys() -> void:
 		mb.ellipsoid(at.call(Vector3(0, 0.5, 0.03)), Vector3(0.09, 0.09, 0.09), fur, 4, 6)
 		mb.ellipsoid(at.call(Vector3(0, 0.49, 0.1)), Vector3(0.05, 0.045, 0.03), Color(0.55, 0.38, 0.3), 3, 5)
 		mb.cylinder(Transform3D(face * Basis(Vector3.RIGHT, 2.4), base + face * Vector3(0, 0.1, -0.1)), 0.02, 0.012, 0.55, fur, 4)
+
+
+## Each frame from the game: where the player's headlights are and whether they're on.
+func set_headlights(pos: Vector3, dir: Vector3, on: bool, night: float) -> void:
+	mat_glow.set_shader_parameter("head_pos", pos)
+	mat_glow.set_shader_parameter("head_dir", dir)
+	mat_glow.set_shader_parameter("head_on", 1.0 if on else 0.0)
+	mat_glow.set_shader_parameter("night", night)

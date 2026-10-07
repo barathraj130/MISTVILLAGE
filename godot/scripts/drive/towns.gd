@@ -999,6 +999,8 @@ func _plan_kit(town: String, tw: Dictionary) -> Dictionary:
 		if L < 0.4 or L > 28.0 or to.normalized().dot(best) < 0.3:
 			continue
 		var E2 := F2 + to.normalized() * L
+		if _on_street(F2.lerp(E2, 0.5), 0.0) and F2.lerp(E2, 0.5).distance_to(S2) > float(sn["width"]) * 0.5 + 0.5:
+			continue                           # the way to the street crosses the highway
 		var dw := 3.0 if kind in ["city_house", "bungalow", "hill_cottage"] else minf(front_w * 0.8, 10.0)
 		var clear := true
 		for k in range(1, 6):
@@ -1057,6 +1059,9 @@ func _compound(F2: Vector2, E2: Vector2, front_w: float, dw: float, y_house: flo
 		var n := int(ceil(a.distance_to(b) / 1.0))
 		for k in n + 1:
 			var q := a.lerp(b, float(k) / maxf(n, 1))
+			if _on_street(q, 0.6):
+				ok = false                     # never across a road (a corner plot has another street)
+				break
 			var ck := Vector2i(floori(q.x / 24.0), floori(q.y / 24.0))
 			for dx in range(-1, 2):
 				for dz in range(-1, 2):
@@ -1067,6 +1072,9 @@ func _compound(F2: Vector2, E2: Vector2, front_w: float, dw: float, y_house: flo
 			runs.append(r)
 	if runs.size() < 2:
 		return []
+	for sgn in [-1.0, 1.0]:                    # the gate pillars must stand off the road too
+		if _on_street(W + t * gate * sgn, 0.8):
+			return []
 	var stone := Color(1, 1, 1, 2.0 / 255.0)
 	var coping := Color(1, 1, 1, 3.0 / 255.0)
 	var plaster: Color = [Color(0.95, 0.93, 0.88, 5.0 / 255.0), Color(0.9, 0.75, 0.48, 5.0 / 255.0)][rng.randi() % 2]
@@ -1093,6 +1101,18 @@ func _compound(F2: Vector2, E2: Vector2, front_w: float, dw: float, y_house: flo
 		boxes.append([Transform3D(bs, Vector3(pp.x, y + 1.85, pp.y)), Vector3(0.62, 0.1, 0.62), coping])
 		boxes.append([Transform3D(bs, Vector3(pp.x, y + 2.03, pp.y)), Vector3(0.22, 0.26, 0.22), Color(1.0, 0.95, 0.85, 101.0 / 255.0)])
 	return boxes
+
+
+## Is a ground point on a street (within its half-width + margin)?
+func _on_street(q: Vector2, margin: float) -> bool:
+	# the highway (the route itself) isn't a town street: keep clear of its asphalt and shoulders
+	if highway_gap.is_valid() and float(highway_gap.call(Vector3(q.x, 0.0, q.y))) < 6.0 + margin:
+		return true
+	var sn := _street_near(q, 14.0)
+	if sn.is_empty():
+		return false
+	var sp: Vector3 = sn["pt"]
+	return q.distance_to(Vector2(sp.x, sp.z)) < float(sn["width"]) * 0.5 + margin
 
 
 ## Smallest-area rectangle round a polygon, aligned to one of its edges: [centre, u, extent along u,

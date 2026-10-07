@@ -266,7 +266,7 @@ func _build_world() -> void:
 	await props.build(route, terrain, func(f: float): _progress("Planting palms, forest and tea", 0.6 + 0.3 * f))
 	_progress("Adding the small things", 0.92)
 	await get_tree().process_frame
-	var details := Details.new()
+	details = Details.new()
 	details.name = "Details"
 	add_child(details)
 	details.build(route, terrain, road.bumps)
@@ -490,6 +490,7 @@ func _mist_layers(ntex: NoiseTexture2D) -> void:
 		mi.position = Vector3(centre.x, heights[k], centre.y)
 		mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 		add_child(mi)
+		_mist_mats.append(mat)
 
 
 # ----------------------------------------------------------------------------- start
@@ -503,6 +504,8 @@ func _start() -> void:
 	for a in args:
 		if a.begins_with("--start="):
 			start_d = float(a.get_slice("=", 1))
+		elif a == "--lights":
+			jeep.set_lights(true)
 		elif a.begins_with("--time="):
 			sim.minute = float(a.get_slice("=", 1)) * 60.0
 		elif a.begins_with("--weather="):
@@ -537,7 +540,7 @@ func _start() -> void:
 			jeep.configure(vk)
 			jeep.global_transform = Transform3D(Basis(Vector3.UP, float(_saved_pose.get("yaw", 0.0))),
 				Vector3(sp[0], sp[1] + 0.4, sp[2]))
-		jeep.set_lights(bool(_saved_pose.get("lights", false)))
+		jeep.set_lights(bool(_saved_pose.get("lights", false)) or "--lights" in args)
 		_message("Welcome back · Day %d, %s" % [sim.day, Sim.clock_text(sim.minute)], 4.0)
 	# --pothole : park 9 m before the first pothole past the start (to look at one)
 	if "--pothole" in args and not potholes.is_empty():
@@ -931,6 +934,8 @@ func _save_game(announce: bool) -> void:
 var _saved_pose := {}
 var left_behind: Array = []
 var potholes: Array = []           # [centre, radius] from details.gd
+var details: Node3D                # details.gd (studs, delineators, potholes)
+var _mist_mats: Array = []         # the ghat's cloud sheets (unshaded: dimmed by hand at night)
 var _pothole_cd := {}              # wheel index → time left before it can jolt again        # cars you got out of and left parked: {kind, body}
 
 
@@ -1225,6 +1230,10 @@ func _process(delta: float) -> void:
 		_head_yaw = 0.0
 		_head_pitch = 0.0
 	jeep.night = 1.0 - sim.daylight()
+	if details:
+		var fw: Vector3 = jeep.forward()
+		details.set_headlights(jeep.global_position + fw * 2.0 + Vector3(0, 0.8, 0), fw, jeep.lights_on and walker == null,
+			jeep.night)
 	jeep.map_ui = map_ui
 	jeep.clock_text = Sim.clock_text(sim.minute)
 	jeep.fuel_frac = sim.fuel_frac()
@@ -1476,6 +1485,17 @@ func _update_mist(delta: float) -> void:
 	env.fog_density = 0.0 if "--nofog" in args else lerpf(0.00015, 0.011, f) + cloud * 0.0004 + wx["rain"] * 0.0015
 	var fog_col := Color(0.74, 0.74, 0.76).lerp(Color(0.80, 0.82, 0.85), f).lerp(Color(0.62, 0.64, 0.67), cloud * 0.6)
 	env.fog_light_color = fog_col * lerpf(0.06, 1.0, day)
+	# night: a dark sky and a thin mist that catches the headlight beams
+	var nt := 1.0 - day
+	env.background_energy_multiplier = lerpf(0.3, 1.0, day)
+	var indoors: bool = interiors != null and not interiors.inside.is_empty()
+	env.volumetric_fog_enabled = nt > 0.45 and not indoors and not "--nofog" in args
+	if env.volumetric_fog_enabled:
+		env.volumetric_fog_density = 0.006 + f * 0.035 + wx["rain"] * 0.012
+		env.volumetric_fog_albedo = Color(0.75, 0.77, 0.8)
+		env.volumetric_fog_length = 80.0
+		env.volumetric_fog_ambient_inject = 0.0
+		env.volumetric_fog_sky_affect = 0.0
 	env.ambient_light_energy = lerpf(0.05, lerpf(0.3, 0.55, cloud), day)
 	# sun by day, a faint blue moon opposite it by night
 	var up := sd.y > -0.04
@@ -1504,6 +1524,9 @@ func _update_mist(delta: float) -> void:
 		_sky_t = 2.0
 		sky_mat.set_shader_parameter("sun_dir", sd)
 		sky_mat.set_shader_parameter("night_mix", 1.0 - day)
+		sky_mat.set_shader_parameter("night_strength", lerpf(1.0, 0.18, 1.0 - day))   # a dark night sky
+		for mm in _mist_mats:
+			(mm as ShaderMaterial).set_shader_parameter("light", lerpf(0.035, 1.0, day))
 		sky_mat.set_shader_parameter("noon_mix", smoothstep(0.2, 0.55, sd.y))
 		sky_mat.set_shader_parameter("overcast", cloud)
 		sky_mat.set_shader_parameter("day_strength", lerpf(1.5, 1.05, cloud))

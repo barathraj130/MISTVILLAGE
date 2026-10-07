@@ -607,6 +607,11 @@ func _dark_cabin(model: Node3D) -> void:
 		var inst := mi as MeshInstance3D
 		for si in inst.mesh.get_surface_count():
 			var mat := inst.mesh.surface_get_material(si) as BaseMaterial3D
+			if mat and mat.resource_name == "INT_Ambient":
+				var amb := mat.duplicate() as BaseMaterial3D
+				amb.emission_energy_multiplier = 0.12            # a thin glow, not a light bar
+				inst.set_surface_override_material(si, amb)
+				continue
 			if mat and colors.has(mat.resource_name):
 				var v := mat.duplicate() as BaseMaterial3D
 				v.albedo_color = colors[mat.resource_name] if not "--redcab" in OS.get_cmdline_user_args() else Color(1, 0, 0)
@@ -1096,14 +1101,16 @@ func _build_lights() -> void:
 		var lp: Vector3 = SPECS[vehicle].get("lamp", Vector3(0.72, 0.98, 2.3))
 		if SPECS[vehicle].has("len"):
 			lp = Vector3(float(SPECS[vehicle]["w"]) * 0.33, float(SPECS[vehicle]["h"]) * 0.42, float(SPECS[vehicle]["len"]) * 0.5 + 0.05)
-		s.position = Vector3(signf(sx) * lp.x, lp.y, lp.z)
-		s.rotation = Vector3(deg_to_rad(-3.5), PI, 0.0)
+		s.position = Vector3(signf(sx) * lp.x, lp.y, lp.z + 0.35)   # just ahead of the lens, clear of the bonnet
+		s.rotation = Vector3(deg_to_rad(-4.0), PI, 0.0)
 		s.light_color = Color(0.95, 0.97, 1.0)                 # LED projectors
-		s.light_energy = 6.0
-		s.spot_range = 70.0
-		s.spot_angle = 24.0
-		s.spot_attenuation = 0.8
-		s.shadow_enabled = false
+		s.light_energy = 18.0
+		s.spot_range = 110.0
+		s.spot_angle = 30.0
+		s.spot_attenuation = 1.1
+		s.spot_angle_attenuation = 1.6                     # bright centre, soft edge to the beam
+		s.light_volumetric_fog_energy = 3.0                # the beam shows in night mist
+		s.shadow_enabled = sx > 0.0                        # one shadowed lamp: trees, posts, walls throw shadows
 		s.visible = false
 		add_child(s)
 		_headlights.append(s)
