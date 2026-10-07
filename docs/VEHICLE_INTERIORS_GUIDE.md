@@ -5,6 +5,25 @@ send it to the project on GitHub.
 
 ---
 
+## 0. The easy way: Blender only (no git, no Godot)
+
+1. Open the starter file for the vehicle, e.g. **`art/interiors/hatchback_start.blend`**. There's one per vehicle:
+   hatchback, sedan, taxi, coupe, auto, bus, lorry.
+   - **REFERENCE exterior (locked):** the body the cabin must fit. It's see-through from inside, like in the game.
+   - **CABIN (design here):** the current game cabin. Edit it or replace it completely. Keep the three empties
+     `Eye`, `SteeringPivot` and `Cluster` (see §3).
+   - **PREVIEW:** a camera called **"Driver view"** at `Eye` with the game's cockpit field of view. Press
+     **Numpad 0** to see exactly what the player sees.
+   - A text block **"READ ME"** (Scripting / Text Editor) with the short rules.
+2. Design inside the **CABIN** collection only. Follow §2–§4 below.
+3. **Save the .blend and send it back** (Drive / WhatsApp / email). That's all.
+
+The project owner (or Claude) turns it into the game file with:
+```bash
+/Applications/Blender.app/Contents/MacOS/Blender -b --python tools/interior_starter.py -- export hatchback path/to/your.blend
+```
+This exports only the CABIN collection to `godot/assets/vehicles/interior_hatchback.glb` and checks the markers.
+
 ## 1. Which cabins the game uses
 
 | Vehicle | File the game loads | Exterior shell to design around |
