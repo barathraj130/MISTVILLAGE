@@ -68,9 +68,9 @@ void fragment() {
 	col = mix(col, col * 0.72, patch);
 	rough = mix(rough, rough + 0.08, patch);
 	// red dust blown in from the verges, thicker in the gutters
-	float dust_amt = lanes ? (1.0 - smoothstep(0.0, 0.9, edge)) * (0.55 + 0.45 * n2(wpos.xz / 4.0)) : 0.0;
-	dust_amt += 0.12 * smoothstep(0.55, 0.8, n2(wpos.xz / 9.0));
-	col = mix(col, dust * (0.8 + 0.4 * n2(wpos.xz / 1.3)), clamp(dust_amt * wear, 0.0, 0.85));
+	float dust_amt = lanes ? (1.0 - smoothstep(0.0, 0.45, edge)) * (0.35 + 0.35 * n2(wpos.xz / 4.0)) : 0.0;
+	dust_amt += 0.06 * smoothstep(0.6, 0.8, n2(wpos.xz / 9.0));
+	col = mix(col, dust * (0.8 + 0.4 * n2(wpos.xz / 1.3)), clamp(dust_amt * wear, 0.0, 0.5));
 	rough = mix(rough, 1.0, dust_amt * 0.6);
 	// rain: darker, glossy, water collects in the wheel tracks first
 	float pool = wet * clamp(0.4 + tracks * 0.8 + (1.0 - dust_amt) * 0.2, 0.0, 1.0);

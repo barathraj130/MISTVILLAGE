@@ -16,6 +16,7 @@ const FLOOR := 3.2
 const RANK := {"trunk": 0.07, "primary": 0.06, "secondary": 0.05, "tertiary": 0.04, "unclassified": 0.03,
 	"residential": 0.025, "living_street": 0.02, "service": 0.015, "road": 0.02, "pedestrian": 0.015}
 const MARKED := ["trunk", "primary", "secondary", "tertiary"]
+const FOOTPATH := 1.65                    # outer edge of an ordinary street's footpath from its edge (m)
 const POI_COLOURS := {"Bus stand": Color(0.2, 0.55, 1.0), "Temple": Color(1.0, 0.55, 0.1), "Market": Color(0.9, 0.3, 0.6),
 	"Railway station": Color(0.6, 0.4, 1.0), "Hospital": Color(1.0, 0.25, 0.25), "Petrol bunk": Color(0.2, 0.8, 0.3)}
 
@@ -39,6 +40,7 @@ var drive_count := 0
 var wall_count := 0
 var walled := 0
 var frontage_count := 0                    # GENERATED shop-houses lining the highway through towns
+var connected := [0, 0, 0]                 # buildings reaching the street: [own driveway, touching the footpath, new path]
 var graph                                 # road_graph.gd: built here from towns.json, shared with GPS etc.                 # (Vector3) -> metres to the main road's centreline
 
 
@@ -80,6 +82,7 @@ func build(path: String, asphalt: Material, progress: Callable) -> void:
 		if tr: print("  TOWN %s buildings %d ms" % [names[i], Time.get_ticks_msec() - t0])
 		t0 = Time.get_ticks_msec()
 		_rooftops(names[i], tw["buildings"], plan["fits"])
+		_connections(names[i], tw["buildings"], plan["fits"])
 		_utilities(names[i], tw["streets"])
 		if tr: print("  TOWN %s utilities %d ms" % [names[i], Time.get_ticks_msec() - t0])
 		t0 = Time.get_ticks_msec()
@@ -213,7 +216,10 @@ func _streets(town: String, streets: Array, lots: Array = [], extra_gaps: Dictio
 						_strip(wm, a, b2, la * side, lj * side, half + 0.45, half + 0.7, 0.16, 0.16, Color(0.78, 0.77, 0.73) if i % 4 == 0 or s["class"] == "tertiary" else Color(0.12, 0.12, 0.12), 0)
 						_strip(wm, a, b2, la * side, lj * side, half + 0.7, half + 1.9, 0.15, 0.15, Color(0.66, 0.63, 0.58), 3)
 					else:
-						_strip(vm, a, b2, la * side, lj * side, half - 0.05, half + 1.0, -0.01, -0.06, Color(0.52, 0.47, 0.40), 3)
+						# every other street, down to service lanes, gets a kerb and a paver footpath for people on foot
+						var kc := Color(0.82, 0.81, 0.77) if int(dist / 1.5) % 2 == 0 else Color(0.14, 0.14, 0.14)
+						_strip(wm, a, b2, la * side, lj * side, half, half + 0.15, 0.13, 0.13, kc, 1)
+						_strip(wm, a, b2, la * side, lj * side, half + 0.15, half + FOOTPATH, 0.12, 0.12, Color(0.9, 0.88, 0.85), 3)
 			if marked and fmod(dist, 8.0) < 4.0 and dist > clear_a and dist + seg < total - clear_b:
 				var up := Vector3(0, 0.015, 0)
 				lm.quad(a + la * 0.06 + up, a - la * 0.06 + up, b - lb * 0.06 + up, b + lb * 0.06 + up,
@@ -264,7 +270,20 @@ var _edge_mats := {}
 
 func _edge_mat(key: String, tile: float) -> Material:
 	if not _edge_mats.has(key):
-		_edge_mats[key] = MB.cc0_material(key, tile, 0.9)
+		if key == "concrete":
+			# pavements: real paver blocks (world-aligned, so strips need no UVs), tinted by the vertex colour
+			var m := StandardMaterial3D.new()
+			m.albedo_texture = load("res://assets/models/textures/parking_pavers_base.jpg")
+			m.normal_enabled = true
+			m.normal_texture = load("res://assets/models/textures/parking_pavers_normal.png")
+			m.vertex_color_use_as_albedo = true
+			m.uv1_triplanar = true
+			m.uv1_world_triplanar = true
+			m.uv1_scale = Vector3(0.5, 0.5, 0.5)
+			m.roughness = 0.88
+			_edge_mats[key] = m
+		else:
+			_edge_mats[key] = MB.cc0_material(key, tile, 0.9)
 	return _edge_mats[key]
 
 
@@ -1103,6 +1122,106 @@ func _compound(F2: Vector2, E2: Vector2, front_w: float, dw: float, y_house: flo
 		boxes.append([Transform3D(bs, Vector3(pp.x, y + 1.85, pp.y)), Vector3(0.62, 0.1, 0.62), coping])
 		boxes.append([Transform3D(bs, Vector3(pp.x, y + 2.03, pp.y)), Vector3(0.22, 0.26, 0.22), Color(1.0, 0.95, 0.85, 101.0 / 255.0)])
 	return boxes
+
+
+## Every building reaches the street: designed ones already have a driveway; for the rest, a 1.3 m stone path
+## runs from the wall nearest the street to the street's footpath (none needed if the building touches it).
+## Skipped where the way would cross another building.
+var _path_mat: StandardMaterial3D
+
+func _connections(town: String, list: Array, fits: Dictionary) -> void:
+	if graph == null or not graph.has_graph():
+		return
+	var polys: Array = []
+	var grid := {}
+	for i in list.size():
+		var pg := PackedVector2Array()
+		for q in list[i]["poly"]:
+			pg.append(Vector2(q[0], q[1]))
+		polys.append(pg)
+		if pg.size() >= 3:
+			var ck := Vector2i(floori(pg[0].x / 24.0), floori(pg[0].y / 24.0))
+			if not grid.has(ck):
+				grid[ck] = []
+			grid[ck].append(i)
+	var tiles := {}
+	for i in list.size():
+		var poly: PackedVector2Array = polys[i]
+		if poly.size() < 3:
+			continue
+		if fits.has(i) and fits[i].has("drive"):
+			connected[0] += 1
+			continue
+		var C := Vector2.ZERO
+		for q in poly:
+			C += q
+		C /= poly.size()
+		var sn := _street_near(C, 45.0)
+		if sn.is_empty():
+			continue
+		var S3: Vector3 = sn["pt"]
+		var S := Vector2(S3.x, S3.z)
+		# the point of the building closest to the street
+		var F := poly[0]
+		var bd := INF
+		for k in poly.size():
+			var q := Geometry2D.get_closest_point_to_segment(S, poly[k], poly[(k + 1) % poly.size()])
+			if q.distance_to(S) < bd:
+				bd = q.distance_to(S)
+				F = q
+		var main_st: bool = graph.streets[sn["si"]]["class"] in MARKED or graph.streets[sn["si"]]["class"] in ["trunk_link", "primary_link"]
+		var reach: float = float(sn["width"]) * 0.5 + (1.9 if main_st else FOOTPATH)
+		if bd <= reach + 0.4:
+			connected[1] += 1
+			continue
+		if bd > reach + 30.0:
+			continue
+		var dir := (S - F).normalized()
+		var E := S - dir * reach
+		var clear := true
+		for k in range(1, 5):
+			var q := F.lerp(E, k / 5.0)
+			var ck := Vector2i(floori(q.x / 24.0), floori(q.y / 24.0))
+			for dx in range(-1, 2):
+				for dz in range(-1, 2):
+					for j in grid.get(Vector2i(ck.x + dx, ck.y + dz), []):
+						if j != i and Geometry2D.is_point_in_polygon(q, polys[j]):
+							clear = false
+		if not clear:
+			continue
+		var base: float = list[i]["base"]
+		var k2 := Vector2i(floori(C.x / KIT_TILE), floori(C.y / KIT_TILE))
+		if not tiles.has(k2):
+			tiles[k2] = SurfaceTool.new()
+			tiles[k2].begin(Mesh.PRIMITIVE_TRIANGLES)
+		var st: SurfaceTool = tiles[k2]
+		var F3 := Vector3(F.x, base + 0.05, F.y)
+		var E3 := Vector3(E.x, S3.y + 0.13, E.y)
+		var side := Vector3(dir.y, 0, -dir.x) * 0.65
+		_st_quad(st, F3 - side, F3 + side, E3 + side, E3 - side)
+		_st_quad(st, F3 + side + Vector3(0, -0.35, 0), E3 + side + Vector3(0, -0.35, 0), E3 + side, F3 + side)
+		_st_quad(st, E3 - side + Vector3(0, -0.35, 0), F3 - side + Vector3(0, -0.35, 0), F3 - side, E3 - side)
+		connected[2] += 1
+	if _path_mat == null:
+		_path_mat = StandardMaterial3D.new()
+		_path_mat.albedo_texture = load("res://assets/models/textures/flagstone_path_base.jpg")
+		_path_mat.normal_enabled = true
+		_path_mat.normal_texture = load("res://assets/models/textures/flagstone_path_normal.png")
+		_path_mat.uv1_triplanar = true
+		_path_mat.uv1_world_triplanar = true
+		_path_mat.uv1_scale = Vector3(0.5, 0.5, 0.5)
+		_path_mat.roughness = 0.85
+		_path_mat.cull_mode = BaseMaterial3D.CULL_DISABLED
+	for k2 in tiles:
+		var st: SurfaceTool = tiles[k2]
+		st.generate_normals()
+		var mi := MeshInstance3D.new()
+		mi.name = "%sPaths_%d_%d" % [town, k2.x, k2.y]
+		mi.mesh = st.commit()
+		mi.material_override = _path_mat
+		mi.visibility_range_end = 320.0
+		mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		add_child(mi)
 
 
 ## GENERATED (src gen:frontage): Indian main roads are lined with shops right behind the footpath, but the map
