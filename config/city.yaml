@@ -1,0 +1,22 @@
+# Coimbatore open-world map — city settings (docs/CBE_MAP_PIPELINE.md §20)
+name: Coimbatore
+crs: EPSG:32643                      # UTM zone 43N, metres
+origin: {lat: 11.0183, lon: 76.9678} # Gandhipuram; game x = E - E0, z = -(N - N0)
+
+# which area to build: exactly one of these
+boundary:
+  circle: {lat: 11.0183, lon: 76.9678, radius_m: 12000}   # the city core (start here)
+  geojson: null                                            # e.g. config/cbe_boundary.geojson
+  osm_relation: null                                       # e.g. the corporation boundary relation id
+margin_m: 1500                        # extra data kept around the boundary (terrain, roads leaving it)
+
+source:
+  pbf: mapdata/cbe/2026-10-09/southern-zone.osm.pbf
+
+chunk_m: 256
+rings: {full: 1, blocks: 4, proxy: 12}
+
+dem: [srtm_1s]                        # mapdata/N11E076.hgt.gz (already on disk)
+landcover: null                       # ESA WorldCover later (needs approval to download)
+
+build_dir: build/cbe

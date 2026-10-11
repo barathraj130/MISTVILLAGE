@@ -21,7 +21,7 @@ const CONCRETE := Color(0.55, 0.54, 0.5)
 
 var route: Route
 var terrain: Terrain
-var mat_asphalt: StandardMaterial3D
+var mat_asphalt: Material                  # road_surface.gdshader (worn city asphalt), shared with towns
 var mat_wall: StandardMaterial3D
 var mat_vc: StandardMaterial3D
 var mat_water: StandardMaterial3D
@@ -48,6 +48,8 @@ func build(r, t) -> void:
 	_bridge()
 	_signs()
 	_town_details()
+	_city_edges()
+	_zebras()
 
 
 func _tex_mat(tex_name: String, rough: float, uv_scale := 1.0) -> StandardMaterial3D:
@@ -65,14 +67,23 @@ func _tex_mat(tex_name: String, rough: float, uv_scale := 1.0) -> StandardMateri
 
 func _materials() -> void:
 	if ResourceLoader.exists("res://assets/drive/tex/asphalt_color.jpg"):
-		mat_asphalt = StandardMaterial3D.new()
-		mat_asphalt.albedo_texture = load("res://assets/drive/tex/asphalt_color.jpg")
-		mat_asphalt.normal_enabled = true
-		mat_asphalt.normal_texture = load("res://assets/drive/tex/asphalt_normal.jpg")
-		mat_asphalt.roughness_texture = load("res://assets/drive/tex/asphalt_rough.jpg")
-		mat_asphalt.albedo_color = Color(0.62, 0.62, 0.64)
-		mat_asphalt.uv1_scale = Vector3(1.5, 1.5, 1.0)          # UVs are in 6 m units → 4 m tiles
-		mat_asphalt.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS_ANISOTROPIC
+		var sm := ShaderMaterial.new()
+		sm.shader = preload("res://shaders/road_surface.gdshader")
+		sm.set_shader_parameter("albedo_tex", load("res://assets/drive/tex/asphalt_color.jpg"))
+		sm.set_shader_parameter("normal_tex", load("res://assets/drive/tex/asphalt_normal.jpg"))
+		sm.set_shader_parameter("rough_tex", load("res://assets/drive/tex/asphalt_rough.jpg"))
+		var nz := FastNoiseLite.new()
+		nz.noise_type = FastNoiseLite.TYPE_VALUE_CUBIC
+		nz.fractal_octaves = 4
+		nz.frequency = 0.012
+		var nt := NoiseTexture2D.new()
+		nt.width = 512
+		nt.height = 512
+		nt.seamless = true
+		nt.generate_mipmaps = true
+		nt.noise = nz
+		sm.set_shader_parameter("noise_tex", nt)
+		mat_asphalt = sm
 	else:
 		mat_asphalt = _tex_mat("wet_mountain_asphalt", 0.75)
 		mat_asphalt.albedo_color = Color(0.85, 0.85, 0.85)
@@ -88,11 +99,8 @@ func _materials() -> void:
 
 ## Rain soaks the tarmac: darker and glossy (sky and lamps reflect in it), drying slowly after.
 func set_wet(w: float) -> void:
-	if mat_asphalt:
-		mat_asphalt.roughness = lerpf(1.0, 0.22, w)
-		mat_asphalt.albedo_color = Color(0.62, 0.62, 0.64) * lerpf(1.0, 0.55, w)
-		mat_asphalt.metallic_specular = lerpf(0.5, 0.75, w)
-		mat_asphalt.normal_scale = lerpf(1.0, 0.25, w)          # water fills the texture
+	if mat_asphalt is ShaderMaterial:
+		(mat_asphalt as ShaderMaterial).set_shader_parameter("wet", w)   # darker, glossy, pools in the wheel tracks
 	if mat_concrete:
 		mat_concrete.roughness = lerpf(0.85, 0.4, w)
 
@@ -148,6 +156,26 @@ func _mouth(d: float, side: float) -> bool:
 	return false
 
 
+## Stretches of the highway that run through a town (city kerbs and pavements instead of dirt shoulders).
+var _city: Array = []
+
+func _city_ranges() -> Array:
+	if _city.is_empty():
+		for st in route.stages:
+			if st["id"] in ["coimbatore", "mettupalayam", "kotagiri"]:
+				_city.append([st["start"], st["end"]])
+		for t in route.towns:
+			_city.append([t["start"], t["end"]])
+	return _city
+
+
+func in_city(d: float) -> bool:
+	for r in _city_ranges():
+		if d >= r[0] and d <= r[1]:
+			return true
+	return false
+
+
 # ----------------------------------------------------------------------------- surface + markings
 func _surface() -> void:
 	var n: int = route.pts.size()
@@ -167,7 +195,7 @@ func _surface() -> void:
 			var lj: Vector3 = route.left(j)
 			var di: float = route.dist[i]
 			var dj: float = route.dist[j]
-			asphalt.quad(ci + li * HALF, ci - li * HALF, cj - lj * HALF, cj + lj * HALF, Color.WHITE, Vector3.UP,
+			asphalt.quad(ci + li * HALF, ci - li * HALF, cj - lj * HALF, cj + lj * HALF, Color(HALF / 10.0, 1, 1), Vector3.UP,
 				Vector2(0.0, di / 6.0), Vector2(7.2 / 6.0, di / 6.0), Vector2(7.2 / 6.0, dj / 6.0), Vector2(0.0, dj / 6.0))
 			for s in [1.0, -1.0]:
 				var e0: Vector3 = ci + li * HALF * s
@@ -178,9 +206,10 @@ func _surface() -> void:
 					var m1: Vector3 = cj + lj * (HALF + SHOULDER + 0.6) * s
 					asphalt.quad(e0, m0, m1, e1, Color.WHITE, Vector3.UP)
 					continue
-				var o0: Vector3 = ci + li * (HALF + SHOULDER) * s + Vector3(0, -0.4, 0)
-				var o1: Vector3 = cj + lj * (HALF + SHOULDER) * s + Vector3(0, -0.4, 0)
-				shoulder.quad(e0, o0, o1, e1, DIRT, Vector3.UP)
+				if not in_city(di):
+					var o0: Vector3 = ci + li * (HALF + SHOULDER) * s + Vector3(0, -0.4, 0)
+					var o1: Vector3 = cj + lj * (HALF + SHOULDER) * s + Vector3(0, -0.4, 0)
+					shoulder.quad(e0, o0, o1, e1, DIRT, Vector3.UP)
 				# solid edge line
 				_stripe(lines, ci, cj, li, lj, (HALF - 0.3) * s, 0.12, WHITE)
 			# centre: solid yellow on the ghat (no overtaking), dashed white elsewhere
@@ -462,6 +491,89 @@ func _town_details() -> void:
 	var lamps := _add(poles, mat_vc, false, "StreetLamps")
 	if lamps:
 		lamps.visibility_range_end = 700.0
+
+
+## Through the towns the highway gets a city edge on both sides: a painted kerb, a raised paver footpath and a
+## dusty concrete apron out to where the shops start (no grass verge). Mouths of side streets stay open.
+const KERB := 0.2
+const WALK := 2.4
+const APRON := 9.0
+
+func _city_edges() -> void:
+	var pav := _tex_mat("parking_pavers", 0.85)
+	pav.uv1_scale = Vector3(1, 1, 1)
+	var dusty: StandardMaterial3D = MB.cc0_material("concrete", 3.0, 0.9)
+	dusty.vertex_color_use_as_albedo = true
+	var chunks := {}                             # ~600 m pieces so each can be culled on its own
+	var n: int = route.pts.size()
+	for i in n - 1:
+		var di: float = route.dist[i]
+		var dj: float = route.dist[i + 1]
+		if not in_city(di) or not in_city(dj):
+			continue
+		var key := i / CHUNK
+		if not chunks.has(key):
+			chunks[key] = [MB.new(), MB.new(), MB.new()]
+		var kerbs = chunks[key][0]
+		var walks = chunks[key][1]
+		var aprons = chunks[key][2]
+		var ci: Vector3 = route.pts[i]
+		var cj: Vector3 = route.pts[i + 1]
+		var li: Vector3 = route.left(i)
+		var lj: Vector3 = route.left(i + 1)
+		for s in [1.0, -1.0]:
+			if _mouth(di, s) or _mouth(dj, s):
+				continue
+			var col := Color(0.86, 0.86, 0.82) if int(di / 1.5) % 2 == 0 else BLACK
+			var w0: float = HALF + KERB
+			var w1: float = w0 + WALK
+			# the footpath sits on top of whatever is beside the road (the ground here is often a little higher)
+			var gi: Vector3 = ci + li * s * w1
+			var gj: Vector3 = cj + lj * s * w1
+			var hi: float = clampf(maxf(0.15, terrain.height_at(gi.x, gi.z) - ci.y + 0.06), 0.15, 0.7)
+			var hj: float = clampf(maxf(0.15, terrain.height_at(gj.x, gj.z) - cj.y + 0.06), 0.15, 0.7)
+			_block_segment(kerbs, ci, cj, li * s, lj * s, HALF, KERB, -0.3, maxf(hi, hj) + 0.01, col)
+			var ui := Vector3(0, hi, 0)
+			var uj := Vector3(0, hj, 0)
+			walks.quad(ci + li * s * w0 + ui, ci + li * s * w1 + ui, cj + lj * s * w1 + uj, cj + lj * s * w0 + uj,
+				Color.WHITE, Vector3.UP, Vector2(w0 / 2.0, di / 2.0), Vector2(w1 / 2.0, di / 2.0),
+				Vector2(w1 / 2.0, dj / 2.0), Vector2(w0 / 2.0, dj / 2.0))
+			# the apron runs out to where the shops start, never below the ground
+			var oi: Vector3 = ci + li * s * (w1 + APRON)
+			var oj: Vector3 = cj + lj * s * (w1 + APRON)
+			oi.y = clampf(terrain.height_at(oi.x, oi.z) + 0.06, ci.y - 1.0, ci.y + 1.4)
+			oj.y = clampf(terrain.height_at(oj.x, oj.z) + 0.06, cj.y - 1.0, cj.y + 1.4)
+			aprons.quad(ci + li * s * w1 + ui, oi, oj, cj + lj * s * w1 + uj,
+				Color(0.78, 0.74, 0.68), Vector3.UP, Vector2(w1 / 3.0, di / 3.0), Vector2((w1 + APRON) / 3.0, di / 3.0),
+				Vector2((w1 + APRON) / 3.0, dj / 3.0), Vector2(w1 / 3.0, dj / 3.0))
+	for key in chunks:
+		_add(chunks[key][0], mat_vc, true, "CityKerbs_%d" % key)
+		_add(chunks[key][1], pav, true, "CityFootpaths_%d" % key)
+		_add(chunks[key][2], dusty, true, "CityAprons_%d" % key)
+
+
+## Zebra crossings across the highway at side streets in town, a little before each mouth.
+func _zebras() -> void:
+	var chunks := {}
+	var last := -100.0
+	var d := 20.0
+	while d < route.length - 20.0:
+		if in_city(d) and d - last > 60.0 and (_mouth(d, 1.0) or _mouth(d, -1.0)):
+			var zd := d - 9.0
+			var key := route.index_at(zd) / CHUNK
+			if not chunks.has(key):
+				chunks[key] = MB.new()
+			var mb = chunks[key]
+			var k := -HALF + 0.35
+			while k < HALF - 0.3:
+				var a: Transform3D = route.frame_at(zd, k)
+				mb.box(Transform3D(a.basis, a.origin + Vector3(0, 0.025, 0)), Vector3(0.45, 0.02, 3.0), Color(0.86, 0.86, 0.82))
+				k += 0.9
+			last = d
+			d += 40.0
+		d += 2.0
+	for key in chunks:
+		_add(chunks[key], mat_vc, false, "Zebras_%d" % key)
 
 
 ## A painted hump across the road, 0.12 m high and 1.4 m long, striped yellow and black.

@@ -2,12 +2,51 @@
 
 All money, banks, police and courts are fictional. No real brands or institutions.
 
-## Structure
+## Structure (updated 2026-10-11: the story is the spine)
 
-**Level 1 — "From the Plains to the Hills"** (Coimbatore, Mettupalayam, the ghat)
-Start poor, work, borrow, build businesses → goal: **own The Mist Village resort** in Kotagiri.
+**Part 1 — "The Wrong Accusation"** (Coimbatore) — a narrative crime thriller.
+An ordinary man's life (work, family, loans, a small business — the Level 1 systems below) is broken when he is
+falsely accused of a serious, fictional crime. On bail he must sign at the police station every evening, may not
+leave Coimbatore district, and investigates to prove his innocence through evidence, witnesses, real-road travel
+times and a legal process. **Ending:** the truth also clears the businessman's family's name; grateful (and
+ashamed of having believed the accusation), they give him **The Mist Village** resort in Kotagiri.
 
-**Level 2 — "Life in the Mist"** (Kotagiri and the Nilgiris, resort as home base)
+**Part 2 — "Life in the Mist"** (Kotagiri and the Nilgiris) — the bail conditions end, he drives up the ghat for the
+first time, and the resort life begins (Level 2 below).
+
+### Part 1 story outline (to be written as a story bible before any building)
+- **Six acts:** 1 Ordinary life → 2 The accusation → 3 Isolation → 4 Investigation → 5 The second twist (a trusted
+  character had a hidden role) → 6 The truth (evidence assembled with legal counsel, manipulation exposed).
+- **The businessman** is at the centre of the crime (victim of a fraud / disappearance / death — to decide) and owned or
+  was building The Mist Village. The protagonist really met him (a client), which makes the framing believable. The
+  real culprit is someone close to the businessman's family (partner / relative).
+- **Bail conditions (core mechanic):**
+  - **Sign at the police station every evening, 6–7 PM (game time).** The day is free for work, investigation and family;
+    each day ends with a drive back across the city in evening traffic; night investigation follows.
+  - Missing a signing: warning → the inspector's suspicion grows → risk of bail cancellation and arrest (Law and
+    Consequences / jail systems below).
+  - The station is a living story place: the inspector, constables (one may quietly help), the same faces on the bench.
+  - **May not leave Coimbatore district:** the ghat to Kotagiri is closed through Part 1. The hills are visible on the
+    horizon, and the first drive up the ghat is the reward that opens Part 2.
+- **Systems:** evidence (id, source, reliability, contradictions, verified / disputed / unverified), deduction board
+  (people, places, evidence, events, times, motives; several hypotheses at once; conclusions checked against evidence),
+  relationships (trust, fear, loyalty, suspicion, cooperation — shown through behaviour, not numbers), timeline,
+  consequences (calls unanswered, business lost, EMIs, family worry), journey reconstruction on real roads.
+- **Rules:** fictional characters and crimes; no real CCTV coverage, addresses or allegations; no gore.
+- **First build target:** a 20–30 minute vertical slice — morning at home → a drive → a meaningful meeting → the first
+  suspicious event → the accusation → the first evidence → a short investigation → a cliffhanger.
+- **Decided (2026-10-11):** the businessman is the **victim** (murdered off-screen; no gore) in a land-development
+  conspiracy; his **business partner** is the real killer; the protagonist's **close friend unknowingly** leaked his
+  movements (second twist); the businessman's family gives The Mist Village at the end.
+  **Protagonist's job:** the businessman's trusted **driver, promoted during Act 1 to also be his assistant** (errands,
+  calls, payments) — the promotion is Act 1's "opportunity" and gives the killer the car, phone and money trail to frame him.
+  **Language:** Tamil and English, the player chooses (dialogue system bilingual from day one).
+- **Open:** voice acting; the story bible (to be drafted).
+
+**Level 1 — "From the Plains to the Hills"** (now the ordinary-life layer of Part 1)
+Work, borrow, build businesses. (Originally its goal was to buy the resort; now the resort is given at the end of Part 1.)
+
+**Level 2 — "Life in the Mist"** (Kotagiri and the Nilgiris, resort as home base) — becomes Part 2.
 Run the resort, explore, rescue, stories → goal: make the resort the best-loved place in the Nilgiris.
 
 ---

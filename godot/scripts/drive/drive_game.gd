@@ -289,7 +289,7 @@ func _build_world() -> void:
 		if "--trace" in args or "--bench" in args:
 			print("ENTERABLE places %d" % interiors.doors.size())
 			print("TOWNS parked vehicles %d, fuel bunks %d, traffic islands %d" % [towns.parked, towns.bunks.size(), towns.islands])
-			print("TOWNS designed buildings %d, driveways %d, compound walls %d" % [towns.kit_count, towns.drive_count, towns.walled])
+			print("TOWNS designed buildings %d, driveways %d, compound walls %d, generated frontage shops %d" % [towns.kit_count, towns.drive_count, towns.walled, towns.frontage_count])
 	_mist_layers(ntex)
 
 	jeep = Jeep.new()

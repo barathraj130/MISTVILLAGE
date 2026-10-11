@@ -38,6 +38,7 @@ var kit_count := 0
 var drive_count := 0
 var wall_count := 0
 var walled := 0
+var frontage_count := 0                    # GENERATED shop-houses lining the highway through towns
 var graph                                 # road_graph.gd: built here from towns.json, shared with GPS etc.                 # (Vector3) -> metres to the main road's centreline
 
 
@@ -93,6 +94,7 @@ func build(path: String, asphalt: Material, progress: Callable) -> void:
 		lives.append(life)
 		if tr: print("  TOWN %s parked %d ms" % [names[i], Time.get_ticks_msec() - t0])
 		_fuel_bunks(names[i], tw)
+		_frontage(names[i], tw)
 		_pois(names[i], tw["pois"])
 
 
@@ -189,7 +191,7 @@ func _streets(town: String, streets: Array, lots: Array = [], extra_gaps: Dictio
 			var la := Vector3(ta.z, 0, -ta.x).normalized()
 			var lb := Vector3(tb.z, 0, -tb.x).normalized()
 			var seg := a.distance_to(b)
-			mb.quad(a + la * half, a - la * half, b - lb * half, b + lb * half, Color.WHITE, Vector3.UP,
+			mb.quad(a + la * half, a - la * half, b - lb * half, b + lb * half, Color(minf(half, 9.0) / 10.0, 1, 1), Vector3.UP,
 				Vector2(0, dist / 6.0), Vector2(half / 3.0, dist / 6.0), Vector2(half / 3.0, (dist + seg) / 6.0),
 				Vector2(0, (dist + seg) / 6.0))
 			# edges in 6 m pieces (every other segment): plenty on a 3 m polyline, half the geometry
@@ -1101,6 +1103,125 @@ func _compound(F2: Vector2, E2: Vector2, front_w: float, dw: float, y_house: flo
 		boxes.append([Transform3D(bs, Vector3(pp.x, y + 1.85, pp.y)), Vector3(0.62, 0.1, 0.62), coping])
 		boxes.append([Transform3D(bs, Vector3(pp.x, y + 2.03, pp.y)), Vector3(0.22, 0.26, 0.22), Color(1.0, 0.95, 0.85, 101.0 / 255.0)])
 	return boxes
+
+
+## GENERATED (src gen:frontage): Indian main roads are lined with shops right behind the footpath, but the map
+## data keeps buildings off the highway corridor. Through each town this walks both sides of the highway and
+## places designed shop-houses facing the road, behind road.gd's kerb + footpath, wherever there is no real
+## building, street, parking lot or fuel bunk. Real OSM content always wins.
+const FRONT_OFF := 3.6 + 0.2 + 2.4 + 0.5           # highway half-width + kerb + footpath + a step
+
+func _frontage(town: String, tw: Dictionary) -> void:
+	if kit == null or graph == null or graph.route == null:
+		return
+	var route = graph.route
+	var sid: String = {"Coimbatore": "coimbatore", "Mettupalayam": "mettupalayam", "Kotagiri": "kotagiri"}.get(town, "")
+	var ranges: Array = []
+	for st in route.stages:
+		if st["id"] == sid:
+			ranges.append([float(st["start"]), float(st["end"])])
+	if ranges.is_empty():
+		return
+	var variants: Array = []
+	for vn in kit.manifest:
+		if kit.manifest[vn]["kind"] == "shop_house":
+			variants.append(vn)
+	if variants.is_empty():
+		return
+	# everything real that a shop must not overlap
+	var polys: Array = []
+	for b in tw["buildings"]:
+		var pg := PackedVector2Array()
+		for q in b["poly"]:
+			pg.append(Vector2(q[0], q[1]))
+		if pg.size() >= 3:
+			polys.append(pg)
+	for lot in tw.get("parking", []):
+		var pg := PackedVector2Array()
+		for q in lot["poly"]:
+			pg.append(Vector2(q[0], q[1]))
+		polys.append(pg)
+	var grid := {}
+	for k in polys.size():
+		var ck := Vector2i(floori(polys[k][0].x / 24.0), floori(polys[k][0].y / 24.0))
+		if not grid.has(ck):
+			grid[ck] = []
+		grid[ck].append(k)
+	var rng := RandomNumberGenerator.new()
+	rng.seed = hash(town + "frontage")
+	var tiles := {}
+	var body_shapes: Array = []
+	for r in ranges:
+		for side in [1.0, -1.0]:
+			var d: float = r[0] + 12.0
+			while d < r[1] - 12.0:
+				var vname: String = variants[rng.randi() % variants.size()]
+				var ex: Array = kit.extent(vname)
+				var size: Vector3 = ex[1]
+				var dm: float = d + size.x * 0.5
+				var f: Transform3D = route.frame_at(dm)
+				var l: Vector3 = f.basis.x * side
+				var fwd: Vector3 = f.basis.z
+				var C: Vector3 = f.origin + l * (FRONT_OFF + size.z * 0.5)
+				var ok := true
+				var pts2: Array = []
+				for a in [-0.5, 0.0, 0.5]:
+					for b in [-0.5, 0.5]:
+						var q: Vector3 = C + fwd * size.x * a + l * size.z * b
+						pts2.append(Vector2(q.x, q.z))
+				for q in pts2:
+					if _on_street(q, 0.3) and (q as Vector2).distance_to(Vector2(f.origin.x, f.origin.z)) > FRONT_OFF + 0.6:
+						ok = false
+						break
+					var ck := Vector2i(floori(q.x / 24.0), floori(q.y / 24.0))
+					for dx in range(-1, 2):
+						for dz in range(-1, 2):
+							for k in grid.get(Vector2i(ck.x + dx, ck.y + dz), []):
+								if Geometry2D.is_point_in_polygon(q, polys[k]):
+									ok = false
+				for bk in bunks:
+					if (bk["pos"] as Vector3).distance_to(C) < 30.0:
+						ok = false
+				if not ok:
+					d += 3.0
+					continue
+				var nz := -l
+				var nx := Vector3(nz.z, 0, -nz.x)
+				var basis := Basis(nx, Vector3.UP, nz)
+				var origin := Vector3(C.x, f.origin.y, C.z) - basis * (ex[0] as Vector3)
+				var k2 := Vector2i(floori(C.x / KIT_TILE), floori(C.z / KIT_TILE))
+				if not tiles.has(k2):
+					tiles[k2] = {}
+				if not tiles[k2].has(vname):
+					tiles[k2][vname] = []
+				tiles[k2][vname].append(Transform3D(basis, origin))
+				body_shapes.append([Transform3D(basis, Vector3(C.x, f.origin.y + size.y * 0.5, C.z)), size])
+				frontage_count += 1
+				d += size.x + rng.randf_range(0.2, 1.2) + (rng.randf_range(4.0, 8.0) if rng.randf() < 0.08 else 0.0)
+	for k2 in tiles:
+		for vname in tiles[k2]:
+			var m: Mesh = kit.mesh(vname)
+			if m == null:
+				continue
+			var xs: Array = tiles[k2][vname]
+			var mm := MultiMesh.new()
+			mm.transform_format = MultiMesh.TRANSFORM_3D
+			mm.mesh = m
+			mm.instance_count = xs.size()
+			for i in xs.size():
+				mm.set_instance_transform(i, xs[i])
+			var mmi := MultiMeshInstance3D.new()
+			mmi.name = "%sFrontage_%d_%d_%s" % [town, k2.x, k2.y, vname]
+			mmi.multimesh = mm
+			mmi.visibility_range_end = 480.0
+			add_child(mmi)
+	for bs in body_shapes:
+		var cs := CollisionShape3D.new()
+		var bx := BoxShape3D.new()
+		bx.size = bs[1]
+		cs.shape = bx
+		cs.transform = bs[0]
+		body.add_child(cs)
 
 
 ## Is a ground point on a street (within its half-width + margin)?
