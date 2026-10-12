@@ -148,6 +148,8 @@ func _drive(dt: float) -> void:
 			return
 		path = nxt
 		path_i = 0
+		if Vector2(nxt[0].x - cam.position.x, nxt[0].z - cam.position.z).length() > 25.0:
+			cam.position = nxt[0] + Vector3(0, 1.45, 0)          # a jump to another road: don't fly through hills
 	var a := path[path_i]
 	var b := path[path_i + 1]
 	var seg := b - a

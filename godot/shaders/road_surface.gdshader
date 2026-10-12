@@ -7,7 +7,8 @@ shader_type spatial;
 // COLOR.r = half-width / 10 (COLOR.r ≥ 0.95 = junction / lot: no lanes, just wear).
 // City roads (city_marks on, scripts/city/city_streamer.gd) also carry their paint: COLOR.g = (code + 4·oneway) / 8
 // with code 0 none · 1 dashed centre · 2 dashed centre + edge lines · 3 four lanes (double centre, lane dashes,
-// edges); UV2.x = the OSM way's length, so the paint fades out and a zebra appears where the way meets a junction.
+// edges); UV2.x = the OSM way's length, UV2.y = 1000·round(10·clear_end) + round(10·clear_start): how far the junction
+// surface reaches into the way at each end (0 = no junction): paint stops short of it, a zebra is drawn just outside.
 
 uniform sampler2D albedo_tex : source_color, filter_linear_mipmap_anisotropic, repeat_enable;
 uniform sampler2D normal_tex : hint_normal, filter_linear_mipmap_anisotropic, repeat_enable;
@@ -81,7 +82,9 @@ void fragment() {
 		int code = int(mod(g, 4.0));
 		float along = UV.y * 6.0;
 		float len = UV2.x;
-		float to_end = min(along, len - along);
+		float c1 = floor(UV2.y / 1000.0 + 0.0001) / 10.0;
+		float c0 = mod(UV2.y, 1000.0) / 10.0;
+		float from_end = len - along;
 		float a = abs(across);
 		float aa = fwidth(across) + 0.01;
 		float dash = step(fract(along / 7.5), 0.4);                       // 3 m dash, 4.5 m gap
@@ -99,10 +102,15 @@ void fragment() {
 		if (code >= 2) {
 			paint += 1.0 - smoothstep(0.07, 0.07 + aa, abs(edge - 0.4));
 		}
-		paint *= smoothstep(9.0, 13.0, to_end);
-		if (code >= 2 && len > 40.0) {                                     // zebra 4–8 m before the junction
-			float zb = step(4.0, to_end) * step(to_end, 7.5) * step(0.6, edge);
-			paint = max(paint, zb * step(0.5, fract(across / 1.1)));
+		if (c0 > 0.0) paint *= smoothstep(c0 + 3.9, c0 + 4.6, along);
+		if (c1 > 0.0) paint *= smoothstep(c1 + 3.9, c1 + 4.6, from_end);
+		if (code >= 1 && len > 30.0) {                                     // zebra just outside each junction
+			float z0 = c0 > 0.0 ? step(c0 + 0.6, along) * step(along, c0 + 3.6) : 0.0;
+			float z1 = c1 > 0.0 ? step(c1 + 0.6, from_end) * step(from_end, c1 + 3.6) : 0.0;
+			float zb = max(z0, z1) * step(0.5, edge) * (code >= 2 ? 1.0 : 0.0);
+			float stop = (c0 > 0.0 ? 1.0 - smoothstep(0.15, 0.15 + aa, abs(along - c0 - 4.2)) : 0.0)
+				+ (c1 > 0.0 ? 1.0 - smoothstep(0.15, 0.15 + aa, abs(from_end - c1 - 4.2)) : 0.0);
+			paint = max(paint, max(zb * step(0.5, fract(across / 1.1)), stop * step(0.3, edge) * (code >= 2 ? 1.0 : 0.0)));
 		}
 		paint *= 0.55 + 0.45 * smoothstep(0.2, 0.6, n2(wpos.xz / 1.7)) * (1.0 - 0.4 * tracks);
 		col = mix(col, paint_col, clamp(paint, 0.0, 1.0));

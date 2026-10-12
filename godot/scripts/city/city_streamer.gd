@@ -37,6 +37,7 @@ var building_mat: Material
 var walk_mat: Material
 var kerb_mat: Material
 var lamp_mesh: ArrayMesh
+var prop_meshes := {}                      # prop type → Mesh (1 traffic signal, 2 bus shelter, 3 speed breaker)
 var kit
 var kit_meshes: Array = []                 # variant index → Mesh (or null)
 var body: StaticBody3D
@@ -51,6 +52,7 @@ func _ready() -> void:
 	body.name = "CityCollision"
 	add_child(body)
 	lamp_mesh = _lamp()
+	prop_meshes = {1: _signal(), 2: _shelter(), 3: _breaker()}
 	kit = Kit.new()
 	if kit.setup():
 		for vname in index.get("variants", []):
@@ -152,7 +154,7 @@ func _build(k: Vector2i) -> void:
 	var f := FileAccess.open(path, FileAccess.READ)
 	if f == null:
 		return
-	if f.get_buffer(4).get_string_from_ascii() != "CBE3":
+	if f.get_buffer(4).get_string_from_ascii() != "CBE4":
 		return
 	f.get_32()
 	f.get_32()
@@ -166,7 +168,9 @@ func _build(k: Vector2i) -> void:
 		var w := f.get_float()
 		var a0 := f.get_float()
 		var ln := f.get_float()
-		roads.append({"c": classes[cid] if cid < classes.size() else "residential", "o": fl & 1, "w": w, "a0": a0, "len": ln,
+		var c0 := f.get_float()
+		var c1 := f.get_float()
+		roads.append({"c": classes[cid] if cid < classes.size() else "residential", "o": fl & 1, "w": w, "a0": a0, "len": ln, "c0": c0, "c1": c1,
 			"p": f.get_buffer(np * 12).to_float32_array()})
 	var blds: Array = []
 	for _b in _s32(f.get_32()):
@@ -187,11 +191,22 @@ func _build(k: Vector2i) -> void:
 		var wn := f.get_16()
 		var ww := f.get_float()
 		walks.append([wf, ww, f.get_buffer(wn * 12).to_float32_array()])
+	var juncs: Array = []
+	for _j in _s32(f.get_32()):
+		var jn := f.get_16()
+		juncs.append(f.get_buffer(jn * 12).to_float32_array())
+	var props: Array = []
+	for _p in _s32(f.get_32()):
+		var kind := f.get_8()
+		var pv := f.get_buffer(20).to_float32_array()
+		props.append([kind, pv])
 	var out := {}
 	_ground(k, hn, h, out)
 	_roads(roads, out)
 	_buildings(blds, out)
 	_walks(walks, out)
+	_junctions(juncs, out)
+	_props(props, out)
 	out["roads_raw"] = roads
 	_mutex.lock()
 	ready_q.append([k, out])
@@ -259,7 +274,7 @@ func _roads(roads: Array, out: Dictionary) -> void:
 			code = 3
 		var col := Color(minf(half, 9.0) / 10.0, (code + 4 * int(r["o"])) / 8.0, 0)
 		var along: float = r["a0"]
-		var wl := Vector2(r["len"], 0)
+		var wl := Vector2(r["len"], roundf(float(r["c1"]) * 10.0) * 1000.0 + roundf(float(r["c0"]) * 10.0))
 		var base := v.size()
 		for q in cnt:
 			var t := pts[mini(q + 1, cnt - 1)] - pts[maxi(q - 1, 0)]
@@ -479,6 +494,179 @@ func _walks(walks: Array, out: Dictionary) -> void:
 		out["lamps"] = mm
 
 
+## Junction surfaces: flat-shaded asphalt triangles over the road ends (road shader, junction mode: no lanes).
+func _junctions(juncs: Array, out: Dictionary) -> void:
+	var v := PackedVector3Array()
+	var nm := PackedVector3Array()
+	var cl := PackedColorArray()
+	var uv := PackedVector2Array()
+	for j in juncs:
+		var p: PackedFloat32Array = j
+		for i in range(0, p.size() / 3 - 2, 3):
+			var a := Vector3(p[i * 3], p[i * 3 + 1], p[i * 3 + 2])
+			var b := Vector3(p[i * 3 + 3], p[i * 3 + 4], p[i * 3 + 5])
+			var c := Vector3(p[i * 3 + 6], p[i * 3 + 7], p[i * 3 + 8])
+			if (b - a).cross(c - a).y < 0.0:
+				var tmp := b
+				b = c
+				c = tmp
+			for q in [a, c, b]:
+				v.append(q)
+				nm.append(Vector3.UP)
+				cl.append(Color(1, 0, 0))
+				uv.append(Vector2(q.x, q.z) / 6.0)
+	if v.is_empty():
+		return
+	var arr := []
+	arr.resize(Mesh.ARRAY_MAX)
+	arr[Mesh.ARRAY_VERTEX] = v
+	arr[Mesh.ARRAY_NORMAL] = nm
+	arr[Mesh.ARRAY_COLOR] = cl
+	arr[Mesh.ARRAY_TEX_UV] = uv
+	var m := ArrayMesh.new()
+	m.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arr)
+	out["junc_mesh"] = m
+	var shape := ConcavePolygonShape3D.new()
+	shape.set_faces(v)
+	out["junc_shape"] = shape
+
+
+func _props(props: Array, out: Dictionary) -> void:
+	var by := {}
+	for pr in props:
+		var kind: int = pr[0]
+		var pv: PackedFloat32Array = pr[1]
+		var f := Vector3(sin(pv[3]), 0, cos(pv[3]))
+		var x := Vector3.UP.cross(f).normalized()
+		var xf := Transform3D(Basis(x * (pv[4] if kind == 3 else 1.0), Vector3.UP, f), Vector3(pv[0], pv[1], pv[2]))
+		if not by.has(kind):
+			by[kind] = []
+		by[kind].append(xf)
+	var mms := []
+	for kind in by:
+		var mm := MultiMesh.new()
+		mm.transform_format = MultiMesh.TRANSFORM_3D
+		mm.mesh = prop_meshes[kind]
+		mm.instance_count = by[kind].size()
+		for i in by[kind].size():
+			mm.set_instance_transform(i, by[kind][i])
+		mms.append(mm)
+	out["props"] = mms
+
+
+static func _mat(c: Color, metal := 0.0, rough := 0.6, emit := Color.BLACK, energy := 0.0) -> StandardMaterial3D:
+	var m := StandardMaterial3D.new()
+	m.albedo_color = c
+	m.metallic = metal
+	m.roughness = rough
+	if energy > 0.0:
+		m.emission_enabled = true
+		m.emission = emit
+		m.emission_energy_multiplier = energy
+	return m
+
+
+static func _box(st: SurfaceTool, size: Vector3, at: Vector3) -> void:
+	var b := BoxMesh.new()
+	b.size = size
+	st.append_from(b, 0, Transform3D(Basis(), at))
+
+
+## Traffic signal: black-and-yellow pole at the left kerb, a head on the pole and one on the arm over the road (+x),
+## lenses facing the oncoming driver (+z); green lit.
+func _signal() -> ArrayMesh:
+	var am := ArrayMesh.new()
+	var parts := [
+		[_mat(Color(0.12, 0.12, 0.12), 0.5, 0.5), func(st):
+			var pole := CylinderMesh.new()
+			pole.top_radius = 0.08
+			pole.bottom_radius = 0.1
+			pole.height = 5.6
+			pole.radial_segments = 10
+			st.append_from(pole, 0, Transform3D(Basis(), Vector3(0, 2.8, 0)))
+			_box(st, Vector3(3.6, 0.12, 0.12), Vector3(1.8, 5.5, 0))
+			_box(st, Vector3(0.36, 1.05, 0.28), Vector3(0, 3.1, 0.2))
+			_box(st, Vector3(0.36, 1.05, 0.28), Vector3(3.3, 4.85, 0.0))],
+		[_mat(Color(0.85, 0.7, 0.05), 0.2, 0.5), func(st):
+			for k in 4:
+				_box(st, Vector3(0.22, 0.3, 0.22), Vector3(0, 0.35 + k * 0.6, 0))],
+		[_mat(Color(0.25, 0.03, 0.02), 0.0, 0.3, Color(1, 0.1, 0.05), 0.3), func(st):
+			_box(st, Vector3(0.22, 0.22, 0.04), Vector3(0, 3.45, 0.35))
+			_box(st, Vector3(0.22, 0.22, 0.04), Vector3(3.3, 5.2, 0.15))],
+		[_mat(Color(0.3, 0.2, 0.02), 0.0, 0.3, Color(1, 0.6, 0.05), 0.2), func(st):
+			_box(st, Vector3(0.22, 0.22, 0.04), Vector3(0, 3.1, 0.35))
+			_box(st, Vector3(0.22, 0.22, 0.04), Vector3(3.3, 4.85, 0.15))],
+		[_mat(Color(0.05, 0.6, 0.25), 0.0, 0.3, Color(0.1, 1, 0.45), 3.0), func(st):
+			_box(st, Vector3(0.22, 0.22, 0.04), Vector3(0, 2.75, 0.35))
+			_box(st, Vector3(0.22, 0.22, 0.04), Vector3(3.3, 4.5, 0.15))],
+	]
+	return _parts_mesh(am, parts)
+
+
+## Bus shelter: four posts, a sloping roof, a back panel and a bench; 4 m along the kerb (x), open to the road (+z).
+func _shelter() -> ArrayMesh:
+	var am := ArrayMesh.new()
+	var parts := [
+		[_mat(Color(0.55, 0.56, 0.57), 0.7, 0.4), func(st):
+			for sx in [-1.9, 1.9]:
+				for sz in [-0.65, 0.55]:
+					_box(st, Vector3(0.08, 2.6, 0.08), Vector3(sx, 1.3, sz))
+			_box(st, Vector3(3.6, 0.06, 0.4), Vector3(0, 0.45, -0.4))
+			for sx in [-1.5, 0.0, 1.5]:
+				_box(st, Vector3(0.06, 0.45, 0.3), Vector3(sx, 0.22, -0.4))],
+		[_mat(Color(0.1, 0.3, 0.55), 0.3, 0.5), func(st):
+			_box(st, Vector3(4.3, 0.08, 1.9), Vector3(0, 2.66, -0.05))
+			_box(st, Vector3(3.8, 0.4, 0.04), Vector3(0, 2.4, 0.86))],
+		[_mat(Color(0.75, 0.82, 0.85, 1.0), 0.0, 0.1), func(st):
+			_box(st, Vector3(3.8, 1.6, 0.03), Vector3(0, 1.45, -0.68))],
+	]
+	return _parts_mesh(am, parts)
+
+
+## Speed breaker: a 3 m hump, 0.1 m high, 1 m across (scaled to the road width), painted yellow and black.
+func _breaker() -> ArrayMesh:
+	var am := ArrayMesh.new()
+	var prof := [[-1.5, 0.0], [-0.9, 0.06], [-0.3, 0.1], [0.3, 0.1], [0.9, 0.06], [1.5, 0.0]]
+	for col_i in 2:
+		var st := SurfaceTool.new()
+		st.begin(Mesh.PRIMITIVE_TRIANGLES)
+		var n := 10
+		for k in n:
+			if k % 2 != col_i:
+				continue
+			var x0 := -0.5 + float(k) / n
+			var x1 := x0 + 1.0 / n
+			for i in prof.size() - 1:
+				var z0: float = prof[i][0]
+				var y0: float = prof[i][1]
+				var z1: float = prof[i + 1][0]
+				var y1: float = prof[i + 1][1]
+				var a := Vector3(x0, y0, z0)
+				var b := Vector3(x1, y0, z0)
+				var c := Vector3(x1, y1, z1)
+				var d := Vector3(x0, y1, z1)
+				var nrm := (c - b).cross(a - b).normalized()
+				if nrm.y < 0:
+					nrm = -nrm
+				st.set_normal(nrm)
+				for q in [a, c, b, a, d, c]:
+					st.add_vertex(q)
+		st.commit(am)
+		am.surface_set_material(am.get_surface_count() - 1,
+			_mat(Color(0.9, 0.72, 0.05) if col_i == 0 else Color(0.05, 0.05, 0.05), 0.0, 0.7))
+	return am
+
+
+func _parts_mesh(am: ArrayMesh, parts: Array) -> ArrayMesh:
+	for pt in parts:
+		var st := SurfaceTool.new()
+		st.begin(Mesh.PRIMITIVE_TRIANGLES)
+		(pt[1] as Callable).call(st)
+		st.commit(am)
+		am.surface_set_material(am.get_surface_count() - 1, pt[0])
+	return am
+
+
 func _quad(t: Array, a: Vector3, b: Vector3, c: Vector3, d: Vector3, nrm: Vector3, col: Color,
 		ua: Vector2, ub: Vector2, uc: Vector2, ud: Vector2, u2: Vector2) -> void:
 	var i: int = t[0].size()
@@ -565,6 +753,20 @@ func _instance(k: Vector2i, d: Dictionary) -> void:
 		var wcs := CollisionShape3D.new()
 		wcs.shape = d["walk_shape"]
 		_shape(node, wcs)
+	if d.has("junc_mesh"):
+		var jmi := MeshInstance3D.new()
+		jmi.mesh = d["junc_mesh"]
+		jmi.material_override = road_mat
+		jmi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		node.add_child(jmi)
+		var jcs := CollisionShape3D.new()
+		jcs.shape = d["junc_shape"]
+		_shape(node, jcs)
+	for pm in d.get("props", []):
+		var pmi := MultiMeshInstance3D.new()
+		pmi.multimesh = pm
+		pmi.visibility_range_end = 350.0
+		node.add_child(pmi)
 	if d.has("lamps"):
 		var lmi := MultiMeshInstance3D.new()
 		lmi.multimesh = d["lamps"]
