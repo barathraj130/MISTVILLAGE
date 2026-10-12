@@ -31,7 +31,9 @@ func _ready() -> void:
 	streamer = Streamer.new()
 	streamer.name = "City"
 	add_child(streamer)
-	streamer.set_materials(_road_material(), MB.cc0_material("dry_grass", 6.0, 0.95, false))
+	var bm := ShaderMaterial.new()
+	bm.shader = preload("res://shaders/building.gdshader")
+	streamer.set_materials(_road_material(), MB.cc0_material("dry_grass", 6.0, 0.95, false), bm)
 	cam = Camera3D.new()
 	cam.fov = 70.0
 	cam.far = 4000.0
@@ -156,8 +158,8 @@ func _next_piece(from: Vector3) -> PackedVector3Array:
 		for r in (streamer.loaded[k] as Node3D).get_meta("roads", []):
 			if not r["c"] in ["trunk", "primary", "secondary"]:
 				continue
-			var a: Array = r["p"]
-			var n := a.size() / 3
+			var a = r["p"]
+			var n: int = a.size() / 3
 			var first := Vector3(a[0], a[1], a[2])
 			var last := Vector3(a[(n - 1) * 3], a[(n - 1) * 3 + 1], a[(n - 1) * 3 + 2])
 			var key := "%.1f,%.1f" % [first.x, first.z]
@@ -173,12 +175,14 @@ func _next_piece(from: Vector3) -> PackedVector3Array:
 						var j := n - 1 - i if flip else i
 						best.append(Vector3(a[j * 3], a[j * 3 + 1], a[j * 3 + 2]))
 					used[key] = true
-	if best.is_empty() and path.is_empty():
+	if best.is_empty():                       # dead end: jump on the nearest main road not yet driven
 		bd = INF
 		for k in streamer.loaded:
 			for r in (streamer.loaded[k] as Node3D).get_meta("roads", []):
-				if r["c"] in ["trunk", "primary"]:
-					var a: Array = r["p"]
+				if r["c"] in ["trunk", "primary", "secondary"]:
+					var a = r["p"]
+					if used.has("%.1f,%.1f" % [a[0], a[2]]):
+						continue
 					var dd := Vector2(a[0] - from.x, a[2] - from.z).length()
 					if dd < bd:
 						bd = dd
@@ -190,8 +194,9 @@ func _next_piece(from: Vector3) -> PackedVector3Array:
 
 func _log_and_shots(dt: float) -> void:
 	if int(t) != int(t - dt) and int(t) % 5 == 0:
-		print("CITY t=%3ds fps=%3d tiles=%3d built=%4d unloaded=%4d mem=%dMB vmem=%dMB draws=%d pos=(%.0f,%.0f)" % [
+		print("CITY t=%3ds fps=%3d tiles=%3d built=%4d unloaded=%4d blds=%d designed=%d mem=%dMB vmem=%dMB draws=%d pos=(%.0f,%.0f)" % [
 			int(t), Engine.get_frames_per_second(), streamer.stats["loaded"], streamer.stats["built"], streamer.stats["unloaded"],
+			streamer.stats["buildings"], streamer.stats["designed"],
 			int(OS.get_static_memory_usage() / 1048576), int(Performance.get_monitor(Performance.RENDER_VIDEO_MEM_USED) / 1048576),
 			int(Performance.get_monitor(Performance.RENDER_TOTAL_DRAW_CALLS_IN_FRAME)), cam.position.x, cam.position.z])
 	if auto and shots_dir != "" and not shot_times.is_empty() and t >= shot_times[0]:

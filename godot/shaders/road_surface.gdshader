@@ -45,8 +45,10 @@ void fragment() {
 	float edge = half_w - abs(across);                // metres to the nearest edge
 	float tracks = 0.0;
 	if (lanes) {
-		float lane_c = half_w > 4.2 ? half_w * 0.5 : half_w * 0.5;      // two lanes, keep left
 		float a = abs(across);
+		// lanes 3.5 m wide on big roads (4+ lanes), otherwise each half is one lane
+		float lane_w = half_w > 5.5 ? 3.5 : half_w;
+		float lane_c = (floor(a / lane_w) + 0.5) * lane_w;
 		float d1 = abs(a - (lane_c - 0.78));
 		float d2 = abs(a - (lane_c + 0.78));
 		tracks = exp(-d1 * d1 / 0.09) + exp(-d2 * d2 / 0.09);
