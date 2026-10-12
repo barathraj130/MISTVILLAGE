@@ -15,3 +15,5 @@ __pycache__/
 blender/
 .venv/
 build/
+vendor/
+godot/assets/city/
