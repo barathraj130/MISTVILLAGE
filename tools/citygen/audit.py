@@ -54,7 +54,7 @@ def main():
         keys = keys[::step]
     c = dict.fromkeys(["tiles", "road_pts", "road_below_ground", "road_steps", "walks", "walk_on_road", "walk_low_kerb",
                        "kits", "kit_on_road", "kit_overlap", "props", "prop_on_road", "breaker_in_junction",
-                       "junc", "junc_low"], 0)
+                       "junc", "junc_low", "paving_on_road", "medians_on_road"], 0)
     for k in keys:
         cx, cz = map(int, k.split(","))
         fn = os.path.join(out, "chunks", "CBE_%d_%d.bin" % (cx, cz))
@@ -114,6 +114,18 @@ def main():
                 for h in rt.query(rc, predicate="intersects"):
                     if h > i and rc.intersection(rects[h]).area > 0.15 * min(rc.area, rects[h].area):
                         c["kit_overlap"] += 1
+        for kind, v in t["yards"]:
+            if kind in (1, 2, 6) and len(v) >= 3 and tree is not None:
+                for i in range(0, len(v) - 2, 3):
+                    tri = Polygon(v[i:i + 3, [0, 2]])
+                    if tri.area > 0.05 and any(tri.intersection(carr[h]).area > 0.3 for h in tree.query(tri, predicate="intersects")):
+                        c["paving_on_road"] += 1
+                        break
+        for w in t["walks"]:
+            if w["w"] < 1.5 and len(w["p"]) >= 2 and tree is not None:
+                strip = LineString(w["p"][:, [0, 2]]).buffer(w["w"] * 0.5, cap_style="flat")
+                if any(strip.intersection(carr[h]).area > 0.3 for h in tree.query(strip, predicate="intersects")):
+                    c["medians_on_road"] += 1
         jpolys = []
         for v in t["junc"]:
             c["junc"] += 1

@@ -404,7 +404,7 @@ func _medians(roads: Array, out: Dictionary) -> void:
 				faces.append_array([a + side, b + side, b + side + up, a + side, b + side + up, a + side + up])
 			faces.append_array([a + sd + up, b + sd + up, b - sd + up, a + sd + up, b - sd + up, a - sd + up])
 			if int(a0 / 3.0) != int(along / 3.0):            # a shrub every 3 m
-				plants.append(Transform3D(Basis(Vector3.UP, a0).scaled(Vector3.ONE * 0.45), (a + b) * 0.5 + up))
+				plants.append(Transform3D(Basis(Vector3.UP, a0).scaled(Vector3.ONE * 0.28), (a + b) * 0.5 + up - Vector3(0, 0.08, 0)))
 		# end caps where the median stops
 	if (t[0] as PackedVector3Array).is_empty():
 		return
@@ -564,6 +564,18 @@ func _walks(walks: Array, out: Dictionary) -> void:
 		for i in n:
 			pts.append(Vector3(p[i * 3], p[i * 3 + 1], p[i * 3 + 2]))
 		var road_right := (fl & 4) != 0
+		# mitred offsets at each point, so bends join cleanly instead of overlapping blocks
+		var rws := PackedVector3Array()
+		for i in n:
+			var t0 := pts[mini(i + 1, n - 1)] - pts[maxi(i - 1, 0)]
+			t0.y = 0.0
+			t0 = t0.normalized() if t0.length() > 0.001 else Vector3.RIGHT
+			var r0 := Vector3(t0.z, 0, -t0.x) if road_right else Vector3(-t0.z, 0, t0.x)
+			if i > 0 and i < n - 1:
+				var ta := Vector3(pts[i].x - pts[i - 1].x, 0, pts[i].z - pts[i - 1].z).normalized()
+				var ra := Vector3(ta.z, 0, -ta.x) if road_right else Vector3(-ta.z, 0, ta.x)
+				r0 = r0 / maxf(r0.dot(ra), 0.5)
+			rws.append(r0)
 		var along := 0.0
 		var next_lamp := LAMP_STEP * 0.5
 		for i in n - 1:
@@ -575,11 +587,10 @@ func _walks(walks: Array, out: Dictionary) -> void:
 				continue
 			var t := Vector3(seg.x, 0, seg.z) / L
 			var rw := Vector3(t.z, 0, -t.x) if road_right else Vector3(-t.z, 0, t.x)      # towards the road
-			# miter-free: each segment is its own quad; neighbours overlap slightly at bends
-			var ai := a + rw * hw
-			var bi := b + rw * hw
-			var ao := a - rw * hw
-			var bo := b - rw * hw
+			var ai := a + rws[i] * hw
+			var bi := b + rws[i + 1] * hw
+			var ao := a - rws[i] * hw
+			var bo := b - rws[i + 1] * hw
 			_quad(top, ai, bi, bo, ao, Vector3.UP, Color.WHITE, Vector2(hw, along) / 2.0, Vector2(hw, along + L) / 2.0,
 				Vector2(-hw, along + L) / 2.0, Vector2(-hw, along) / 2.0, Vector2.ZERO)
 			faces.append_array([ai, bi, bo, ai, bo, ao])
@@ -591,8 +602,8 @@ func _walks(walks: Array, out: Dictionary) -> void:
 			if fl & 1:
 				col = white if int(along / 1.2) % 2 == 0 else black
 			var up := Vector3(0, 0.02, 0)
-			var ki := ai + rw * KERB + up
-			var kj := bi + rw * KERB + up
+			var ki := ai + rws[i] * KERB + up
+			var kj := bi + rws[i + 1] * KERB + up
 			_quad(kb, ai + up, bi + up, kj, ki, Vector3.UP, col, Vector2.ZERO, Vector2.ZERO, Vector2.ZERO, Vector2.ZERO, Vector2.ZERO)
 			var drop := Vector3(0, -0.4, 0)
 			_quad(kb, ki, kj, kj + drop, ki + drop, rw, col, Vector2.ZERO, Vector2.ZERO, Vector2.ZERO, Vector2.ZERO, Vector2.ZERO)

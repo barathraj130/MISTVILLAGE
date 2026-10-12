@@ -56,6 +56,9 @@ func _ready() -> void:
 	add_child(cam)
 	cam.make_current()
 	streamer.target = cam
+	for a in args:
+		if a.begins_with("--survey="):
+			_survey_setup(int(a.get_slice("=", 1)))
 	get_viewport().scaling_3d_mode = Viewport.SCALING_3D_MODE_FSR2
 	get_viewport().scaling_3d_scale = 0.67
 	get_viewport().mesh_lod_threshold = 8.0 if "--lod8" in OS.get_cmdline_user_args() else 1.0
@@ -112,8 +115,84 @@ func _road_material() -> Material:
 	return sm
 
 
+## --survey=N: visit N spread-out tiles; at each, a street-level shot along a road and a 45° view from above.
+var survey: Array = []
+var survey_i := -1
+var survey_wait := 0.0
+var survey_stage := 0
+
+
+func _survey_setup(n: int) -> void:
+	var keys: Array = []
+	for k in streamer.index["tiles"]:
+		var c: Array = streamer.index["tiles"][k]
+		if c[0] > 2 and c[1] > 8:
+			keys.append(k)
+	keys.sort()
+	var step := maxi(1, keys.size() / n)
+	for i in range(0, keys.size(), step):
+		var parts: PackedStringArray = keys[i].split(",")
+		survey.append(Vector2i(int(parts[0]), int(parts[1])))
+	survey = survey.slice(0, n)
+
+
+func _survey(dt: float) -> void:
+	survey_wait += dt
+	if survey_i < 0 or survey_stage >= 2:
+		survey_i += 1
+		survey_stage = 0
+		survey_wait = 0.0
+		if survey_i >= survey.size():
+			get_tree().quit()
+			return
+		var k: Vector2i = survey[survey_i]
+		cam.position = Vector3((k.x + 0.5) * streamer.tile, 600.0, (k.y + 0.5) * streamer.tile)
+		return
+	var k: Vector2i = survey[survey_i]
+	if not streamer.loaded.has(k) or survey_wait < 6.0:
+		return
+	if survey_stage == 0 and survey_wait < 6.5:
+		var roads: Array = (streamer.loaded[k] as Node3D).get_meta("roads", [])
+		var best = null
+		for r in roads:
+			if best == null or float(r["w"]) * (r["p"].size()) > float(best["w"]) * (best["p"].size()):
+				best = r
+		var p = best["p"]
+		var n: int = p.size() / 3
+		var i := maxi(0, n / 2 - 1)
+		var a := Vector3(p[i * 3], p[i * 3 + 1], p[i * 3 + 2])
+		var b := Vector3(p[(i + 1) * 3], p[(i + 1) * 3 + 1], p[(i + 1) * 3 + 2])
+		var dir := Vector3(b.x - a.x, 0, b.z - a.z).normalized()
+		var left := Vector3(dir.z, 0, -dir.x)
+		cam.position = a + left * float(best["w"]) * 0.25 + Vector3(0, 1.5, 0)
+		yaw = atan2(-dir.x, -dir.z)
+		pitch = -0.04
+		cam.basis = Basis.from_euler(Vector3(pitch, yaw, 0))
+		set_meta("aim", a)
+		set_meta("dir", dir)
+		return
+	if survey_wait >= 8.0 and survey_stage == 0:
+		await RenderingServer.frame_post_draw
+		get_viewport().get_texture().get_image().save_jpg("%s/s%02d_street.jpg" % [shots_dir, survey_i], 0.8)
+		var a: Vector3 = get_meta("aim")
+		var dir: Vector3 = get_meta("dir")
+		cam.position = a - dir * 30.0 + Vector3(0, 32.0, 0)
+		cam.look_at(a + dir * 20.0, Vector3.UP)
+		survey_stage = 1
+		survey_wait = 8.0
+		return
+	if survey_stage == 1 and survey_wait >= 10.0:
+		await RenderingServer.frame_post_draw
+		get_viewport().get_texture().get_image().save_jpg("%s/s%02d_above.jpg" % [shots_dir, survey_i], 0.8)
+		print("SURVEY %d tile %s" % [survey_i, str(k)])
+		survey_stage = 2
+
+
 func _process(dt: float) -> void:
 	t += dt
+	if not survey.is_empty():
+		_survey(dt)
+		return
 	var fwd := Vector3(sin(yaw), 0, cos(yaw))
 	if auto:
 		_drive(dt)

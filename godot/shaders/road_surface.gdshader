@@ -66,6 +66,7 @@ void fragment() {
 		rough -= 0.25 * oil * wear;
 	}
 	col *= 1.0 - 0.13 * tracks * wear;                // darker where tyres run
+	if (!lanes) col *= 1.0 - 0.07 * wear;             // junctions: as worn as the lanes leading into them
 	rough -= 0.12 * tracks * wear;                    // and polished
 	// patched repairs: cut rectangles of newer, darker asphalt
 	vec2 cell = floor(wpos.xz / vec2(3.1, 2.3));

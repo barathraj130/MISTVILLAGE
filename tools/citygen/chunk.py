@@ -538,6 +538,11 @@ def run(cfg, roads_cfg):
                     band.append(sub.buffer(w * 0.5 + KERB + WALK, cap_style="flat"))
                     inner.append(sub.buffer(w * 0.5 + KERB, cap_style="flat"))
             reach = max(road_lines[ri][2] for ri in ws) * 0.5 + KERB + WALK + 1.5
+            # keep it off every carriageway near here, not only the ones meeting at this junction
+            for h in wtree.query(J.buffer(reach), predicate="intersects"):      # wtree: same order as road_lines
+                if road_lines[h][3] not in NO_WALK:
+                    l2h = road_lines[h][0]
+                    inner.append(l2h.buffer(road_lines[h][2] * 0.5 + KERB, cap_style="flat"))
             pad = shapely.union_all(band).difference(shapely.union_all(inner)).difference(u).intersection(J.buffer(reach))
             pads.append((pad, ws))
     merged = shapely.union_all([p for p, _ in patches]) if patches else None
