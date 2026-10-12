@@ -19,8 +19,12 @@ from lib.common import Projection, build_dir, load  # noqa: E402
 
 
 def _num(v, default):
+    """A tag like '2', '7.5 m' or '2;3' as a number; missing / unreadable → default."""
+    if v is None or (isinstance(v, float) and v != v):
+        return default
     try:
-        return float(str(v).split(";")[0].replace("m", "").strip())
+        x = float(str(v).split(";")[0].replace("m", "").strip())
+        return default if x != x else x
     except (TypeError, ValueError):
         return default
 
@@ -41,7 +45,7 @@ def run(cfg, roads_cfg):
     roads = roads[roads["cls"] != ""].copy()
     prof = roads["cls"].map(classes)
     roads["lanes_n"] = [int(_num(l, p["lanes"])) for l, p in zip(roads.get("lanes", pd.Series([None] * len(roads))), prof)]
-    roads["width_m"] = [_num(w, p["width"]) if w else p["width"] for w, p in zip(roads.get("width", pd.Series([None] * len(roads))), prof)]
+    roads["width_m"] = [_num(w, p["width"]) for w, p in zip(roads.get("width", pd.Series([None] * len(roads))), prof)]
     roads["oneway_b"] = roads.get("oneway", pd.Series([""] * len(roads))).fillna("").isin(["yes", "1", "true", "-1"]) | \
         roads.get("junction", pd.Series([""] * len(roads))).fillna("").isin(["roundabout", "circular"])
     roads["bridge_b"] = roads.get("bridge", pd.Series([""] * len(roads))).fillna("").ne("") & \
