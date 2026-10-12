@@ -36,12 +36,51 @@ def age(years):
 
 
 CAST = [
-    # name, gender (0 f / 1 m), years, weight, muscle, height, (african, asian, caucasian), skin rgb, hair, extras
-    ("protagonist", 1.0, 27, 0.48, 0.58, 0.58, (0.42, 0.12, 0.46), (0.20, 0.105, 0.06), "short02", ["moustache"]),
-    ("mother", 0.0, 46, 0.66, 0.4, 0.38, (0.45, 0.15, 0.40), (0.19, 0.10, 0.058), "braid01", []),
-    ("elder", 1.0, 68, 0.42, 0.38, 0.5, (0.5, 0.1, 0.40), (0.14, 0.075, 0.045), "short01", ["moustache"]),
-    ("schoolgirl", 0.0, 12, 0.45, 0.45, 0.45, (0.42, 0.18, 0.40), (0.23, 0.125, 0.072), "ponytail01", []),
+    # name, gender (0 f / 1 m), years, weight, muscle, height, (african, asian, caucasian), fallback skin rgb,
+    # skin (.mhmat in the CC0 packs), hair, facial hair (clothes asset or None), eyebrows
+    ("protagonist", 1.0, 27, 0.48, 0.58, 0.58, (0.42, 0.12, 0.46), (0.20, 0.105, 0.06),
+     "young_african_male", "short02", "rehmanpolanski_moustache_viking", "mindfront_eyebrows_03"),
+    ("mother", 0.0, 46, 0.66, 0.4, 0.38, (0.45, 0.15, 0.40), (0.19, 0.10, 0.058),
+     "cutoff3d_indian_female_enhanced", "braid01", None, "mindfront_eyebrows_08"),
+    ("elder", 1.0, 68, 0.42, 0.38, 0.5, (0.5, 0.1, 0.40), (0.14, 0.075, 0.045),
+     "old_african_male", "short01", "rehmanpolanski_moustache_viking", "eyebrow004"),
+    ("schoolgirl", 0.0, 12, 0.45, 0.45, 0.45, (0.42, 0.18, 0.40), (0.23, 0.125, 0.072),
+     "cutoff3d_indian_female_enhanced", "ponytail01", None, "mindfront_eyebrows_10"),
 ]
+
+
+# per person: skin multiply (None = as the pack has it), hair colour, facial-hair colour, how strongly to apply
+LOOK = {
+    "protagonist": (None, (0.05, 0.04, 0.035), (0.04, 0.035, 0.03), 0.9),
+    "mother": (None, (0.05, 0.04, 0.035), None, 0.9),
+    "elder": (None, (0.42, 0.41, 0.4), (0.55, 0.54, 0.52), 0.75),          # salt-and-pepper
+    "schoolgirl": (None, (0.05, 0.04, 0.035), None, 0.9),
+}
+
+
+def tint(obj, rgb, amount, mode="MULTIPLY"):
+    """Recolour an object's colour textures in place: insert a mix node after every sRGB image texture."""
+    for slot in obj.material_slots:
+        m = slot.material
+        if not m or not m.use_nodes:
+            continue
+        nt = m.node_tree
+        for n in list(nt.nodes):
+            if n.type != 'TEX_IMAGE' or not n.image or n.image.colorspace_settings.name != "sRGB":
+                continue
+            outs = [l for l in nt.links if l.from_node == n and l.from_socket.name == "Color"]
+            if not outs:
+                continue
+            mix = nt.nodes.new("ShaderNodeMix")
+            mix.data_type = "RGBA"
+            mix.blend_type = mode
+            mix.inputs["Factor"].default_value = amount
+            mix.inputs[7].default_value = (*rgb, 1)
+            nt.links.new(n.outputs["Color"], mix.inputs[6])
+            for l in outs:
+                to = l.to_socket
+                nt.links.remove(l)
+                nt.links.new(mix.outputs[2], to)
 
 
 def own_skin(rgb):
@@ -66,7 +105,7 @@ def asset(name, subdir):
 
 
 def build(spec, x):
-    name, g, yrs, w, mu, hgt, eth, rgb, hair, extras = spec
+    name, g, yrs, w, mu, hgt, eth, rgb, skin_name, hair, facial, brows = spec
     h = HumanService.create_human()
     h.name = name
     for k, v in (("gender", g), ("age", age(yrs)), ("weight", w), ("muscle", mu), ("height", hgt),
@@ -75,22 +114,49 @@ def build(spec, x):
     TargetService.reapply_macro_details(h)
     have_packs = asset("eyebrow001.mhclo", "eyebrows") is not None
     if have_packs:
-        tone = "young" if yrs < 35 else ("middleage" if yrs < 60 else "old")
-        sex = "male" if g > 0.5 else "female"
-        skin = asset("%s_african_%s.mhmat" % (tone, sex), "skins") or asset("young_african_male.mhmat", "skins")
+        skin = asset(skin_name + ".mhmat", "skins")
         if skin:
             HumanService.set_character_skin(skin, h, skin_type="ENHANCED_SSS")
-        for sub, fname, typ in (("eyes", "low-poly.mhclo", "Eyes"), ("eyebrows", "eyebrow001.mhclo", "Eyebrows"),
-                                ("eyelashes", "eyelashes01.mhclo", "Eyelashes"), ("teeth", "teeth_base.mhclo", "Teeth"),
-                                ("tongue", "tongue01.mhclo", "Tongue"), ("hair", hair + ".mhclo", "Hair")):
+        parts = [("eyes", "high-poly.mhclo", "Eyes"), ("eyebrows", brows + ".mhclo", "Eyebrows"),
+                 ("eyelashes", "mindfront_eyelashes_02.mhclo", "Eyelashes"), ("teeth", "teeth_base.mhclo", "Teeth"),
+                 ("tongue", "tongue01.mhclo", "Tongue"), ("hair", hair + ".mhclo", "Hair")]
+        if facial:
+            parts.append(("clothes", facial + ".mhclo", "Clothes"))
+        for sub, fname, typ in parts:
             p = asset(fname, sub)
-            if p:
-                HumanService.add_mhclo_asset(p, h, asset_type=typ)
+            if not p:
+                print("CAST missing", sub, fname)
+                continue
+            obj = HumanService.add_mhclo_asset(p, h, asset_type=typ)
+            look = LOOK.get(name)
+            if typ == "Eyes":
+                _brown_eyes(obj)
+            elif typ == "Hair" and look:
+                tint(obj, look[1], look[3], "MIX" if name == "elder" else "MULTIPLY")
+            elif typ == "Clothes" and look and look[2]:
+                tint(obj, look[2], look[3], "MIX")
+        if LOOK.get(name) and LOOK[name][0]:
+            tint(h, LOOK[name][0], 1.0)
     else:
         h.data.materials.clear()
         h.data.materials.append(own_skin(rgb))
     h.location = (x, 0, 0)
     return h
+
+
+def _brown_eyes(obj):
+    """Every iris texture on the eyes → the pack's brown eye (most South Indian eyes are dark brown)."""
+    brown = asset("brown.mhmat", "eyes/materials")
+    img = os.path.join(os.path.dirname(brown), "brown_eye.png") if brown else None
+    if not img or not os.path.exists(img):
+        return
+    im = bpy.data.images.load(img, check_existing=True)
+    for slot in obj.material_slots:
+        m = slot.material
+        if m and m.use_nodes:
+            for n in m.node_tree.nodes:
+                if n.type == 'TEX_IMAGE' and n.image and "eye" in n.image.name.lower():
+                    n.image = im
 
 
 def main():

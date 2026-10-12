@@ -45,7 +45,7 @@ def run(cfg, roads_cfg):
     roads = roads[roads["cls"] != ""].copy()
     prof = roads["cls"].map(classes)
     roads["lanes_n"] = [int(_num(l, p["lanes"])) for l, p in zip(roads.get("lanes", pd.Series([None] * len(roads))), prof)]
-    roads["width_m"] = [_num(w, p["width"]) for w, p in zip(roads.get("width", pd.Series([None] * len(roads))), prof)]
+    roads["width_m"] = [max(_num(w, p["width"]), p["width"]) for w, p in zip(roads.get("width", pd.Series([None] * len(roads))), prof)]
     roads["oneway_b"] = roads.get("oneway", pd.Series([""] * len(roads))).fillna("").isin(["yes", "1", "true", "-1"]) | \
         roads.get("junction", pd.Series([""] * len(roads))).fillna("").isin(["roundabout", "circular"])
     roads["bridge_b"] = roads.get("bridge", pd.Series([""] * len(roads))).fillna("").ne("") & \

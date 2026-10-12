@@ -1,17 +1,18 @@
-# Road classification (docs/CBE_MAP_PIPELINE.md §5). OSM tags listed in tag_overrides win over these.
+# Road classification (docs/CBE_MAP_PIPELINE.md §5). Widths are generous on purpose (Euro Truck / GTA feel
+# from the driver's seat): residential 6.5 m, two 3.25 m lanes; trunk 14 m, four 3.5 m lanes. OSM tags listed in tag_overrides win over these.
 # width = carriageway metres; sidewalk / shoulder per side; lights per 100 m; traffic weight 0..1.
 classes:
   motorway:      {width: 14.0, lanes: 4, divided: true,  sidewalk: 0.0, shoulder: 2.5, marking: highway,  speed: 100, lights: 2.0, traffic: 1.0,  material: asphalt_new}
-  trunk:         {width: 10.5, lanes: 2, divided: false, sidewalk: 2.0, shoulder: 1.5, marking: centre_edge, speed: 80, lights: 3.0, traffic: 1.0, material: asphalt}
-  primary:       {width: 9.0,  lanes: 2, divided: false, sidewalk: 2.0, shoulder: 0.5, marking: centre_edge, speed: 60, lights: 3.0, traffic: 0.8, material: asphalt}
-  secondary:     {width: 7.5,  lanes: 2, divided: false, sidewalk: 1.8, shoulder: 0.5, marking: centre,   speed: 50,  lights: 2.0, traffic: 0.6,  material: asphalt}
-  tertiary:      {width: 6.5,  lanes: 2, divided: false, sidewalk: 1.5, shoulder: 0.3, marking: centre,   speed: 40,  lights: 1.5, traffic: 0.45, material: asphalt_worn}
-  unclassified:  {width: 5.5,  lanes: 2, divided: false, sidewalk: 0.0, shoulder: 0.8, marking: none,     speed: 40,  lights: 0.5, traffic: 0.2,  material: asphalt_worn}
-  residential:   {width: 5.0,  lanes: 2, divided: false, sidewalk: 0.0, shoulder: 0.8, marking: none,     speed: 30,  lights: 1.0, traffic: 0.25, material: asphalt_patched}
-  living_street: {width: 4.5,  lanes: 1, divided: false, sidewalk: 0.0, shoulder: 0.0, marking: none,     speed: 15,  lights: 1.0, traffic: 0.1,  material: concrete_pavers}
-  service:       {width: 4.0,  lanes: 1, divided: false, sidewalk: 0.0, shoulder: 0.5, marking: none,     speed: 20,  lights: 0.5, traffic: 0.1,  material: concrete}
-  track:         {width: 3.0,  lanes: 1, divided: false, sidewalk: 0.0, shoulder: 0.0, marking: none,     speed: 15,  lights: 0.0, traffic: 0.02, material: gravel}
-  footway:       {width: 2.0,  lanes: 0, divided: false, sidewalk: 0.0, shoulder: 0.0, marking: none,     speed: 0,   lights: 1.0, traffic: 0.0,  material: paving}
+  trunk:         {width: 14.0, lanes: 4, divided: false, sidewalk: 2.0, shoulder: 1.5, marking: centre_edge, speed: 80, lights: 3.0, traffic: 1.0, material: asphalt}
+  primary:       {width: 11.0, lanes: 2, divided: false, sidewalk: 2.0, shoulder: 0.5, marking: centre_edge, speed: 60, lights: 3.0, traffic: 0.8, material: asphalt}
+  secondary:     {width: 9.5,  lanes: 2, divided: false, sidewalk: 1.8, shoulder: 0.5, marking: centre,   speed: 50,  lights: 2.0, traffic: 0.6,  material: asphalt}
+  tertiary:      {width: 8.0,  lanes: 2, divided: false, sidewalk: 1.5, shoulder: 0.3, marking: centre,   speed: 40,  lights: 1.5, traffic: 0.45, material: asphalt_worn}
+  unclassified:  {width: 7.0,  lanes: 2, divided: false, sidewalk: 0.0, shoulder: 0.8, marking: none,     speed: 40,  lights: 0.5, traffic: 0.2,  material: asphalt_worn}
+  residential:   {width: 6.5,  lanes: 2, divided: false, sidewalk: 0.0, shoulder: 0.8, marking: none,     speed: 30,  lights: 1.0, traffic: 0.25, material: asphalt_patched}
+  living_street: {width: 5.5,  lanes: 1, divided: false, sidewalk: 0.0, shoulder: 0.0, marking: none,     speed: 15,  lights: 1.0, traffic: 0.1,  material: concrete_pavers}
+  service:       {width: 5.0,  lanes: 1, divided: false, sidewalk: 0.0, shoulder: 0.5, marking: none,     speed: 20,  lights: 0.5, traffic: 0.1,  material: concrete}
+  track:         {width: 3.5,  lanes: 1, divided: false, sidewalk: 0.0, shoulder: 0.0, marking: none,     speed: 15,  lights: 0.0, traffic: 0.02, material: gravel}
+  footway:       {width: 2.2,  lanes: 0, divided: false, sidewalk: 0.0, shoulder: 0.0, marking: none,     speed: 0,   lights: 1.0, traffic: 0.0,  material: paving}
 
 # OSM highway=* value → class above
 map:
