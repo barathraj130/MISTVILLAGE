@@ -255,12 +255,16 @@ def parapet(w, d, z, h, m, t=0.22):
 
 
 # ----------------------------------------------------------------------------- walls with real openings
-def wall(face, a0, a1, z0, z1, depth, m, openings, t=0.25, lit=None, rng=None, frame="alu", shades=True):
+def wall(face, a0, a1, z0, z1, depth, m, openings, t=0.25, lit=None, rng=None, frame="alu", shades=True, ends=None):
     """A wall slab on one face of the volume with real holes for its openings.
     face: '-y' / '+y' (runs along x, outer face at y=depth) or '-x' / '+x' (runs along y at x=depth).
     openings: [(u_centre, z_bottom, width, height, kind)] kind: 'win' | 'door' | 'french' | 'shop'."""
     along_x = face in ("-y", "+y")
     out = -1.0 if face in ("-y", "-x") else 1.0
+    # side walls stop at the inner faces of the front and back walls: two walls sharing a face make
+    # coincident surfaces, which render as black strips down the corners
+    e0, e1 = ends if ends is not None else ((0.0, 0.0) if along_x else (t, t))
+    a0, a1 = a0 + e0, a1 - e1
 
     def put(u0, u1, zz0, zz1):
         if u1 - u0 < 0.01 or zz1 - zz0 < 0.01:
