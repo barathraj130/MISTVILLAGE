@@ -16,7 +16,8 @@ const Kit := preload("res://scripts/drive/building_kit.gd")
 const RANK := {"trunk": 0.07, "primary": 0.06, "secondary": 0.05, "tertiary": 0.04, "unclassified": 0.03,
 	"residential": 0.025, "living_street": 0.02, "service": 0.015, "track": 0.01, "footway": 0.035}
 const FLOOR := 3.2
-const KIT_RANGE := 250.0
+const KIT_NEAR := 120.0                    # full designs out to here, then their far versions
+const KIT_RANGE := 900.0                   # far versions out to here; beyond, plain stand-ins (in the haze)
 const KERB := 0.2
 const LAMP_STEP := 32.0
 const MARK := {"motorway": 3, "trunk": 3, "primary": 2, "secondary": 2, "tertiary": 1, "unclassified": 1, "residential": 1}
@@ -36,10 +37,16 @@ var ground_mat: Material
 var building_mat: Material
 var walk_mat: Material
 var kerb_mat: Material
+var yard_mat: Material
+var wall_mat: Material
 var lamp_mesh: ArrayMesh
 var prop_meshes := {}                      # prop type → Mesh (1 traffic signal, 2 bus shelter, 3 speed breaker)
 var kit
 var kit_meshes: Array = []                 # variant index → Mesh (or null)
+var kit_far_meshes: Array = []             # variant index → its far version (tools/kit_far.py) or null
+var kit_boxes: Array = []                  # variant index → AABB of the design (far stand-in and collision)
+var tree_meshes: Array = []                # [near Mesh, far LOD Mesh] per tree kind
+var signal_shader: Shader
 var body: StaticBody3D
 var stats := {"loaded": 0, "built": 0, "unloaded": 0, "buildings": 0, "designed": 0}
 
@@ -52,11 +59,19 @@ func _ready() -> void:
 	body.name = "CityCollision"
 	add_child(body)
 	lamp_mesh = _lamp()
+	signal_shader = _signal_shader()
+	for tn in ["shola_evergreen_0", "shola_evergreen_1", "shola_evergreen_2", "silver_oak_0", "eucalyptus_0"]:
+		var near_m := _gltf_mesh("res://assets/models/veg_%s.gltf" % tn)
+		var far_m := _gltf_mesh("res://assets/models/veg_%s_lod.gltf" % tn)
+		if near_m:
+			tree_meshes.append([near_m, far_m if far_m else near_m])
 	prop_meshes = {1: _signal(), 2: _shelter(), 3: _breaker()}
 	kit = Kit.new()
 	if kit.setup():
 		for vname in index.get("variants", []):
 			kit_meshes.append(kit.mesh(vname))
+			kit_boxes.append(kit_meshes[-1].get_aabb() if kit_meshes[-1] else AABB())
+			kit_far_meshes.append(kit.mesh_far(vname))
 	else:
 		kit = null
 
@@ -67,6 +82,11 @@ func set_materials(road: Material, ground: Material, buildings: Material, walk: 
 	building_mat = buildings
 	walk_mat = walk
 	kerb_mat = kerb
+
+
+func set_yard_materials(yard: Material, wall: Material) -> void:
+	yard_mat = yard
+	wall_mat = wall
 
 
 ## A streetlight: an 8 m galvanised pole with an arm reaching over the road (+z) and a lamp head.
@@ -154,7 +174,7 @@ func _build(k: Vector2i) -> void:
 	var f := FileAccess.open(path, FileAccess.READ)
 	if f == null:
 		return
-	if f.get_buffer(4).get_string_from_ascii() != "CBE4":
+	if f.get_buffer(4).get_string_from_ascii() != "CBE5":
 		return
 	f.get_32()
 	f.get_32()
@@ -200,6 +220,12 @@ func _build(k: Vector2i) -> void:
 		var kind := f.get_8()
 		var pv := f.get_buffer(20).to_float32_array()
 		props.append([kind, pv])
+	var yards: Array = []
+	if f.get_position() < f.get_length():
+		for _y in _s32(f.get_32()):
+			var yk := f.get_8()
+			var yn := f.get_16()
+			yards.append([yk, f.get_buffer(yn * 12).to_float32_array()])
 	var out := {}
 	_ground(k, hn, h, out)
 	_roads(roads, out)
@@ -207,6 +233,7 @@ func _build(k: Vector2i) -> void:
 	_walks(walks, out)
 	_junctions(juncs, out)
 	_props(props, out)
+	_yards(yards, out)
 	out["roads_raw"] = roads
 	_mutex.lock()
 	ready_q.append([k, out])
@@ -340,6 +367,22 @@ func _buildings(blds: Array, out: Dictionary) -> void:
 		var t: Array = far if designed else near
 		var roof_y := base + 0.3 + floors * FLOOR
 		var top := roof_y + 0.6
+		var xf := Transform3D()
+		if designed:
+			# the far stand-in and the collision follow the placed design, not the raw OSM outline
+			var nz0 := Vector3(kd[3], 0, kd[4])
+			var nx0 := Vector3(nz0.z, 0, -nz0.x)
+			xf = Transform3D(Basis(nx0 * kd[5], Vector3.UP, nz0 * kd[6]), Vector3(kd[0], kd[1], kd[2]))
+			var bx: AABB = kit_boxes[variant]
+			poly = PackedVector2Array()
+			for c2 in [Vector2(bx.position.x, bx.position.z), Vector2(bx.end.x, bx.position.z), Vector2(bx.end.x, bx.end.z),
+					Vector2(bx.position.x, bx.end.z)]:
+				var w3 := xf * Vector3(c2.x, 0, c2.y)
+				poly.append(Vector2(w3.x, w3.z))
+			n = 4
+			centre = (poly[0] + poly[2]) * 0.5
+			top = kd[1] + bx.end.y * 0.92
+			roof_y = top
 		var along := 0.0
 		for i in n:
 			var p0 := poly[i]
@@ -364,12 +407,11 @@ func _buildings(blds: Array, out: Dictionary) -> void:
 			_tri(t, Vector3(poly[tris[q]].x, roof_y, poly[tris[q]].y), Vector3(poly[tris[q + 1]].x, roof_y, poly[tris[q + 1]].y),
 				Vector3(poly[tris[q + 2]].x, roof_y, poly[tris[q + 2]].y), Color(0.55, 0.54, 0.52, 0.0))
 		if designed:
-			var nz := Vector3(kd[3], 0, kd[4])
-			var nx := Vector3(nz.z, 0, -nz.x)
-			var xf := Transform3D(Basis(nx * kd[5], Vector3.UP, nz * kd[6]), Vector3(kd[0], kd[1], kd[2]))
-			if not kits.has(variant):
-				kits[variant] = []
-			kits[variant].append(xf)
+			# grouped per variant and per 64 m cell, so each group gets its own distance LOD and culling
+			var gk := Vector3i(variant, floori(kd[0] / 64.0), floori(kd[2] / 64.0))
+			if not kits.has(gk):
+				kits[gk] = []
+			kits[gk].append(xf)
 	for pair in [["near_mesh", near], ["far_mesh", far]]:
 		var t: Array = pair[1]
 		if (t[0] as PackedVector3Array).is_empty():
@@ -386,15 +428,20 @@ func _buildings(blds: Array, out: Dictionary) -> void:
 		m.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arr)
 		out[pair[0]] = m
 	var mms: Array = []
-	for variant in kits:
-		var xs: Array = kits[variant]
-		var mm := MultiMesh.new()
-		mm.transform_format = MultiMesh.TRANSFORM_3D
-		mm.mesh = kit_meshes[variant]
-		mm.instance_count = xs.size()
-		for i in xs.size():
-			mm.set_instance_transform(i, xs[i])
-		mms.append(mm)
+	for gk in kits:
+		var variant: int = gk.x
+		var xs: Array = kits[gk]
+		for lod in 2:                              # 0 the full design (near), 1 its far version
+			var m: Mesh = kit_meshes[variant] if lod == 0 else kit_far_meshes[variant]
+			if m == null:
+				continue
+			var mm := MultiMesh.new()
+			mm.transform_format = MultiMesh.TRANSFORM_3D
+			mm.mesh = m
+			mm.instance_count = xs.size()
+			for i in xs.size():
+				mm.set_instance_transform(i, xs[i])
+			mms.append([mm, lod])
 	out["kits"] = mms
 	if not faces.is_empty():
 		var shape := ConcavePolygonShape3D.new()
@@ -541,17 +588,191 @@ func _props(props: Array, out: Dictionary) -> void:
 		var xf := Transform3D(Basis(x * (pv[4] if kind == 3 else 1.0), Vector3.UP, f), Vector3(pv[0], pv[1], pv[2]))
 		if not by.has(kind):
 			by[kind] = []
-		by[kind].append(xf)
+		by[kind].append([xf, signal_phase(pv[0], pv[2], pv[3])])
 	var mms := []
+	var hump := PackedVector3Array()
 	for kind in by:
 		var mm := MultiMesh.new()
 		mm.transform_format = MultiMesh.TRANSFORM_3D
+		mm.use_custom_data = kind == 1
 		mm.mesh = prop_meshes[kind]
 		mm.instance_count = by[kind].size()
 		for i in by[kind].size():
-			mm.set_instance_transform(i, by[kind][i])
+			mm.set_instance_transform(i, by[kind][i][0])
+			if kind == 1:
+				mm.set_instance_custom_data(i, Color(by[kind][i][1], 0, 0, 0))
+			if kind == 3:                                # the hump is felt: its surface joins the collision
+				var hx: Transform3D = by[kind][i][0]
+				for q in (prop_meshes[3] as Mesh).get_faces():
+					hump.append(hx * q)
 		mms.append(mm)
 	out["props"] = mms
+	if not hump.is_empty():
+		var hs := ConcavePolygonShape3D.new()
+		hs.set_faces(hump)
+		out["hump_shape"] = hs
+
+
+## Where a signal is in its 40 s cycle (0..1): the two approaches along one axis are green together, the crossing
+## axis half a cycle later; each junction starts at its own offset. Traffic can use the same rule.
+static func signal_phase(x: float, z: float, yaw: float) -> float:
+	var axis := 0.0 if absf(cos(yaw)) > absf(sin(yaw)) else 0.5
+	var jx := floorf(x / 60.0)
+	var jz := floorf(z / 60.0)
+	var off := fposmod(sin(jx * 12.9898 + jz * 78.233) * 43758.5453, 1.0)
+	return fposmod(axis + off, 1.0)
+
+
+## Signal lenses: lit by the cycle (green 17 s, amber 3 s, red 20 s), INSTANCE_CUSTOM.r = phase.
+func _signal_shader() -> Shader:
+	var sh := Shader.new()
+	sh.code = """shader_type spatial;
+uniform vec3 col : source_color;
+uniform int which = 0;          // 0 red, 1 amber, 2 green
+uniform float cycle = 40.0;
+varying float ph;
+void vertex() { ph = INSTANCE_CUSTOM.r; }
+void fragment() {
+	float t = mod(TIME + ph * cycle, cycle);
+	bool on = which == 2 ? t < 17.0 : (which == 1 ? (t >= 17.0 && t < 20.0) : t >= 20.0);
+	ALBEDO = col * (on ? 0.9 : 0.12);
+	ROUGHNESS = 0.3;
+	EMISSION = on ? col * 3.5 : vec3(0.0);
+}
+"""
+	return sh
+
+
+func _lens(c: Color, which: int) -> ShaderMaterial:
+	var m := ShaderMaterial.new()
+	m.shader = signal_shader
+	m.set_shader_parameter("col", c)
+	m.set_shader_parameter("which", which)
+	return m
+
+
+static func _gltf_mesh(path: String) -> Mesh:
+	if not ResourceLoader.exists(path):
+		return null
+	var sc := (load(path) as PackedScene).instantiate()
+	var found: Mesh = null
+	for n in sc.find_children("*", "MeshInstance3D", true, false):
+		found = (n as MeshInstance3D).mesh
+		break
+	sc.free()
+	return found
+
+
+## Yards: paver forecourts, concrete yards and footpath corners with skirts into the ground, plastered compound
+## walls with a coping, and trees (two LODs).
+func _yards(yards: Array, out: Dictionary) -> void:
+	var pav := [PackedVector3Array(), PackedVector3Array(), PackedColorArray(), PackedVector2Array(), PackedVector2Array(), PackedInt32Array()]
+	var con := [PackedVector3Array(), PackedVector3Array(), PackedColorArray(), PackedVector2Array(), PackedVector2Array(), PackedInt32Array()]
+	var skirt := [PackedVector3Array(), PackedVector3Array(), PackedColorArray(), PackedVector2Array(), PackedVector2Array(), PackedInt32Array()]
+	var wall := [PackedVector3Array(), PackedVector3Array(), PackedColorArray(), PackedVector2Array(), PackedVector2Array(), PackedInt32Array()]
+	var faces := PackedVector3Array()
+	var trees := {}
+	var paints := [Color(0.95, 0.9, 0.82), Color(0.93, 0.6, 0.6), Color(0.62, 0.84, 0.68), Color(0.62, 0.76, 0.92),
+		Color(0.95, 0.85, 0.55), Color(0.88, 0.88, 0.86), Color(0.8, 0.72, 0.9)]
+	for yd in yards:
+		var kind: int = yd[0]
+		var p: PackedFloat32Array = yd[1]
+		var n := p.size() / 3
+		if kind == 1 or kind == 2 or kind == 6:
+			var t: Array = con if kind == 2 else pav
+			for i in range(0, n - 2, 3):
+				var a := Vector3(p[i * 3], p[i * 3 + 1], p[i * 3 + 2])
+				var b := Vector3(p[i * 3 + 3], p[i * 3 + 4], p[i * 3 + 5])
+				var c := Vector3(p[i * 3 + 6], p[i * 3 + 7], p[i * 3 + 8])
+				if (b - a).cross(c - a).y < 0.0:
+					var tmp := b
+					b = c
+					c = tmp
+				var vi: int = t[0].size()
+				t[0].append_array([a, c, b])
+				t[1].append_array([Vector3.UP, Vector3.UP, Vector3.UP])
+				t[2].append_array([Color.WHITE, Color.WHITE, Color.WHITE])
+				t[3].append_array([Vector2(a.x, a.z) / 2.0, Vector2(c.x, c.z) / 2.0, Vector2(b.x, b.z) / 2.0])
+				t[4].append_array([Vector2.ZERO, Vector2.ZERO, Vector2.ZERO])
+				t[5].append_array([vi, vi + 1, vi + 2])
+				faces.append_array([a, c, b])
+		elif kind > 100:
+			for i in n - 1:
+				var a := Vector3(p[i * 3], p[i * 3 + 1], p[i * 3 + 2])
+				var b := Vector3(p[i * 3 + 3], p[i * 3 + 4], p[i * 3 + 5])
+				var e := b - a
+				var nrm := Vector3(e.z, 0, -e.x).normalized()
+				var dn := Vector3(0, -0.6, 0)
+				_quad(skirt, a, b, b + dn, a + dn, nrm, Color(0.5, 0.48, 0.45), Vector2.ZERO, Vector2.ZERO, Vector2.ZERO, Vector2.ZERO, Vector2.ZERO)
+				_quad(skirt, b, a, a + dn, b + dn, -nrm, Color(0.5, 0.48, 0.45), Vector2.ZERO, Vector2.ZERO, Vector2.ZERO, Vector2.ZERO, Vector2.ZERO)
+		elif kind == 3 or kind == 5:
+			var h := 1.5 if kind == 3 else 2.4
+			var th := 0.12
+			var col: Color = paints[int(absf(p[0] * 0.37 + p[2] * 0.91)) % paints.size()] if kind == 3 else Color(0.88, 0.87, 0.83)
+			var along := 0.0
+			for i in n - 1:
+				var a := Vector3(p[i * 3], p[i * 3 + 1], p[i * 3 + 2])
+				var b := Vector3(p[i * 3 + 3], p[i * 3 + 4], p[i * 3 + 5])
+				var e := Vector3(b.x - a.x, 0, b.z - a.z)
+				var L := e.length()
+				if L < 0.05:
+					continue
+				var s := Vector3(e.z, 0, -e.x) / L * th
+				var lo := Vector3(0, -0.5, 0)
+				var hi := Vector3(0, h, 0)
+				for side in [s, -s]:
+					var nrm: Vector3 = side.normalized()
+					_quad(wall, a + side + lo, b + side + lo, b + side + hi, a + side + hi, nrm, col,
+						Vector2(along, -0.5), Vector2(along + L, -0.5), Vector2(along + L, h), Vector2(along, h), Vector2.ZERO)
+				# coping: a slightly wider cap in grey
+				var cs := s * 1.6
+				var ch := Vector3(0, h + 0.07, 0)
+				_quad(wall, a + cs + ch, b + cs + ch, b - cs + ch, a - cs + ch, Vector3.UP, Color(0.6, 0.59, 0.56),
+					Vector2.ZERO, Vector2.ZERO, Vector2.ZERO, Vector2.ZERO, Vector2.ZERO)
+				for side in [cs, -cs]:
+					_quad(wall, a + side + hi, b + side + hi, b + side + ch, a + side + ch, side.normalized(), Color(0.6, 0.59, 0.56),
+						Vector2.ZERO, Vector2.ZERO, Vector2.ZERO, Vector2.ZERO, Vector2.ZERO)
+				faces.append_array([a + s + lo, b + s + lo, b + s + hi, a + s + lo, b + s + hi, a + s + hi])
+				along += L
+		elif kind == 4 and not tree_meshes.is_empty():
+			if fmod(absf(p[0] * 3.7 + p[2] * 1.3), 1.0) > 0.6:     # thin the planting a little
+				continue
+			var q := Vector3(p[0], p[1] - 0.1, p[2])
+			var hsh := absf(sin(q.x * 12.9898 + q.z * 78.233) * 43758.5453)
+			var ti := int(hsh) % tree_meshes.size()
+			var sc := 0.75 + fmod(hsh, 1.0) * 0.6
+			if not trees.has(ti):
+				trees[ti] = []
+			trees[ti].append(Transform3D(Basis(Vector3.UP, fmod(hsh * 7.0, TAU)).scaled(Vector3(sc, sc, sc)), q))
+	for pair in [["pave_mesh", pav], ["yard_mesh", con], ["skirt_mesh", skirt], ["wall_mesh", wall]]:
+		var t2: Array = pair[1]
+		if (t2[0] as PackedVector3Array).is_empty():
+			continue
+		var arr := []
+		arr.resize(Mesh.ARRAY_MAX)
+		arr[Mesh.ARRAY_VERTEX] = t2[0]
+		arr[Mesh.ARRAY_NORMAL] = t2[1]
+		arr[Mesh.ARRAY_COLOR] = t2[2]
+		arr[Mesh.ARRAY_TEX_UV] = t2[3]
+		arr[Mesh.ARRAY_INDEX] = t2[5]
+		var m := ArrayMesh.new()
+		m.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arr)
+		out[pair[0]] = m
+	if not faces.is_empty():
+		var shape := ConcavePolygonShape3D.new()
+		shape.set_faces(faces)
+		out["yard_shape"] = shape
+	var tm := []
+	for ti in trees:
+		for lod in 2:
+			var mm := MultiMesh.new()
+			mm.transform_format = MultiMesh.TRANSFORM_3D
+			mm.mesh = tree_meshes[ti][lod]
+			mm.instance_count = trees[ti].size()
+			for i in trees[ti].size():
+				mm.set_instance_transform(i, trees[ti][i])
+			tm.append([mm, lod])
+	out["trees"] = tm
 
 
 static func _mat(c: Color, metal := 0.0, rough := 0.6, emit := Color.BLACK, energy := 0.0) -> StandardMaterial3D:
@@ -590,13 +811,13 @@ func _signal() -> ArrayMesh:
 		[_mat(Color(0.85, 0.7, 0.05), 0.2, 0.5), func(st):
 			for k in 4:
 				_box(st, Vector3(0.22, 0.3, 0.22), Vector3(0, 0.35 + k * 0.6, 0))],
-		[_mat(Color(0.25, 0.03, 0.02), 0.0, 0.3, Color(1, 0.1, 0.05), 0.3), func(st):
+		[_lens(Color(1.0, 0.08, 0.04), 0), func(st):
 			_box(st, Vector3(0.22, 0.22, 0.04), Vector3(0, 3.45, 0.35))
 			_box(st, Vector3(0.22, 0.22, 0.04), Vector3(3.3, 5.2, 0.15))],
-		[_mat(Color(0.3, 0.2, 0.02), 0.0, 0.3, Color(1, 0.6, 0.05), 0.2), func(st):
+		[_lens(Color(1.0, 0.6, 0.05), 1), func(st):
 			_box(st, Vector3(0.22, 0.22, 0.04), Vector3(0, 3.1, 0.35))
 			_box(st, Vector3(0.22, 0.22, 0.04), Vector3(3.3, 4.85, 0.15))],
-		[_mat(Color(0.05, 0.6, 0.25), 0.0, 0.3, Color(0.1, 1, 0.45), 3.0), func(st):
+		[_lens(Color(0.1, 1.0, 0.45), 2), func(st):
 			_box(st, Vector3(0.22, 0.22, 0.04), Vector3(0, 2.75, 0.35))
 			_box(st, Vector3(0.22, 0.22, 0.04), Vector3(3.3, 4.5, 0.15))],
 	]
@@ -731,10 +952,15 @@ func _instance(k: Vector2i, d: Dictionary) -> void:
 		fmi.material_override = building_mat
 		fmi.visibility_range_begin = KIT_RANGE - 10.0
 		node.add_child(fmi)
-	for mm in d.get("kits", []):
+	for km in ([] if "--nokits" in OS.get_cmdline_user_args() else d.get("kits", [])):
 		var mmi := MultiMeshInstance3D.new()
-		mmi.multimesh = mm
-		mmi.visibility_range_end = KIT_RANGE + 10.0
+		mmi.multimesh = km[0]
+		if km[1] == 0:
+			mmi.visibility_range_end = KIT_NEAR + 10.0
+		else:
+			mmi.visibility_range_begin = KIT_NEAR
+			mmi.visibility_range_end = KIT_RANGE + 10.0
+			mmi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 		node.add_child(mmi)
 	if d.has("walk_mesh"):
 		var wmi := MeshInstance3D.new()
@@ -767,6 +993,32 @@ func _instance(k: Vector2i, d: Dictionary) -> void:
 		pmi.multimesh = pm
 		pmi.visibility_range_end = 350.0
 		node.add_child(pmi)
+	if d.has("hump_shape"):
+		var hcs := CollisionShape3D.new()
+		hcs.shape = d["hump_shape"]
+		_shape(node, hcs)
+	for pair in [["pave_mesh", walk_mat, 400.0], ["yard_mesh", yard_mat, 400.0], ["skirt_mesh", kerb_mat, 300.0], ["wall_mesh", wall_mat, 450.0]]:
+		if d.has(pair[0]) and not "--noyards" in OS.get_cmdline_user_args():
+			var ymi := MeshInstance3D.new()
+			ymi.mesh = d[pair[0]]
+			ymi.material_override = pair[1]
+			ymi.visibility_range_end = pair[2]
+			node.add_child(ymi)
+	if d.has("yard_shape"):
+		var ycs := CollisionShape3D.new()
+		ycs.shape = d["yard_shape"]
+		_shape(node, ycs)
+	var skip := OS.get_cmdline_user_args()
+	for tr in ([] if "--notrees" in skip else d.get("trees", [])):
+		var tmi := MultiMeshInstance3D.new()
+		tmi.multimesh = tr[0]
+		if tr[1] == 0:
+			tmi.visibility_range_end = 220.0
+		else:
+			tmi.visibility_range_begin = 210.0
+			tmi.visibility_range_end = 500.0
+			tmi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		node.add_child(tmi)
 	if d.has("lamps"):
 		var lmi := MultiMeshInstance3D.new()
 		lmi.multimesh = d["lamps"]

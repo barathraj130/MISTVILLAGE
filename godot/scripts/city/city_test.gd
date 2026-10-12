@@ -44,6 +44,11 @@ func _ready() -> void:
 	var kerb: StandardMaterial3D = MB.cc0_material("concrete", 3.0, 0.85)
 	kerb.vertex_color_use_as_albedo = true
 	streamer.set_materials(_road_material(), MB.cc0_material("dry_grass", 6.0, 0.95, false), bm, walk, kerb)
+	var yard: StandardMaterial3D = MB.cc0_material("concrete", 2.5, 0.9, false)
+	yard.albedo_color = Color(0.86, 0.84, 0.8)
+	var wall: StandardMaterial3D = MB.cc0_material("plaster", 2.5, 0.9)
+	wall.vertex_color_use_as_albedo = true
+	streamer.set_yard_materials(yard, wall)
 	cam = Camera3D.new()
 	cam.fov = 70.0
 	cam.far = 4000.0
@@ -53,6 +58,8 @@ func _ready() -> void:
 	streamer.target = cam
 	get_viewport().scaling_3d_mode = Viewport.SCALING_3D_MODE_FSR2
 	get_viewport().scaling_3d_scale = 0.67
+	get_viewport().mesh_lod_threshold = 8.0 if "--lod8" in OS.get_cmdline_user_args() else 1.0
+	RenderingServer.viewport_set_measure_render_time(get_viewport().get_viewport_rid(), true)
 
 
 func _environment() -> void:
@@ -79,7 +86,7 @@ func _environment() -> void:
 	sun.rotation = Vector3(deg_to_rad(-48), deg_to_rad(-35), 0)
 	sun.light_energy = 2.6
 	sun.light_color = Color(1.0, 0.94, 0.85)
-	sun.shadow_enabled = true
+	sun.shadow_enabled = not "--noshadow" in OS.get_cmdline_user_args()
 	sun.directional_shadow_max_distance = 200.0
 	add_child(sun)
 
@@ -215,6 +222,10 @@ func _log_and_shots(dt: float) -> void:
 			streamer.stats["buildings"], streamer.stats["designed"],
 			int(OS.get_static_memory_usage() / 1048576), int(Performance.get_monitor(Performance.RENDER_VIDEO_MEM_USED) / 1048576),
 			int(Performance.get_monitor(Performance.RENDER_TOTAL_DRAW_CALLS_IN_FRAME)), cam.position.x, cam.position.z])
+		var vp := get_viewport().get_viewport_rid()
+		print("PRIMS %dk gpu=%.1fms cpu=%.1fms" % [int(Performance.get_monitor(Performance.RENDER_TOTAL_PRIMITIVES_IN_FRAME) / 1000),
+			RenderingServer.viewport_get_measured_render_time_gpu(vp), RenderingServer.viewport_get_measured_render_time_cpu(vp)
+			+ RenderingServer.get_frame_setup_time_cpu()])
 	if auto and shots_dir != "" and not shot_times.is_empty() and t >= shot_times[0]:
 		shot_times.pop_front()
 		await RenderingServer.frame_post_draw

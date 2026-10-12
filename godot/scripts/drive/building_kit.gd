@@ -29,6 +29,7 @@ const LAYERS := [
 const ALBEDO_SIZE := 1024
 const NORMAL_SIZE := 512
 
+var far_material: StandardMaterial3D
 var manifest := {}                 # variant name → {kind, w, d, floors, min, max, ...}
 var material: ShaderMaterial
 var glass: StandardMaterial3D
@@ -128,6 +129,29 @@ func extent(name: String) -> Array:
 	var c := Vector3((mn[0] + mx[0]) * 0.5, 0.0, -(mn[1] + mx[1]) * 0.5)
 	var s := Vector3(mx[0] - mn[0], mx[2] - mn[2], mx[1] - mn[1])
 	return [c, s]
+
+
+## The far version of a design (tools/kit_far.py): same shape, colours in the vertices, ~1,500 triangles.
+func mesh_far(name: String) -> Mesh:
+	var path := DIR + name + "_far.glb"
+	if not ResourceLoader.exists(path):
+		return null
+	var scene := (load(path) as PackedScene).instantiate()
+	var found: Mesh = null
+	for mi in scene.find_children("*", "MeshInstance3D", true, false):
+		found = (mi as MeshInstance3D).mesh
+		break
+	scene.free()
+	if found == null:
+		return null
+	if far_material == null:
+		far_material = StandardMaterial3D.new()
+		far_material.vertex_color_use_as_albedo = true
+		far_material.roughness = 0.85
+	var m := found.duplicate() as ArrayMesh
+	for i in m.get_surface_count():
+		m.surface_set_material(i, far_material)
+	return m
 
 
 func mesh(name: String) -> Mesh:

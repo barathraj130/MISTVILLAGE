@@ -6,20 +6,25 @@ Reads build/cbe/cache/roads.gpkg + osm.gpkg (buildings), the SRTM tile and the d
 
     index.json          tile size, origin, class list, variant list, tiles (counts), bounds, flags
     chunks/CBE_c_r.bin  one 256 m tile (little-endian), read by scripts/city/city_streamer.gd:
-        b"CBE4"  i32 cx  i32 cz  i32 hn  f32[hn*hn] ground heights (8 m grid, row = z)
+        b"CBE5"  i32 cx  i32 cz  i32 hn  f32[hn*hn] ground heights (8 m grid, row = z)
         i32 nroads   per road:  u8 class  u8 flags(1 oneway, 2 bridge)  u16 npts  f32 width  f32 a0  f32 len
                                 f32 clear0  f32 clear1  f32[3*npts] x,y,z
                      (a0 = metres along the whole OSM way where this piece starts, len = the way's length, so
                      dashes run on across tiles; clear0/1 = how far the junction surface reaches into the way at
                      its start/end (0 = no junction there): the paint stops and a zebra is drawn just outside it)
         i32 nblds    per building:
-                     u8 floors  u8 flags(1 shop, 2 generated-height)  u8 r  u8 g  u8 b  u8 rnd  u16 nverts
+                     u8 floors  u8 flags(1 shop, 2 generated-height, 4 generated infill — not in OSM)  u8 r  u8 g  u8 b  u8 rnd  u16 nverts
                      f32 base  i32 variant(-1 = none)  f32[7] ox oy oz  fx fz  sx sz   f32[2*nverts] x,z
         i32 nwalks   per footpath strip:  u8 flags(1 painted kerb, 2 streetlights, 4 road on the right)  u8 class
                      u16 npts  f32 width  f32[3*npts] x,y,z (centre of the footpath, its top surface)
         i32 njunc    per junction surface: u16 nverts  f32[3*nverts] x,y,z (a triangle list; the crossing with
                      filleted corners, laid over the road ends that meet there)
         i32 nprops   per prop: u8 type(1 traffic signal, 2 bus shelter, 3 speed breaker)  f32 x y z  f32 yaw  f32 size
+        i32 nyards   per record: u8 kind  u16 nverts  f32[3*nverts] x,y,z
+                     kind 1 paver forecourt, 2 concrete yard, 6 footpath corner at a junction (triangle lists);
+                     101 / 102 / 106 the outline of the record before it (an edge skirt down into the ground);
+                     3 compound wall 1.5 m, 5 mill wall 2.4 m (polylines along the top of the footing);
+                     4 tree (one point: where it stands)
 
 Everything heavy happens here, once: roads densified to ≤ 6 m following smoothed ground; ground lowered
 under roads; building footprints cut back from the (generous) road + footpath corridors so nothing stands in
@@ -52,6 +57,7 @@ HN = int(TILE / HSTEP) + 1
 FOOTPATH = 1.8                     # kept clear beside every road for the footpath
 KERB = 0.2
 WALK = 1.8                         # footpath width beside the kerb (fits inside the cleared corridor)
+MEDIAN = 1.0                       # kerbed median strip on the inner side of a divided road's carriageway
 NO_WALK = {"footway", "track"}
 LIFT = {"trunk": 0.07, "primary": 0.06, "secondary": 0.05, "tertiary": 0.04, "unclassified": 0.03, "residential": 0.025,
         "living_street": 0.02, "service": 0.015, "track": 0.01, "footway": 0.035}   # = city_streamer.gd RANK
@@ -101,22 +107,27 @@ class Kit:
         mn, mx = self.m[n]["min"], self.m[n]["max"]
         return ((mn[0] + mx[0]) * 0.5, -(mn[1] + mx[1]) * 0.5), (mx[0] - mn[0], mx[1] - mn[1])
 
-    def pick(self, kind, floors, w, d):
-        best, bs = None, 1e9
+    def pick(self, kind, floors, w, d, seed=0):
+        """a design of this kind that fits: one of the three closest, chosen by seed, so rows don't repeat"""
+        scored = []
         for n in self.by_kind.get(kind, []):
             _, (bw, bd) = self.extent(n)
-            s = abs(math.log(w / bw)) + abs(math.log(d / bd)) + abs(self.m[n]["floors"] - floors) * 0.6
-            if s < bs:
-                best, bs = n, s
-        return best
+            scored.append((abs(math.log(w / bw)) + abs(math.log(d / bd)) + abs(self.m[n]["floors"] - floors) * 0.6, n))
+        if not scored:
+            return None
+        scored.sort()
+        top = [n for s, n in scored[:3] if s < scored[0][0] + 0.8]
+        return top[seed % len(top)]
 
 
 def run(cfg, roads_cfg):
     t0 = time.time()
     out = path("godot", "assets", "city")
-    os.makedirs(os.path.join(out, "chunks"), exist_ok=True)
-    for f in os.listdir(os.path.join(out, "chunks")):
-        os.remove(os.path.join(out, "chunks", f))
+    # write into chunks.tmp and swap at the end: the game never sees a half-written city
+    tmp = os.path.join(out, "chunks.tmp")
+    os.makedirs(tmp, exist_ok=True)
+    for f in os.listdir(tmp):
+        os.remove(os.path.join(tmp, f))
     bdir = build_dir(cfg)
     classes = list(roads_cfg["classes"].keys())
     roads = gpd.read_file(os.path.join(bdir, "cache", "roads.gpkg"))
@@ -138,12 +149,13 @@ def run(cfg, roads_cfg):
 
     def tile(key):
         if key not in tiles:
-            tiles[key] = {"roads": [], "blds": [], "walks": [], "junc": [], "props": []}
+            tiles[key] = {"roads": [], "blds": [], "walks": [], "junc": [], "props": [], "yards": []}
         return tiles[key]
 
     # ---- roads ---------------------------------------------------------------------------------------
     road_geoms, road_w, road_cls = [], [], []
     road_lines = []                                  # (2D line, 3D line with height as z, width, class)
+    road_oneway = []                                 # per road_lines entry: one carriageway of a divided road
     n_pieces = 0
     for row in roads.itertuples():
         g = game(row.geometry)
@@ -170,6 +182,7 @@ def run(cfg, roads_cfg):
             wi = -1
             if len(px) >= 2 and total > 1.0:
                 wi = len(road_lines)
+                road_oneway.append(bool(row.oneway_b))
                 road_lines.append((shapely.LineString(np.column_stack([px, pz])),
                                    shapely.LineString(np.column_stack([px, pz, py])), float(row.width_m), row.cls))
             flags = (1 if row.oneway_b else 0) | (2 if row.bridge_b else 0)
@@ -197,6 +210,27 @@ def run(cfg, roads_cfg):
     area_circle = gpd.GeoSeries([Point(c["lon"], c["lat"])], crs="EPSG:4326").to_crs(cfg["crs"]).iloc[0].buffer(float(c["radius_m"]))
     b = b[b.intersects(area_circle)]
     print("  %d buildings to place (%ds)" % (len(b), time.time() - t0), flush=True)
+    grid = {}                                   # 32 m cell → placed building rectangles (overlap checks)
+    placed = []                                 # for yards and walls: (rect, kind, C, nx, nz, hx, hz, tile key)
+
+    def cells(poly):
+        x0, z0, x1, z1 = poly.bounds
+        for i in range(int(math.floor(x0 / 32)), int(math.floor(x1 / 32)) + 1):
+            for j in range(int(math.floor(z0 / 32)), int(math.floor(z1 / 32)) + 1):
+                yield (i, j)
+
+    def near_rects(poly):
+        seen, ids = [], set()
+        for c in cells(poly):
+            for q in grid.get(c, ()):
+                if id(q) not in ids:
+                    ids.add(id(q))
+                    seen.append(q)
+        return seen
+
+    def rect(C, nx, nz, hx, hz):
+        return shapely.Polygon([C - nx * hx - nz * hz, C + nx * hx - nz * hz, C + nx * hx + nz * hz, C - nx * hx + nz * hz])
+    n_moved = n_shrunk = 0
     n_in, n_cut, n_drop, n_kit = len(b), 0, 0, 0
     cols = [(0.86, 0.82, 0.74), (0.93, 0.9, 0.84), (0.82, 0.74, 0.62), (0.78, 0.8, 0.76), (0.88, 0.78, 0.7), (0.72, 0.78, 0.82)]
     for bi, row in enumerate(b.itertuples()):
@@ -281,29 +315,124 @@ def run(cfg, roads_cfg):
                         kind = "bungalow"
                     else:
                         kind = "tn_house"
-                    name = kit.pick(kind, floors, front, depth) or kit.pick("city_house", floors, front, depth)
+                    name = kit.pick(kind, floors, front, depth, seed >> 3) or kit.pick("city_house", floors, front, depth)
                     if name:
                         (ecx, ecz), (bw, bd) = kit.extent(name)
                         sx = min(max(front / bw, 0.55), 1.8)
                         sz = min(max(depth / bd, 0.55), 1.8)
                         nz = np.array([face[0], face[1]])
                         nx = np.array([nz[1], -nz[0]])
+                        # never on a street or footpath, never inside a neighbour: step back, then shrink
+                        for attempt in range(7):
+                            R = rect(C, nx, nz, bw * sx / 2, bd * sz / 2)
+                            on_road = any(R.intersection(corridors[h]).area > 0.3 for h in ctree.query(R, predicate="intersects"))
+                            on_bld = any(R.intersection(q).area > 0.12 * min(R.area, q.area) for q in near_rects(R) if R.intersects(q))
+                            if not on_road and not on_bld:
+                                break
+                            if on_road and attempt < 3:
+                                C = C - nz * 1.2
+                                n_moved += 1
+                            else:
+                                sx, sz = max(sx * 0.85, 0.35), max(sz * 0.85, 0.35)
+                                n_shrunk += 1
+                        R = rect(C, nx, nz, bw * sx / 2, bd * sz / 2)
+                        for cc in cells(R):
+                            grid.setdefault(cc, []).append(R)
                         # origin = C − basis·(ecx, 0, ecz); basis columns nx·sx, up, nz·sz
                         ox = C[0] - (nx[0] * sx * ecx + nz[0] * sz * ecz)
                         oz = C[1] - (nx[1] * sx * ecx + nz[1] * sz * ecz)
                         variant = kit.names.index(name)
                         kd = [ox, base + 0.3, oz, nz[0], nz[1], sx, sz]
                         n_kit += 1
+                        placed.append((R, kind, C, nx, nz, bw * sx / 2, bd * sz / 2))
         cxz = ext.mean(axis=0)
         key = (int(math.floor(cxz[0] / TILE)), int(math.floor(cxz[1] / TILE)))
         tile(key)["blds"].append((floors, (1 if shop else 0) | (2 if gen_h else 0), col, base, variant, kd,
                                   ext.astype(np.float32), rnd))
-    print("  buildings: %d in area, %d trimmed back from roads, %d dropped, %d designed (%ds)" % (
-        n_in, n_cut, n_drop, n_kit, time.time() - t0), flush=True)
+    print("  buildings: %d in area, %d trimmed back from roads, %d dropped, %d designed, %d steps back, %d shrinks (%ds)" % (
+        n_in, n_cut, n_drop, n_kit, n_moved, n_shrunk, time.time() - t0), flush=True)
+
+    # ---- infill: OSM misses many real buildings, so empty frontage in built-up streets gets designed ones -----
+    # (only where real buildings stand nearby, never on water, parks, fields or rail land; flagged generated: 2 | 4)
+    OPEN = {"grass", "farmland", "meadow", "forest", "park", "cemetery", "recreation_ground", "railway", "orchard",
+            "scrub", "wetland", "village_green", "military", "quarry", "garden", "pitch", "golf_course", "nature_reserve"}
+    lu = gpd.read_file(os.path.join(bdir, "cache", "osm.gpkg"), layer="landuse").to_crs(cfg["crs"])
+    wa = gpd.read_file(os.path.join(bdir, "cache", "osm.gpkg"), layer="water").to_crs(cfg["crs"])
+    opens = [game(g) for k, g in zip(lu["kind"], lu.geometry) if k in OPEN and g is not None and g.geom_type in ("Polygon", "MultiPolygon")]
+    opens += [game(g) for g in wa.geometry if g is not None and g.geom_type in ("Polygon", "MultiPolygon")]
+    otree = STRtree(opens) if opens else None
+    real = STRtree([q[0] for q in placed]) if placed else None
+    n_fill = 0
+    for ri, (l2, l3, w, cls) in enumerate(road_lines):
+        if cls in NO_WALK or cls in ("service", "motorway") or l2.length < 20.0 or real is None:
+            continue
+        if len(real.query(l2.buffer(120.0), predicate="intersects")) < 4:
+            continue                                                   # countryside: leave it open
+        mainr = cls in main
+        L = l2.length
+        for side in (1.0, -1.0):
+            t = 5.0
+            while t < L - 5.0:
+                h = zlib.crc32(b"%d_%d_%d" % (ri, int(side), int(t)))
+                front = 7.0 + (h % 60) / 10.0
+                depth = 9.0 + ((h >> 8) % 60) / 10.0
+                a = np.asarray(l2.interpolate(t).coords[0])
+                b2 = np.asarray(l2.interpolate(min(L, t + 1.0)).coords[0])
+                d = (b2 - a) / max(np.linalg.norm(b2 - a), 1e-6)
+                nrm = np.array([-d[1], d[0]]) * side
+                C = a + d * (front / 2) + nrm * (w * 0.5 + KERB + WALK + 0.8 + depth / 2)
+                nz = -nrm
+                nx = np.array([nz[1], -nz[0]])
+                R = rect(C, nx, nz, front / 2 + 0.6, depth / 2 + 0.6)       # with a little space round it
+                bad = any(R.intersects(corridors[q]) for q in ctree.query(R, predicate="intersects"))
+                bad = bad or any(R.intersects(q) for q in near_rects(R))
+                bad = bad or (otree is not None and len(otree.query(R, predicate="intersects")) > 0)
+                if bad or len(real.query(Point(C), predicate="dwithin", distance=150.0)) < 3:
+                    t += 4.0
+                    continue
+                floors = (2 + h % 3) if mainr else (1 + (h >> 4) % 3)
+                r = h % 100
+                if mainr:
+                    kind = "commercial" if front >= 12.5 or r < 30 else ("apartment" if r < 45 else ("city_house" if r < 60 else "shop_house"))
+                else:
+                    kind = "shop_house" if r < 8 else ("city_house" if r < 22 else "tn_house")
+                name = kit.pick(kind, floors, front, depth, h >> 5)
+                if not name:
+                    t += 4.0
+                    continue
+                (ecx, ecz), (bw, bd) = kit.extent(name)
+                sx = min(max(front / bw, 0.55), 1.8)
+                sz = min(max(depth / bd, 0.55), 1.8)
+                R = rect(C, nx, nz, bw * sx / 2, bd * sz / 2)
+                if any(R.intersects(corridors[q]) for q in ctree.query(R, predicate="intersects")) or \
+                        any(R.intersects(q) for q in near_rects(R)):
+                    t += 4.0
+                    continue
+                ext = np.asarray(R.exterior.coords)[:-1]
+                base = float(height(ext[:, 0], ext[:, 1]).min()) - 0.3
+                ox = C[0] - (nx[0] * sx * ecx + nz[0] * sz * ecz)
+                oz = C[1] - (nx[1] * sx * ecx + nz[1] * sz * ecz)
+                kd = [ox, base + 0.3, oz, nz[0], nz[1], sx, sz]
+                for cc in cells(R):
+                    grid.setdefault(cc, []).append(R)
+                placed.append((R, kind, C, nx, nz, bw * sx / 2, bd * sz / 2))
+                key = (int(math.floor(C[0] / TILE)), int(math.floor(C[1] / TILE)))
+                tile(key)["blds"].append((floors, 2 | 4, cols[h % len(cols)], base, kit.names.index(name), kd,
+                                          ext.astype(np.float32), (h % 1000) / 1000.0))
+                n_fill += 1
+                t += bw * sx + 1.5
+    print("  infill → %d generated buildings on empty frontage (%ds)" % (n_fill, time.time() - t0), flush=True)
 
     # ---- footpaths: a kerbed strip each side of every street, stopping at the kerb of any road it meets ----
     lines2 = np.array([q[0] for q in road_lines], dtype=object)
-    carriage = shapely.buffer(lines2, np.array([q[2] for q in road_lines]) * 0.5 + KERB + 0.1, cap_style="flat")
+    carriage = shapely.buffer(lines2, np.array([q[2] for q in road_lines]) * 0.5 + KERB + WALK * 0.5 + 0.05, cap_style="flat")
+    walkzone = shapely.buffer(lines2, np.array([q[2] for q in road_lines]) * 0.5 + KERB + WALK, cap_style="flat")
+    wtree = STRtree(walkzone)
+
+    def surface(ri, x, z):
+        """top of the road ribbon at (x, z) on road ri (city_streamer.gd lifts each class a little)"""
+        l2, l3, w, cls = road_lines[ri]
+        return l3.interpolate(l2.project(Point(x, z))).z + LIFT.get(cls, 0.02) + 0.06
     ctree2 = STRtree(carriage)
     n_walk = 0
     for ri, (l2, l3, w, cls) in enumerate(road_lines):
@@ -311,7 +440,11 @@ def run(cfg, roads_cfg):
             continue
         mainr = cls in main
         for s in (1.0, -1.0):
-            off = shapely.offset_curve(l2, s * (w * 0.5 + KERB + WALK * 0.5), join_style="mitre", mitre_limit=2.0)
+            # one carriageway of a divided road: footpath on the driver's left (the kerb side, s < 0),
+            # a narrow kerbed median strip on its right
+            median = road_oneway[ri] and s > 0
+            ww = MEDIAN if median else WALK
+            off = shapely.offset_curve(l2, s * (w * 0.5 + KERB + ww * 0.5), join_style="mitre", mitre_limit=2.0)
             if off.is_empty:
                 continue
             hits = [h for h in ctree2.query(off, predicate="intersects") if h != ri]
@@ -323,9 +456,9 @@ def run(cfg, roads_cfg):
                     continue
                 part = shapely.segmentize(part, 6.0)
                 c = np.asarray(part.coords)
-                ry = np.array([l3.interpolate(l2.project(Point(x, z))).z for x, z in c])
+                ry = np.array([surface(ri, x, z) for x, z in c])
                 gy = height(c[:, 0], c[:, 1])
-                y = np.clip(np.maximum(ry + 0.15, gy + 0.05), ry + 0.15, ry + 0.6) + 0.004 * (ri % 5)
+                y = np.clip(np.maximum(ry + 0.15, gy + 0.05), ry + 0.15, ry + 0.55) + 0.004 * (ri % 5)
                 pts = np.column_stack([c[:, 0], y, c[:, 1]]).astype(np.float32)
                 # offset_curve keeps the line's direction: a left (+) offset has the road on its right
                 fl = (1 if mainr else 0) | (2 if mainr or cls == "tertiary" else 0) | (4 if s > 0 else 0)
@@ -335,10 +468,29 @@ def run(cfg, roads_cfg):
                 st = 0
                 for i in range(1, len(keys) + 1):
                     if i == len(keys) or keys[i] != keys[st]:
-                        tile(keys[st])["walks"].append((fl, cid, WALK, pts[st:i + 1]))
+                        tile(keys[st])["walks"].append((fl, cid, ww, pts[st:i + 1]))
                         n_walk += 1
                         st = i
     print("  footpaths → %d strips (%ds)" % (n_walk, time.time() - t0), flush=True)
+
+    def put_poly(kind, poly, yfun):
+        """a paved area as a triangle list (kind) and its outline (kind + 100) for the edge skirt"""
+        try:
+            tris = shapely.constrained_delaunay_triangles(poly)
+        except Exception:
+            return
+        verts = []
+        for tri in tris.geoms:
+            for x, z in list(tri.exterior.coords)[:3]:
+                verts.append((x, yfun(x, z), z))
+        if not verts:
+            return
+        v = np.asarray(verts, dtype=np.float32)
+        ring = np.asarray([(x, yfun(x, z), z) for x, z in poly.exterior.coords], dtype=np.float32)
+        cxz = v[:, [0, 2]].mean(axis=0)
+        key = (int(math.floor(cxz[0] / TILE)), int(math.floor(cxz[1] / TILE)))
+        tile(key)["yards"].append((kind, v))
+        tile(key)["yards"].append((kind + 100, ring))
 
     # ---- junctions: where two or more streets share a node --------------------------------------------
     from collections import defaultdict
@@ -353,6 +505,7 @@ def run(cfg, roads_cfg):
             ways[k].add(ri)
     clear = defaultdict(lambda: [0.0, 0.0])
     patches = []
+    pads = []
     for k, ws in ways.items():
         if len(ws) < 2 or deg[k] < 3:
             continue
@@ -375,6 +528,18 @@ def run(cfg, roads_cfg):
         if polys:
             u = shapely.union_all(polys).buffer(2.5, join_style="round").buffer(-2.5, join_style="round")
             patches.append((u, ws))
+            # the footpath round each corner: the band beside the kerbs, near the crossing, off the carriageways
+            band, inner = [], []
+            for ri in ws:
+                l2, l3, w, cls = road_lines[ri]
+                t = l2.project(J)
+                sub = shapely.ops.substring(l2, max(0.0, t - 14.0), min(l2.length, t + 14.0))
+                if sub.length > 0.1:
+                    band.append(sub.buffer(w * 0.5 + KERB + WALK, cap_style="flat"))
+                    inner.append(sub.buffer(w * 0.5 + KERB, cap_style="flat"))
+            reach = max(road_lines[ri][2] for ri in ws) * 0.5 + KERB + WALK + 1.5
+            pad = shapely.union_all(band).difference(shapely.union_all(inner)).difference(u).intersection(J.buffer(reach))
+            pads.append((pad, ws))
     merged = shapely.union_all([p for p, _ in patches]) if patches else None
     n_junc = 0
     if merged is not None:
@@ -387,9 +552,12 @@ def run(cfg, roads_cfg):
             verts = []
             for tri in tris.geoms:
                 for x, z in list(tri.exterior.coords)[:3]:
-                    ri = int(lines_tree.nearest(Point(x, z)))
-                    l2, l3, w, cls = road_lines[ri]
-                    y = l3.interpolate(l2.project(Point(x, z))).z + 0.15
+                    hits = [h for h in lines_tree.query(Point(x, z), predicate="dwithin", distance=12.0)
+                            if road_lines[h][3] not in NO_WALK]
+                    if not hits:
+                        hits = [int(lines_tree.nearest(Point(x, z)))]
+                    hits.sort(key=lambda h: road_lines[h][0].distance(Point(x, z)))
+                    y = max(surface(h, x, z) for h in hits[:3]) + 0.015       # over every ribbon meeting here
                     verts.append((x, y, z))
             if not verts:
                 continue
@@ -398,7 +566,16 @@ def run(cfg, roads_cfg):
             key = (int(math.floor(cxz[0] / TILE)), int(math.floor(cxz[1] / TILE)))
             tile(key)["junc"].append(v)
             n_junc += 1
-    print("  junctions → %d surfaces (%ds)" % (n_junc, time.time() - t0), flush=True)
+    n_pad = 0
+    for pad, ws in pads:
+        for comp in (pad.geoms if hasattr(pad, "geoms") else [pad]):
+            if comp.geom_type != "Polygon" or comp.area < 0.5:
+                continue
+            comp = comp.simplify(0.05)
+            ref = ws[0]
+            put_poly(6, comp, lambda x, z: max(surface(h, x, z) for h in ws) + 0.165)
+            n_pad += 1
+    print("  junctions → %d surfaces, %d footpath corners (%ds)" % (n_junc, n_pad, time.time() - t0), flush=True)
 
     # ---- props: traffic signals and bus shelters from OSM, speed breakers on the longer side streets ----
     pois = gpd.read_file(os.path.join(bdir, "cache", "osm.gpkg"), layer="pois").to_crs(cfg["crs"])
@@ -440,7 +617,9 @@ def run(cfg, roads_cfg):
                     to_j = np.asarray(P.coords[0]) - a
                     d = to_j / max(np.linalg.norm(to_j), 1e-6)
                     q = a + drive_left(d) * (w * 0.5 + 0.6)
-                    y = l3.interpolate(ta).z + 0.15
+                    if any(h2 != h and carriage[h2].contains(Point(q[0], q[1])) for h2 in ctree2.query(Point(q[0], q[1]))):
+                        continue
+                    y = surface(h, a[0], a[1]) + 0.15
                     f = -d                                              # the lights face the oncoming driver
                     put_prop(1, q[0], y, q[1], math.atan2(f[0], f[1]), w)
                     n_props += 1
@@ -457,13 +636,22 @@ def run(cfg, roads_cfg):
             n = drive_left(d)
             sgn = 1.0 if float(np.dot(side, n)) >= 0 else -1.0
             q = c + n * sgn * (w * 0.5 + KERB + WALK * 0.5)
-            y = l3.interpolate(t).z + 0.2
+            if any(h2 != h and carriage[h2].contains(Point(q[0], q[1])) for h2 in ctree2.query(Point(q[0], q[1]))):
+                continue
+            y = surface(h, c[0], c[1]) + 0.15
             f = -n * sgn                                                # open side faces the road
             put_prop(2, q[0], y, q[1], math.atan2(f[0], f[1]), 4.0)
             n_props += 1
+    jkeys = [Point(k) for k, ws in ways.items() if len(ws) >= 2 and deg[k] >= 3]
+    jtree = STRtree(jkeys)
     for ri, (l2, l3, w, cls) in enumerate(road_lines):
         if cls in ("residential", "unclassified", "tertiary") and l2.length > 110.0 and ri % 3 == 0:
             t = l2.length * (0.35 + 0.3 * ((ri * 7919) % 100) / 100.0)
+            c0, c1 = clear[ri] if ri in clear else (0.0, 0.0)
+            if t < c0 + 18.0 or t > l2.length - c1 - 18.0:
+                continue
+            if len(jtree.query(l2.interpolate(t), predicate="dwithin", distance=18.0)):
+                continue
             c = np.asarray(l2.interpolate(t).coords[0])
             c2 = np.asarray(l2.interpolate(min(l2.length, t + 1.0)).coords[0])
             d = (c2 - c) / max(np.linalg.norm(c2 - c), 1e-6)
@@ -471,6 +659,76 @@ def run(cfg, roads_cfg):
             put_prop(3, c[0], y, c[1], math.atan2(d[0], d[1]), w)
             n_props += 1
     print("  props → %d (signals, bus shelters, speed breakers) (%ds)" % (n_props, time.time() - t0), flush=True)
+
+    # ---- yards: paving in front of every building, compound walls round houses and mills, trees ----------
+    n_yard = n_wall = n_tree = 0
+    ytrees = []
+    HOUSES = {"tn_house", "city_house", "bungalow", "hill_cottage"}
+    gy = lambda x, z: float(height(np.array([x]), np.array([z]))[0])   # noqa: E731
+    for (R, kind, C, nx, nz, hx, hz) in placed:
+        F = C + nz * hz
+        hits = wtree.query(Point(F), predicate="dwithin", distance=30.0)
+        if not len(hits):
+            continue
+        h = min(hits, key=lambda q: road_lines[q][0].distance(Point(F)))
+        gap = road_lines[h][0].distance(Point(F)) - (road_lines[h][2] * 0.5 + KERB + WALK)
+        house = kind in HOUSES or kind == "mill_shed"
+        side = (3.0 if kind == "mill_shed" else 1.0) if house else 0.0
+        if 0.4 < gap < 25.0:
+            yard = rect(C + nz * (hz + gap / 2 + 0.3), nx, nz, hx + side, gap / 2 + 0.3)
+            for q in wtree.query(yard, predicate="intersects"):
+                yard = yard.difference(walkzone[q])
+            for q in near_rects(yard):
+                if q is not R and yard.intersects(q):
+                    yard = yard.difference(q)
+            if not yard.is_empty:
+                part = max(yard.geoms, key=lambda q: q.area) if hasattr(yard, "geoms") else yard
+                if part.geom_type == "Polygon" and part.area > 2.0:
+                    ytrees.append(part)
+                    put_poly(2 if house else 1, part.simplify(0.05), lambda x, z: gy(x, z) + 0.06)
+                    n_yard += 1
+        if house and gap > 1.0:
+            b_ = 3.0 if kind == "mill_shed" else 1.5
+            gate = 6.0 if kind == "mill_shed" else 3.2
+            fd = hz + gap - 0.15
+            FL = C - nx * (hx + side) + nz * fd
+            FR = C + nx * (hx + side) + nz * fd
+            BL = C - nx * (hx + side) - nz * (hz + b_)
+            BR = C + nx * (hx + side) - nz * (hz + b_)
+            GL = C - nx * gate / 2 + nz * fd
+            GR = C + nx * gate / 2 + nz * fd
+            wall = shapely.LineString([GL, FL, BL, BR, FR, GR])
+            for q in wtree.query(wall, predicate="intersects"):
+                wall = wall.difference(walkzone[q])
+            for q in near_rects(wall.buffer(0.5)):
+                if q is not R and wall.intersects(q.buffer(0.3)):
+                    wall = wall.difference(q.buffer(0.3))
+            for part in (wall.geoms if hasattr(wall, "geoms") else [wall]):
+                if part.geom_type == "LineString" and part.length > 1.0:
+                    c = np.asarray(part.coords)
+                    v = np.asarray([(x, gy(x, z), z) for x, z in c], dtype=np.float32)
+                    key = (int(math.floor(c[:, 0].mean() / TILE)), int(math.floor(c[:, 1].mean() / TILE)))
+                    tile(key)["yards"].append((5 if kind == "mill_shed" else 3, v))
+                    n_wall += 1
+    ytree = STRtree(ytrees) if ytrees else None
+    rng = np.random.default_rng(11)
+    for (cx, cz), t in list(tiles.items()):
+        for i in range(26):
+            for j in range(26):
+                x = cx * TILE + (i + 0.15 + 0.7 * rng.random()) * 9.85
+                z = cz * TILE + (j + 0.15 + 0.7 * rng.random()) * 9.85
+                if rng.random() > 0.3:
+                    continue
+                P = Point(x, z)
+                if len(wtree.query(P, predicate="dwithin", distance=1.2)):
+                    continue
+                if any(q.distance(P) < 2.0 for q in grid.get((int(math.floor(x / 32)), int(math.floor(z / 32))), ())):
+                    continue
+                if ytree is not None and len(ytree.query(P, predicate="dwithin", distance=0.8)):
+                    continue
+                t["yards"].append((4, np.asarray([(x, gy(x, z), z)], dtype=np.float32)))
+                n_tree += 1
+    print("  yards → %d paved, %d wall runs, %d trees (%ds)" % (n_yard, n_wall, n_tree, time.time() - t0), flush=True)
 
     # ---- ground, then write -------------------------------------------------------------------------
     for (cx, cz), t in tiles.items():
@@ -488,7 +746,7 @@ def run(cfg, roads_cfg):
                 if i1 >= i0 and j1 >= j0:
                     sub = H[i0:i1 + 1, j0:j1 + 1]
                     np.minimum(sub, y - 0.3, out=sub)
-        buf = bytearray(b"CBE4")
+        buf = bytearray(b"CBE5")
         buf += struct.pack("<iii", cx, cz, HN)
         buf += H.astype("<f4").tobytes()
         buf += struct.pack("<i", len(t["roads"]))
@@ -513,18 +771,30 @@ def run(cfg, roads_cfg):
         buf += struct.pack("<i", len(t["props"]))
         for kind, x, y, z, yaw, size in t["props"]:
             buf += struct.pack("<B5f", kind, x, y, z, yaw, size)
+        buf += struct.pack("<i", len(t["yards"]))
+        for kind, v in t["yards"]:
+            buf += struct.pack("<BH", kind, len(v))
+            buf += v.astype("<f4").tobytes()
         name = "CBE_%d_%d" % (cx, cz)
-        with open(os.path.join(out, "chunks", name + ".bin"), "wb") as f:
+        with open(os.path.join(tmp, name + ".bin"), "wb") as f:
             f.write(bytes(buf))
         t["n"] = (len(t["roads"]), len(t["blds"]))
     keys = np.array(list(tiles.keys()))
-    index = {"tile": TILE, "hstep": HSTEP, "hn": HN, "origin": cfg["origin"], "crs": cfg["crs"], "format": "CBE4",
+    index = {"tile": TILE, "hstep": HSTEP, "hn": HN, "origin": cfg["origin"], "crs": cfg["crs"], "format": "CBE5",
              "classes": classes, "variants": kit.names,
              "tiles": {"%d,%d" % k: list(t["n"]) for k, t in tiles.items()},
              "bounds": [int(keys[:, 0].min()), int(keys[:, 1].min()), int(keys[:, 0].max()), int(keys[:, 1].max())],
              "dem_clamped_south": dem.clamped > 0}
+    import shutil
+    old = os.path.join(out, "chunks.old")
+    if os.path.exists(old):
+        shutil.rmtree(old)
+    if os.path.exists(os.path.join(out, "chunks")):
+        os.replace(os.path.join(out, "chunks"), old)
+    os.replace(tmp, os.path.join(out, "chunks"))
     with open(os.path.join(out, "index.json"), "w") as f:
         json.dump(index, f, separators=(",", ":"))
+    shutil.rmtree(old, ignore_errors=True)
     size = sum(os.path.getsize(os.path.join(out, "chunks", n)) for n in os.listdir(os.path.join(out, "chunks")))
     print("CHUNK %d tiles, %d road pieces, %d buildings (%d designed), %.1f MB, %ds" % (
         len(tiles), n_pieces, sum(len(t["blds"]) for t in tiles.values()), n_kit, size / 1e6, time.time() - t0))
