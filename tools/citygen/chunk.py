@@ -220,45 +220,57 @@ def run(cfg, roads_cfg):
         base = float(height(ext[:, 0], ext[:, 1]).min()) - 0.3
         rnd = (seed >> 8) % 1000 / 1000.0
         col = cols[seed % len(cols)]
-        # a designed building where the footprint is a house-sized rectangle by a street
+        # every footprint gets a designed building, faced towards its nearest street: shop rows on the main
+        # roads, Tamil Nadu houses (now and then a corner shop) on every other street, mills on big plots
         variant, kd = -1, [0.0] * 7
         if kit.names:
             rr = g.minimum_rotated_rectangle
-            if rr.geom_type == "Polygon" and g.area / max(rr.area, 1e-6) >= 0.72:
-                rc = np.asarray(rr.exterior.coords)[:4]
+            rc = np.asarray(rr.exterior.coords)[:4] if rr.geom_type == "Polygon" else None
+            if rc is not None and len(rc) == 4:
                 e1, e2 = rc[1] - rc[0], rc[2] - rc[1]
                 l1, l2 = np.linalg.norm(e1), np.linalg.norm(e2)
-                if min(l1, l2) >= 4.5 and max(l1, l2) <= 36.0:
-                    C = rc.mean(axis=0)
+                fill = math.sqrt(min(1.0, g.area / max(rr.area, 1e-6)))        # L- and odd shapes: shrink to fit
+                if min(l1, l2) > 0.5:
+                    C = np.asarray(g.representative_point().coords[0]) if fill < 0.8 else rc.mean(axis=0)
                     ni = line_tree.nearest(Point(C))
                     sp = shapely.ops.nearest_points(road_geoms[ni], Point(C))[0]
                     ds = np.array([sp.x - C[0], sp.y - C[1]])
-                    if np.linalg.norm(ds) <= 45.0:
-                        ds /= max(np.linalg.norm(ds), 1e-6)
-                        u, v = e1 / l1, e2 / l2
-                        cands = [(u, l1, l2), (-u, l1, l2), (v, l2, l1), (-v, l2, l1)]
-                        face, depth, front = max(cands, key=lambda q: float(np.dot(q[0], ds)))
-                        if floors >= 4:
-                            kind = "hotel" if front * depth > 280 and seed % 7 == 0 else "apartment"
-                        elif shop:
-                            kind = "shop_house"
-                        elif floors <= 1:
-                            kind = "bungalow"
-                        else:
-                            kind = "shop_house" if on_main else "city_house"
-                        name = kit.pick(kind, floors, front, depth)
-                        if name:
-                            (ecx, ecz), (bw, bd) = kit.extent(name)
-                            sx, sz = front / bw, depth / bd
-                            if 0.6 <= sx <= 1.6 and 0.6 <= sz <= 1.6:
-                                nz = np.array([face[0], face[1]])
-                                nx = np.array([nz[1], -nz[0]])
-                                # origin = C − basis·(ecx, 0, ecz); basis columns nx·sx, up, nz·sz
-                                ox = C[0] - (nx[0] * sx * ecx + nz[0] * sz * ecz)
-                                oz = C[1] - (nx[1] * sx * ecx + nz[1] * sz * ecz)
-                                variant = kit.names.index(name)
-                                kd = [ox, base + 0.3, oz, nz[0], nz[1], sx, sz]
-                                n_kit += 1
+                    ds /= max(np.linalg.norm(ds), 1e-6)
+                    u, v = e1 / l1, e2 / l2
+                    cands = [(u, l1, l2), (-u, l1, l2), (v, l2, l1), (-v, l2, l1)]
+                    face, depth, front = max(cands, key=lambda q: float(np.dot(q[0], ds)))
+                    front, depth = front * fill, depth * fill
+                    main_front = on_main and float(np.linalg.norm(np.array([sp.x, sp.y]) - C)) < 30.0
+                    big = max(front, depth) > 40.0 or front * depth > 1300.0
+                    r = seed % 100
+                    if big and not main_front:
+                        # big plots: some mills and godowns, more shopping complexes and flats
+                        kind = "mill_shed" if r < 30 else ("apartment" if floors >= 3 and r < 65 else "commercial")
+                    elif main_front or shop:
+                        kind = "commercial" if front >= 12.5 else "shop_house"
+                    elif floors >= 4 and front * depth > 220:
+                        kind = "hotel" if r < 8 and front * depth > 280 else "apartment"
+                    elif r < 8:
+                        kind = "shop_house"                                    # corner shops in the lanes
+                    elif r < 18:
+                        kind = "city_house"
+                    elif r < 24 and floors <= 1 and front * depth > 110:
+                        kind = "bungalow"
+                    else:
+                        kind = "tn_house"
+                    name = kit.pick(kind, floors, front, depth) or kit.pick("city_house", floors, front, depth)
+                    if name:
+                        (ecx, ecz), (bw, bd) = kit.extent(name)
+                        sx = min(max(front / bw, 0.55), 1.8)
+                        sz = min(max(depth / bd, 0.55), 1.8)
+                        nz = np.array([face[0], face[1]])
+                        nx = np.array([nz[1], -nz[0]])
+                        # origin = C − basis·(ecx, 0, ecz); basis columns nx·sx, up, nz·sz
+                        ox = C[0] - (nx[0] * sx * ecx + nz[0] * sz * ecz)
+                        oz = C[1] - (nx[1] * sx * ecx + nz[1] * sz * ecz)
+                        variant = kit.names.index(name)
+                        kd = [ox, base + 0.3, oz, nz[0], nz[1], sx, sz]
+                        n_kit += 1
         cxz = ext.mean(axis=0)
         key = (int(math.floor(cxz[0] / TILE)), int(math.floor(cxz[1] / TILE)))
         tile(key)["blds"].append((floors, (1 if shop else 0) | (2 if gen_h else 0), col, base, variant, kd,

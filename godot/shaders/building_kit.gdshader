@@ -16,11 +16,37 @@ uniform float wet = 0.0;
 varying vec3 wpos;
 varying vec3 wnrm;
 varying flat float layer;
+varying float hloc;
+
+// weathering on painted walls and concrete, as in the Blender designs (tools/buildings_tn.py weather()):
+// rain streaks under everything, a darker splash band at the foot, large faded patches
+float hash(vec3 p) {
+	p = fract(p * 0.3183099 + 0.1);
+	p *= 17.0;
+	return fract(p.x * p.y * p.z * (p.x + p.y + p.z));
+}
+float vnoise(vec3 x) {
+	vec3 i = floor(x);
+	vec3 f = fract(x);
+	f = f * f * (3.0 - 2.0 * f);
+	return mix(mix(mix(hash(i), hash(i + vec3(1, 0, 0)), f.x), mix(hash(i + vec3(0, 1, 0)), hash(i + vec3(1, 1, 0)), f.x), f.y),
+		mix(mix(hash(i + vec3(0, 0, 1)), hash(i + vec3(1, 0, 1)), f.x), mix(hash(i + vec3(0, 1, 1)), hash(i + vec3(1, 1, 1)), f.x), f.y), f.z);
+}
+float weathering(vec3 p, vec3 n, float h) {
+	float along = abs(n.x) > abs(n.z) ? p.z : p.x;
+	vec3 q = vec3(along * 7.0, p.y * 0.35, 0.0);
+	float streak = vnoise(q) * 0.65 + vnoise(q * 2.3) * 0.35;
+	float dark = 1.0 - 0.3 * smoothstep(0.48, 0.78, streak);
+	float foot = mix(0.62, 1.0, clamp(h / 1.1, 0.0, 1.0));
+	float patch = mix(0.86, 1.04, smoothstep(0.35, 0.7, vnoise(p * 0.35)));
+	return dark * foot * patch;
+}
 
 void vertex() {
 	wpos = (MODEL_MATRIX * vec4(VERTEX, 1.0)).xyz;
 	wnrm = normalize((MODEL_MATRIX * vec4(NORMAL, 0.0)).xyz);
 	layer = floor(COLOR.a * 255.0 + 0.5);
+	hloc = VERTEX.y;
 }
 
 vec3 unpack_n(vec4 t) {
@@ -46,6 +72,9 @@ void fragment() {
 		vec3 ay = texture(albedo_tex, vec3(p.xz, float(li))).rgb;
 		vec3 az = texture(albedo_tex, vec3(p.xy, float(li))).rgb;
 		ALBEDO = (ax * bw.x + ay * bw.y + az * bw.z) * COLOR.rgb * mix(1.0, 0.7, wet);
+		if (li == 4 || li == 5 || li == 9 || li == 10) {
+			ALBEDO *= mix(1.0, weathering(wpos, n, hloc), li == 10 ? 0.6 : 1.0);
+		}
 		vec3 tx = unpack_n(texture(normal_tex, vec3(p.zy, float(li))));
 		vec3 ty = unpack_n(texture(normal_tex, vec3(p.xz, float(li))));
 		vec3 tz = unpack_n(texture(normal_tex, vec3(p.xy, float(li))));

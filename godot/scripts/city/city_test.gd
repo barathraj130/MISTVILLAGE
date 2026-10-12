@@ -18,6 +18,7 @@ var pitch := -0.05
 var cam_y := 420.0
 var path := PackedVector3Array()            # the road being driven (auto mode)
 var path_i := 0
+var landed := false
 var used := {}                              # road pieces already driven (by first point)
 
 
@@ -116,6 +117,9 @@ func _process(dt: float) -> void:
 	# ride 2.2 m above the ground once the tile under us is loaded
 	var g: float = streamer.height_at(cam.position.x, cam.position.z)
 	if not is_nan(g):
+		if not auto and not landed:                   # free camera: start at eye height on the street
+			cam_y = g + 1.8
+			landed = true
 		cam_y = lerpf(cam_y, g + 2.2, minf(1.0, dt * 4.0)) if auto else maxf(cam_y, g + 1.0)
 	cam.position.y = cam_y
 	cam.basis = Basis.from_euler(Vector3(pitch, yaw, 0))
