@@ -36,7 +36,7 @@ float weathering(vec3 p, vec3 n, float h) {
 	float along = abs(n.x) > abs(n.z) ? p.z : p.x;
 	vec3 q = vec3(along * 7.0, p.y * 0.35, 0.0);
 	float streak = vnoise(q) * 0.65 + vnoise(q * 2.3) * 0.35;
-	float dark = 1.0 - 0.3 * smoothstep(0.48, 0.78, streak);
+	float dark = 1.0 - 0.17 * smoothstep(0.5, 0.8, streak) * smoothstep(0.3, 0.6, vnoise(p * 0.12 + 3.1));
 	float foot = mix(0.62, 1.0, clamp(h / 1.1, 0.0, 1.0));
 	float patch = mix(0.86, 1.04, smoothstep(0.35, 0.7, vnoise(p * 0.35)));
 	return dark * foot * patch;

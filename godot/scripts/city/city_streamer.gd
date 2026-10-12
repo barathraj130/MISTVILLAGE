@@ -5,8 +5,9 @@ extends Node3D
 ## finished nodes, at most `per_frame` tiles a frame, nearest first. Nothing global is kept except the index
 ## and the designed-building meshes.
 ##
-## A tile holds: ground (33 × 33 heights, 8 m grid, heightmap collision); roads (worn asphalt, road_surface
-## shader, concave collision); buildings — designed ones (building_kit MultiMeshes) within KIT_RANGE with plain
+## A tile holds: ground (33 × 33 heights, 8 m grid, heightmap collision); roads (worn asphalt with their
+## paint, road_surface shader, concave collision); kerbed paver footpaths along every street with streetlights on
+## the bigger ones; buildings — designed ones (building_kit MultiMeshes) within KIT_RANGE with plain
 ## facade blocks standing in for them beyond, and facade blocks for every other footprint (concave collision).
 ## Game frame: x = east, z = south, y = elevation (metres). Tile format: see tools/citygen/chunk.py.
 
@@ -16,6 +17,9 @@ const RANK := {"trunk": 0.07, "primary": 0.06, "secondary": 0.05, "tertiary": 0.
 	"residential": 0.025, "living_street": 0.02, "service": 0.015, "track": 0.01, "footway": 0.035}
 const FLOOR := 3.2
 const KIT_RANGE := 250.0
+const KERB := 0.2
+const LAMP_STEP := 32.0
+const MARK := {"motorway": 3, "trunk": 3, "primary": 2, "secondary": 2, "tertiary": 1, "unclassified": 1, "residential": 1}
 
 @export var radius := 3                    # tiles each way to keep loaded (3 → 7 × 7 tiles ≈ 1.8 km square)
 @export var per_frame := 1                 # tiles added to the scene per frame at most
@@ -30,6 +34,9 @@ var _mutex := Mutex.new()
 var road_mat: Material
 var ground_mat: Material
 var building_mat: Material
+var walk_mat: Material
+var kerb_mat: Material
+var lamp_mesh: ArrayMesh
 var kit
 var kit_meshes: Array = []                 # variant index → Mesh (or null)
 var body: StaticBody3D
@@ -43,6 +50,7 @@ func _ready() -> void:
 	body = StaticBody3D.new()
 	body.name = "CityCollision"
 	add_child(body)
+	lamp_mesh = _lamp()
 	kit = Kit.new()
 	if kit.setup():
 		for vname in index.get("variants", []):
@@ -51,10 +59,50 @@ func _ready() -> void:
 		kit = null
 
 
-func set_materials(road: Material, ground: Material, buildings: Material) -> void:
+func set_materials(road: Material, ground: Material, buildings: Material, walk: Material = null, kerb: Material = null) -> void:
 	road_mat = road
 	ground_mat = ground
 	building_mat = buildings
+	walk_mat = walk
+	kerb_mat = kerb
+
+
+## A streetlight: an 8 m galvanised pole with an arm reaching over the road (+z) and a lamp head.
+func _lamp() -> ArrayMesh:
+	var am := ArrayMesh.new()
+	var st := SurfaceTool.new()
+	st.begin(Mesh.PRIMITIVE_TRIANGLES)
+	var pole := CylinderMesh.new()
+	pole.top_radius = 0.06
+	pole.bottom_radius = 0.09
+	pole.height = 8.0
+	pole.radial_segments = 8
+	st.append_from(pole, 0, Transform3D(Basis(), Vector3(0, 4.0, 0)))
+	var arm := BoxMesh.new()
+	arm.size = Vector3(0.08, 0.08, 1.8)
+	st.append_from(arm, 0, Transform3D(Basis(), Vector3(0, 7.9, 0.9)))
+	var foot := BoxMesh.new()
+	foot.size = Vector3(0.35, 0.5, 0.35)
+	st.append_from(foot, 0, Transform3D(Basis(), Vector3(0, 0.25, 0)))
+	st.commit(am)
+	var head := BoxMesh.new()
+	head.size = Vector3(0.32, 0.12, 0.65)
+	var st2 := SurfaceTool.new()
+	st2.begin(Mesh.PRIMITIVE_TRIANGLES)
+	st2.append_from(head, 0, Transform3D(Basis(), Vector3(0, 7.82, 1.75)))
+	st2.commit(am)
+	var metal := StandardMaterial3D.new()
+	metal.albedo_color = Color(0.42, 0.43, 0.44)
+	metal.metallic = 0.7
+	metal.roughness = 0.45
+	var glow := StandardMaterial3D.new()
+	glow.albedo_color = Color(0.9, 0.9, 0.85)
+	glow.emission_enabled = true
+	glow.emission = Color(1.0, 0.92, 0.78)
+	glow.emission_energy_multiplier = 0.4
+	am.surface_set_material(0, metal)
+	am.surface_set_material(1, glow)
+	return am
 
 
 func _process(_dt: float) -> void:
@@ -104,7 +152,7 @@ func _build(k: Vector2i) -> void:
 	var f := FileAccess.open(path, FileAccess.READ)
 	if f == null:
 		return
-	if f.get_buffer(4).get_string_from_ascii() != "CBE2":
+	if f.get_buffer(4).get_string_from_ascii() != "CBE3":
 		return
 	f.get_32()
 	f.get_32()
@@ -116,7 +164,9 @@ func _build(k: Vector2i) -> void:
 		var fl := f.get_8()
 		var np := f.get_16()
 		var w := f.get_float()
-		roads.append({"c": classes[cid] if cid < classes.size() else "residential", "o": fl & 1, "w": w,
+		var a0 := f.get_float()
+		var ln := f.get_float()
+		roads.append({"c": classes[cid] if cid < classes.size() else "residential", "o": fl & 1, "w": w, "a0": a0, "len": ln,
 			"p": f.get_buffer(np * 12).to_float32_array()})
 	var blds: Array = []
 	for _b in _s32(f.get_32()):
@@ -130,10 +180,18 @@ func _build(k: Vector2i) -> void:
 		var kd := f.get_buffer(28).to_float32_array()
 		var xz := f.get_buffer(nv * 8).to_float32_array()
 		blds.append([floors, fl, col, rnd, base, variant, kd, xz])
+	var walks: Array = []
+	for _w in _s32(f.get_32()):
+		var wf := f.get_8()
+		f.get_8()
+		var wn := f.get_16()
+		var ww := f.get_float()
+		walks.append([wf, ww, f.get_buffer(wn * 12).to_float32_array()])
 	var out := {}
 	_ground(k, hn, h, out)
 	_roads(roads, out)
 	_buildings(blds, out)
+	_walks(walks, out)
 	out["roads_raw"] = roads
 	_mutex.lock()
 	ready_q.append([k, out])
@@ -183,6 +241,7 @@ func _roads(roads: Array, out: Dictionary) -> void:
 	var nm := PackedVector3Array()
 	var cl := PackedColorArray()
 	var uv := PackedVector2Array()
+	var uv2 := PackedVector2Array()
 	var idx := PackedInt32Array()
 	var faces := PackedVector3Array()
 	for r in roads:
@@ -195,8 +254,12 @@ func _roads(roads: Array, out: Dictionary) -> void:
 		var pts := PackedVector3Array()
 		for q in cnt:
 			pts.append(Vector3(p[q * 3], p[q * 3 + 1] + lift, p[q * 3 + 2]))
-		var col := Color(minf(half, 9.0) / 10.0, 1, 1)
-		var along := 0.0
+		var code: int = MARK.get(r["c"], 0)
+		if code > 0 and half >= 6.0:
+			code = 3
+		var col := Color(minf(half, 9.0) / 10.0, (code + 4 * int(r["o"])) / 8.0, 0)
+		var along: float = r["a0"]
+		var wl := Vector2(r["len"], 0)
 		var base := v.size()
 		for q in cnt:
 			var t := pts[mini(q + 1, cnt - 1)] - pts[maxi(q - 1, 0)]
@@ -211,6 +274,8 @@ func _roads(roads: Array, out: Dictionary) -> void:
 			cl.append(col)
 			uv.append(Vector2(0.0, along / 6.0))
 			uv.append(Vector2(half / 3.0, along / 6.0))
+			uv2.append(wl)
+			uv2.append(wl)
 		for q in cnt - 1:
 			var a := base + q * 2
 			idx.append_array([a, a + 2, a + 1, a + 1, a + 2, a + 3])
@@ -223,6 +288,7 @@ func _roads(roads: Array, out: Dictionary) -> void:
 	ra[Mesh.ARRAY_NORMAL] = nm
 	ra[Mesh.ARRAY_COLOR] = cl
 	ra[Mesh.ARRAY_TEX_UV] = uv
+	ra[Mesh.ARRAY_TEX_UV2] = uv2
 	ra[Mesh.ARRAY_INDEX] = idx
 	var rm := ArrayMesh.new()
 	rm.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, ra)
@@ -324,6 +390,95 @@ func _buildings(blds: Array, out: Dictionary) -> void:
 	out["n_kit"] = kits.values().reduce(func(acc, a): return acc + a.size(), 0)
 
 
+## Footpath strips: paver top, a skirt down the outer edge into the ground, and the kerb on the road side
+## (painted black and white on the main roads); streetlights every LAMP_STEP metres on the bigger streets.
+func _walks(walks: Array, out: Dictionary) -> void:
+	var top := [PackedVector3Array(), PackedVector3Array(), PackedColorArray(), PackedVector2Array(), PackedVector2Array(), PackedInt32Array()]
+	var kb := [PackedVector3Array(), PackedVector3Array(), PackedColorArray(), PackedVector2Array(), PackedVector2Array(), PackedInt32Array()]
+	var faces := PackedVector3Array()
+	var lamps: Array = []
+	var white := Color(0.86, 0.86, 0.82)
+	var black := Color(0.08, 0.08, 0.08)
+	var grey := Color(0.62, 0.61, 0.58)
+	for wk in walks:
+		var fl: int = wk[0]
+		var hw: float = float(wk[1]) * 0.5
+		var p: PackedFloat32Array = wk[2]
+		var n := p.size() / 3
+		if n < 2:
+			continue
+		var pts := PackedVector3Array()
+		for i in n:
+			pts.append(Vector3(p[i * 3], p[i * 3 + 1], p[i * 3 + 2]))
+		var road_right := (fl & 4) != 0
+		var along := 0.0
+		var next_lamp := LAMP_STEP * 0.5
+		for i in n - 1:
+			var a := pts[i]
+			var b := pts[i + 1]
+			var seg := b - a
+			var L := Vector2(seg.x, seg.z).length()
+			if L < 0.05:
+				continue
+			var t := Vector3(seg.x, 0, seg.z) / L
+			var rw := Vector3(t.z, 0, -t.x) if road_right else Vector3(-t.z, 0, t.x)      # towards the road
+			# miter-free: each segment is its own quad; neighbours overlap slightly at bends
+			var ai := a + rw * hw
+			var bi := b + rw * hw
+			var ao := a - rw * hw
+			var bo := b - rw * hw
+			_quad(top, ai, bi, bo, ao, Vector3.UP, Color.WHITE, Vector2(hw, along) / 2.0, Vector2(hw, along + L) / 2.0,
+				Vector2(-hw, along + L) / 2.0, Vector2(-hw, along) / 2.0, Vector2.ZERO)
+			faces.append_array([ai, bi, bo, ai, bo, ao])
+			var dn := Vector3(0, -0.7, 0)
+			_quad(kb, ao, bo, bo + dn, ao + dn, -rw, Color(0.5, 0.48, 0.45), Vector2.ZERO, Vector2.ZERO, Vector2.ZERO,
+				Vector2.ZERO, Vector2.ZERO)
+			# kerb: 0.2 m wide, a touch above the footpath, its face dropping to the road
+			var col := grey
+			if fl & 1:
+				col = white if int(along / 1.2) % 2 == 0 else black
+			var up := Vector3(0, 0.02, 0)
+			var ki := ai + rw * KERB + up
+			var kj := bi + rw * KERB + up
+			_quad(kb, ai + up, bi + up, kj, ki, Vector3.UP, col, Vector2.ZERO, Vector2.ZERO, Vector2.ZERO, Vector2.ZERO, Vector2.ZERO)
+			var drop := Vector3(0, -0.4, 0)
+			_quad(kb, ki, kj, kj + drop, ki + drop, rw, col, Vector2.ZERO, Vector2.ZERO, Vector2.ZERO, Vector2.ZERO, Vector2.ZERO)
+			faces.append_array([ai + up, bi + up, kj, ai + up, kj, ki])
+			if fl & 2:
+				while next_lamp <= along + L:
+					var q := a + seg * ((next_lamp - along) / L) + rw * (hw - 0.35)
+					var xz := Vector3.UP.cross(rw).normalized()
+					lamps.append(Transform3D(Basis(xz, Vector3.UP, rw), q))
+					next_lamp += LAMP_STEP
+			along += L
+	for pair in [["walk_mesh", top], ["kerb_mesh", kb]]:
+		var t2: Array = pair[1]
+		if (t2[0] as PackedVector3Array).is_empty():
+			continue
+		var arr := []
+		arr.resize(Mesh.ARRAY_MAX)
+		arr[Mesh.ARRAY_VERTEX] = t2[0]
+		arr[Mesh.ARRAY_NORMAL] = t2[1]
+		arr[Mesh.ARRAY_COLOR] = t2[2]
+		arr[Mesh.ARRAY_TEX_UV] = t2[3]
+		arr[Mesh.ARRAY_INDEX] = t2[5]
+		var m := ArrayMesh.new()
+		m.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arr)
+		out[pair[0]] = m
+	if not faces.is_empty():
+		var shape := ConcavePolygonShape3D.new()
+		shape.set_faces(faces)
+		out["walk_shape"] = shape
+	if not lamps.is_empty():
+		var mm := MultiMesh.new()
+		mm.transform_format = MultiMesh.TRANSFORM_3D
+		mm.mesh = lamp_mesh
+		mm.instance_count = lamps.size()
+		for i in lamps.size():
+			mm.set_instance_transform(i, lamps[i])
+		out["lamps"] = mm
+
+
 func _quad(t: Array, a: Vector3, b: Vector3, c: Vector3, d: Vector3, nrm: Vector3, col: Color,
 		ua: Vector2, ub: Vector2, uc: Vector2, ud: Vector2, u2: Vector2) -> void:
 	var i: int = t[0].size()
@@ -393,6 +548,28 @@ func _instance(k: Vector2i, d: Dictionary) -> void:
 		mmi.multimesh = mm
 		mmi.visibility_range_end = KIT_RANGE + 10.0
 		node.add_child(mmi)
+	if d.has("walk_mesh"):
+		var wmi := MeshInstance3D.new()
+		wmi.mesh = d["walk_mesh"]
+		wmi.material_override = walk_mat
+		wmi.visibility_range_end = 700.0
+		node.add_child(wmi)
+	if d.has("kerb_mesh"):
+		var kmi := MeshInstance3D.new()
+		kmi.mesh = d["kerb_mesh"]
+		kmi.material_override = kerb_mat
+		kmi.visibility_range_end = 500.0
+		kmi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		node.add_child(kmi)
+	if d.has("walk_shape"):
+		var wcs := CollisionShape3D.new()
+		wcs.shape = d["walk_shape"]
+		_shape(node, wcs)
+	if d.has("lamps"):
+		var lmi := MultiMeshInstance3D.new()
+		lmi.multimesh = d["lamps"]
+		lmi.visibility_range_end = 450.0
+		node.add_child(lmi)
 	if d.has("building_shape"):
 		var bcs := CollisionShape3D.new()
 		bcs.shape = d["building_shape"]

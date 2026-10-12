@@ -5,6 +5,9 @@ shader_type spatial;
 //
 // Mesh contract: UV.x * 6 = metres across from the left edge, UV.y * 6 = metres along (road.gd / towns.gd).
 // COLOR.r = half-width / 10 (COLOR.r ≥ 0.95 = junction / lot: no lanes, just wear).
+// City roads (city_marks on, scripts/city/city_streamer.gd) also carry their paint: COLOR.g = (code + 4·oneway) / 8
+// with code 0 none · 1 dashed centre · 2 dashed centre + edge lines · 3 four lanes (double centre, lane dashes,
+// edges); UV2.x = the OSM way's length, so the paint fades out and a zebra appears where the way meets a junction.
 
 uniform sampler2D albedo_tex : source_color, filter_linear_mipmap_anisotropic, repeat_enable;
 uniform sampler2D normal_tex : hint_normal, filter_linear_mipmap_anisotropic, repeat_enable;
@@ -15,6 +18,8 @@ uniform vec3 dust : source_color = vec3(0.55, 0.43, 0.33);
 uniform float tile = 1.5;                  // texture repeats per 6 m UV unit (4 m tiles)
 uniform float wear = 1.0;                  // 0 new road … 1 well used
 uniform float wet = 0.0;
+uniform bool city_marks = false;
+uniform vec3 paint_col : source_color = vec3(0.86, 0.85, 0.8);
 
 varying vec3 wpos;
 
@@ -64,11 +69,45 @@ void fragment() {
 	// patched repairs: cut rectangles of newer, darker asphalt
 	vec2 cell = floor(wpos.xz / vec2(3.1, 2.3));
 	float pick = n2(cell * 0.137);
-	vec2 inner = fract(wpos.xz / vec2(3.1, 2.3));
-	float box = step(0.12, inner.x) * step(inner.x, 0.86) * step(0.18, inner.y) * step(inner.y, 0.8);
-	float patch = step(0.78, pick) * box * wear;
-	col = mix(col, col * 0.72, patch);
+	vec2 inner = fract(wpos.xz / vec2(3.1, 2.3) + 0.13 * vec2(n2(wpos.xz / 0.9), n2(wpos.zx / 0.8)));
+	float box = smoothstep(0.1, 0.16, inner.x) * smoothstep(0.9, 0.84, inner.x) * smoothstep(0.14, 0.2, inner.y) * smoothstep(0.86, 0.8, inner.y);
+	float patch = step(0.9, pick) * box * wear;
+	col = mix(col, col * 0.84, patch);
 	rough = mix(rough, rough + 0.08, patch);
+	// road paint: worn, faded at way ends, zebra crossings where main roads meet a junction
+	if (city_marks && lanes) {
+		float g = COLOR.g * 8.0 + 0.01;
+		bool oneway = g >= 4.0;
+		int code = int(mod(g, 4.0));
+		float along = UV.y * 6.0;
+		float len = UV2.x;
+		float to_end = min(along, len - along);
+		float a = abs(across);
+		float aa = fwidth(across) + 0.01;
+		float dash = step(fract(along / 7.5), 0.4);                       // 3 m dash, 4.5 m gap
+		float paint = 0.0;
+		if (code == 1 || code == 2) {
+			paint += oneway ? 0.0 : (1.0 - smoothstep(0.06, 0.06 + aa, a)) * dash;
+		}
+		if (code == 3) {
+			paint += oneway ? 0.0 : 1.0 - smoothstep(0.05, 0.05 + aa, abs(a - 0.13));
+			paint += (1.0 - smoothstep(0.06, 0.06 + aa, abs(a - 3.5))) * dash * step(4.5, half_w);
+		}
+		if (oneway && half_w > 3.6) {
+			paint += (1.0 - smoothstep(0.06, 0.06 + aa, a)) * dash;
+		}
+		if (code >= 2) {
+			paint += 1.0 - smoothstep(0.07, 0.07 + aa, abs(edge - 0.4));
+		}
+		paint *= smoothstep(9.0, 13.0, to_end);
+		if (code >= 2 && len > 40.0) {                                     // zebra 4–8 m before the junction
+			float zb = step(4.0, to_end) * step(to_end, 7.5) * step(0.6, edge);
+			paint = max(paint, zb * step(0.5, fract(across / 1.1)));
+		}
+		paint *= 0.55 + 0.45 * smoothstep(0.2, 0.6, n2(wpos.xz / 1.7)) * (1.0 - 0.4 * tracks);
+		col = mix(col, paint_col, clamp(paint, 0.0, 1.0));
+		rough = mix(rough, 0.55, paint);
+	}
 	// red dust blown in from the verges, thicker in the gutters
 	float dust_amt = lanes ? (1.0 - smoothstep(0.0, 0.45, edge)) * (0.35 + 0.35 * n2(wpos.xz / 4.0)) : 0.0;
 	dust_amt += 0.06 * smoothstep(0.6, 0.8, n2(wpos.xz / 9.0));

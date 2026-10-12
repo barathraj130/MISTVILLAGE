@@ -34,7 +34,16 @@ func _ready() -> void:
 	add_child(streamer)
 	var bm := ShaderMaterial.new()
 	bm.shader = preload("res://shaders/building.gdshader")
-	streamer.set_materials(_road_material(), MB.cc0_material("dry_grass", 6.0, 0.95, false), bm)
+	var walk := StandardMaterial3D.new()
+	walk.albedo_texture = load("res://assets/models/textures/parking_pavers_base.jpg")
+	walk.normal_enabled = true
+	walk.normal_texture = load("res://assets/models/textures/parking_pavers_normal.png")
+	walk.roughness_texture = load("res://assets/models/textures/parking_pavers_rough.jpg")
+	walk.albedo_color = Color(0.92, 0.88, 0.84)
+	walk.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS_ANISOTROPIC
+	var kerb: StandardMaterial3D = MB.cc0_material("concrete", 3.0, 0.85)
+	kerb.vertex_color_use_as_albedo = true
+	streamer.set_materials(_road_material(), MB.cc0_material("dry_grass", 6.0, 0.95, false), bm, walk, kerb)
 	cam = Camera3D.new()
 	cam.fov = 70.0
 	cam.far = 4000.0
@@ -92,6 +101,7 @@ func _road_material() -> Material:
 	nt.generate_mipmaps = true
 	nt.noise = nz
 	sm.set_shader_parameter("noise_tex", nt)
+	sm.set_shader_parameter("city_marks", true)
 	return sm
 
 
