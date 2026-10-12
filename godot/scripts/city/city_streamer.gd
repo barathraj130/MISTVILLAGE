@@ -46,6 +46,9 @@ var kit_meshes: Array = []                 # variant index → Mesh (or null)
 var kit_far_meshes: Array = []             # variant index → its far version (tools/kit_far.py) or null
 var kit_boxes: Array = []                  # variant index → AABB of the design (far stand-in and collision)
 var tree_meshes: Array = []                # [near Mesh, far LOD Mesh] per tree kind
+var bike_meshes: Array = []                # parked scooters and motorcycles
+var shrub_mesh: Mesh                       # planting on the medians
+var breaker_faces := PackedVector3Array()
 var signal_shader: Shader
 var body: StaticBody3D
 var stats := {"loaded": 0, "built": 0, "unloaded": 0, "buildings": 0, "designed": 0}
@@ -60,12 +63,21 @@ func _ready() -> void:
 	add_child(body)
 	lamp_mesh = _lamp()
 	signal_shader = _signal_shader()
-	for tn in ["shola_evergreen_0", "shola_evergreen_1", "shola_evergreen_2", "silver_oak_0", "eucalyptus_0"]:
-		var near_m := _gltf_mesh("res://assets/models/veg_%s.gltf" % tn)
-		var far_m := _gltf_mesh("res://assets/models/veg_%s_lod.gltf" % tn)
+	# Coimbatore street trees (tools/trees_tn.py): coconut palms and neem, near and far versions
+	for tn in ["palm_1", "palm_2", "palm_4", "neem_3", "neem_5"]:
+		var near_m := _gltf_mesh("res://assets/models/city_%s.glb" % tn)
+		var far_m := _gltf_mesh("res://assets/models/city_%s_far.glb" % tn)
 		if near_m:
 			tree_meshes.append([near_m, far_m if far_m else near_m])
+	shrub_mesh = _gltf_mesh("res://assets/models/veg_hedgerow_bush_0_lod.gltf")
+	# parked two-wheelers (tools/twowheeler.py), four paints each
+	for kind in ["scooter", "motorcycle"]:
+		for ci in 4:
+			var bm := _gltf_mesh("res://assets/vehicles/bike_%s_%d.glb" % [kind, ci])
+			if bm:
+				bike_meshes.append(bm)
 	prop_meshes = {1: _signal(), 2: _shelter(), 3: _breaker()}
+	breaker_faces = (prop_meshes[3] as Mesh).get_faces()        # read here: workers must not touch the mesh
 	kit = Kit.new()
 	if kit.setup():
 		for vname in index.get("variants", []):
@@ -299,7 +311,8 @@ func _roads(roads: Array, out: Dictionary) -> void:
 		var code: int = MARK.get(r["c"], 0)
 		if code > 0 and half >= 6.0:
 			code = 3
-		var col := Color(minf(half, 9.0) / 10.0, (code + 4 * int(r["o"])) / 8.0, 0)
+		var med := _has_median(r)
+		var col := Color(minf(half, 9.0) / 10.0, (code + 4 * int(r["o"])) / 8.0, 1.0 if med else 0.0)
 		var along: float = r["a0"]
 		var wl := Vector2(r["len"], roundf(float(r["c1"]) * 10.0) * 1000.0 + roundf(float(r["c0"]) * 10.0))
 		var base := v.size()
@@ -338,6 +351,84 @@ func _roads(roads: Array, out: Dictionary) -> void:
 	var shape := ConcavePolygonShape3D.new()
 	shape.set_faces(faces)
 	out["road_shape"] = shape
+	_medians(roads, out)
+
+
+## Two-way main roads get a raised centre median, as on Indian city roads (trunk / primary, or 11 m and wider).
+static func _has_median(r: Dictionary) -> bool:
+	return int(r["o"]) == 0 and (r["c"] in ["trunk", "motorway", "primary"] or float(r["w"]) >= 11.0)
+
+
+## The median: 1.2 m wide, 0.25 m high, kerbs painted black and yellow, a planted top; it stops short of each
+## junction (the way's clear zones) so traffic can turn; solid to drive into.
+func _medians(roads: Array, out: Dictionary) -> void:
+	var t := [PackedVector3Array(), PackedVector3Array(), PackedColorArray(), PackedVector2Array(), PackedVector2Array(), PackedInt32Array()]
+	var faces := PackedVector3Array()
+	var plants: Array = []
+	var black := Color(0.06, 0.06, 0.06)
+	var yellow := Color(0.85, 0.66, 0.08)
+	var soil := Color(0.3, 0.22, 0.15)
+	for r in roads:
+		if not _has_median(r):
+			continue
+		var p: PackedFloat32Array = r["p"]
+		var cnt := p.size() / 3
+		if cnt < 2:
+			continue
+		var lift: float = RANK.get(r["c"], 0.02) + 0.06
+		var hw := 0.6
+		var hh := 0.25
+		var along: float = r["a0"]
+		var L: float = r["len"]
+		var c0: float = r["c0"] + 3.0 if r["c0"] > 0.0 else 0.0
+		var c1: float = r["c1"] + 3.0 if r["c1"] > 0.0 else 0.0
+		for i in cnt - 1:
+			var a := Vector3(p[i * 3], p[i * 3 + 1] + lift, p[i * 3 + 2])
+			var b := Vector3(p[i * 3 + 3], p[i * 3 + 4] + lift, p[i * 3 + 5])
+			var seg := Vector3(b.x - a.x, 0, b.z - a.z)
+			var sl := seg.length()
+			if sl < 0.05:
+				continue
+			var a0 := along
+			along += Vector3(b - a).length()
+			if a0 < c0 or along > L - c1:                    # leave the junction open
+				continue
+			var sd := Vector3(seg.z, 0, -seg.x) / sl * hw
+			var up := Vector3(0, hh, 0)
+			var col := black if int(a0 / 1.0) % 2 == 0 else yellow
+			_quad(t, a + sd + up, b + sd + up, b - sd + up, a - sd + up, Vector3.UP, soil, Vector2.ZERO, Vector2.ZERO, Vector2.ZERO, Vector2.ZERO, Vector2.ZERO)
+			for side in [sd, -sd]:
+				var nrm: Vector3 = side.normalized()
+				_quad(t, a + side - Vector3(0, 0.05, 0), b + side - Vector3(0, 0.05, 0), b + side + up, a + side + up, nrm, col,
+					Vector2.ZERO, Vector2.ZERO, Vector2.ZERO, Vector2.ZERO, Vector2.ZERO)
+				faces.append_array([a + side, b + side, b + side + up, a + side, b + side + up, a + side + up])
+			faces.append_array([a + sd + up, b + sd + up, b - sd + up, a + sd + up, b - sd + up, a - sd + up])
+			if int(a0 / 3.0) != int(along / 3.0):            # a shrub every 3 m
+				plants.append(Transform3D(Basis(Vector3.UP, a0).scaled(Vector3.ONE * 0.45), (a + b) * 0.5 + up))
+		# end caps where the median stops
+	if (t[0] as PackedVector3Array).is_empty():
+		return
+	var arr := []
+	arr.resize(Mesh.ARRAY_MAX)
+	arr[Mesh.ARRAY_VERTEX] = t[0]
+	arr[Mesh.ARRAY_NORMAL] = t[1]
+	arr[Mesh.ARRAY_COLOR] = t[2]
+	arr[Mesh.ARRAY_INDEX] = t[5]
+	var m := ArrayMesh.new()
+	m.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arr)
+	out["median_mesh"] = m
+	var shape := ConcavePolygonShape3D.new()
+	shape.backface_collision = true
+	shape.set_faces(faces)
+	out["median_shape"] = shape
+	if not plants.is_empty() and shrub_mesh:
+		var mm := MultiMesh.new()
+		mm.transform_format = MultiMesh.TRANSFORM_3D
+		mm.mesh = shrub_mesh
+		mm.instance_count = plants.size()
+		for i in plants.size():
+			mm.set_instance_transform(i, plants[i])
+		out["median_plants"] = mm
 
 
 ## Facade blocks for every footprint (into "near" or, for designed buildings, "far"), designed buildings as
@@ -603,7 +694,7 @@ func _props(props: Array, out: Dictionary) -> void:
 				mm.set_instance_custom_data(i, Color(by[kind][i][1], 0, 0, 0))
 			if kind == 3:                                # the hump is felt: its surface joins the collision
 				var hx: Transform3D = by[kind][i][0]
-				for q in (prop_meshes[3] as Mesh).get_faces():
+				for q in breaker_faces:
 					hump.append(hx * q)
 		mms.append(mm)
 	out["props"] = mms
@@ -672,6 +763,7 @@ func _yards(yards: Array, out: Dictionary) -> void:
 	var wall := [PackedVector3Array(), PackedVector3Array(), PackedColorArray(), PackedVector2Array(), PackedVector2Array(), PackedInt32Array()]
 	var faces := PackedVector3Array()
 	var trees := {}
+	var bikes := {}
 	var paints := [Color(0.95, 0.9, 0.82), Color(0.93, 0.6, 0.6), Color(0.62, 0.84, 0.68), Color(0.62, 0.76, 0.92),
 		Color(0.95, 0.85, 0.55), Color(0.88, 0.88, 0.86), Color(0.8, 0.72, 0.9)]
 	for yd in yards:
@@ -697,6 +789,8 @@ func _yards(yards: Array, out: Dictionary) -> void:
 				t[5].append_array([vi, vi + 1, vi + 2])
 				faces.append_array([a, c, b])
 		elif kind > 100:
+			if (kind == 101 or kind == 102) and not bike_meshes.is_empty():
+				_park_bikes(p, kind == 101, bikes)
 			for i in n - 1:
 				var a := Vector3(p[i * 3], p[i * 3 + 1], p[i * 3 + 2])
 				var b := Vector3(p[i * 3 + 3], p[i * 3 + 4], p[i * 3 + 5])
@@ -773,6 +867,48 @@ func _yards(yards: Array, out: Dictionary) -> void:
 				mm.set_instance_transform(i, trees[ti][i])
 			tm.append([mm, lod])
 	out["trees"] = tm
+	var bm2 := []
+	for bi in bikes:
+		var mm := MultiMesh.new()
+		mm.transform_format = MultiMesh.TRANSFORM_3D
+		mm.mesh = bike_meshes[bi]
+		mm.instance_count = bikes[bi].size()
+		for i in bikes[bi].size():
+			mm.set_instance_transform(i, bikes[bi][i])
+		bm2.append(mm)
+	out["bikes"] = bm2
+
+
+## Parked two-wheelers in a forecourt (shops: 2–5) or a house yard (0–2): a row along the yard's long side, nose
+## towards the building, each a little askew.
+func _park_bikes(p: PackedFloat32Array, shop: bool, bikes: Dictionary) -> void:
+	var n := p.size() / 3
+	if n < 4:
+		return
+	var c := Vector3.ZERO
+	var best := 0.0
+	var dir := Vector3.RIGHT
+	for i in n - 1:
+		var a := Vector3(p[i * 3], p[i * 3 + 1], p[i * 3 + 2])
+		var b := Vector3(p[i * 3 + 3], p[i * 3 + 4], p[i * 3 + 5])
+		c += a
+		var e := Vector3(b.x - a.x, 0, b.z - a.z)
+		if e.length() > best:
+			best = e.length()
+			dir = e.normalized()
+	c /= n - 1
+	var h := absf(sin(c.x * 12.9898 + c.z * 78.233) * 43758.5453)
+	var count := (2 + int(h) % 4) if shop else (int(h) % 3)
+	count = mini(count, int(best / 0.9) - 1)
+	var across := Vector3(dir.z, 0, -dir.x)
+	for k in count:
+		var q := c + dir * ((k - (count - 1) * 0.5) * 0.9) + Vector3(0, 0.02, 0)
+		var jit := fmod(h * (k + 3.1), 1.0)
+		var bi := int(h * (k + 1.7)) % bike_meshes.size()
+		var basis := Basis.looking_at(across if jit > 0.5 else -across, Vector3.UP).rotated(Vector3.UP, PI * 0.5 + (jit - 0.5) * 0.35)
+		if not bikes.has(bi):
+			bikes[bi] = []
+		bikes[bi].append(Transform3D(basis, q))
 
 
 static func _mat(c: Color, metal := 0.0, rough := 0.6, emit := Color.BLACK, energy := 0.0) -> StandardMaterial3D:
@@ -1019,6 +1155,25 @@ func _instance(k: Vector2i, d: Dictionary) -> void:
 			tmi.visibility_range_end = 500.0
 			tmi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 		node.add_child(tmi)
+	if d.has("median_mesh"):
+		var mdi := MeshInstance3D.new()
+		mdi.mesh = d["median_mesh"]
+		mdi.material_override = kerb_mat
+		mdi.visibility_range_end = 600.0
+		node.add_child(mdi)
+		var mcs := CollisionShape3D.new()
+		mcs.shape = d["median_shape"]
+		_shape(node, mcs)
+	if d.has("median_plants"):
+		var mpi := MultiMeshInstance3D.new()
+		mpi.multimesh = d["median_plants"]
+		mpi.visibility_range_end = 250.0
+		node.add_child(mpi)
+	for bm3 in d.get("bikes", []):
+		var bmi := MultiMeshInstance3D.new()
+		bmi.multimesh = bm3
+		bmi.visibility_range_end = 80.0
+		node.add_child(bmi)
 	if d.has("lamps"):
 		var lmi := MultiMeshInstance3D.new()
 		lmi.multimesh = d["lamps"]

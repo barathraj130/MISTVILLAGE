@@ -188,6 +188,29 @@ if __name__ == "__main__":
     if "--export" in args:
         out = os.path.abspath(args[args.index("--export") + 1])
         for kind in KINDS:
-            F.reset()
-            build(kind, 0)
-            F.finish(os.path.join(out, "bike_%s.glb" % kind))
+            for ci in range(4):                      # four paint colours each, one joined mesh, leaning on its stand
+                F.reset()
+                root = build(kind, ci)
+                bpy.context.view_layer.update()
+                for o in list(bpy.data.objects):
+                    if o.type == 'MESH':
+                        bpy.context.view_layer.objects.active = o
+                        for m in list(o.modifiers):
+                            bpy.ops.object.modifier_apply(modifier=m.name)
+                meshes = [o for o in bpy.data.objects if o.type == 'MESH']
+                bpy.ops.object.select_all(action='DESELECT')
+                for o in meshes:
+                    o.select_set(True)
+                bpy.context.view_layer.objects.active = meshes[0]
+                bpy.ops.object.parent_clear(type='CLEAR_KEEP_TRANSFORM')
+                bpy.ops.object.transform_apply(location=True, rotation=True, scale=True)
+                bpy.ops.object.join()
+                ob = bpy.context.view_layer.objects.active
+                d = ob.modifiers.new("Dec", 'DECIMATE')            # a parked bike seen from the street: ~4,000 tris
+                d.ratio = min(1.0, 4000 / max(1, len(ob.data.polygons)))
+                bpy.ops.object.modifier_apply(modifier="Dec")
+                name = "bike_%s_%d" % (kind, ci)
+                bpy.context.view_layer.objects.active.name = name
+                bpy.ops.export_scene.gltf(filepath=os.path.join(out, name + ".glb"), export_format='GLB',
+                                          use_selection=True, export_apply=True, export_yup=True)
+                print("BIKE", name, sum(len(p.vertices) - 2 for p in bpy.context.view_layer.objects.active.data.polygons), flush=True)

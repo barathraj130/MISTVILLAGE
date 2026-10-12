@@ -89,11 +89,14 @@ void fragment() {
 		float aa = fwidth(across) + 0.01;
 		float dash = step(fract(along / 7.5), 0.4);                       // 3 m dash, 4.5 m gap
 		float paint = 0.0;
-		if (code == 1 || code == 2) {
+		bool median = COLOR.b > 0.5;                                      // a raised median down the middle
+		if (median) {
+			paint += 1.0 - smoothstep(0.06, 0.06 + aa, abs(a - 0.85));        // solid line along each side of it
+		} else if (code == 1 || code == 2) {
 			paint += oneway ? 0.0 : (1.0 - smoothstep(0.06, 0.06 + aa, a)) * dash;
 		}
 		if (code == 3) {
-			paint += oneway ? 0.0 : 1.0 - smoothstep(0.05, 0.05 + aa, abs(a - 0.13));
+			paint += (oneway || median) ? 0.0 : 1.0 - smoothstep(0.05, 0.05 + aa, abs(a - 0.13));
 			paint += (1.0 - smoothstep(0.06, 0.06 + aa, abs(a - 3.5))) * dash * step(4.5, half_w);
 		}
 		if (oneway && half_w > 3.6) {
