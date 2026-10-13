@@ -23,8 +23,8 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib.common import path  # noqa: E402
 from lib.tiles import read_tile  # noqa: E402
 
-LIFT = {"motorway": 0.07, "trunk": 0.07, "primary": 0.06, "secondary": 0.05, "tertiary": 0.04, "unclassified": 0.03,
-        "residential": 0.025, "living_street": 0.02, "service": 0.015, "track": 0.01, "footway": 0.035}
+LIFT = {k: 0.03 for k in ("motorway", "trunk", "primary", "secondary", "tertiary", "unclassified", "residential",
+                           "living_street", "service", "track", "footway")}       # = chunk.py LIFT (one height)
 
 
 def kit_rect(kd, ext):
