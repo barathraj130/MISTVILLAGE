@@ -3,12 +3,13 @@ extends Node3D
 ##   --auto            fly north from Gandhipuram at ~90 km/h, logging fps / tiles / memory, then quit
 ##   --shots=/abs/dir  screenshots at 15 s, 45 s and 80 s (with --auto)
 ##   (no flags)        drive your car in the city: W/S/A/D, Space handbrake, V camera (chase / cockpit / bonnet),
-##                     R back onto the nearest road, L lights, H horn, Tab free camera (fly) and back
+##                     R back onto the nearest road, L lights, H horn, Tab map (minimap always on), F free camera (fly)
 ##   --fly             start with the free camera: WASD move, Q/E down/up, Shift fast, mouse look (click to capture)
 
 const Streamer := preload("res://scripts/city/city_streamer.gd")
 const MB := preload("res://scripts/drive/mesh_builder.gd")
 const Jeep := preload("res://scripts/drive/jeep.gd")
+const CityMap := preload("res://scripts/city/city_map.gd")
 
 var streamer
 var cam: Camera3D
@@ -30,6 +31,9 @@ var cam_mode := 0                           # 0 chase, 1 cockpit, 2 bonnet
 var _cam_prev_speed := 0.0
 var _cam_acc := 0.0
 var _r_down := false
+var _jolt := 0.0
+var _vy_prev := 0.0
+var map
 
 
 func _ready() -> void:
@@ -101,6 +105,10 @@ func _ready() -> void:
 		car.global_position = Vector3(0, 600, 0)
 		driving = true
 		streamer.target = car
+		map = CityMap.new()
+		map.name = "Map"
+		map.target = car
+		add_child(map)
 	for a in args:
 		if a.begins_with("--view="):
 			for v in a.get_slice("=", 1).split(","):
@@ -254,7 +262,7 @@ func _place_car(near: Vector3) -> bool:
 			var p = r["p"]
 			for i in p.size() / 3 - 1:
 				var d := Vector2(p[i * 3] - near.x, p[i * 3 + 2] - near.z).length()
-				var bonus := 0.0 if r["c"] in ["trunk", "primary", "secondary"] else 25.0
+				var bonus := 0.0 if r["c"] in ["trunk", "primary", "secondary"] else (5000.0 if "--testdrive" in OS.get_cmdline_user_args() else 25.0)
 				if d + bonus < bd:
 					bd = d + bonus
 					best = r
@@ -321,16 +329,53 @@ func _process(dt: float) -> void:
 			_place_car(car.global_position)
 		_r_down = Input.is_key_pressed(KEY_R)
 		_drive_camera(dt)
+		if "--carshot" in OS.get_cmdline_user_args() and t > 5.0:      # side view of the car (checking the model)
+			var ct := car.global_transform
+			cam.global_position = ct.origin + ct.basis.x * 5.0 + Vector3.UP * 1.0
+			cam.look_at(ct.origin + Vector3.UP * 0.6)
+			if t > 6.0 and shots_dir != "":
+				get_viewport().get_texture().get_image().save_jpg(shots_dir + "/car.jpg", 0.85)
+				print("WHEELS %d %s" % [car._wheels.size(), str(car._wheels.map(func(w): return w.get_child_count()))])
+				get_tree().quit()
+			return
 		if "--testdrive" in OS.get_cmdline_user_args():          # self-test: accelerate, report, screenshot, quit
-			if t > 4.0 and t < 12.0:
-				Input.action_press("accelerate")
-			else:
-				Input.action_release("accelerate")
+			# a test driver: follows the main roads at ~50 km/h, keeping left (pure pursuit 12 m ahead)
+			car.autopilot = true
+			if path.is_empty() or path_i >= path.size() - 1:
+				var nxt := _next_piece(car.global_position if path.is_empty() else path[path.size() - 1])
+				if not nxt.is_empty():
+					path = nxt
+					path_i = 0
+			var steer := 0.0
+			if path.size() > 1:
+				while path_i < path.size() - 1 and Vector2(path[path_i].x - car.global_position.x, path[path_i].z - car.global_position.z).length() < 12.0:
+					path_i += 1
+				var a2 := path[maxi(path_i - 1, 0)]
+				var b2 := path[path_i]
+				var d2 := Vector3(b2.x - a2.x, 0, b2.z - a2.z).normalized()
+				var aim := b2 + Vector3(d2.z, 0, -d2.x) * 1.8
+				var to := (aim - car.global_position)
+				var f2: Vector3 = car.forward()
+				var ang := atan2(f2.x * to.z - f2.z * to.x, f2.x * to.x + f2.z * to.z)
+				steer = clampf(-ang * 1.6, -1.0, 1.0)
+			var want := 14.0 if t > 4.0 and t < (40.0 if "--long" in OS.get_cmdline_user_args() else 12.0) else 0.0
+			car.in_steer = steer
+			car.in_throttle = clampf((want - car.speed) * 0.4, 0.0, 1.0)
+			car.in_brake = clampf((car.speed - want - 1.0) * 0.3, 0.0, 1.0)
+			# bumpiness: the car's vertical jolts (change of vertical speed per second), worst in each second
+			var vy: float = car.linear_velocity.y
+			_jolt = maxf(_jolt, absf(vy - _vy_prev) / maxf(dt, 0.001))
+			_vy_prev = vy
 			if int(t) != int(t - dt):
-				print("DRIVE t=%d speed=%.1f km/h pos=%s fps=%d" % [int(t), car.speed * 3.6, str(car.global_position.round()),
-					Engine.get_frames_per_second()])
-			if t > 14.0 and shots_dir != "":
+				print("DRIVE t=%d speed=%.1f km/h jolt=%.1f m/s2 pos=%s fps=%d" % [int(t), car.speed * 3.6, _jolt,
+					str(car.global_position.round()), Engine.get_frames_per_second()])
+				_jolt = 0.0
+			if t > (42.0 if "--long" in OS.get_cmdline_user_args() else 13.0) and shots_dir != "" and not map.full_open:
 				get_viewport().get_texture().get_image().save_jpg(shots_dir + "/drive.jpg", 0.85)
+				map.pin = Vector2(car.global_position.x + 1500.0, car.global_position.z - 900.0)
+				map.toggle()
+			elif t > (43.5 if "--long" in OS.get_cmdline_user_args() else 14.5) and shots_dir != "" and map.full_open:
+				get_viewport().get_texture().get_image().save_jpg(shots_dir + "/map.jpg", 0.85)
 				get_tree().quit()
 		_log_and_shots(dt)
 		return
@@ -474,8 +519,9 @@ func _unhandled_input(e: InputEvent) -> void:
 			cam_mode = (cam_mode + 1) % 3
 			car.set_cockpit(cam_mode == 1)
 			return
-		if e.keycode == KEY_TAB:
+		if e.keycode == KEY_F:
 			driving = not driving
+			map.target = car if driving else cam
 			if driving:
 				streamer.target = car
 				car.freeze = false

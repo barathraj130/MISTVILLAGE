@@ -13,8 +13,8 @@ extends Node3D
 
 const DIR := "res://assets/city/"
 const Kit := preload("res://scripts/drive/building_kit.gd")
-const RANK := {"trunk": 0.07, "primary": 0.06, "secondary": 0.05, "tertiary": 0.04, "unclassified": 0.03,
-	"residential": 0.025, "living_street": 0.02, "service": 0.015, "track": 0.01, "footway": 0.035}
+const RANK := {"trunk": 0.03, "primary": 0.03, "secondary": 0.03, "tertiary": 0.03, "unclassified": 0.03,
+	"residential": 0.03, "living_street": 0.03, "service": 0.03, "track": 0.03, "footway": 0.03}   # = chunk.py LIFT: one height, no steps
 const FLOOR := 3.2
 const KIT_NEAR := 120.0                    # full designs out to here, then their far versions
 const KIT_RANGE := 900.0                   # far versions out to here; beyond, plain stand-ins (in the haze)

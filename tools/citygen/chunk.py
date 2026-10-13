@@ -60,8 +60,9 @@ KERB = 0.2
 WALK = 1.8                         # footpath width beside the kerb (fits inside the cleared corridor)
 MEDIAN = 1.0                       # kerbed median strip on the inner side of a divided road's carriageway
 NO_WALK = {"footway", "track"}
-LIFT = {"trunk": 0.07, "primary": 0.06, "secondary": 0.05, "tertiary": 0.04, "unclassified": 0.03, "residential": 0.025,
-        "living_street": 0.02, "service": 0.015, "track": 0.01, "footway": 0.035}   # = city_streamer.gd RANK
+# every road at one height above the shared road surface (no steps where roads meet) = city_streamer.gd RANK
+LIFT = {"trunk": 0.03, "primary": 0.03, "secondary": 0.03, "tertiary": 0.03, "unclassified": 0.03, "residential": 0.03,
+        "living_street": 0.03, "service": 0.03, "track": 0.03, "footway": 0.03}
 
 
 class Dem:
@@ -142,6 +143,20 @@ def run(cfg, roads_cfg):
         lon, lat = to_ll.transform(np.asarray(x) + e0, -np.asarray(z) + n0)
         return dem.sample(lat, lon)
 
+    # the road surface: the satellite heights (30 m cells, metres of noise) smoothed into gentle gradients on a 10 m
+    # grid; every road samples the same surface, so roads that meet are at the same height and ride smoothly
+    from scipy.ndimage import gaussian_filter
+    from scipy.interpolate import RegularGridInterpolator
+    R = float(cfg["boundary"]["circle"]["radius_m"]) + float(cfg.get("margin_m", 1500)) + 600.0
+    gs = 10.0
+    ax = np.arange(-R, R + gs, gs)
+    GX, GZ = np.meshgrid(ax, ax)
+    RG = gaussian_filter(height(GX.ravel(), GZ.ravel()).reshape(GX.shape), sigma=7.0, mode="nearest")   # ~70 m
+    _road_h = RegularGridInterpolator((ax, ax), RG.T, bounds_error=False, fill_value=None)
+
+    def road_height(x, z):
+        return _road_h(np.column_stack([np.asarray(x, dtype=float).ravel(), np.asarray(z, dtype=float).ravel()]))
+
     def game(geom):
         """UTM geometry → game frame (x = E − E0, z = −(N − N0))"""
         return shapely.transform(geom, lambda c: np.column_stack([c[:, 0] - e0, -(c[:, 1] - n0)]))
@@ -174,9 +189,7 @@ def run(cfg, roads_cfg):
                     px.append(c[i - 1, 0] + (c[i, 0] - c[i - 1, 0]) * j / k)
                     pz.append(c[i - 1, 1] + (c[i, 1] - c[i - 1, 1]) * j / k)
             px, pz = np.array(px), np.array(pz)
-            py = height(px, pz)
-            if len(py) >= 5:
-                py = np.convolve(np.pad(py, 2, mode="edge"), np.ones(5) / 5.0, mode="valid")
+            py = road_height(px, pz)
             seg = np.hypot(np.diff(px), np.diff(pz))
             cum = np.concatenate([[0.0], np.cumsum(seg)])
             total = float(cum[-1])
@@ -577,7 +590,7 @@ def run(cfg, roads_cfg):
                     if not hits:
                         hits = [int(lines_tree.nearest(Point(x, z)))]
                     hits.sort(key=lambda h: road_lines[h][0].distance(Point(x, z)))
-                    y = max(surface(h, x, z) for h in hits[:3]) + 0.015       # over every ribbon meeting here
+                    y = max(surface(h, x, z) for h in hits[:3]) + 0.008       # over every ribbon meeting here
                     verts.append((x, y, z))
             if not verts:
                 continue
@@ -665,7 +678,7 @@ def run(cfg, roads_cfg):
     jkeys = [Point(k) for k, ws in ways.items() if len(ws) >= 2 and deg[k] >= 3]
     jtree = STRtree(jkeys)
     for ri, (l2, l3, w, cls) in enumerate(road_lines):
-        if cls in ("residential", "unclassified", "tertiary") and l2.length > 110.0 and ri % 3 == 0:
+        if cls in ("residential", "unclassified", "tertiary") and l2.length > 180.0 and ri % 8 == 0:
             t = l2.length * (0.35 + 0.3 * ((ri * 7919) % 100) / 100.0)
             c0, c1 = clear[ri] if ri in clear else (0.0, 0.0)
             if t < c0 + 18.0 or t > l2.length - c1 - 18.0:
