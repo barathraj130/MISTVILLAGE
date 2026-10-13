@@ -43,7 +43,19 @@ func _ready() -> void:
 	walk.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS_ANISOTROPIC
 	var kerb: StandardMaterial3D = MB.cc0_material("concrete", 3.0, 0.85)
 	kerb.vertex_color_use_as_albedo = true
-	streamer.set_materials(_road_material(), MB.cc0_material("dry_grass", 6.0, 0.95, false), bm, walk, kerb)
+	var gm := ShaderMaterial.new()
+	gm.shader = preload("res://shaders/city_ground.gdshader")
+	gm.set_shader_parameter("dry_tex", load("res://assets/drive/tex/dry_grass_color.jpg"))
+	gm.set_shader_parameter("green_tex", load("res://assets/drive/tex/grass_color.jpg"))
+	gm.set_shader_parameter("soil_tex", load("res://assets/drive/tex/red_soil_color.jpg"))
+	var gn := NoiseTexture2D.new()
+	gn.seamless = true
+	gn.width = 256
+	gn.height = 256
+	gn.noise = FastNoiseLite.new()
+	gn.noise.frequency = 0.02
+	gm.set_shader_parameter("noise_tex", gn)
+	streamer.set_materials(_road_material(), gm, bm, walk, kerb)
 	var yard: StandardMaterial3D = MB.cc0_material("concrete", 2.5, 0.9, false)
 	yard.albedo_color = Color(0.86, 0.84, 0.8)
 	var wall: StandardMaterial3D = MB.cc0_material("plaster", 2.5, 0.9)
@@ -150,6 +162,10 @@ func _survey(dt: float) -> void:
 		return
 	var k: Vector2i = survey[survey_i]
 	if not streamer.loaded.has(k) or survey_wait < 6.0:
+		if survey_wait > 40.0:                       # never loaded: note it and move on
+			print("SURVEY %d tile %s SKIPPED pending=%d ready=%d loaded=%d cam=%s" % [survey_i, str(k), streamer.pending.size(),
+				streamer.ready_q.size(), streamer.loaded.size(), str(cam.position)])
+			survey_stage = 2
 		return
 	if survey_stage == 0 and survey_wait < 6.5:
 		var roads: Array = (streamer.loaded[k] as Node3D).get_meta("roads", [])
@@ -172,7 +188,6 @@ func _survey(dt: float) -> void:
 		set_meta("dir", dir)
 		return
 	if survey_wait >= 8.0 and survey_stage == 0:
-		await RenderingServer.frame_post_draw
 		get_viewport().get_texture().get_image().save_jpg("%s/s%02d_street.jpg" % [shots_dir, survey_i], 0.8)
 		var a: Vector3 = get_meta("aim")
 		var dir: Vector3 = get_meta("dir")
@@ -182,7 +197,6 @@ func _survey(dt: float) -> void:
 		survey_wait = 8.0
 		return
 	if survey_stage == 1 and survey_wait >= 10.0:
-		await RenderingServer.frame_post_draw
 		get_viewport().get_texture().get_image().save_jpg("%s/s%02d_above.jpg" % [shots_dir, survey_i], 0.8)
 		print("SURVEY %d tile %s" % [survey_i, str(k)])
 		survey_stage = 2

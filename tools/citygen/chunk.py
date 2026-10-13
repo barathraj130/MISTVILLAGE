@@ -15,7 +15,8 @@ Reads build/cbe/cache/roads.gpkg + osm.gpkg (buildings), the SRTM tile and the d
         i32 nblds    per building:
                      u8 floors  u8 flags(1 shop, 2 generated-height, 4 generated infill — not in OSM)  u8 r  u8 g  u8 b  u8 rnd  u16 nverts
                      f32 base  i32 variant(-1 = none)  f32[7] ox oy oz  fx fz  sx sz   f32[2*nverts] x,z
-        i32 nwalks   per footpath strip:  u8 flags(1 painted kerb, 2 streetlights, 4 road on the right)  u8 class
+        i32 nwalks   per footpath strip:  u8 flags(1 painted kerb, 2 streetlights, 4 road on the right, 8 separator /
+                     median: kerbed both sides, planted, no lamps)  u8 class
                      u16 npts  f32 width  f32[3*npts] x,y,z (centre of the footpath, its top surface)
         i32 njunc    per junction surface: u16 nverts  f32[3*nverts] x,y,z (a triangle list; the crossing with
                      filleted corners, laid over the road ends that meet there)
@@ -323,11 +324,13 @@ def run(cfg, roads_cfg):
                         nz = np.array([face[0], face[1]])
                         nx = np.array([nz[1], -nz[0]])
                         # never on a street or footpath, never inside a neighbour: step back, then shrink
-                        for attempt in range(7):
+                        clean = False
+                        for attempt in range(9):
                             R = rect(C, nx, nz, bw * sx / 2, bd * sz / 2)
                             on_road = any(R.intersection(corridors[h]).area > 0.3 for h in ctree.query(R, predicate="intersects"))
-                            on_bld = any(R.intersection(q).area > 0.12 * min(R.area, q.area) for q in near_rects(R) if R.intersects(q))
+                            on_bld = any(R.intersection(q).area > 0.05 * min(R.area, q.area) for q in near_rects(R) if R.intersects(q))
                             if not on_road and not on_bld:
+                                clean = True
                                 break
                             if on_road and attempt < 3:
                                 C = C - nz * 1.2
@@ -336,6 +339,9 @@ def run(cfg, roads_cfg):
                                 sx, sz = max(sx * 0.85, 0.35), max(sz * 0.85, 0.35)
                                 n_shrunk += 1
                         R = rect(C, nx, nz, bw * sx / 2, bd * sz / 2)
+                        if not clean:                        # still on top of another: a duplicate outline, leave it out
+                            n_drop += 1
+                            continue
                         for cc in cells(R):
                             grid.setdefault(cc, []).append(R)
                         # origin = C − basis·(ecx, 0, ecz); basis columns nx·sx, up, nz·sz
@@ -456,12 +462,21 @@ def run(cfg, roads_cfg):
                     continue
                 part = shapely.segmentize(part, 6.0)
                 c = np.asarray(part.coords)
-                ry = np.array([surface(ri, x, z) for x, z in c])
+                # above every road surface nearby, not only its own (junctions, a second road alongside)
+                ry = np.array([max([surface(ri, x, z)] + [surface(h, x, z) for h in
+                               wtree.query(Point(x, z), predicate="dwithin", distance=0.3) if road_lines[h][3] not in NO_WALK])
+                               for x, z in c])
                 gy = height(c[:, 0], c[:, 1])
                 y = np.clip(np.maximum(ry + 0.15, gy + 0.05), ry + 0.15, ry + 0.55) + 0.004 * (ri % 5)
                 pts = np.column_stack([c[:, 0], y, c[:, 1]]).astype(np.float32)
                 # offset_curve keeps the line's direction: a left (+) offset has the road on its right
                 fl = (1 if mainr else 0) | (2 if mainr or cls == "tertiary" else 0) | (4 if s > 0 else 0)
+                # a strip squeezed between this road and another one just beyond it: a kerbed separator, not a footpath
+                mid = part.interpolate(0.5, normalized=True)
+                beyond = shapely.offset_curve(l2, s * (w * 0.5 + KERB + ww + 1.2)).interpolate(l2.project(mid))
+                if median or any(h != ri and road_lines[h][3] not in NO_WALK for h in
+                                 ctree2.query(beyond, predicate="intersects")):
+                    fl = (fl & 4) | 8
                 cid = classes.index(cls) if cls in classes else 0
                 keys = [(int(math.floor((pts[i, 0] + pts[i + 1, 0]) * 0.5 / TILE)), int(math.floor((pts[i, 2] + pts[i + 1, 2]) * 0.5 / TILE)))
                         for i in range(len(pts) - 1)]

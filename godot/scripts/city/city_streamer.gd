@@ -30,6 +30,7 @@ var tile := 256.0
 var classes: Array = []
 var loaded := {}                           # Vector2i → Node3D
 var pending := {}                          # Vector2i → task id
+var queued := {}                           # Vector2i → requested and not yet added (pending or waiting in ready_q)
 var ready_q: Array = []                    # [key, resources] made on a worker, waiting for the main thread
 var _mutex := Mutex.new()
 var road_mat: Material
@@ -147,7 +148,7 @@ func _process(_dt: float) -> void:
 	for dz in range(-radius, radius + 1):
 		for dx in range(-radius, radius + 1):
 			var k := Vector2i(c.x + dx, c.y + dz)
-			if not loaded.has(k) and not pending.has(k) and index["tiles"].has("%d,%d" % [k.x, k.y]):
+			if not loaded.has(k) and not queued.has(k) and index["tiles"].has("%d,%d" % [k.x, k.y]):
 				want.append(k)
 	want.sort_custom(func(a, b): return (a - c).length_squared() < (b - c).length_squared())
 	var busy := pending.size()
@@ -155,15 +156,24 @@ func _process(_dt: float) -> void:
 		if busy >= 3:                      # a few at a time: the rest of the frame stays smooth
 			break
 		pending[k] = WorkerThreadPool.add_task(_build.bind(k))
+		queued[k] = true                   # requested: not again until it has been added or dropped
 		busy += 1
 	var n := 0
-	while n < per_frame:
+	_mutex.lock()
+	var backlog := ready_q.size()
+	_mutex.unlock()
+	var limit := per_frame + (2 if backlog > 4 else 0)
+	while n < limit:
 		_mutex.lock()
 		var item = ready_q.pop_front() if not ready_q.is_empty() else null
 		_mutex.unlock()
 		if item == null:
 			break
-		_instance(item[0], item[1])
+		var ik: Vector2i = item[0]
+		queued.erase(ik)
+		if absi(ik.x - c.x) > radius + 1 or absi(ik.y - c.y) > radius + 1:
+			continue                       # built for a place we have already left: drop it
+		_instance(ik, item[1])
 		n += 1
 	for k in loaded.keys():
 		if absi(k.x - c.x) > radius + 1 or absi(k.y - c.y) > radius + 1:
@@ -185,8 +195,14 @@ func _build(k: Vector2i) -> void:
 	var path := DIR + "chunks/CBE_%d_%d.bin" % [k.x, k.y]
 	var f := FileAccess.open(path, FileAccess.READ)
 	if f == null:
+		_mutex.lock()
+		ready_q.append([k, {}])
+		_mutex.unlock()
 		return
 	if f.get_buffer(4).get_string_from_ascii() != "CBE5":
+		_mutex.lock()
+		ready_q.append([k, {}])
+		_mutex.unlock()
 		return
 	f.get_32()
 	f.get_32()
@@ -550,6 +566,7 @@ func _walks(walks: Array, out: Dictionary) -> void:
 	var kb := [PackedVector3Array(), PackedVector3Array(), PackedColorArray(), PackedVector2Array(), PackedVector2Array(), PackedInt32Array()]
 	var faces := PackedVector3Array()
 	var lamps: Array = []
+	var seps: Array = []
 	var white := Color(0.86, 0.86, 0.82)
 	var black := Color(0.08, 0.08, 0.08)
 	var grey := Color(0.62, 0.61, 0.58)
@@ -591,16 +608,24 @@ func _walks(walks: Array, out: Dictionary) -> void:
 			var bi := b + rws[i + 1] * hw
 			var ao := a - rws[i] * hw
 			var bo := b - rws[i + 1] * hw
-			_quad(top, ai, bi, bo, ao, Vector3.UP, Color.WHITE, Vector2(hw, along) / 2.0, Vector2(hw, along + L) / 2.0,
-				Vector2(-hw, along + L) / 2.0, Vector2(-hw, along) / 2.0, Vector2.ZERO)
-			faces.append_array([ai, bi, bo, ai, bo, ao])
-			var dn := Vector3(0, -0.7, 0)
-			_quad(kb, ao, bo, bo + dn, ao + dn, -rw, Color(0.5, 0.48, 0.45), Vector2.ZERO, Vector2.ZERO, Vector2.ZERO,
-				Vector2.ZERO, Vector2.ZERO)
-			# kerb: 0.2 m wide, a touch above the footpath, its face dropping to the road
+			var sep := (fl & 8) != 0                     # a separator / median: planted, kerbed both sides
 			var col := grey
 			if fl & 1:
 				col = white if int(along / 1.2) % 2 == 0 else black
+			if sep:
+				col = black if int(along / 1.0) % 2 == 0 else Color(0.85, 0.66, 0.08)
+				_quad(kb, ai, bi, bo, ao, Vector3.UP, Color(0.3, 0.22, 0.15), Vector2.ZERO, Vector2.ZERO, Vector2.ZERO,
+					Vector2.ZERO, Vector2.ZERO)
+				if int(along / 3.0) != int((along + L) / 3.0) and shrub_mesh:
+					seps.append(Transform3D(Basis(Vector3.UP, along).scaled(Vector3.ONE * 0.28), (a + b) * 0.5 - Vector3(0, 0.08, 0)))
+			else:
+				_quad(top, ai, bi, bo, ao, Vector3.UP, Color.WHITE, Vector2(hw, along) / 2.0, Vector2(hw, along + L) / 2.0,
+					Vector2(-hw, along + L) / 2.0, Vector2(-hw, along) / 2.0, Vector2.ZERO)
+			faces.append_array([ai, bi, bo, ai, bo, ao])
+			var dn := Vector3(0, -0.7, 0)
+			_quad(kb, ao, bo, bo + dn, ao + dn, -rw, col if sep else Color(0.5, 0.48, 0.45), Vector2.ZERO, Vector2.ZERO,
+				Vector2.ZERO, Vector2.ZERO, Vector2.ZERO)
+			# kerb: 0.2 m wide, a touch above the footpath, its face dropping to the road
 			var up := Vector3(0, 0.02, 0)
 			var ki := ai + rws[i] * KERB + up
 			var kj := bi + rws[i + 1] * KERB + up
@@ -608,13 +633,21 @@ func _walks(walks: Array, out: Dictionary) -> void:
 			var drop := Vector3(0, -0.4, 0)
 			_quad(kb, ki, kj, kj + drop, ki + drop, rw, col, Vector2.ZERO, Vector2.ZERO, Vector2.ZERO, Vector2.ZERO, Vector2.ZERO)
 			faces.append_array([ai + up, bi + up, kj, ai + up, kj, ki])
-			if fl & 2:
+			if fl & 2 and not sep:
 				while next_lamp <= along + L:
 					var q := a + seg * ((next_lamp - along) / L) + rw * (hw - 0.35)
 					var xz := Vector3.UP.cross(rw).normalized()
 					lamps.append(Transform3D(Basis(xz, Vector3.UP, rw), q))
 					next_lamp += LAMP_STEP
 			along += L
+	if not seps.is_empty():
+		var smm := MultiMesh.new()
+		smm.transform_format = MultiMesh.TRANSFORM_3D
+		smm.mesh = shrub_mesh
+		smm.instance_count = seps.size()
+		for i in seps.size():
+			smm.set_instance_transform(i, seps[i])
+		out["sep_plants"] = smm
 	for pair in [["walk_mesh", top], ["kerb_mesh", kb]]:
 		var t2: Array = pair[1]
 		if (t2[0] as PackedVector3Array).is_empty():
@@ -908,14 +941,16 @@ func _park_bikes(p: PackedFloat32Array, shop: bool, bikes: Dictionary) -> void:
 			best = e.length()
 			dir = e.normalized()
 	c /= n - 1
-	var h := absf(sin(c.x * 12.9898 + c.z * 78.233) * 43758.5453)
+	if not (is_finite(c.x) and is_finite(c.z)):
+		return
+	var h := fposmod(absf(sin(c.x * 12.9898 + c.z * 78.233) * 43758.5453), 1000.0)
 	var count := (2 + int(h) % 4) if shop else (int(h) % 3)
 	count = mini(count, int(best / 0.9) - 1)
 	var across := Vector3(dir.z, 0, -dir.x)
 	for k in count:
 		var q := c + dir * ((k - (count - 1) * 0.5) * 0.9) + Vector3(0, 0.02, 0)
 		var jit := fmod(h * (k + 3.1), 1.0)
-		var bi := int(h * (k + 1.7)) % bike_meshes.size()
+		var bi := posmod(int(h * (k + 1.7)), bike_meshes.size())
 		var basis := Basis.looking_at(across if jit > 0.5 else -across, Vector3.UP).rotated(Vector3.UP, PI * 0.5 + (jit - 0.5) * 0.35)
 		if not bikes.has(bi):
 			bikes[bi] = []
@@ -1064,7 +1099,7 @@ func _tri(t: Array, a: Vector3, b: Vector3, c: Vector3, col: Color) -> void:
 
 # ----------------------------------------------------------------------------- main thread
 func _instance(k: Vector2i, d: Dictionary) -> void:
-	if loaded.has(k):
+	if loaded.has(k) or d.is_empty():
 		return
 	var node := Node3D.new()
 	node.name = "CBE_%d_%d" % [k.x, k.y]
@@ -1175,6 +1210,11 @@ func _instance(k: Vector2i, d: Dictionary) -> void:
 		var mcs := CollisionShape3D.new()
 		mcs.shape = d["median_shape"]
 		_shape(node, mcs)
+	if d.has("sep_plants"):
+		var spi := MultiMeshInstance3D.new()
+		spi.multimesh = d["sep_plants"]
+		spi.visibility_range_end = 250.0
+		node.add_child(spi)
 	if d.has("median_plants"):
 		var mpi := MultiMeshInstance3D.new()
 		mpi.multimesh = d["median_plants"]
