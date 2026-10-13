@@ -148,6 +148,8 @@ func mesh_far(name: String) -> Mesh:
 		far_material = StandardMaterial3D.new()
 		far_material.vertex_color_use_as_albedo = true
 		far_material.roughness = 0.85
+		# the near designs are darkened by their textures, normal detail and weathering; match them
+		far_material.albedo_color = Color(0.84, 0.83, 0.82)
 	var m := found.duplicate() as ArrayMesh
 	for i in m.get_surface_count():
 		m.surface_set_material(i, far_material)

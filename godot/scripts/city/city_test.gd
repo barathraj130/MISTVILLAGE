@@ -69,6 +69,9 @@ func _ready() -> void:
 	cam.make_current()
 	streamer.target = cam
 	for a in args:
+		if a.begins_with("--view="):
+			for v in a.get_slice("=", 1).split(","):
+				view.append(float(v))
 		if a.begins_with("--survey="):
 			_survey_setup(int(a.get_slice("=", 1)))
 	get_viewport().scaling_3d_mode = Viewport.SCALING_3D_MODE_FSR2
@@ -202,8 +205,19 @@ func _survey(dt: float) -> void:
 		survey_stage = 2
 
 
+## --view=x,y,z,yaw_deg,pitch_deg: hold the camera there, save view.jpg after 25 s and quit (comparisons)
+var view := PackedFloat32Array()
+
+
 func _process(dt: float) -> void:
 	t += dt
+	if not view.is_empty():
+		cam.position = Vector3(view[0], view[1], view[2])
+		cam.basis = Basis.from_euler(Vector3(deg_to_rad(view[4]), deg_to_rad(view[3]), 0))
+		if t > 25.0 and streamer.pending.is_empty() and streamer.ready_q.is_empty() and streamer.loaded.size() > 20:
+			get_viewport().get_texture().get_image().save_jpg(shots_dir + "/view.jpg", 0.85)
+			get_tree().quit()
+		return
 	if not survey.is_empty():
 		_survey(dt)
 		return

@@ -81,6 +81,17 @@ def main():
                 if i and abs(y - p[i - 1][1]) > 1.2:
                     c["road_steps"] += 1
         tree = STRtree(carr) if carr else None
+        drive = [(ln, r, cls) for ln, r, cls in lines if cls not in ("footway", "track")]
+        dcarr = [ln.buffer(r["w"] * 0.5, cap_style="flat") for ln, r, cls in drive]
+        dtree = STRtree(dcarr) if dcarr else None
+
+        def near_carr(geom):
+            return [] if dtree is None else list(dtree.query(geom, predicate="intersects"))
+
+        def surface(h, P):
+            ln, r, cls = drive[h] if isinstance(h, (int, np.integer)) else h
+            cum = np.concatenate([[0.0], np.cumsum(np.hypot(np.diff(r["p"][:, 0]), np.diff(r["p"][:, 2])))])
+            return float(np.interp(ln.project(P), cum, r["p"][:, 1])) + LIFT.get(cls, 0.02) + 0.06
         ltree = STRtree([l for l, _, _ in lines]) if lines else None
         for w in t["walks"]:
             p = w["p"]
@@ -92,13 +103,12 @@ def main():
                 hit = [h for h in tree.query(strip, predicate="intersects") if strip.intersection(carr[h]).area > 0.3]
                 if hit:
                     c["walk_on_road"] += 1
-            if ltree is not None:
-                mid = p[len(p) // 2]
-                h = int(ltree.nearest(Point(mid[0], mid[2])))
-                ln, r, cls = lines[h]
-                ry = float(r["p"][min(range(len(r["p"])), key=lambda i: (r["p"][i][0] - mid[0]) ** 2 + (r["p"][i][2] - mid[2]) ** 2)][1])
-                if mid[1] - (ry + LIFT.get(cls, 0.02) + 0.06) < 0.1:
-                    c["walk_low_kerb"] += 1
+            # kerb: footpath top at least 10 cm above every carriageway beside it
+            mid = p[len(p) // 2]
+            P = Point(mid[0], mid[2])
+            hs = [surface(h, P) for h in near_carr(P.buffer(w["w"] * 0.5 + 0.6))]
+            if hs and mid[1] - max(hs) < 0.1:
+                c["walk_low_kerb"] += 1
         rects = []
         for b in t["blds"]:
             if b["variant"] < 0:
@@ -132,13 +142,10 @@ def main():
             tri = [Polygon(v[i:i + 3, [0, 2]]) for i in range(0, len(v) - 2, 3)]
             jp = shapely.union_all([q.buffer(0) for q in tri if q.area > 0])
             jpolys.append(jp)
-            if ltree is not None:
-                cc = v.mean(axis=0)
-                h = int(ltree.nearest(Point(cc[0], cc[2])))
-                ln, r, cls = lines[h]
-                ry = float(r["p"][min(range(len(r["p"])), key=lambda i: (r["p"][i][0] - cc[0]) ** 2 + (r["p"][i][2] - cc[2]) ** 2)][1])
-                if cc[1] < ry + LIFT.get(cls, 0.02) + 0.06:
-                    c["junc_low"] += 1
+            # every vertex above every ribbon whose carriageway it lies on
+            if any(v[i, 1] < max(hs) - 0.005 for i in range(0, len(v), 3)
+                   for hs in [[surface(h, Point(v[i, 0], v[i, 2])) for h in near_carr(Point(v[i, 0], v[i, 2]))]] if hs):
+                c["junc_low"] += 1
         jtree = STRtree(jpolys) if jpolys else None
         for kind, x, y, z, yaw, size in t["props"]:
             c["props"] += 1

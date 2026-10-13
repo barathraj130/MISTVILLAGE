@@ -44,6 +44,7 @@ var lamp_mesh: ArrayMesh
 var prop_meshes := {}                      # prop type → Mesh (1 traffic signal, 2 bus shelter, 3 speed breaker)
 var kit
 var kit_meshes: Array = []                 # variant index → Mesh (or null)
+var kit_near := KIT_NEAR                   # (--kitnear=N overrides, for comparing near and far versions)
 var kit_far_meshes: Array = []             # variant index → its far version (tools/kit_far.py) or null
 var kit_boxes: Array = []                  # variant index → AABB of the design (far stand-in and collision)
 var tree_meshes: Array = []                # [near Mesh, far LOD Mesh] per tree kind
@@ -62,6 +63,9 @@ func _ready() -> void:
 	body = StaticBody3D.new()
 	body.name = "CityCollision"
 	add_child(body)
+	for a in OS.get_cmdline_user_args():
+		if a.begins_with("--kitnear="):
+			kit_near = float(a.get_slice("=", 1))
 	lamp_mesh = _lamp()
 	signal_shader = _signal_shader()
 	# Coimbatore street trees (tools/trees_tn.py): coconut palms and neem, near and far versions
@@ -1138,9 +1142,9 @@ func _instance(k: Vector2i, d: Dictionary) -> void:
 		var mmi := MultiMeshInstance3D.new()
 		mmi.multimesh = km[0]
 		if km[1] == 0:
-			mmi.visibility_range_end = KIT_NEAR + 10.0
+			mmi.visibility_range_end = kit_near + 10.0
 		else:
-			mmi.visibility_range_begin = KIT_NEAR
+			mmi.visibility_range_begin = kit_near
 			mmi.visibility_range_end = KIT_RANGE + 10.0
 			mmi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 		node.add_child(mmi)
