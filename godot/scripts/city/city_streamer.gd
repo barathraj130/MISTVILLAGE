@@ -961,6 +961,12 @@ func _props(props: Array, out: Dictionary) -> void:
 					hump.append(hx * q)
 		mms.append(mm)
 	out["props"] = mms
+	var sigs: Array = []                          # for traffic: [position, yaw, phase] of every signal head
+	for pr in props:
+		if pr[0] == 1:
+			var pv2: PackedFloat32Array = pr[1]
+			sigs.append([Vector3(pv2[0], pv2[1], pv2[2]), pv2[3], signal_phase(pv2[0], pv2[2], pv2[3])])
+	out["signals"] = sigs
 	if not hump.is_empty():
 		var hs := ConcavePolygonShape3D.new()
 		hs.set_faces(hump)
@@ -969,6 +975,12 @@ func _props(props: Array, out: Dictionary) -> void:
 
 ## Where a signal is in its 40 s cycle (0..1): the two approaches along one axis are green together, the crossing
 ## axis half a cycle later; each junction starts at its own offset. Traffic can use the same rule.
+## Whether a signal with this phase shows green / amber / red right now (same clock as the lenses' shader TIME).
+static func signal_state(phase: float) -> int:
+	var t := fposmod(Time.get_ticks_msec() / 1000.0 + phase * 40.0, 40.0)
+	return 0 if t < 17.0 else (1 if t < 20.0 else 2)        # 0 green, 1 amber, 2 red
+
+
 static func signal_phase(x: float, z: float, yaw: float) -> float:
 	var axis := 0.0 if absf(cos(yaw)) > absf(sin(yaw)) else 0.5
 	var jx := floorf(x / 60.0)
@@ -1468,6 +1480,7 @@ func _instance(k: Vector2i, d: Dictionary) -> void:
 		bcs.shape = d["building_shape"]
 		_shape(node, bcs)
 	node.set_meta("roads", d["roads_raw"])
+	node.set_meta("signals", d.get("signals", []))
 	loaded[k] = node
 	stats["built"] += 1
 	stats["loaded"] = loaded.size()

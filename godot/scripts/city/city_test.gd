@@ -10,6 +10,7 @@ const Streamer := preload("res://scripts/city/city_streamer.gd")
 const MB := preload("res://scripts/drive/mesh_builder.gd")
 const Jeep := preload("res://scripts/drive/jeep.gd")
 const CityMap := preload("res://scripts/city/city_map.gd")
+const CityTraffic := preload("res://scripts/city/city_traffic.gd")
 
 var streamer
 var cam: Camera3D
@@ -34,6 +35,7 @@ var _r_down := false
 var _jolt := 0.0
 var _vy_prev := 0.0
 var map
+var traffic
 
 
 func _ready() -> void:
@@ -105,6 +107,11 @@ func _ready() -> void:
 		car.global_position = Vector3(0, 600, 0)
 		driving = true
 		streamer.target = car
+		traffic = CityTraffic.new()
+		traffic.name = "Traffic"
+		traffic.streamer = streamer
+		traffic.player = car
+		add_child(traffic)
 		map = CityMap.new()
 		map.name = "Map"
 		map.target = car
@@ -329,6 +336,26 @@ func _process(dt: float) -> void:
 			_place_car(car.global_position)
 		_r_down = Input.is_key_pressed(KEY_R)
 		_drive_camera(dt)
+		if "--trafficshot" in OS.get_cmdline_user_args():
+			if int(t) != int(t - dt) and int(t) % 5 == 0:
+				var moving: int = traffic.vehicles.filter(func(v): return v["speed"] > 1.0).size()
+				var sp := 0.0
+				for v in traffic.vehicles:
+					sp += v["speed"]
+				print("TRAFFIC t=%d vehicles=%d moving=%d mean=%.1f km/h fps=%d" % [int(t), traffic.vehicles.size(), moving,
+					sp / maxf(1, traffic.vehicles.size()) * 3.6, Engine.get_frames_per_second()])
+			if t > 30.0 and shots_dir != "":
+				var near = null
+				for v in traffic.vehicles:
+					if near == null or v["pos"].distance_to(car.global_position) < near["pos"].distance_to(car.global_position):
+						near = v
+				if near != null:
+					cam.global_position = near["pos"] - near["fwd"] * 12.0 + Vector3.UP * 4.0 + Vector3(near["fwd"].z, 0, -near["fwd"].x) * 4.0
+					cam.look_at(near["pos"] + near["fwd"] * 6.0)
+				if t > 30.5:
+					get_viewport().get_texture().get_image().save_jpg(shots_dir + "/traffic.jpg", 0.85)
+					get_tree().quit()
+				return
 		if "--carshot" in OS.get_cmdline_user_args() and t > 5.0:      # side view of the car (checking the model)
 			var ct := car.global_transform
 			cam.global_position = ct.origin + ct.basis.x * 5.0 + Vector3.UP * 1.0
