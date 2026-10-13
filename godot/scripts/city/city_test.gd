@@ -2,10 +2,13 @@ extends Node3D
 ## Test bed for the Coimbatore streaming world (scenes/city_test.tscn), separate from the drive.
 ##   --auto            fly north from Gandhipuram at ~90 km/h, logging fps / tiles / memory, then quit
 ##   --shots=/abs/dir  screenshots at 15 s, 45 s and 80 s (with --auto)
-##   (no flags)        free camera: WASD move, Q/E down/up, Shift fast, mouse look (click to capture)
+##   (no flags)        drive your car in the city: W/S/A/D, Space handbrake, V camera (chase / cockpit / bonnet),
+##                     R back onto the nearest road, L lights, H horn, Tab free camera (fly) and back
+##   --fly             start with the free camera: WASD move, Q/E down/up, Shift fast, mouse look (click to capture)
 
 const Streamer := preload("res://scripts/city/city_streamer.gd")
 const MB := preload("res://scripts/drive/mesh_builder.gd")
+const Jeep := preload("res://scripts/drive/jeep.gd")
 
 var streamer
 var cam: Camera3D
@@ -20,6 +23,13 @@ var path := PackedVector3Array()            # the road being driven (auto mode)
 var path_i := 0
 var landed := false
 var used := {}                              # road pieces already driven (by first point)
+var car: Jeep                               # your car (play mode)
+var driving := false
+var placed := false                         # the car waits, frozen, until the road under it has loaded
+var cam_mode := 0                           # 0 chase, 1 cockpit, 2 bonnet
+var _cam_prev_speed := 0.0
+var _cam_acc := 0.0
+var _r_down := false
 
 
 func _ready() -> void:
@@ -68,6 +78,29 @@ func _ready() -> void:
 	add_child(cam)
 	cam.make_current()
 	streamer.target = cam
+	var play := not auto and not "--fly" in args and not "--top" in args
+	for a in args:
+		if a.begins_with("--survey=") or a.begins_with("--view="):
+			play = false
+	if play:
+		for pair in [["accelerate", [KEY_W, KEY_UP]], ["brake", [KEY_S, KEY_DOWN]], ["steer_left", [KEY_A, KEY_LEFT]],
+				["steer_right", [KEY_D, KEY_RIGHT]], ["handbrake", [KEY_SPACE]], ["horn", [KEY_H]], ["headlights", [KEY_L]],
+				["toggle_manual", [KEY_M]], ["shift_up", [KEY_X]], ["shift_down", [KEY_Z]], ["indicate_left", [KEY_COMMA]],
+				["indicate_right", [KEY_PERIOD]], ["hazards", [KEY_SLASH]], ["steer_less", [KEY_BRACKETLEFT]],
+				["steer_more", [KEY_BRACKETRIGHT]]]:
+			if not InputMap.has_action(pair[0]):          # the drive game's keys (drive_game.gd _setup_input)
+				InputMap.add_action(pair[0])
+				for kc in pair[1]:
+					var ev := InputEventKey.new()
+					ev.physical_keycode = kc
+					InputMap.action_add_event(pair[0], ev)
+		car = Jeep.new()
+		car.name = "Car"
+		car.freeze = true
+		add_child(car)
+		car.global_position = Vector3(0, 600, 0)
+		driving = true
+		streamer.target = car
 	for a in args:
 		if a.begins_with("--view="):
 			for v in a.get_slice("=", 1).split(","):
@@ -209,8 +242,98 @@ func _survey(dt: float) -> void:
 var view := PackedFloat32Array()
 
 
+## Put the car on the nearest main road to `near`, keeping left, facing along the road.
+func _place_car(near: Vector3) -> bool:
+	var best = null
+	var bd := INF
+	var bi := 0
+	for k in streamer.loaded:
+		for r in (streamer.loaded[k] as Node3D).get_meta("roads", []):
+			if r.get("fly", false) or not r["c"] in ["trunk", "primary", "secondary", "tertiary", "residential", "unclassified"]:
+				continue
+			var p = r["p"]
+			for i in p.size() / 3 - 1:
+				var d := Vector2(p[i * 3] - near.x, p[i * 3 + 2] - near.z).length()
+				var bonus := 0.0 if r["c"] in ["trunk", "primary", "secondary"] else 25.0
+				if d + bonus < bd:
+					bd = d + bonus
+					best = r
+					bi = i
+	if best == null:
+		return false
+	var p = best["p"]
+	var a := Vector3(p[bi * 3], p[bi * 3 + 1], p[bi * 3 + 2])
+	var b := Vector3(p[bi * 3 + 3], p[bi * 3 + 4], p[bi * 3 + 5])
+	var dir := Vector3(b.x - a.x, 0, b.z - a.z).normalized()
+	var left := Vector3(dir.z, 0, -dir.x)
+	var spot := a + left * float(best["w"]) * 0.25
+	var g: float = streamer.height_at(spot.x, spot.z)
+	if is_nan(g):
+		return false
+	car.linear_velocity = Vector3.ZERO
+	car.angular_velocity = Vector3.ZERO
+	var basis := Basis.looking_at(-dir if Jeep.FWD > 0.0 else dir, Vector3.UP)
+	car.global_transform = Transform3D(basis, Vector3(spot.x, g + 0.8, spot.z))
+	car.freeze = false
+	_cam_prev_speed = 0.0
+	cam.global_position = car.global_position - dir * 9.0 + Vector3.UP * 3.0
+	return true
+
+
+func _drive_camera(dt: float) -> void:
+	var jt: Transform3D = car.global_transform
+	var fwd: Vector3 = car.forward()
+	var flat := Vector3(fwd.x, 0.0, fwd.z).normalized()
+	var face := Basis.looking_at(fwd, Vector3.UP)
+	match cam_mode:
+		0:
+			var acc: float = (car.speed - _cam_prev_speed) / maxf(dt, 0.001)
+			_cam_prev_speed = car.speed
+			_cam_acc = lerpf(_cam_acc, clampf(acc, -8.0, 4.0), 1.0 - exp(-dt * 3.0))
+			var back: float = car.chase_back + _cam_acc * 0.12
+			var want := jt.origin - flat * back + Vector3.UP * car.chase_up
+			cam.global_position = cam.global_position.lerp(want, 1.0 - exp(-dt * 2.4))
+			var pivot := jt.origin + Vector3.UP * 1.6
+			var q := PhysicsRayQueryParameters3D.create(pivot, cam.global_position)
+			q.exclude = [car.get_rid()]
+			var hit := get_world_3d().direct_space_state.intersect_ray(q)
+			if not hit.is_empty():
+				cam.global_position = hit["position"] + (pivot - hit["position"]).normalized() * 0.4
+			cam.look_at(jt.origin + Vector3.UP * (car.chase_up * 0.48) + flat * 4.0)
+			cam.fov = lerpf(cam.fov, 66.0 + clampf(absf(car.speed) / 30.0, 0.0, 1.0) * 8.0, 1.0 - exp(-dt * 1.5))
+		1:
+			cam.fov = 74.0
+			cam.global_transform = Transform3D(face * Basis(Vector3.RIGHT, deg_to_rad(-5.0)), jt * car.seat)
+		2:
+			cam.fov = 70.0
+			cam.global_transform = Transform3D(face, jt * car.bonnet)
+
+
 func _process(dt: float) -> void:
 	t += dt
+	if driving:
+		if not placed:
+			placed = _place_car(Vector3.ZERO) if t > 1.0 else false
+			cam.global_position = Vector3(0, 80, 40)
+			cam.look_at(Vector3.ZERO)
+			return
+		if Input.is_key_pressed(KEY_R) and not _r_down:
+			_place_car(car.global_position)
+		_r_down = Input.is_key_pressed(KEY_R)
+		_drive_camera(dt)
+		if "--testdrive" in OS.get_cmdline_user_args():          # self-test: accelerate, report, screenshot, quit
+			if t > 4.0 and t < 12.0:
+				Input.action_press("accelerate")
+			else:
+				Input.action_release("accelerate")
+			if int(t) != int(t - dt):
+				print("DRIVE t=%d speed=%.1f km/h pos=%s fps=%d" % [int(t), car.speed * 3.6, str(car.global_position.round()),
+					Engine.get_frames_per_second()])
+			if t > 14.0 and shots_dir != "":
+				get_viewport().get_texture().get_image().save_jpg(shots_dir + "/drive.jpg", 0.85)
+				get_tree().quit()
+		_log_and_shots(dt)
+		return
 	if not view.is_empty():
 		cam.position = Vector3(view[0], view[1], view[2])
 		cam.basis = Basis.from_euler(Vector3(deg_to_rad(view[4]), deg_to_rad(view[3]), 0))
@@ -346,6 +469,25 @@ func _log_and_shots(dt: float) -> void:
 
 
 func _unhandled_input(e: InputEvent) -> void:
+	if car and e is InputEventKey and e.pressed and not e.echo:
+		if e.keycode == KEY_V and driving:
+			cam_mode = (cam_mode + 1) % 3
+			car.set_cockpit(cam_mode == 1)
+			return
+		if e.keycode == KEY_TAB:
+			driving = not driving
+			if driving:
+				streamer.target = car
+				car.freeze = false
+			else:
+				streamer.target = cam
+				cam_y = cam.global_position.y
+				yaw = cam.rotation.y
+				pitch = cam.rotation.x
+				car.freeze = true
+			return
+	if driving:
+		return
 	if e is InputEventMouseButton and e.pressed:
 		Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
 	elif e is InputEventMouseMotion and Input.mouse_mode == Input.MOUSE_MODE_CAPTURED:
