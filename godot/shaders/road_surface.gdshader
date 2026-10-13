@@ -108,12 +108,16 @@ void fragment() {
 		}
 		if (c0 > 0.0) paint *= smoothstep(c0 + 3.9, c0 + 4.6, along);
 		if (c1 > 0.0) paint *= smoothstep(c1 + 3.9, c1 + 4.6, from_end);
-		if (code >= 1 && len > 30.0) {                                     // zebra just outside each junction
-			float z0 = c0 > 0.0 ? step(c0 + 0.6, along) * step(along, c0 + 3.6) : 0.0;
-			float z1 = c1 > 0.0 ? step(c1 + 0.6, from_end) * step(from_end, c1 + 3.6) : 0.0;
+		// zebra and stop line only where the crossing road is itself a main road: the junction surface reaches
+		// 8 m or more into this one (its half width + 2.5 m); side lanes every few metres get neither
+		bool big0 = c0 >= 8.0;
+		bool big1 = c1 >= 8.0;
+		if (code >= 1 && len > 30.0 && (big0 || big1)) {
+			float z0 = big0 ? step(c0 + 0.6, along) * step(along, c0 + 3.6) : 0.0;
+			float z1 = big1 ? step(c1 + 0.6, from_end) * step(from_end, c1 + 3.6) : 0.0;
 			float zb = max(z0, z1) * step(0.5, edge) * (code >= 2 ? 1.0 : 0.0);
-			float stop = (c0 > 0.0 ? 1.0 - smoothstep(0.15, 0.15 + aa, abs(along - c0 - 4.2)) : 0.0)
-				+ (c1 > 0.0 ? 1.0 - smoothstep(0.15, 0.15 + aa, abs(from_end - c1 - 4.2)) : 0.0);
+			float stop = (big0 ? 1.0 - smoothstep(0.15, 0.15 + aa, abs(along - c0 - 4.2)) : 0.0)
+				+ (big1 ? 1.0 - smoothstep(0.15, 0.15 + aa, abs(from_end - c1 - 4.2)) : 0.0);
 			paint = max(paint, max(zb * step(0.5, fract(across / 1.1)), stop * step(0.3, edge) * (code >= 2 ? 1.0 : 0.0)));
 		}
 		paint *= 0.55 + 0.45 * smoothstep(0.2, 0.6, n2(wpos.xz / 1.7)) * (1.0 - 0.4 * tracks);

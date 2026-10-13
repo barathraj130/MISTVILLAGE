@@ -222,7 +222,7 @@ func _build(k: Vector2i) -> void:
 		var ln := f.get_float()
 		var c0 := f.get_float()
 		var c1 := f.get_float()
-		roads.append({"c": classes[cid] if cid < classes.size() else "residential", "o": fl & 1, "w": w, "a0": a0, "len": ln, "c0": c0, "c1": c1,
+		roads.append({"c": classes[cid] if cid < classes.size() else "residential", "o": fl & 1, "b": fl & 2, "w": w, "a0": a0, "len": ln, "c0": c0, "c1": c1,
 			"p": f.get_buffer(np * 12).to_float32_array()})
 	var blds: Array = []
 	for _b in _s32(f.get_32()):
@@ -258,6 +258,7 @@ func _build(k: Vector2i) -> void:
 			var yk := f.get_8()
 			var yn := f.get_16()
 			yards.append([yk, f.get_buffer(yn * 12).to_float32_array()])
+	_raise_flyovers(roads)
 	var out := {}
 	_ground(k, hn, h, out)
 	_roads(roads, out)
@@ -318,6 +319,8 @@ func _roads(roads: Array, out: Dictionary) -> void:
 	var uv2 := PackedVector2Array()
 	var idx := PackedInt32Array()
 	var faces := PackedVector3Array()
+	_mark_overlaps(roads)
+	_flyovers(roads, out)
 	for r in roads:
 		var p: PackedFloat32Array = r["p"]
 		var cnt := p.size() / 3
@@ -331,6 +334,8 @@ func _roads(roads: Array, out: Dictionary) -> void:
 		var code: int = MARK.get(r["c"], 0)
 		if code > 0 and half >= 6.0:
 			code = 3
+		if r.get("under", false):
+			code = 0                                # runs inside a wider road: that road's paint is the one you see
 		var med := _has_median(r)
 		var col := Color(minf(half, 9.0) / 10.0, (code + 4 * int(r["o"])) / 8.0, 1.0 if med else 0.0)
 		var along: float = r["a0"]
@@ -372,6 +377,156 @@ func _roads(roads: Array, out: Dictionary) -> void:
 	shape.set_faces(faces)
 	out["road_shape"] = shape
 	_medians(roads, out)
+
+
+## Where the map has several roads on top of each other (each direction, slip lanes, a service lane mapped
+## inside the main road), each would paint its own dashes and zebras: dots everywhere. A piece that mostly runs
+## inside another, wider carriageway is marked "under" and leaves the painting to that road.
+static func _mark_overlaps(roads: Array) -> void:
+	for i in roads.size():
+		var r: Dictionary = roads[i]
+		if r.get("fly", false):
+			continue
+		var p: PackedFloat32Array = r["p"]
+		var n := p.size() / 3
+		if n < 2:
+			continue
+		var inside := 0
+		for k in n:
+			var q := Vector2(p[k * 3], p[k * 3 + 2])
+			for j in roads.size():
+				if j == i:
+					continue
+				var o: Dictionary = roads[j]
+				if o.get("fly", false):
+					continue                         # a flyover passes over, it does not cover
+				var ow: float = o["w"]
+				if ow < float(r["w"]) or (ow == float(r["w"]) and j > i):
+					continue
+				var op: PackedFloat32Array = o["p"]
+				var hit := false
+				for m in op.size() / 3 - 1:
+					var a := Vector2(op[m * 3], op[m * 3 + 2])
+					var b := Vector2(op[m * 3 + 3], op[m * 3 + 5])
+					if q.distance_to(Geometry2D.get_closest_point_to_segment(q, a, b)) < ow * 0.5 - 0.3:
+						hit = true
+						break
+				if hit:
+					inside += 1
+					break
+		r["under"] = inside >= int(ceil(n * 0.4))
+
+
+const FLY_H := 6.5                         # flyover deck height above the road it crosses
+const FLY_RAMP := 160.0                    # ramp length at each end
+
+
+static func _fly_elev(along: float, len: float) -> float:
+	return FLY_H * smoothstep(0.0, FLY_RAMP, along) * smoothstep(0.0, FLY_RAMP, len - along)
+
+
+## Long bridge ways in the city are flyovers (the map draws them over the road below): lift them up on
+## ramps at each end, so the road and its paint are not drawn on top of the road beneath.
+static func _raise_flyovers(roads: Array) -> void:
+	for r in roads:
+		if not r.get("b", 0) or float(r["len"]) < 250.0:
+			continue
+		var p: PackedFloat32Array = (r["p"] as PackedFloat32Array).duplicate()
+		var along: float = r["a0"]
+		var n := p.size() / 3
+		var ground := PackedFloat32Array()
+		for i in n:
+			if i > 0:
+				along += Vector2(p[i * 3] - p[i * 3 - 3], p[i * 3 + 2] - p[i * 3 - 1]).length()
+			ground.append(p[i * 3 + 1])
+			p[i * 3 + 1] += _fly_elev(along, float(r["len"]))
+		r["p"] = p
+		r["ground"] = ground
+		r["fly"] = true
+
+
+## The flyover's structure: deck edge fascia, parapet walls both sides, round-cornered pillars every 25 m.
+func _flyovers(roads: Array, out: Dictionary) -> void:
+	var t := [PackedVector3Array(), PackedVector3Array(), PackedColorArray(), PackedVector2Array(), PackedVector2Array(), PackedInt32Array()]
+	var faces := PackedVector3Array()
+	var concrete := Color(0.62, 0.61, 0.58)
+	var fascia := Color(0.5, 0.49, 0.47)
+	for r in roads:
+		if not r.get("fly", false):
+			continue
+		var p: PackedFloat32Array = r["p"]
+		var g: PackedFloat32Array = r["ground"]
+		var n := p.size() / 3
+		var half: float = float(r["w"]) * 0.5
+		var lift: float = RANK.get(r["c"], 0.02) + 0.06
+		var along: float = r["a0"]
+		var next_pier := ceilf(along / 25.0) * 25.0
+		for i in n - 1:
+			var a := Vector3(p[i * 3], p[i * 3 + 1] + lift, p[i * 3 + 2])
+			var b := Vector3(p[i * 3 + 3], p[i * 3 + 4] + lift, p[i * 3 + 5])
+			var seg := Vector3(b.x - a.x, 0, b.z - a.z)
+			var L := seg.length()
+			if L < 0.05:
+				continue
+			var sd := Vector3(seg.z, 0, -seg.x) / L
+			var ea := a.y - g[i] - lift
+			var eb := b.y - g[i + 1] - lift
+			for s in [1.0, -1.0]:
+				var o: Vector3 = sd * s * (half + 0.15)
+				var nrm: Vector3 = sd * s
+				# parapet: 0.9 m wall with a cap, inside and outside faces
+				var h := Vector3(0, 0.9, 0)
+				_quad(t, a + o, b + o, b + o + h, a + o + h, -nrm, concrete, Vector2.ZERO, Vector2.ZERO, Vector2.ZERO, Vector2.ZERO, Vector2.ZERO)
+				var o2: Vector3 = sd * s * (half + 0.4)
+				_quad(t, a + o2, b + o2, b + o2 + h, a + o2 + h, nrm, concrete, Vector2.ZERO, Vector2.ZERO, Vector2.ZERO, Vector2.ZERO, Vector2.ZERO)
+				_quad(t, a + o + h, b + o + h, b + o2 + h, a + o2 + h, Vector3.UP, concrete, Vector2.ZERO, Vector2.ZERO, Vector2.ZERO, Vector2.ZERO, Vector2.ZERO)
+				faces.append_array([a + o, b + o, b + o + h, a + o, b + o + h, a + o + h])
+				# deck edge: the slab's thickness, then down to the ground on the ramps (a retaining wall)
+				var da := Vector3(0, -minf(1.2, ea + 0.3), 0) if ea > 1.4 else Vector3(0, -(ea + 0.4), 0)
+				var db := Vector3(0, -minf(1.2, eb + 0.3), 0) if eb > 1.4 else Vector3(0, -(eb + 0.4), 0)
+				_quad(t, a + o2, b + o2, b + o2 + db, a + o2 + da, nrm, fascia, Vector2.ZERO, Vector2.ZERO, Vector2.ZERO, Vector2.ZERO, Vector2.ZERO)
+			# deck underside where it is up in the air
+			if ea > 1.4 and eb > 1.4:
+				var w2 := sd * (half + 0.4)
+				var dn := Vector3(0, -1.2, 0)
+				_quad(t, a - w2 + dn, b - w2 + dn, b + w2 + dn, a + w2 + dn, Vector3.DOWN, fascia, Vector2.ZERO, Vector2.ZERO, Vector2.ZERO, Vector2.ZERO, Vector2.ZERO)
+			# pillars
+			while next_pier <= along + L:
+				var f := (next_pier - along) / L
+				var c := a.lerp(b, f)
+				var e := lerpf(ea, eb, f)
+				if e > 3.0:
+					var gy := c.y - lift - e
+					var hw := 0.7
+					var hd := half * 0.6
+					var top := c.y - 1.2
+					var corners := [c + sd * hd + seg / L * hw, c - sd * hd + seg / L * hw, c - sd * hd - seg / L * hw, c + sd * hd - seg / L * hw]
+					for k in 4:
+						var q0: Vector3 = corners[k]
+						var q1: Vector3 = corners[(k + 1) % 4]
+						var mid := (q0 + q1) * 0.5 - c
+						var nn := Vector3(mid.x, 0, mid.z).normalized()
+						_quad(t, Vector3(q0.x, gy - 0.3, q0.z), Vector3(q1.x, gy - 0.3, q1.z), Vector3(q1.x, top, q1.z), Vector3(q0.x, top, q0.z),
+							nn, concrete, Vector2.ZERO, Vector2.ZERO, Vector2.ZERO, Vector2.ZERO, Vector2.ZERO)
+						faces.append_array([Vector3(q0.x, gy, q0.z), Vector3(q1.x, gy, q1.z), Vector3(q1.x, top, q1.z),
+							Vector3(q0.x, gy, q0.z), Vector3(q1.x, top, q1.z), Vector3(q0.x, top, q0.z)])
+				next_pier += 25.0
+			along += L
+	if (t[0] as PackedVector3Array).is_empty():
+		return
+	var arr := []
+	arr.resize(Mesh.ARRAY_MAX)
+	arr[Mesh.ARRAY_VERTEX] = t[0]
+	arr[Mesh.ARRAY_NORMAL] = t[1]
+	arr[Mesh.ARRAY_COLOR] = t[2]
+	arr[Mesh.ARRAY_INDEX] = t[5]
+	var m := ArrayMesh.new()
+	m.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arr)
+	out["fly_mesh"] = m
+	var shape := ConcavePolygonShape3D.new()
+	shape.backface_collision = true
+	shape.set_faces(faces)
+	out["fly_shape"] = shape
 
 
 ## Two-way main roads get a raised centre median, as on Indian city roads (trunk / primary, or 11 m and wider).
@@ -1154,7 +1309,7 @@ func _instance(k: Vector2i, d: Dictionary) -> void:
 		wmi.material_override = walk_mat
 		wmi.visibility_range_end = 700.0
 		node.add_child(wmi)
-	if d.has("kerb_mesh"):
+	if d.has("kerb_mesh") and not "--nokerbs" in OS.get_cmdline_user_args():
 		var kmi := MeshInstance3D.new()
 		kmi.mesh = d["kerb_mesh"]
 		kmi.material_override = kerb_mat
@@ -1205,7 +1360,7 @@ func _instance(k: Vector2i, d: Dictionary) -> void:
 			tmi.visibility_range_end = 500.0
 			tmi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 		node.add_child(tmi)
-	if d.has("median_mesh"):
+	if d.has("median_mesh") and not "--nokerbs" in OS.get_cmdline_user_args():
 		var mdi := MeshInstance3D.new()
 		mdi.mesh = d["median_mesh"]
 		mdi.material_override = kerb_mat
@@ -1214,6 +1369,14 @@ func _instance(k: Vector2i, d: Dictionary) -> void:
 		var mcs := CollisionShape3D.new()
 		mcs.shape = d["median_shape"]
 		_shape(node, mcs)
+	if d.has("fly_mesh"):
+		var fmi2 := MeshInstance3D.new()
+		fmi2.mesh = d["fly_mesh"]
+		fmi2.material_override = kerb_mat
+		node.add_child(fmi2)
+		var fcs := CollisionShape3D.new()
+		fcs.shape = d["fly_shape"]
+		_shape(node, fcs)
 	if d.has("sep_plants"):
 		var spi := MultiMeshInstance3D.new()
 		spi.multimesh = d["sep_plants"]
