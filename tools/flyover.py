@@ -197,7 +197,33 @@ def scene(out):
         print("SHOT", name, flush=True)
 
 
+def export(out_dir):
+    """pier.glb (ground at 0, carrying a deck whose surface is at H, cap across ±Y) and lamp.glb (on its base)"""
+    os.makedirs(out_dir, exist_ok=True)
+    for name, fn in (("flyover_pier", lambda M: pier(M)), ("flyover_lamp", lambda M: lamp(M, 0, 0, 0))):
+        F.reset()
+        M = mats()
+        fn(M)
+        for o in list(bpy.data.objects):
+            if o.type == 'MESH':
+                bpy.context.view_layer.objects.active = o
+                for m in list(o.modifiers):
+                    bpy.ops.object.modifier_apply(modifier=m.name)
+        meshes = [o for o in bpy.data.objects if o.type == 'MESH']
+        bpy.ops.object.select_all(action='DESELECT')
+        for o in meshes:
+            o.select_set(True)
+        bpy.context.view_layer.objects.active = meshes[0]
+        bpy.ops.object.transform_apply(location=True, rotation=True, scale=True)   # origin = ground, world axes
+        bpy.ops.object.join()
+        bpy.ops.export_scene.gltf(filepath=os.path.join(out_dir, name + ".glb"), export_format='GLB',
+                                  use_selection=True, export_apply=True, export_yup=True)
+        print("EXPORT", name, flush=True)
+
+
 if __name__ == "__main__":
     args = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else []
     if "--preview" in args:
         scene(os.path.abspath(args[args.index("--preview") + 1]))
+    if "--export" in args:
+        export(os.path.abspath(args[args.index("--export") + 1]))

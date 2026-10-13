@@ -50,6 +50,8 @@ var kit_boxes: Array = []                  # variant index → AABB of the desig
 var tree_meshes: Array = []                # [near Mesh, far LOD Mesh] per tree kind
 var bike_meshes: Array = []                # parked scooters and motorcycles
 var shrub_mesh: Mesh                       # planting on the medians
+var pier_mesh: Mesh                        # flyover pier and lamp (tools/flyover.py)
+var fly_lamp_mesh: Mesh
 var breaker_faces := PackedVector3Array()
 var signal_shader: Shader
 var body: StaticBody3D
@@ -75,6 +77,8 @@ func _ready() -> void:
 		if near_m:
 			tree_meshes.append([near_m, far_m if far_m else near_m])
 	shrub_mesh = _gltf_mesh("res://assets/models/veg_hedgerow_bush_0_lod.gltf")
+	pier_mesh = _gltf_mesh("res://assets/city_props/flyover_pier.glb")
+	fly_lamp_mesh = _gltf_mesh("res://assets/city_props/flyover_lamp.glb")
 	# parked two-wheelers (tools/twowheeler.py), four paints each
 	for kind in ["scooter", "motorcycle"]:
 		for ci in 4:
@@ -417,8 +421,8 @@ static func _mark_overlaps(roads: Array) -> void:
 		r["under"] = inside >= int(ceil(n * 0.4))
 
 
-const FLY_H := 6.5                         # flyover deck height above the road it crosses
-const FLY_RAMP := 160.0                    # ramp length at each end
+const FLY_H := 8.6                         # flyover deck height above the road it crosses (~7 m clear)
+const FLY_RAMP := 140.0                    # ramp length at each end
 
 
 static func _fly_elev(along: float, len: float) -> float:
@@ -445,12 +449,24 @@ static func _raise_flyovers(roads: Array) -> void:
 		r["fly"] = true
 
 
-## The flyover's structure: deck edge fascia, parapet walls both sides, round-cornered pillars every 25 m.
+## The flyover (tools/flyover.py design): New-Jersey crash barriers along both edges, the girder deck with its
+## sloped underside, reinforced-earth panel walls on the ramps, hammerhead piers every 30 m and double-arm
+## lamps along the right-hand edge; barriers and piers are solid.
+const NJ := [Vector2(0.0, 0.0), Vector2(0.0, 0.075), Vector2(0.05, 0.33), Vector2(0.18, 0.81), Vector2(0.2, 0.9),
+	Vector2(0.38, 0.9), Vector2(0.38, 0.0)]
+const PIER_CAP_TOP := 7.0                  # in flyover_pier.glb: ground 0, cap top 7 m, cap across 0.84 × 19.7 m
+const PIER_DECK_W := 19.7
+
+
 func _flyovers(roads: Array, out: Dictionary) -> void:
 	var t := [PackedVector3Array(), PackedVector3Array(), PackedColorArray(), PackedVector2Array(), PackedVector2Array(), PackedInt32Array()]
 	var faces := PackedVector3Array()
-	var concrete := Color(0.62, 0.61, 0.58)
-	var fascia := Color(0.5, 0.49, 0.47)
+	var barrier := Color(0.74, 0.74, 0.71)
+	var girder := Color(0.55, 0.54, 0.51)
+	var panel_a := Color(0.6, 0.58, 0.54)
+	var panel_b := Color(0.42, 0.41, 0.39)
+	var piers: Array = []
+	var lamps2: Array = []
 	for r in roads:
 		if not r.get("fly", false):
 			continue
@@ -459,8 +475,10 @@ func _flyovers(roads: Array, out: Dictionary) -> void:
 		var n := p.size() / 3
 		var half: float = float(r["w"]) * 0.5
 		var lift: float = RANK.get(r["c"], 0.02) + 0.06
+		var hw := half + 0.38
 		var along: float = r["a0"]
-		var next_pier := ceilf(along / 25.0) * 25.0
+		var next_pier := ceilf(along / 30.0) * 30.0
+		var next_lamp := ceilf((along - 15.0) / 30.0) * 30.0 + 15.0
 		for i in n - 1:
 			var a := Vector3(p[i * 3], p[i * 3 + 1] + lift, p[i * 3 + 2])
 			var b := Vector3(p[i * 3 + 3], p[i * 3 + 4] + lift, p[i * 3 + 5])
@@ -468,49 +486,80 @@ func _flyovers(roads: Array, out: Dictionary) -> void:
 			var L := seg.length()
 			if L < 0.05:
 				continue
-			var sd := Vector3(seg.z, 0, -seg.x) / L
-			var ea := a.y - g[i] - lift
-			var eb := b.y - g[i + 1] - lift
+			var dir := seg / L
+			var sd := Vector3(dir.z, 0, -dir.x)            # one side; the other is -sd
+			var ea := a.y - lift - g[i]
+			var eb := b.y - lift - g[i + 1]
 			for s in [1.0, -1.0]:
-				var o: Vector3 = sd * s * (half + 0.15)
-				var nrm: Vector3 = sd * s
-				# parapet: 0.9 m wall with a cap, inside and outside faces
-				var h := Vector3(0, 0.9, 0)
-				_quad(t, a + o, b + o, b + o + h, a + o + h, -nrm, concrete, Vector2.ZERO, Vector2.ZERO, Vector2.ZERO, Vector2.ZERO, Vector2.ZERO)
-				var o2: Vector3 = sd * s * (half + 0.4)
-				_quad(t, a + o2, b + o2, b + o2 + h, a + o2 + h, nrm, concrete, Vector2.ZERO, Vector2.ZERO, Vector2.ZERO, Vector2.ZERO, Vector2.ZERO)
-				_quad(t, a + o + h, b + o + h, b + o2 + h, a + o2 + h, Vector3.UP, concrete, Vector2.ZERO, Vector2.ZERO, Vector2.ZERO, Vector2.ZERO, Vector2.ZERO)
-				faces.append_array([a + o, b + o, b + o + h, a + o, b + o + h, a + o + h])
-				# deck edge: the slab's thickness, then down to the ground on the ramps (a retaining wall)
-				var da := Vector3(0, -minf(1.2, ea + 0.3), 0) if ea > 1.4 else Vector3(0, -(ea + 0.4), 0)
-				var db := Vector3(0, -minf(1.2, eb + 0.3), 0) if eb > 1.4 else Vector3(0, -(eb + 0.4), 0)
-				_quad(t, a + o2, b + o2, b + o2 + db, a + o2 + da, nrm, fascia, Vector2.ZERO, Vector2.ZERO, Vector2.ZERO, Vector2.ZERO, Vector2.ZERO)
-			# deck underside where it is up in the air
-			if ea > 1.4 and eb > 1.4:
-				var w2 := sd * (half + 0.4)
-				var dn := Vector3(0, -1.2, 0)
-				_quad(t, a - w2 + dn, b - w2 + dn, b + w2 + dn, a + w2 + dn, Vector3.DOWN, fascia, Vector2.ZERO, Vector2.ZERO, Vector2.ZERO, Vector2.ZERO, Vector2.ZERO)
-			# pillars
+				var side: Vector3 = sd * s
+				# barrier: the profile swept from the carriageway edge outwards
+				for k in NJ.size() - 1:
+					var p0: Vector2 = NJ[k]
+					var p1: Vector2 = NJ[k + 1]
+					var a0 := a + side * (half + p0.x) + Vector3(0, p0.y, 0)
+					var a1 := a + side * (half + p1.x) + Vector3(0, p1.y, 0)
+					var b0 := b + side * (half + p0.x) + Vector3(0, p0.y, 0)
+					var b1 := b + side * (half + p1.x) + Vector3(0, p1.y, 0)
+					var nrm := (b0 - a0).cross(a1 - a0).normalized()
+					if nrm.dot(-side + Vector3.UP * 0.01) < 0.0 and k < 3:
+						nrm = -nrm
+					_quad(t, a0, b0, b1, a1, nrm, barrier, Vector2.ZERO, Vector2.ZERO, Vector2.ZERO, Vector2.ZERO, Vector2.ZERO)
+				var ia := a + side * half
+				var ib := b + side * half
+				faces.append_array([ia, ib, ib + Vector3(0, 0.9, 0), ia, ib + Vector3(0, 0.9, 0), ia + Vector3(0, 0.9, 0)])
+				# outer face: girder edge in the air, a panel wall on the ramps
+				var oa := a + side * hw
+				var ob := b + side * hw
+				if ea > 2.5 and eb > 2.5:
+					_quad(t, oa, ob, ob + Vector3(0, -0.56, 0), oa + Vector3(0, -0.56, 0), side, girder,
+						Vector2.ZERO, Vector2.ZERO, Vector2.ZERO, Vector2.ZERO, Vector2.ZERO)
+					var ua := a + side * (hw - 1.2) + Vector3(0, -1.6, 0)
+					var ub := b + side * (hw - 1.2) + Vector3(0, -1.6, 0)
+					_quad(t, oa + Vector3(0, -0.56, 0), ob + Vector3(0, -0.56, 0), ub, ua, (side + Vector3.DOWN).normalized(), girder,
+						Vector2.ZERO, Vector2.ZERO, Vector2.ZERO, Vector2.ZERO, Vector2.ZERO)
+				else:
+					var steps := maxi(1, int(L / 1.5))
+					for q in steps:
+						var f0 := float(q) / steps
+						var f1 := float(q + 1) / steps
+						var pa := oa.lerp(ob, f0)
+						var pb := oa.lerp(ob, f1)
+						var ga := lerpf(g[i], g[i + 1], f0) - 0.4
+						var gb := lerpf(g[i], g[i + 1], f1) - 0.4
+						var col := panel_a if int((along + L * f0) / 1.5) % 3 != 0 else panel_b
+						_quad(t, pa, pb, Vector3(pb.x, gb, pb.z), Vector3(pa.x, ga, pa.z), side, col,
+							Vector2.ZERO, Vector2.ZERO, Vector2.ZERO, Vector2.ZERO, Vector2.ZERO)
+			if ea > 2.5 and eb > 2.5:                     # the flat soffit between the girder edges
+				var ua := a + sd * (hw - 1.2) + Vector3(0, -1.6, 0)
+				var ub := b + sd * (hw - 1.2) + Vector3(0, -1.6, 0)
+				var va := a - sd * (hw - 1.2) + Vector3(0, -1.6, 0)
+				var vb := b - sd * (hw - 1.2) + Vector3(0, -1.6, 0)
+				_quad(t, ua, ub, vb, va, Vector3.DOWN, girder, Vector2.ZERO, Vector2.ZERO, Vector2.ZERO, Vector2.ZERO, Vector2.ZERO)
+			# hammerhead piers and lamps
+			var basis_x := dir
+			var basis_z := dir.cross(Vector3.UP)
 			while next_pier <= along + L:
 				var f := (next_pier - along) / L
 				var c := a.lerp(b, f)
 				var e := lerpf(ea, eb, f)
-				if e > 3.0:
+				if e > 4.5:
 					var gy := c.y - lift - e
-					var hw := 0.7
-					var hd := half * 0.6
-					var top := c.y - 1.2
-					var corners := [c + sd * hd + seg / L * hw, c - sd * hd + seg / L * hw, c - sd * hd - seg / L * hw, c + sd * hd - seg / L * hw]
-					for k in 4:
-						var q0: Vector3 = corners[k]
-						var q1: Vector3 = corners[(k + 1) % 4]
-						var mid := (q0 + q1) * 0.5 - c
-						var nn := Vector3(mid.x, 0, mid.z).normalized()
-						_quad(t, Vector3(q0.x, gy - 0.3, q0.z), Vector3(q1.x, gy - 0.3, q1.z), Vector3(q1.x, top, q1.z), Vector3(q0.x, top, q0.z),
-							nn, concrete, Vector2.ZERO, Vector2.ZERO, Vector2.ZERO, Vector2.ZERO, Vector2.ZERO)
-						faces.append_array([Vector3(q0.x, gy, q0.z), Vector3(q1.x, gy, q1.z), Vector3(q1.x, top, q1.z),
-							Vector3(q0.x, gy, q0.z), Vector3(q1.x, top, q1.z), Vector3(q0.x, top, q0.z)])
-				next_pier += 25.0
+					var sy := (e + lift - 1.6) / PIER_CAP_TOP
+					var sz := (2.0 * hw) / PIER_DECK_W
+					piers.append(Transform3D(Basis(basis_x, Vector3.UP * sy, basis_z * sz), Vector3(c.x, gy, c.z)))
+					for k in 4:                            # column collision: a 1.9 m square
+						var ang := k * PI * 0.5
+						var q0 := Vector3(c.x, gy, c.z) + (basis_x * cos(ang) + basis_z * sin(ang)) * 0.95 * 1.41
+						var q1 := Vector3(c.x, gy, c.z) + (basis_x * cos(ang + PI * 0.5) + basis_z * sin(ang + PI * 0.5)) * 0.95 * 1.41
+						var top := Vector3(0, e - 1.6, 0)
+						faces.append_array([q0, q1, q1 + top, q0, q1 + top, q0 + top])
+				next_pier += 30.0
+			while next_lamp <= along + L:
+				var f := (next_lamp - along) / L
+				var c := a.lerp(b, f)
+				var right := Vector3(-dir.z, 0, dir.x)          # the driver's right: the median side of a divided road
+				lamps2.append(Transform3D(Basis(basis_x, Vector3.UP, basis_z), c + right * (half + 0.19) + Vector3(0, 0.9, 0)))
+				next_lamp += 30.0
 			along += L
 	if (t[0] as PackedVector3Array).is_empty():
 		return
@@ -527,6 +576,17 @@ func _flyovers(roads: Array, out: Dictionary) -> void:
 	shape.backface_collision = true
 	shape.set_faces(faces)
 	out["fly_shape"] = shape
+	for pair in [["fly_piers", piers, pier_mesh], ["fly_lamps", lamps2, fly_lamp_mesh]]:
+		var xs: Array = pair[1]
+		if xs.is_empty() or pair[2] == null:
+			continue
+		var mm := MultiMesh.new()
+		mm.transform_format = MultiMesh.TRANSFORM_3D
+		mm.mesh = pair[2]
+		mm.instance_count = xs.size()
+		for i in xs.size():
+			mm.set_instance_transform(i, xs[i])
+		out[pair[0]] = mm
 
 
 ## Two-way main roads get a raised centre median, as on Indian city roads (trunk / primary, or 11 m and wider).
@@ -1377,6 +1437,12 @@ func _instance(k: Vector2i, d: Dictionary) -> void:
 		var fcs := CollisionShape3D.new()
 		fcs.shape = d["fly_shape"]
 		_shape(node, fcs)
+	for fk in ["fly_piers", "fly_lamps"]:
+		if d.has(fk):
+			var fpi := MultiMeshInstance3D.new()
+			fpi.multimesh = d[fk]
+			fpi.visibility_range_end = 900.0
+			node.add_child(fpi)
 	if d.has("sep_plants"):
 		var spi := MultiMeshInstance3D.new()
 		spi.multimesh = d["sep_plants"]
