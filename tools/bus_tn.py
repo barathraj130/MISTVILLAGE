@@ -34,7 +34,7 @@ def mats():
     M = F.mats((0.95, 0.87, 0.62))
     M.update({
         "cream": F.make_mat("Paint", (0.93, 0.72, 0.32), rough=0.35, coat=0.6),
-        "yellow": F.make_mat("Bus Yellow", (0.93, 0.36, 0.02), rough=0.35, coat=0.6),
+        "yellow": F.make_mat("Bus Yellow", (0.98, 0.39, 0.02), rough=0.35, coat=0.6),
         "blue": F.make_mat("Bus Blue", (0.01, 0.04, 0.32), rough=0.35, coat=0.6),
         "red": F.make_mat("Bus Red", (0.75, 0.06, 0.05), rough=0.4),
         "led_g": F.make_mat("LED Green", (0.1, 0.9, 0.3), rough=0.3, emission=(0.2, 1.0, 0.35), strength=4.0),
@@ -48,10 +48,14 @@ def mats():
         "white": F.make_mat("White Text", (0.95, 0.95, 0.92), rough=0.5),
         "rubber": F.make_mat("Door Rubber", (0.02, 0.02, 0.02), rough=0.8),
     })
+    M["livery"] = img_mat("Livery", "livery.png")
+    M["board_f"] = img_mat("Board Front", "board_front.png", emit=3.0, coat=0.0)
+    M["board_r"] = img_mat("Board Rear", "board_rear.png", emit=3.0, coat=0.0)
+    M["route"] = img_mat("Route Board", "board_route.png", emit=0.6, coat=0.0)
     g = bpy.data.materials.new("Glass")
     g.use_nodes = True
     b = g.node_tree.nodes["Principled BSDF"]
-    b.inputs["Base Color"].default_value = (0.7, 0.8, 0.78, 1)
+    b.inputs["Base Color"].default_value = (0.35, 0.45, 0.45, 1)
     b.inputs["Roughness"].default_value = 0.02
     for nm in ("Transmission Weight", "Transmission"):
         if nm in b.inputs:
@@ -80,100 +84,202 @@ def text(t, loc, rot, size, mat, width=None, align='CENTER'):
     return o
 
 
+ART = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "art", "bus")
+S = 4096.0 / 11.2                 # livery pixels per metre (godot/tools/paint_livery.gd)
+SIDE, FW = 1170.0, 933.0
+
+
+def img_mat(name, file, emit=0.0, rough=0.4, coat=0.5):
+    m = bpy.data.materials.new(name)
+    m.use_nodes = True
+    nt = m.node_tree
+    p = nt.nodes["Principled BSDF"]
+    t = nt.nodes.new("ShaderNodeTexImage")
+    t.image = bpy.data.images.load(os.path.join(ART, file), check_existing=True)
+    nt.links.new(t.outputs["Color"], p.inputs["Base Color"])
+    p.inputs["Roughness"].default_value = rough
+    for nm in ("Coat Weight", "Clearcoat"):
+        if nm in p.inputs:
+            p.inputs[nm].default_value = coat
+    if emit:
+        for nm in ("Emission Color", "Emission"):
+            if nm in p.inputs:
+                nt.links.new(t.outputs["Color"], p.inputs[nm])
+        p.inputs["Emission Strength"].default_value = emit
+    return m
+
+
+def picture(name, centre, w, h, mat, facing=1):
+    """A flat board showing a whole image the right way round, facing +X (front) or -X (rear)."""
+    x, y, z = centre
+    s = facing
+    verts = [(x, y - s * w / 2, z - h / 2), (x, y + s * w / 2, z - h / 2), (x, y + s * w / 2, z + h / 2), (x, y - s * w / 2, z + h / 2)]
+    me = bpy.data.meshes.new(name)
+    me.from_pydata(verts, [], [(0, 1, 2, 3) if s > 0 else (3, 2, 1, 0)])
+    me.update()
+    uv = me.uv_layers.new()
+    for li, (u, v) in zip(me.polygons[0].loop_indices, [(0, 0), (1, 0), (1, 1), (0, 1)] if s > 0 else [(0, 1), (1, 1), (1, 0), (0, 0)]):
+        uv.data[li].uv = (u, v)
+    o = F.link(bpy.data.objects.new(name, me))
+    o.data.materials.append(mat)
+    return o
+
+
+def cutter(c, s):
+    o = F.box("Cutter", c, s, bpy.data.materials.get("Cutter") or bpy.data.materials.new("Cutter"), bev=0)
+    o.display_type = 'WIRE'
+    return o
+
+
+def uv_livery(ob):
+    """Wrap the livery image round the shell: each face takes its place on the sheet by which way it faces."""
+    import bmesh
+    me = ob.data
+    bm = bmesh.new()
+    bm.from_mesh(me)
+    uv = bm.loops.layers.uv.verify()
+    for f in bm.faces:
+        n = f.normal
+        for lp in f.loops:
+            x, y, z = lp.vert.co
+            if abs(n.y) >= max(abs(n.x), abs(n.z)) * 0.8:
+                if n.y > 0:                                         # left side, nose at the image's left
+                    px, py = (FRONT - x) * S, (H - z) * S
+                else:                                               # right side, nose at the image's right
+                    px, py = (x - REAR) * S, SIDE + (H - z) * S
+            elif abs(n.x) > abs(n.z):
+                if n.x > 0:                                         # front: bus's right at the image's left
+                    px, py = (y + W / 2) * S, 2 * SIDE + (H - z) * S
+                else:                                               # rear: bus's left at the image's left
+                    px, py = FW + (W / 2 - y) * S, 2 * SIDE + (H - z) * S
+            else:                                                   # roof and floor
+                px, py = (FRONT - x) * S, 3 * SIDE + 40 + (y + W / 2) * S * 0.5
+            lp[uv].uv = (px / 4096.0, 1.0 - py / 4096.0)
+    bm.to_mesh(me)
+    bm.free()
+
+
 def body(M):
-    # the shell: rounded box in bands (skirt, stripe, cream), with the window band glazed separately
-    def band(z0, z1, mat, inset=0.0, x0=REAR, x1=FRONT):
-        return F.box("Shell", ((x0 + x1) / 2, 0, (z0 + z1) / 2), (x1 - x0 - inset, W - inset, z1 - z0), mat, bev=0.06)
-    band(0.45, 1.2, M["yellow"])
-    band(1.2, 1.32, M["red"], -0.01)
-    band(1.32, 1.6, M["blue"], -0.012)
-    band(1.6, WIN0, M["cream"])
-    band(WIN1, H - 0.12, M["cream"])
-    F.box("Roof", (0, 0, H - 0.06), (L - 0.12, W - 0.12, 0.14), M["cream"], bev=0.07)
-    F.box("RoofHatch", (-1.0, 0, H + 0.04), (0.9, 0.8, 0.08), M["cream"], bev=0.02)
-    F.box("RoofHatch", (2.5, 0, H + 0.04), (0.9, 0.8, 0.08), M["cream"], bev=0.02)
-    # window band: pillars between sliding windows on both sides, glass behind
-    n = 10
-    x0, x1 = REAR + 0.5, FRONT - 1.6
+    """One rounded shell (lofted, rounded roof edges and corners) with the window band, windscreen, rear window
+    and doorways cut out of it, wearing the painted livery."""
+    keys = [(REAR, W / 2 - 0.04, 0.36, H - 0.05, 0), (REAR + 0.12, W / 2, 0.33, H, 0), (0.0, W / 2, 0.33, H, 0),
+            (FRONT - 0.12, W / 2, 0.33, H - 0.01, 0), (FRONT, W / 2 - 0.05, 0.36, H - 0.07, 0)]
+    shell = F.loft("Shell", keys, M["livery"], n_top=7.0, n_bot=14.0, segs=56, steps=2, sub=1)
+    bpy.context.view_layer.objects.active = shell
+    bpy.ops.object.modifier_apply(modifier="Subsurf")
+    cuts = []
     for s in (1, -1):
-        y = s * (W / 2)
-        F.box("GlassSide", ((x0 + x1) / 2, y - s * 0.02, (WIN0 + WIN1) / 2), (x1 - x0, 0.02, WIN1 - WIN0), M["glass"], bev=0)
+        cuts.append(cutter((-0.35, s * (W / 2 + 0.1), (WIN0 + WIN1) / 2), (L - 1.6 - 1.4, 0.5, WIN1 - WIN0)))
+        cuts.append(cutter((FRONT - 0.95, s * (W / 2 + 0.1), (WIN0 + WIN1) / 2 - 0.08), (1.1, 0.5, WIN1 - WIN0 + 0.16)))
+    cuts.append(cutter((FRONT + 0.1, 0, 2.05), (0.6, W - 0.22, 1.46)))                # windscreen 1.32 … 2.78
+    cuts.append(cutter((REAR - 0.1, 0, 2.3), (0.6, W - 0.5, 0.85)))                   # rear window
+    for xc in DOORS:                                                                      # doorways (left side)
+        cuts.append(cutter((xc, W / 2 + 0.1, (0.4 + WIN1) / 2), (0.98, 0.5, WIN1 - 0.4)))
+    for x in (FRONT - 1.75, REAR + 3.05):                                                # wheel arches
+        c = F.cyl("Cutter", (x, 0, 0.52), 0.63, W + 1.0, bpy.data.materials.get("Cutter") or bpy.data.materials.new("Cutter"),
+                  rot=(math.pi / 2, 0, 0), verts=40)
+        cuts.append(c)
+    for c in cuts:
+        m = shell.modifiers.new("Cut", 'BOOLEAN')
+        m.operation = 'DIFFERENCE'
+        m.object = c
+        m.solver = 'EXACT'
+        bpy.context.view_layer.objects.active = shell
+        bpy.ops.object.modifier_apply(modifier=m.name)
+        bpy.data.objects.remove(c, do_unlink=True)
+    F.smooth(shell)
+    uv_livery(shell)
+    # window band: glass a little inside, black rubber frames, pillars between sliding windows
+    n = 9
+    x0, x1 = REAR + 0.4 + 0.3, FRONT - 1.6 - 0.15
+    for s in (1, -1):
+        y = s * (W / 2 - 0.05)
+        F.box("GlassSide", ((x0 + x1) / 2, y, (WIN0 + WIN1) / 2), (x1 - x0, 0.015, WIN1 - WIN0), M["glass"], bev=0)
         for k in range(n + 1):
             x = x0 + (x1 - x0) * k / n
-            F.box("Pillar", (x, y, (WIN0 + WIN1) / 2), (0.14, 0.05, WIN1 - WIN0), M["black"], bev=0.01)
-        for k in range(n):                                          # sliding sash rails
+            F.box("Pillar", (x, s * (W / 2 - 0.03), (WIN0 + WIN1) / 2), (0.13, 0.07, WIN1 - WIN0 + 0.02), M["black"], bev=0.015)
+        for k in range(n):
             x = x0 + (x1 - x0) * (k + 0.5) / n
-            F.box("Sash", (x, y + s * 0.01, WIN0 + 0.5), ((x1 - x0) / n - 0.16, 0.03, 0.04), M["black"], bev=0)
-        F.box("Gutter", (0, y + s * 0.015, WIN1 + 0.05), (L - 0.4, 0.04, 0.05), M["black"], bev=0)
-        F.box("SkirtLine", (0, y + s * 0.01, 0.5), (L - 0.3, 0.03, 0.05), M["black"], bev=0)
-    # cab side windows (behind the windscreen) and the rear window
-    for s in (1, -1):
-        F.box("GlassCab", (FRONT - 0.85, s * (W / 2 - 0.02), (WIN0 + WIN1) / 2 - 0.1), (1.3, 0.02, WIN1 - WIN0 + 0.2), M["glass"], bev=0)
-    F.box("GlassRear", (REAR + 0.02, 0, 2.2), (0.02, W - 0.4, 0.9), M["glass"], bev=0)
+            F.box("Sash", (x, s * (W / 2 - 0.04), WIN1 - 0.32), ((x1 - x0) / n - 0.13, 0.04, 0.03), M["black"], bev=0)
+            F.box("SashV", (x + 0.02, s * (W / 2 - 0.06), (WIN0 + WIN1 - 0.32) / 2), (0.025, 0.03, WIN1 - WIN0 - 0.34), M["chrome"], bev=0)
+        for z in (WIN0 + 0.015, WIN1 - 0.015):
+            F.box("Rubber", (-0.35, s * (W / 2 - 0.03), z), (L - 3.0, 0.07, 0.035), M["black"], bev=0)
+        F.box("GlassCab", (FRONT - 0.95, s * (W / 2 - 0.05), (WIN0 + WIN1) / 2 - 0.08), (1.1, 0.015, WIN1 - WIN0 + 0.16), M["glass"], bev=0)
+        F.box("Gutter", (0, s * (W / 2 + 0.01), WIN1 + 0.16), (L - 0.5, 0.04, 0.04), M["black"], bev=0)
+    F.box("GlassRear", (REAR + 0.06, 0, 2.3), (0.015, W - 0.5, 0.85), M["glass"], bev=0)
+    for hx in (-2.5, 1.5):
+        F.box("RoofHatch", (hx, 0, H + 0.03), (0.85, 0.8, 0.07), M["cream"], bev=0.02)
 
 
 def front(M):
     x = FRONT
-    # black frame round the windscreen (top band carries the board, posts at the corners, sill below)
-    F.box("Mask", (x - 0.05, 0, 3.0), (0.1, W - 0.06, 0.35), M["black"], bev=0.04)
-    for s2 in (1, -1):
-        F.box("Mask", (x - 0.05, s2 * (W / 2 - 0.08), 2.05), (0.1, 0.16, 1.6), M["black"], bev=0.03)
-    F.box("Mask", (x - 0.05, 0, 1.36), (0.1, W - 0.06, 0.08), M["black"], bev=0.02)
-    # split windscreen with a centre divider, a little raked back
+    # windscreen: two panes in a black rubber surround, the destination board behind the glass at the top,
+    # the Tamil route board in the lower corner
     for s in (1, -1):
-        g = F.box("GlassFront", (x + 0.005, s * 0.6, 2.05), (0.02, 1.16, 1.35), M["glass"], bev=0)
-        g.rotation_euler = (0, math.radians(-4), 0)
-    F.box("Divider", (x + 0.02, 0, 2.05), (0.04, 0.08, 1.38), M["black"], bev=0)
-    # destination board: black panel, EXP red, destination green, a little lip
-    F.box("Board", (x + 0.03, 0, 2.95), (0.06, W - 0.2, 0.42), M["board"], bev=0.01)
-    text("EXP", (x + 0.07, -0.78, 2.95), (math.pi / 2, 0, math.pi / 2), 0.25, M["led_r"], width=0.55)
-    text(DEST, (x + 0.07, 0.25, 2.95), (math.pi / 2, 0, math.pi / 2), 0.32, M["led_g"], width=1.5)
-    # cream upper face, blue swoosh, yellow-orange bumper face
-    F.box("FaceCream", (x - 0.02, 0, 1.15), (0.1, W - 0.04, 0.5), M["cream"], bev=0.04)
-    F.box("FaceBlue", (x + 0.02, 0, 0.88), (0.06, W - 0.1, 0.1), M["blue"], bev=0.02)
-    F.box("Bumper", (x + 0.04, 0, 0.62), (0.18, W + 0.02, 0.42), M["yellow"], bev=0.06)
-    F.box("Grille", (x + 0.07, 0, 1.0), (0.04, 1.1, 0.16), M["black"], bev=0.02)
-    for k in range(4):
-        F.box("Slat", (x + 0.09, 0, 0.94 + k * 0.04), (0.01, 1.05, 0.015), M["chrome"], bev=0)
+        g = F.box("GlassFront", (x - 0.06, s * 0.6, 2.05), (0.015, 1.16, 1.44), M["glass"], bev=0)
+        g.rotation_euler = (0, math.radians(-5), 0)
+    F.box("Divider", (x - 0.04, 0, 2.05), (0.05, 0.06, 1.46), M["black"], bev=0)
     for s in (1, -1):
-        # twin round headlamps in a black pod each side, fog lamp and indicator below
-        F.box("Pod", (x + 0.06, s * 0.82, 0.98), (0.08, 0.62, 0.26), M["black"], bev=0.06)
+        F.box("Surround", (x - 0.05, s * (W / 2 - 0.1), 2.05), (0.07, 0.07, 1.48), M["black"], bev=0)
+    for z in (1.32, 2.78):
+        F.box("Surround", (x - 0.05, 0, z), (0.07, W - 0.2, 0.06), M["black"], bev=0)
+    picture("BoardFront", (x + 0.05, 0, 2.93), W - 0.7, 0.24, M["board_f"], 1)
+    F.box("BoardBack", (x + 0.0, 0, 2.93), (0.09, W - 0.6, 0.3), M["black"], bev=0.02)
+    picture("RouteBoard", (x - 0.13, -0.55, 1.42), 1.0, 0.1, M["route"], 1)
+    bf = None
+    # bumper, lamps in black pods, grille, fogs, plate, wipers, rabbit-ear mirrors
+    F.box("Bumper", (x + 0.04, 0, 0.5), (0.22, W + 0.02, 0.32), M["yellow"], bev=0.08)
+    F.box("BumperLip", (x + 0.1, 0, 0.36), (0.12, W - 0.1, 0.06), M["black"], bev=0.02)
+    F.box("Grille", (x + 0.01, 0, 1.0), (0.04, 0.85, 0.2), M["black"], bev=0.03)
+    for k in range(5):
+        F.box("Slat", (x + 0.035, 0, 0.92 + k * 0.04), (0.01, 0.8, 0.014), M["chrome"], bev=0)
+    for s in (1, -1):
+        F.box("Pod", (x + 0.01, s * 0.8, 1.0), (0.05, 0.66, 0.27), M["black"], bev=0.09)
         for k in (0, 1):
-            F.cyl("Headlight", (x + 0.1, s * (0.66 + k * 0.3), 0.98), 0.1, 0.04, M["head"], rot=(0, math.pi / 2, 0), verts=24)
-            F.cyl("Bezel", (x + 0.09, s * (0.66 + k * 0.3), 0.98), 0.115, 0.03, M["chrome"], rot=(0, math.pi / 2, 0), verts=24)
-        F.cyl("Fog", (x + 0.14, s * 0.55, 0.62), 0.06, 0.04, M["head"], rot=(0, math.pi / 2, 0), verts=16)
-        F.box("Indicator", (x + 0.13, s * 1.12, 0.66), (0.03, 0.14, 0.08), M["amber"], bev=0.01)
-        # rabbit-ear mirror: a stalk curving out and forward, a tall mirror head
-        F.beam("MirrorArm", (x - 0.3, s * (W / 2), 2.75), (x + 0.15, s * (W / 2 + 0.3), 2.9), 0.04, 0.04, M["black"])
-        F.beam("MirrorArm", (x + 0.15, s * (W / 2 + 0.3), 2.9), (x + 0.35, s * (W / 2 + 0.32), 2.45), 0.04, 0.04, M["black"])
-        F.box("Mirror", (x + 0.36, s * (W / 2 + 0.32), 2.25), (0.06, 0.26, 0.42), M["black"], bev=0.03)
-        F.box("MirrorGlass", (x + 0.32, s * (W / 2 + 0.32), 2.25), (0.01, 0.22, 0.38), M["chrome"], bev=0)
-    F.box("Plate", (x + 0.14, 0, 0.5), (0.01, 0.52, 0.13), M["plate"], bev=0)
-    for s in (1, -1):
-        F.box("Wiper", (x + 0.04, s * 0.6, 1.42), (0.02, 0.85, 0.03), M["black"], bev=0).rotation_euler = (s * 0.25, 0, 0)
+            yy = s * (0.64 + k * 0.32)
+            F.cyl("Bezel", (x + 0.04, yy, 1.0), 0.115, 0.03, M["chrome"], rot=(0, math.pi / 2, 0), verts=28)
+            F.cyl("Headlight", (x + 0.055, yy, 1.0), 0.097, 0.02, M["head"], rot=(0, math.pi / 2, 0), verts=28)
+        F.cyl("Fog", (x + 0.16, s * 0.6, 0.5), 0.055, 0.03, M["head"], rot=(0, math.pi / 2, 0), verts=16)
+        F.box("Indicator", (x + 0.15, s * 1.12, 0.52), (0.03, 0.15, 0.08), M["amber"], bev=0.01)
+        F.box("Marker", (x - 0.15, s * (W / 2 - 0.1), H - 0.04), (0.08, 0.08, 0.05), M["amber"], bev=0.01)
+        F.beam("MirrorArm", (x - 0.35, s * (W / 2 - 0.02), 2.78), (x + 0.12, s * (W / 2 + 0.3), 2.95), 0.04, 0.04, M["black"])
+        F.beam("MirrorArm", (x + 0.12, s * (W / 2 + 0.3), 2.95), (x + 0.32, s * (W / 2 + 0.33), 2.5), 0.04, 0.04, M["black"])
+        F.box("Mirror", (x + 0.33, s * (W / 2 + 0.33), 2.28), (0.07, 0.27, 0.44), M["black"], bev=0.03)
+        F.box("MirrorGlass", (x + 0.29, s * (W / 2 + 0.33), 2.28), (0.01, 0.23, 0.4), M["chrome"], bev=0)
+        F.box("Wiper", (x - 0.03, s * 0.58, 1.5), (0.02, 0.9, 0.025), M["black"], bev=0).rotation_euler = (s * 0.3, 0, 0)
+    F.box("Plate", (x + 0.16, 0, 0.5), (0.01, 0.52, 0.13), M["plate"], bev=0)
+    _ = bf
 
 
 def rear(M):
     x = REAR
-    F.box("RearYellow", (x - 0.03, 0, 0.8), (0.08, W - 0.04, 0.72), M["yellow"], bev=0.05)
-    F.box("RearGrille", (x - 0.06, 0, 0.85), (0.03, 1.4, 0.4), M["black"], bev=0.02)
+    F.box("RearGrille", (x - 0.02, 0, 0.82), (0.04, 1.3, 0.38), M["black"], bev=0.02)
+    for k in range(6):
+        F.box("RearSlat", (x - 0.045, 0, 0.67 + k * 0.06), (0.01, 1.25, 0.02), M["chrome"], bev=0)
     for s in (1, -1):
-        F.box("TailBar", (x - 0.06, s * 1.0, 1.25), (0.04, 0.22, 0.32), M["tail"], bev=0.02)
-        F.box("Indicator", (x - 0.06, s * 1.0, 1.0), (0.04, 0.2, 0.1), M["amber"], bev=0.01)
-    F.box("Plate", (x - 0.06, 0, 0.55), (0.01, 0.52, 0.13), M["plate"], bev=0)
-    F.box("RearBoard", (x - 0.04, 0, 2.95), (0.05, 1.6, 0.3), M["board"], bev=0.01)
-    text(DEST, (x - 0.08, 0, 2.95), (math.pi / 2, 0, -math.pi / 2), 0.22, M["led_g"], width=1.4)
+        F.box("TailBar", (x - 0.04, s * 1.0, 1.28), (0.05, 0.22, 0.34), M["tail"], bev=0.03)
+        F.box("Indicator", (x - 0.04, s * 1.0, 1.02), (0.05, 0.2, 0.1), M["amber"], bev=0.01)
+        F.box("Marker", (x + 0.15, s * (W / 2 - 0.1), H - 0.04), (0.08, 0.08, 0.05), M["tail"], bev=0.01)
+    F.box("RearBumper", (x - 0.03, 0, 0.45), (0.16, W, 0.2), M["black"], bev=0.04)
+    F.box("Plate", (x - 0.12, 0, 0.62), (0.01, 0.52, 0.13), M["plate"], bev=0)
+    picture("BoardRear", (x - 0.012, 0, 2.95), 1.5, 0.3, M["board_r"], -1)
+    F.cyl("Ladder", (x - 0.06, -0.9, 2.2), 0.02, 1.6, M["chrome"], verts=8)
+
+
+DOORS = (FRONT - 3.0, -0.9)
 
 
 def doors(M):
-    """Front door just behind the front wheel and a centre door, both on the left (+Y), folding glass doors."""
-    for xc, w in ((FRONT - 3.0, 0.95), (-0.9, 0.95)):
-        y = W / 2 + 0.005
-        F.box("Door", (xc, y, (0.45 + WIN1) / 2), (w, 0.04, WIN1 - 0.45), M["black"], bev=0.02)
-        for s in (-1, 1):
-            F.box("GlassDoor", (xc + s * w / 4, y + 0.025, 1.85), (w / 2 - 0.12, 0.01, 1.4), M["glass"], bev=0)
+    """Folding glass doors in the doorways on the left (+Y), steps up to the floor."""
+    for xc in DOORS:
+        w = 0.95
+        y = W / 2 - 0.06
+        for sgn in (-1, 1):
+            F.box("DoorLeaf", (xc + sgn * w / 4, y, (0.45 + WIN1) / 2), (w / 2 - 0.02, 0.04, WIN1 - 0.45), M["black"], bev=0.015)
+            F.box("GlassDoor", (xc + sgn * w / 4, y + 0.025, 1.9), (w / 2 - 0.14, 0.01, 1.35), M["glass"], bev=0)
+            F.box("GlassDoorLow", (xc + sgn * w / 4, y + 0.025, 0.85), (w / 2 - 0.14, 0.01, 0.55), M["glass"], bev=0)
         for k in range(3):
-            F.box("Step", (xc, W / 2 - 0.25, 0.45 + k * 0.2), (w - 0.1, 0.4, 0.04), M["floor"], bev=0)
+            F.box("Step", (xc, W / 2 - 0.3, 0.42 + k * 0.21), (w - 0.06, 0.42 - k * 0.1, 0.04), M["floor"], bev=0)
 
 
 def interior(M):
@@ -184,11 +290,11 @@ def interior(M):
     # 2 + 3 seating rows, aisle on the left of centre
     for k in range(10):
         x = FRONT - 2.8 - k * 0.78
-        for y, nseat in ((-0.72, 3), (0.78, 2)):
+        for y, nseat in ((-0.6, 3), (0.72, 2)):
             for j in range(nseat):
-                yy = y + (j - (nseat - 1) / 2) * 0.45
-                F.box("Seat", (x, yy, FLOOR + 0.45), (0.45, 0.42, 0.1), M["seat_b"], bev=0.03)
-                F.box("SeatBack", (x - 0.22, yy, FLOOR + 0.82), (0.08, 0.42, 0.62), M["seat_b"], bev=0.03)
+                yy = y + (j - (nseat - 1) / 2) * 0.42
+                F.box("Seat", (x, yy, FLOOR + 0.45), (0.45, 0.4, 0.1), M["seat_b"], bev=0.03)
+                F.box("SeatBack", (x - 0.22, yy, FLOOR + 0.82), (0.08, 0.4, 0.62), M["seat_b"], bev=0.03)
         if k % 2 == 0:
             for y in (0.32, -0.12):
                 F.cyl("Pole", (x + 0.3, y, FLOOR + 0.95), 0.02, 1.9, M["pole"], verts=8)
@@ -202,12 +308,8 @@ def interior(M):
 
 
 def sides(M):
-    for s in (1, -1):
-        y = s * (W / 2 + 0.012)
-        rot = (math.pi / 2, 0, 0 if s < 0 else math.pi)
-        text(OPERATOR, (-3.3, y, 1.46), rot, 0.17, M["white"], width=3.6)
-        text("EXPRESS", (FRONT - 3.0, y, 2.95), rot, 0.18, M["red"], width=1.6)
-        F.box("Reflector", (REAR + 0.6, y, 0.75), (0.12, 0.01, 0.06), M["amber"], bev=0)
+    for s_ in (1, -1):
+        F.box("SideMarker", (0.0, s_ * (W / 2 + 0.005), 0.42), (0.1, 0.01, 0.05), M["amber"], bev=0)
 
 
 def wheels(M):
@@ -219,8 +321,8 @@ def wheels(M):
     F.wheel("Wheel_RR", (xr, -W / 2 + 0.22, R), R, WD * 1.9, M, False, hub_cap=True)
     for x in (xf, xr):                                                  # arches cut as black wells
         for s in (1, -1):
-            arch = F.lathe("Arch", [(R + 0.1, s * (W / 2 + 0.012)), (R + 0.2, s * (W / 2 + 0.012))], M["black"], 32,
-                           arc=(-math.pi / 2, math.pi / 2))
+            arch = F.lathe("Arch", [(R + 0.1, s * (W / 2 - 0.02)), (R + 0.14, s * (W / 2 + 0.03)), (R + 0.2, s * (W / 2 + 0.03))],
+                           M["black"], 32, arc=(-math.pi / 2, math.pi / 2))
             arch.location = (x, 0, R)
             F.box("Well", (x, s * (W / 2 - 0.62), R + 0.25), (2 * R + 0.2, 0.08, 2 * R - 0.2), M["under"], bev=0)
     F.box("Chassis", (0, 0, 0.5), (L - 1.0, W - 0.6, 0.25), M["under"], bev=0)
@@ -241,7 +343,7 @@ def preview(out):
     F.reset()
     sc = bpy.context.scene
     sc.render.engine = 'CYCLES'
-    sc.cycles.samples = 128
+    sc.cycles.samples = 64
     sc.cycles.use_denoising = True
     try:
         prefs = bpy.context.preferences.addons["cycles"].preferences
