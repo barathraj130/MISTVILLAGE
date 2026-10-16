@@ -175,6 +175,7 @@ func _road_material() -> Material:
 	nt.noise = nz
 	sm.set_shader_parameter("noise_tex", nt)
 	sm.set_shader_parameter("city_marks", true)
+	sm.set_shader_parameter("tint", Color(0.44, 0.44, 0.46))          # darker, like the Blender reference
 	return sm
 
 

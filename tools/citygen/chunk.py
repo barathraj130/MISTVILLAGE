@@ -21,6 +21,9 @@ Reads build/cbe/cache/roads.gpkg + osm.gpkg (buildings), the SRTM tile and the d
         i32 njunc    per junction surface: u16 nverts  f32[3*nverts] x,y,z (a triangle list; the crossing with
                      filleted corners, laid over the road ends that meet there)
         i32 nprops   per prop: u8 type(1 traffic signal, 2 bus shelter, 3 speed breaker)  f32 x y z  f32 yaw  f32 size
+        i32 nlife    per thing: u8 kind (index.json life_kinds)  f32 x y z  f32 angle (local +X direction)  f32 scale
+        i32 nwires   per pole run: u8 kind (1 three conductors, 2 + a sagging cable bundle)  u16 n  f32[3n] pole feet
+        (CBE6: walk flags bits 4-6 = street type, index.json street_types; the life and wire sections follow yards)
         i32 nyards   per record: u8 kind  u16 nverts  f32[3*nverts] x,y,z
                      kind 1 paver forecourt, 2 concrete yard, 6 footpath corner at a junction (triangle lists);
                      101 / 102 / 106 the outline of the record before it (an edge skirt down into the ground);
@@ -35,6 +38,7 @@ designed building that fits — its kind, size, facing (towards the street) and 
 import gzip
 import json
 import math
+import random
 import os
 import struct
 import sys
@@ -165,7 +169,7 @@ def run(cfg, roads_cfg):
 
     def tile(key):
         if key not in tiles:
-            tiles[key] = {"roads": [], "blds": [], "walks": [], "junc": [], "props": [], "yards": []}
+            tiles[key] = {"roads": [], "blds": [], "walks": [], "junc": [], "props": [], "yards": [], "life": [], "wires": []}
         return tiles[key]
 
     # ---- roads ---------------------------------------------------------------------------------------
@@ -453,6 +457,21 @@ def run(cfg, roads_cfg):
                 t += bw * sx + (0.1 if core else 1.5)
     print("  infill → %d generated buildings on empty frontage (%ds)" % (n_fill, time.time() - t0), flush=True)
 
+    # ---- street types (docs/COIMBATORE_STREETS.md): from the road class, the district and the buildings beside it --
+    import life as LIFE
+    kgrid = {}
+    for q in placed:
+        kgrid.setdefault((int(q[2][0] // 30), int(q[2][1] // 30)), []).append((q[2][0], q[2][1], q[1]))
+
+    def near_kinds(x, z):
+        out = []
+        for i in (-1, 0, 1):
+            for j in (-1, 0, 1):
+                for bx, bz, k in kgrid.get((int(x // 30) + i, int(z // 30) + j), ()):
+                    if abs(bx - x) < 30 and abs(bz - z) < 30:
+                        out.append(k)
+        return out
+
     # ---- footpaths: a kerbed strip each side of every street, stopping at the kerb of any road it meets ----
     lines2 = np.array([q[0] for q in road_lines], dtype=object)
     carriage = shapely.buffer(lines2, np.array([q[2] for q in road_lines]) * 0.5 + KERB + WALK * 0.5 + 0.05, cap_style="flat")
@@ -501,6 +520,9 @@ def run(cfg, roads_cfg):
                 if median or any(h != ri and road_lines[h][3] not in NO_WALK for h in
                                  ctree2.query(beyond, predicate="intersects")):
                     fl = (fl & 4) | 8
+                else:
+                    mx, mz = float(c[len(c) // 2][0]), float(c[len(c) // 2][1])
+                    fl |= LIFE.TYPES.index(LIFE.street_type(cls, mx, mz, near_kinds(mx, mz))) << 4
                 cid = classes.index(cls) if cls in classes else 0
                 keys = [(int(math.floor((pts[i, 0] + pts[i + 1, 0]) * 0.5 / TILE)), int(math.floor((pts[i, 2] + pts[i + 1, 2]) * 0.5 / TILE)))
                         for i in range(len(pts) - 1)]
@@ -774,6 +796,23 @@ def run(cfg, roads_cfg):
                 n_tree += 1
     print("  yards → %d paved, %d wall runs, %d trees (%ds)" % (n_yard, n_wall, n_tree, time.time() - t0), flush=True)
 
+    # ---- street life by street type: stalls, carts, boards, kolams, bikes, people, trees, poles and wires ----------
+    lrng = random.Random(21)
+    n_life = 0
+    for (cx_, cz_), t in list(tiles.items()):
+        for fl, cid, ww, pts in t["walks"]:
+            if fl & 8:
+                continue
+            typ = LIFE.TYPES[(fl >> 4) & 7]
+            out, wires = [], []
+            LIFE.place_walk(typ, fl, ww * 0.5, [tuple(map(float, q)) for q in pts], lrng, out, wires)
+            for rec in out:
+                tile((int(math.floor(rec[1] / TILE)), int(math.floor(rec[3] / TILE))))["life"].append(rec)
+            for w_kind, chain in wires:
+                t["wires"].append((w_kind, np.asarray(chain, dtype=np.float32)))
+            n_life += len(out)
+    print("  street life → %d things (%ds)" % (n_life, time.time() - t0), flush=True)
+
     # ---- ground, then write -------------------------------------------------------------------------
     for (cx, cz), t in tiles.items():
         gx = cx * TILE + np.arange(HN) * HSTEP
@@ -790,7 +829,7 @@ def run(cfg, roads_cfg):
                 if i1 >= i0 and j1 >= j0:
                     sub = H[i0:i1 + 1, j0:j1 + 1]
                     np.minimum(sub, y - 0.3, out=sub)
-        buf = bytearray(b"CBE5")
+        buf = bytearray(b"CBE6")
         buf += struct.pack("<iii", cx, cz, HN)
         buf += H.astype("<f4").tobytes()
         buf += struct.pack("<i", len(t["roads"]))
@@ -819,13 +858,20 @@ def run(cfg, roads_cfg):
         for kind, v in t["yards"]:
             buf += struct.pack("<BH", kind, len(v))
             buf += v.astype("<f4").tobytes()
+        buf += struct.pack("<i", len(t["life"]))
+        for kind, x, y, z, a, sc in t["life"]:
+            buf += struct.pack("<B5f", kind, x, y, z, a, sc)
+        buf += struct.pack("<i", len(t["wires"]))
+        for w_kind, chain in t["wires"]:
+            buf += struct.pack("<BH", w_kind, len(chain))
+            buf += chain.astype("<f4").tobytes()
         name = "CBE_%d_%d" % (cx, cz)
         with open(os.path.join(tmp, name + ".bin"), "wb") as f:
             f.write(bytes(buf))
         t["n"] = (len(t["roads"]), len(t["blds"]))
     keys = np.array(list(tiles.keys()))
-    index = {"tile": TILE, "hstep": HSTEP, "hn": HN, "origin": cfg["origin"], "crs": cfg["crs"], "format": "CBE5",
-             "classes": classes, "variants": kit.names,
+    index = {"tile": TILE, "hstep": HSTEP, "hn": HN, "origin": cfg["origin"], "crs": cfg["crs"], "format": "CBE6",
+             "classes": classes, "variants": kit.names, "life_kinds": LIFE.KINDS, "street_types": LIFE.TYPES,
              "tiles": {"%d,%d" % k: list(t["n"]) for k, t in tiles.items()},
              "bounds": [int(keys[:, 0].min()), int(keys[:, 1].min()), int(keys[:, 0].max()), int(keys[:, 1].max())],
              "dem_clamped_south": dem.clamped > 0}

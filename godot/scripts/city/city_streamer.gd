@@ -49,6 +49,8 @@ var kit_far_meshes: Array = []             # variant index → its far version (
 var kit_boxes: Array = []                  # variant index → AABB of the design (far stand-in and collision)
 var tree_meshes: Array = []                # [near Mesh, far LOD Mesh] per tree kind
 var bike_meshes: Array = []                # parked scooters and motorcycles
+var life_meshes: Array = []                # life kind → Mesh (index.json life_kinds)
+var wire_mat: StandardMaterial3D
 var shrub_mesh: Mesh                       # planting on the medians
 var pier_mesh: Mesh                        # flyover pier and lamp (tools/flyover.py)
 var fly_lamp_mesh: Mesh
@@ -70,12 +72,24 @@ func _ready() -> void:
 			kit_near = float(a.get_slice("=", 1))
 	lamp_mesh = _lamp()
 	signal_shader = _signal_shader()
-	# Coimbatore street trees (tools/trees_tn.py): coconut palms and neem, near and far versions
-	for tn in ["palm_1", "palm_2", "palm_4", "neem_3", "neem_5"]:
-		var near_m := _gltf_mesh("res://assets/models/city_%s.glb" % tn)
-		var far_m := _gltf_mesh("res://assets/models/city_%s_far.glb" % tn)
+	# Coimbatore street trees: natural neem, rain tree and gulmohar (tools/vegetation.py) and coconut palms
+	# (tools/trees_tn.py); far versions from the lighter palm / neem models
+	for pair in [["city_props/veg_neem1", "models/city_neem_3_far"], ["city_props/veg_neem2", "models/city_neem_5_far"],
+			["city_props/veg_rain1", "models/city_neem_5_far"], ["city_props/veg_gul1", "models/city_neem_3_far"],
+			["models/city_palm_1", "models/city_palm_1_far"], ["models/city_palm_2", "models/city_palm_2_far"]]:
+		var near_m := _scene_mesh("res://assets/%s.glb" % pair[0])
+		var far_m := _gltf_mesh("res://assets/%s.glb" % pair[1])
 		if near_m:
 			tree_meshes.append([near_m, far_m if far_m else near_m])
+	# street life (tools/citygen/life.py): one mesh per kind
+	for kname in index.get("life_kinds", []):
+		var path := ""
+		for cand in ["res://assets/city_props/life_%s.glb", "res://assets/city_props/%s.glb", "res://assets/vehicles/%s.glb",
+				"res://assets/people/%s.glb", "res://assets/models/%s.glb"]:
+			if ResourceLoader.exists(cand % kname):
+				path = cand % kname
+				break
+		life_meshes.append(_scene_mesh(path) if path != "" else null)
 	shrub_mesh = _gltf_mesh("res://assets/models/veg_hedgerow_bush_0_lod.gltf")
 	pier_mesh = _gltf_mesh("res://assets/city_props/flyover_pier.glb")
 	fly_lamp_mesh = _gltf_mesh("res://assets/city_props/flyover_lamp.glb")
@@ -207,7 +221,7 @@ func _build(k: Vector2i) -> void:
 		ready_q.append([k, {}])
 		_mutex.unlock()
 		return
-	if f.get_buffer(4).get_string_from_ascii() != "CBE5":
+	if f.get_buffer(4).get_string_from_ascii() != "CBE6":
 		_mutex.lock()
 		ready_q.append([k, {}])
 		_mutex.unlock()
@@ -262,6 +276,16 @@ func _build(k: Vector2i) -> void:
 			var yk := f.get_8()
 			var yn := f.get_16()
 			yards.append([yk, f.get_buffer(yn * 12).to_float32_array()])
+	var life: Array = []
+	var wires: Array = []
+	if f.get_position() < f.get_length():
+		for _l in _s32(f.get_32()):
+			var lk := f.get_8()
+			life.append([lk, f.get_buffer(20).to_float32_array()])
+		for _w in _s32(f.get_32()):
+			var wk2 := f.get_8()
+			var wn2 := f.get_16()
+			wires.append([wk2, f.get_buffer(wn2 * 12).to_float32_array()])
 	_raise_flyovers(roads)
 	var out := {}
 	_ground(k, hn, h, out)
@@ -271,6 +295,8 @@ func _build(k: Vector2i) -> void:
 	_junctions(juncs, out)
 	_props(props, out)
 	_yards(yards, out)
+	_life(life, out)
+	_wires(wires, out)
 	out["roads_raw"] = roads
 	_mutex.lock()
 	ready_q.append([k, out])
@@ -778,6 +804,52 @@ func _buildings(blds: Array, out: Dictionary) -> void:
 	out["n_kit"] = kits.values().reduce(func(acc, a): return acc + a.size(), 0)
 
 
+## Streets without a footpath (docs/COIMBATORE_STREETS.md): colony — a 0.5 m concrete edge strip flush with the
+## road and a slab-covered drain behind it; old town — an open drain channel at the road edge with slab bridges;
+## industrial and outskirts — a gravel shoulder. The strip data sits at footpath height; streets are flush (−0.15).
+func _street_edge(kb: Array, faces: PackedVector3Array, a: Vector3, b: Vector3, ra: Vector3, rb: Vector3, hw: float,
+		styp: int, along: float, L: float) -> void:
+	var dn := Vector3(0, -0.15, 0)
+	var e0 := a + ra * (hw + 0.2) + dn
+	var e1 := b + rb * (hw + 0.2) + dn
+	var concrete := Color(0.7, 0.69, 0.66)
+	var slab := Color(0.56, 0.55, 0.52)
+	var dark := Color(0.04, 0.04, 0.035)
+	var gravel := Color(0.55, 0.42, 0.32)
+	var down := Vector3(0, -0.4, 0)
+	if styp == 4:
+		var s0 := e0 - ra * 0.5
+		var s1 := e1 - rb * 0.5
+		_quad(kb, e0, e1, s1, s0, Vector3.UP, concrete, Vector2.ZERO, Vector2.ZERO, Vector2.ZERO, Vector2.ZERO, Vector2.ZERO)
+		var d0 := s0 - ra * 0.75 + Vector3(0, 0.02, 0)
+		var d1 := s1 - rb * 0.75 + Vector3(0, 0.02, 0)
+		_quad(kb, s0 + Vector3(0, 0.02, 0), s1 + Vector3(0, 0.02, 0), d1, d0, Vector3.UP, slab,
+			Vector2.ZERO, Vector2.ZERO, Vector2.ZERO, Vector2.ZERO, Vector2.ZERO)
+		_quad(kb, d0, d1, d1 + down, d0 + down, -ra, slab, Vector2.ZERO, Vector2.ZERO, Vector2.ZERO, Vector2.ZERO, Vector2.ZERO)
+		faces.append_array([e0, e1, d1, e0, d1, d0])
+	elif styp == 5:
+		var w := 0.45
+		var low := Vector3(0, -0.35, 0)
+		var o0 := e0 - ra * w
+		var o1 := e1 - rb * w
+		_quad(kb, e0 + low, e1 + low, o1 + low, o0 + low, Vector3.UP, dark, Vector2.ZERO, Vector2.ZERO, Vector2.ZERO, Vector2.ZERO, Vector2.ZERO)
+		_quad(kb, e0, e1, e1 + low, e0 + low, -ra, slab, Vector2.ZERO, Vector2.ZERO, Vector2.ZERO, Vector2.ZERO, Vector2.ZERO)
+		_quad(kb, o1, o0, o0 + low, o1 + low, ra, slab, Vector2.ZERO, Vector2.ZERO, Vector2.ZERO, Vector2.ZERO, Vector2.ZERO)
+		_quad(kb, o0, o1, o1 - ra * 0.6, o0 - ra * 0.6, Vector3.UP, concrete, Vector2.ZERO, Vector2.ZERO, Vector2.ZERO, Vector2.ZERO, Vector2.ZERO)
+		if int(along / 5.0) != int((along + L) / 5.0):                     # a slab bridge to the doors
+			var mid := e0.lerp(e1, 0.5) + Vector3(0, 0.02, 0)
+			var dd := (e1 - e0).normalized()
+			_quad(kb, mid - dd * 0.5, mid + dd * 0.5, mid + dd * 0.5 - ra * (w + 0.1), mid - dd * 0.5 - ra * (w + 0.1),
+				Vector3.UP, concrete, Vector2.ZERO, Vector2.ZERO, Vector2.ZERO, Vector2.ZERO, Vector2.ZERO)
+		faces.append_array([e0 + low, e1 + low, o1 + low, e0 + low, o1 + low, o0 + low])
+	else:
+		var w2 := 1.6 if styp == 6 else 1.2
+		var g0 := e0 - ra * w2 + Vector3(0, -0.03, 0)
+		var g1 := e1 - rb * w2 + Vector3(0, -0.03, 0)
+		_quad(kb, e0, e1, g1, g0, Vector3.UP, gravel, Vector2.ZERO, Vector2.ZERO, Vector2.ZERO, Vector2.ZERO, Vector2.ZERO)
+		faces.append_array([e0, e1, g1, e0, g1, g0])
+
+
 ## Footpath strips: paver top, a skirt down the outer edge into the ground, and the kerb on the road side
 ## (painted black and white on the main roads); streetlights every LAMP_STEP metres on the bigger streets.
 func _walks(walks: Array, out: Dictionary) -> void:
@@ -827,6 +899,11 @@ func _walks(walks: Array, out: Dictionary) -> void:
 			var bi := b + rws[i + 1] * hw
 			var ao := a - rws[i] * hw
 			var bo := b - rws[i + 1] * hw
+			var styp := (fl >> 4) & 7                   # street type (tools/citygen/life.py TYPES)
+			if styp >= 4 and (fl & 8) == 0:
+				_street_edge(kb, faces, a, b, rws[i], rws[i + 1], hw, styp, along, L)
+				along += L
+				continue
 			var sep := (fl & 8) != 0                     # a separator / median: planted, kerbed both sides
 			var col := grey
 			if fl & 1:
@@ -1015,6 +1092,159 @@ func _lens(c: Color, which: int) -> ShaderMaterial:
 	m.set_shader_parameter("col", c)
 	m.set_shader_parameter("which", which)
 	return m
+
+
+const LEAVES := {"Neem Leaf": [Color(0.03, 0.09, 0.015), Color(0.11, 0.2, 0.035)],
+	"Rain Tree Leaf": [Color(0.04, 0.12, 0.02), Color(0.14, 0.26, 0.05)],
+	"Gulmohar Leaf": [Color(0.06, 0.15, 0.02), Color(0.16, 0.3, 0.05)],
+	"Bush Leaf": [Color(0.03, 0.1, 0.02), Color(0.12, 0.24, 0.04)],
+	"Grass Blade": [Color(0.18, 0.2, 0.06), Color(0.32, 0.3, 0.1)]}
+static var _leaf_shader: Shader
+static var _bark: StandardMaterial3D
+
+
+## Every mesh of a glTF scene merged into one ArrayMesh (one surface per source surface, transforms baked):
+## vehicles, people and props come as several parts. Leaf and bark materials get the game's own versions.
+static func _scene_mesh(path: String) -> Mesh:
+	if not ResourceLoader.exists(path):
+		return null
+	var sc := (load(path) as PackedScene).instantiate() as Node3D
+	var am := ArrayMesh.new()
+	for n in sc.find_children("*", "MeshInstance3D", true, false):
+		var mi := n as MeshInstance3D
+		var xf := Transform3D()
+		var nd: Node = mi
+		while nd and nd != sc:
+			xf = (nd as Node3D).transform * xf
+			nd = nd.get_parent()
+		for si in mi.mesh.get_surface_count():
+			var arr := mi.mesh.surface_get_arrays(si)
+			var vs: PackedVector3Array = arr[Mesh.ARRAY_VERTEX]
+			for i in vs.size():
+				vs[i] = xf * vs[i]
+			arr[Mesh.ARRAY_VERTEX] = vs
+			if arr[Mesh.ARRAY_NORMAL] != null:
+				var ns: PackedVector3Array = arr[Mesh.ARRAY_NORMAL]
+				for i in ns.size():
+					ns[i] = (xf.basis * ns[i]).normalized()
+				arr[Mesh.ARRAY_NORMAL] = ns
+			arr[Mesh.ARRAY_TANGENT] = null
+			am.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arr)
+			var mat := mi.get_active_material(si)
+			am.surface_set_material(am.get_surface_count() - 1, _game_material(mat))
+	sc.free()
+	return am
+
+
+static func _game_material(mat: Material) -> Material:
+	var nm := mat.resource_name if mat else ""
+	for key in LEAVES:
+		if nm.begins_with(key):
+			if _leaf_shader == null:
+				_leaf_shader = Shader.new()
+				_leaf_shader.code = """shader_type spatial;
+render_mode cull_disabled;
+uniform vec3 col_a : source_color;
+uniform vec3 col_b : source_color;
+void fragment() {
+	vec2 q = UV * 2.0 - 1.0;
+	if (dot(q, q) > 1.0 && UV != vec2(0.5)) discard;
+	vec3 c = COLOR.g > 0.5 ? COLOR.rgb : mix(col_a, col_b, COLOR.r);
+	ALBEDO = c;
+	ROUGHNESS = 0.6;
+	BACKLIGHT = c * 0.6;
+}
+"""
+			var sm := ShaderMaterial.new()
+			sm.shader = _leaf_shader
+			sm.set_shader_parameter("col_a", LEAVES[key][0])
+			sm.set_shader_parameter("col_b", LEAVES[key][1])
+			return sm
+	if nm.begins_with("Bark"):
+		if _bark == null:
+			_bark = StandardMaterial3D.new()
+			_bark.albedo_texture = load("res://assets/models/textures/tree_bark_base.jpg") if ResourceLoader.exists("res://assets/models/textures/tree_bark_base.jpg") else null
+			_bark.albedo_color = Color(0.55, 0.45, 0.38)
+			_bark.uv1_triplanar = true
+			_bark.uv1_scale = Vector3(2, 2, 2)
+			_bark.roughness = 0.95
+		return _bark
+	return mat
+
+
+## Street life: one MultiMesh per kind; people, kolams and bikes only near, trees and poles further.
+func _life(life: Array, out: Dictionary) -> void:
+	var by := {}
+	for rec in life:
+		var kind: int = rec[0]
+		if kind >= life_meshes.size() or life_meshes[kind] == null:
+			continue
+		var v: PackedFloat32Array = rec[1]
+		var a := v[3]
+		var x := Vector3(cos(a), 0, sin(a))
+		var bs := Basis(x, Vector3.UP, x.cross(Vector3.UP)).scaled(Vector3.ONE * v[4])
+		if not by.has(kind):
+			by[kind] = []
+		by[kind].append(Transform3D(bs, Vector3(v[0], v[1], v[2])))
+	var mms := []
+	var names: Array = index.get("life_kinds", [])
+	for kind in by:
+		var mm := MultiMesh.new()
+		mm.transform_format = MultiMesh.TRANSFORM_3D
+		mm.mesh = life_meshes[kind]
+		mm.instance_count = by[kind].size()
+		for i in by[kind].size():
+			mm.set_instance_transform(i, by[kind][i])
+		var nm: String = names[kind]
+		var far := 90.0
+		if nm.begins_with("veg_") or nm.begins_with("city_palm") or nm == "pole" or nm == "transformer":
+			far = 320.0
+		elif nm.begins_with("fleet") or nm.begins_with("stall") or nm.begins_with("shade") or nm.begins_with("flex") \
+				or nm == "shrine" or nm == "thatched":
+			far = 200.0
+		mms.append([mm, far])
+	out["life"] = mms
+
+
+## Overhead wires between the poles of a run: three conductors sagging 0.9 m at 8.55 m, a cable bundle lower down.
+func _wires(wires: Array, out: Dictionary) -> void:
+	var t := [PackedVector3Array(), PackedVector3Array(), PackedColorArray(), PackedVector2Array(), PackedVector2Array(), PackedInt32Array()]
+	for w in wires:
+		var p: PackedFloat32Array = w[1]
+		var n := p.size() / 3
+		var offs := [[-0.7, 8.55, 0.9], [0.0, 8.55, 0.9], [0.7, 8.55, 0.9]]
+		if w[0] == 2:
+			offs.append([0.35, 6.0, 1.6])
+		for i in n - 1:
+			var a := Vector3(p[i * 3], p[i * 3 + 1], p[i * 3 + 2])
+			var b := Vector3(p[i * 3 + 3], p[i * 3 + 4], p[i * 3 + 5])
+			if a.distance_to(b) > 60.0:
+				continue
+			var dirw := Vector3(b.x - a.x, 0, b.z - a.z).normalized()
+			var side := Vector3(dirw.z, 0, -dirw.x)
+			for o in offs:
+				var prev := Vector3.ZERO
+				for s_ in 11:
+					var f := s_ / 10.0
+					var q := a.lerp(b, f) + side * float(o[0]) + Vector3(0, float(o[1]) - float(o[2]) * 4.0 * f * (1.0 - f), 0)
+					if s_ > 0:
+						var up := Vector3(0, 0.012, 0)
+						_quad(t, prev - up, q - up, q + up, prev + up, side, Color(0.02, 0.02, 0.02), Vector2.ZERO, Vector2.ZERO,
+							Vector2.ZERO, Vector2.ZERO, Vector2.ZERO)
+						_quad(t, q - up, prev - up, prev + up, q + up, -side, Color(0.02, 0.02, 0.02), Vector2.ZERO, Vector2.ZERO,
+							Vector2.ZERO, Vector2.ZERO, Vector2.ZERO)
+					prev = q
+	if (t[0] as PackedVector3Array).is_empty():
+		return
+	var arr := []
+	arr.resize(Mesh.ARRAY_MAX)
+	arr[Mesh.ARRAY_VERTEX] = t[0]
+	arr[Mesh.ARRAY_NORMAL] = t[1]
+	arr[Mesh.ARRAY_COLOR] = t[2]
+	arr[Mesh.ARRAY_INDEX] = t[5]
+	var m := ArrayMesh.new()
+	m.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arr)
+	out["wires"] = m
 
 
 static func _gltf_mesh(path: String) -> Mesh:
@@ -1465,6 +1695,24 @@ func _instance(k: Vector2i, d: Dictionary) -> void:
 		mpi.multimesh = d["median_plants"]
 		mpi.visibility_range_end = 250.0
 		node.add_child(mpi)
+	for lm in d.get("life", []):
+		var lmi2 := MultiMeshInstance3D.new()
+		lmi2.multimesh = lm[0]
+		lmi2.visibility_range_end = lm[1]
+		if lm[1] < 100.0:
+			lmi2.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		node.add_child(lmi2)
+	if d.has("wires"):
+		var wmi2 := MeshInstance3D.new()
+		wmi2.mesh = d["wires"]
+		if wire_mat == null:
+			wire_mat = StandardMaterial3D.new()
+			wire_mat.albedo_color = Color(0.03, 0.03, 0.03)
+			wire_mat.roughness = 0.6
+		wmi2.material_override = wire_mat
+		wmi2.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		wmi2.visibility_range_end = 250.0
+		node.add_child(wmi2)
 	for bm3 in d.get("bikes", []):
 		var bmi := MultiMeshInstance3D.new()
 		bmi.multimesh = bm3
