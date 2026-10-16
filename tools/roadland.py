@@ -122,7 +122,7 @@ def plain(name, colour, rough=0.6, metal=0.0, emit=None, strength=0.0):
 def asphalt_mat():
     """Worn city asphalt: the photo texture at 4 m, darker polished wheel tracks in each lane (from the UV: u is
     metres across from the left edge), large patchy colour variation and dust at the edges."""
-    m = tex_mat("Asphalt", "asphalt", 4.0, uv=True, tint=(0.2, 0.2, 0.215), bump=0.5)
+    m = tex_mat("Asphalt", "asphalt", 4.0, uv=True, tint=(0.11, 0.11, 0.12), bump=0.6)
     nt = m.node_tree
     p = nt.nodes["Principled BSDF"]
     base = p.inputs["Base Color"].links[0].from_socket
@@ -172,6 +172,12 @@ def asphalt_mat():
         nt.links.new(mul.outputs[0], comb.inputs[k])
     nt.links.new(comb.outputs[0], mix.inputs[7])
     nt.links.new(mix.outputs[2], p.inputs["Base Color"])
+    # no sheen: asphalt is rough and barely reflects; drop the roughness map link if any
+    for lk in list(p.inputs["Roughness"].links):
+        nt.links.remove(lk)
+    p.inputs["Roughness"].default_value = 0.88
+    if "Specular IOR Level" in p.inputs:
+        p.inputs["Specular IOR Level"].default_value = 0.3
     return m
 
 
@@ -268,7 +274,13 @@ def materials():
         "sig_red": plain("Signal Red", (0.6, 0.02, 0.01), 0.3, emit=(1, 0.05, 0.02), strength=4),
         "sig_body": plain("Signal Body", (0.02, 0.02, 0.02), 0.5),
         "sig_yellow": plain("Signal Yellow", (0.8, 0.6, 0.03), 0.5),
+        "wire": plain("Wire", (0.01, 0.01, 0.01), 0.5),
     })
+    import streetlife as SL
+    _mats["dust"] = SL.decal_mat("Kerb Dust", (0.42, 0.24, 0.13), 0.95, 0.9, 0.38, 0.85)
+    _mats["oil"] = SL.decal_mat("Oil Stain", (0.015, 0.015, 0.015), 0.35, 1.6, 0.48, 0.55)
+    _mats["patch"] = SL.decal_mat("Patch Repair", (0.035, 0.035, 0.038), 0.9, 0.4, 0.2, 0.9)
+    _mats["crack"] = plain("Crack", (0.01, 0.01, 0.01), 0.9)
     return _mats
 
 
@@ -707,7 +719,7 @@ def setup_render(samples):
         sc.view_settings.look = 'AgX - Medium High Contrast'
     except TypeError:
         pass
-    sc.view_settings.exposure = -0.5
+    sc.view_settings.exposure = -0.85
     sc.render.image_settings.file_format = 'JPEG'
     sc.render.image_settings.quality = 92
     sc.world = bpy.data.worlds.new("Sky")
@@ -719,7 +731,7 @@ def setup_render(samples):
     sc.world.node_tree.links.new(sky.outputs[0], sc.world.node_tree.nodes["Background"].inputs[0])
     sc.world.node_tree.nodes["Background"].inputs[1].default_value = 0.14
     sun = bpy.data.objects.new("Sun", bpy.data.lights.new("Sun", 'SUN'))
-    sun.data.energy = 3.4
+    sun.data.energy = 3.0
     sun.data.angle = math.radians(1.0)
     sun.data.color = (1.0, 0.93, 0.82)
     sun.rotation_euler = (math.radians(52), 0, math.radians(-140))
@@ -765,7 +777,7 @@ def pick_views(tiles, classes):
     d = flat(c - a).normalized()
     left = left_of(d)
     half = best["w"] * 0.5
-    eye = a - d * 25 + left * (half * 0.5) + Vector((0, 1.6, 0))
+    eye = a - d * 25 + left * (half * 0.15) + Vector((0, 1.6, 0))
     street = (eye, eye + d * 60 + Vector((0, -1.0, 0)))
     walk = (a - d * 10 + left * (half + 1.3) + Vector((0, 1.75, 0)), a + d * 30 + left * (half * 0.2) + Vector((0, 0.6, 0)))
     jbest, jn = None, -1
@@ -807,6 +819,8 @@ def main():
     junctions(tiles, b)
     footpaths(tiles, b, lamps)
     yards(tiles, b, trees)
+    import streetlife as SL
+    SL.place(tiles, classes, instance_of, to_blender, b)
     objs = b.finish(world)
     print("MESH", sum(len(o.data.polygons) for o in objs), "faces", flush=True)
     lc = lamp_collection()
@@ -814,29 +828,38 @@ def main():
         rot = Matrix.Rotation(math.atan2(rw.x, rw.z), 4, 'Y')            # arm reaches over the road (game frame)
         g = Matrix.Translation(q) @ rot @ Matrix.Rotation(-math.pi / 2, 4, 'X')
         instance_of(lc, C @ g)
-    sh = bpy.data.collections.new("Shrub")
-    bpy.ops.mesh.primitive_ico_sphere_add(subdivisions=2, radius=1.0, location=(0, 0, 0.55))
-    so = bpy.context.active_object
-    so.scale = (1.0, 1.0, 0.7)
-    dm = so.modifiers.new("Leafy", 'DISPLACE')
-    dm.texture = bpy.data.textures.new("leafy", 'VORONOI')
-    dm.texture.noise_scale = 0.35
-    dm.strength = 0.25
-    so.data.materials.append(materials()["shrub"])
-    for pl in so.data.polygons:
-        pl.use_smooth = True
-    bpy.context.scene.collection.objects.unlink(so)
-    sh.objects.link(so)
-    for at, r in SHRUBS:
-        instance_of(sh, Matrix.Translation(to_blender(at)) @ Matrix.Scale(r, 4))
-    tcs = tree_collections()
+    import vegetation as VG
+
+    def as_coll(name, obs):
+        coll = bpy.data.collections.new(name)
+        for o in (obs if isinstance(obs, list) else [obs]):
+            for c in list(o.users_collection):
+                c.objects.unlink(o)
+            coll.objects.link(o)
+        return coll
+    bushes = [as_coll("Bush%d" % k, VG.bush(k + 1)) for k in range(5)]
+    for k, (at, r) in enumerate(SHRUBS):
+        instance_of(bushes[k % len(bushes)], Matrix.Translation(to_blender(at)) @ Matrix.Scale(r * 1.4, 4))
+    big = [as_coll("Neem1", VG.neem(1)), as_coll("Neem2", VG.neem(2)), as_coll("Rain1", VG.raintree(1)),
+           as_coll("Gul1", VG.gulmohar(1)), as_coll("Palm1", VG.palm(1)), as_coll("Palm2", VG.palm(2))]
+    grass = as_coll("Tuft", VG.grass_tuft(1))
     rr = random.Random(9)
     for k, q in enumerate(trees):
-        if rr.random() > 0.55:
-            continue
-        s = rr.uniform(0.75, 1.15)
-        instance_of(tcs[k % len(tcs)], Matrix.Translation(to_blender(q)) @ Matrix.Rotation(rr.random() * 6.28, 4, 'Z')
-                    @ Matrix.Scale(s, 4))
+        roll = rr.random()
+        m = Matrix.Translation(to_blender(q)) @ Matrix.Rotation(rr.random() * 6.28, 4, 'Z')
+        if roll < 0.35:
+            instance_of(big[rr.randrange(len(big))], m @ Matrix.Scale(rr.uniform(0.8, 1.15), 4))
+        elif roll < 0.7:
+            instance_of(bushes[rr.randrange(len(bushes))], m @ Matrix.Scale(rr.uniform(0.8, 1.4), 4))
+            for _g in range(6):
+                off = Vector((rr.uniform(-2, 2), rr.uniform(-2, 2), 0))
+                instance_of(grass, Matrix.Translation(to_blender(q) + off) @ Matrix.Rotation(rr.random() * 6.28, 4, 'Z')
+                            @ Matrix.Scale(rr.uniform(1.0, 1.8), 4))
+        else:
+            for _g in range(10):
+                off = Vector((rr.uniform(-3, 3), rr.uniform(-3, 3), 0))
+                instance_of(grass, Matrix.Translation(to_blender(q) + off) @ Matrix.Rotation(rr.random() * 6.28, 4, 'Z')
+                            @ Matrix.Scale(rr.uniform(1.0, 1.8), 4))
     if "--nobuildings" not in args:
         bcs = building_collections(index)
         kit_materials()
