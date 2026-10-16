@@ -275,6 +275,9 @@ def materials():
         "sig_body": plain("Signal Body", (0.02, 0.02, 0.02), 0.5),
         "sig_yellow": plain("Signal Yellow", (0.8, 0.6, 0.03), 0.5),
         "wire": plain("Wire", (0.01, 0.01, 0.01), 0.5),
+        "gravel": tex_mat("Gravel", "gravel", 1.5, tint=(0.8, 0.65, 0.55)),
+        "drain_water": plain("Drain Water", (0.03, 0.035, 0.025), 0.15),
+        "drain_wall": tex_mat("Drain Wall", "concrete", 1.0, tint=(0.55, 0.53, 0.5)),
     })
     import streetlife as SL
     _mats["dust"] = SL.decal_mat("Kerb Dust", (0.42, 0.24, 0.13), 0.95, 0.9, 0.38, 0.85)
@@ -538,6 +541,10 @@ def footpaths(tiles, b, lamps):
             road_right = bool(wk["fl"] & 4)
             sep = bool(wk["fl"] & 8)
             main = bool(wk["fl"] & 1)
+            typ = wk.get("type", "arterial")
+            if typ in ("colony", "oldtown", "industrial", "periurban"):
+                street_edge(b, pts, n, hw, road_right, typ)
+                continue
             rws = []
             for i in range(n):
                 d = flat(pts[min(i + 1, n - 1)] - pts[max(i - 1, 0)]).normalized()
@@ -573,6 +580,44 @@ def footpaths(tiles, b, lamps):
                         lamps.append((q, rws[i]))
                         next_lamp += 32.0
                 along += seg
+
+
+def street_edge(b, pts, n, hw, road_right, typ):
+    """Streets without a footpath (docs/COIMBATORE_STREETS.md): colony — a 0.5 m concrete edge strip at road level
+    (the slab drain follows, placed by streetlife); old town — an open drain channel right at the road edge;
+    industrial / outskirts — a gravel and red-soil shoulder."""
+    rws = []
+    for i in range(n):
+        d = flat(pts[min(i + 1, n - 1)] - pts[max(i - 1, 0)]).normalized()
+        rws.append(Vector((d.z, 0, -d.x)) if road_right else Vector((-d.z, 0, d.x)))
+    along = 0.0
+    for i in range(n - 1):
+        a, c = pts[i], pts[i + 1]
+        seg = (c - a).length
+        dn = Vector((0, -0.15, 0))                       # the strip data sits on footpath height; streets are flush
+        e0, e1 = a + rws[i] * (hw + 0.2) + dn, c + rws[i + 1] * (hw + 0.2) + dn      # road edge
+        if typ == "colony":
+            w = 0.5
+            b.quad("concrete", e0, e1, e1 - rws[i + 1] * w, e0 - rws[i] * w, uv=((0, along), (0, along + seg), (w, along + seg), (w, along)))
+        elif typ == "oldtown":
+            w, depth = 0.45, 0.35
+            low = Vector((0, -depth, 0))
+            o0, o1 = e0 - rws[i] * w, e1 - rws[i + 1] * w
+            b.quad("drain_water", e0 + low, e1 + low, o1 + low, o0 + low)
+            b.quad("drain_wall", e0, e1, e1 + low, e0 + low)
+            b.quad("drain_wall", o1, o0, o0 + low, o1 + low)
+            # slab bridges to the doors every ~5 m
+            if int(along / 5.0) != int((along + seg) / 5.0):
+                mid = a.lerp(c, 0.5)
+                rwm = (rws[i] + rws[i + 1]).normalized()
+                dd = flat(c - a).normalized()
+                q0 = mid + rwm * (hw + 0.2) + dn + Vector((0, 0.02, 0))
+                b.quad("concrete", q0 - dd * 0.5, q0 + dd * 0.5, q0 + dd * 0.5 - rwm * (w + 0.1), q0 - dd * 0.5 - rwm * (w + 0.1))
+        else:
+            w = 1.6 if typ == "industrial" else 1.2
+            b.quad("gravel", e0, e1, e1 - rws[i + 1] * w + Vector((0, -0.03, 0)), e0 - rws[i] * w + Vector((0, -0.03, 0)),
+                   uv=((0, along), (0, along + seg), (w, along + seg), (w, along)))
+        along += seg
 
 
 SHRUBS = []
@@ -909,6 +954,31 @@ def pick_views(tiles, classes):
     return {"street": (*street, 26), "footpath": (*walk, 24), "junction": (*aerial, 30), "overview": (*high, 28)}
 
 
+def type_views(tiles):
+    """One street-level view per street type found: from the middle of the longest strip of that type, looking
+    along the street from the near edge of the carriageway."""
+    best = {}
+    for t in tiles:
+        for wk in t["walks"]:
+            typ = wk.get("type")
+            if typ in (None, "median") or len(wk["p"]) < 4:
+                continue
+            L = float(np.hypot(*np.diff(wk["p"][:, [0, 2]], axis=0).T).sum())
+            if L > best.get(typ, (0, None))[0]:
+                best[typ] = (L, wk)
+    out = {}
+    for typ, (L, wk) in best.items():
+        p = wk["p"]
+        i = len(p) // 3
+        a, c = V(*p[i]), V(*p[i + 1])
+        d = flat(c - a).normalized()
+        rw = Vector((d.z, 0, -d.x)) if (wk["fl"] & 4) else Vector((-d.z, 0, d.x))
+        hw = wk["w"] * 0.5
+        eye = a + rw * (hw + 3.2) + Vector((0, 1.5, 0))                 # in the carriageway, clear of parked vehicles
+        out["type_" + typ] = (eye, eye + d * 40 - rw * 3.0 + Vector((0, -1.2, 0)), 24)
+    return out
+
+
 def main():
     args = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else []
     rng = args[args.index("--tiles") + 1] if "--tiles" in args else "-1,-1:0,0"
@@ -932,13 +1002,15 @@ def main():
     bpy.context.scene.collection.objects.link(world)
     b = Builder("City")
     lamps, trees = [], []
+    import streetlife as SL
+    SL.classify(tiles, classes, json.load(open(os.path.join(BUILD, "manifest.json"))), index["variants"])
     land(tiles, b)
     roads(tiles, classes, b)
     junctions(tiles, b)
     footpaths(tiles, b, lamps)
     yards(tiles, b, trees)
-    import streetlife as SL
     SL.place(tiles, classes, instance_of, to_blender, b)
+    trees.extend(SL.TREE_SPOTS)
     objs = b.finish(world)
     print("MESH", sum(len(o.data.polygons) for o in objs), "faces", flush=True)
     lc = lamp_collection()
@@ -992,7 +1064,10 @@ def main():
                     instance_of(bcs[bd["variant"]], C @ T @ C.inverted())
                     n += 1
         print("BUILDINGS", n, flush=True)
-    for name, (loc, tgt, lens) in pick_views(tiles, classes).items():
+    views = pick_views(tiles, classes)
+    if "--typeviews" in args:
+        views = type_views(tiles)
+    for name, (loc, tgt, lens) in views.items():
         shoot(name, loc, tgt, lens, out)
     if "--blend" in args:
         bpy.ops.wm.save_as_mainfile(filepath=os.path.abspath(args[args.index("--blend") + 1]), compress=True)

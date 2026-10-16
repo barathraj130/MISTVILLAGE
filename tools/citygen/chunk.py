@@ -382,10 +382,16 @@ def run(cfg, roads_cfg):
     otree = STRtree(opens) if opens else None
     real = STRtree([q[0] for q in placed]) if placed else None
     n_fill = 0
+    OLDTOWN = ((-899.0, 2860.0), 1200.0)        # Town Hall, Big Bazaar, Raja and Oppanakara Streets (docs/COIMBATORE_STREETS.md)
+
+    def in_core(x, z):
+        return math.hypot(x - OLDTOWN[0][0], z - OLDTOWN[0][1]) < OLDTOWN[1]
     for ri, (l2, l3, w, cls) in enumerate(road_lines):
         if cls in NO_WALK or cls in ("service", "motorway") or l2.length < 20.0 or real is None:
             continue
-        if len(real.query(l2.buffer(120.0), predicate="intersects")) < 4:
+        mid = l2.interpolate(0.5, normalized=True)
+        core = in_core(mid.x, mid.y)
+        if not core and len(real.query(l2.buffer(120.0), predicate="intersects")) < 4:
             continue                                                   # countryside: leave it open
         mainr = cls in main
         L = l2.length
@@ -393,25 +399,30 @@ def run(cfg, roads_cfg):
             t = 5.0
             while t < L - 5.0:
                 h = zlib.crc32(b"%d_%d_%d" % (ri, int(side), int(t)))
-                front = 7.0 + (h % 60) / 10.0
-                depth = 9.0 + ((h >> 8) % 60) / 10.0
+                front = (4.5 + (h % 26) / 10.0) if core else (7.0 + (h % 60) / 10.0)     # old town: narrow plots
+                depth = (10.0 + ((h >> 8) % 40) / 10.0) if core else (9.0 + ((h >> 8) % 60) / 10.0)
                 a = np.asarray(l2.interpolate(t).coords[0])
                 b2 = np.asarray(l2.interpolate(min(L, t + 1.0)).coords[0])
                 d = (b2 - a) / max(np.linalg.norm(b2 - a), 1e-6)
                 nrm = np.array([-d[1], d[0]]) * side
-                C = a + d * (front / 2) + nrm * (w * 0.5 + KERB + WALK + 0.8 + depth / 2)
+                setback = 0.35 if core else 0.8                              # the old town builds to the street
+                C = a + d * (front / 2) + nrm * (w * 0.5 + KERB + WALK + setback + depth / 2)
                 nz = -nrm
                 nx = np.array([nz[1], -nz[0]])
-                R = rect(C, nx, nz, front / 2 + 0.6, depth / 2 + 0.6)       # with a little space round it
+                gap = 0.05 if core else 0.6
+                R = rect(C, nx, nz, front / 2 + gap, depth / 2 + gap)       # with a little space round it
                 bad = any(R.intersects(corridors[q]) for q in ctree.query(R, predicate="intersects"))
                 bad = bad or any(R.intersects(q) for q in near_rects(R))
                 bad = bad or (otree is not None and len(otree.query(R, predicate="intersects")) > 0)
-                if bad or len(real.query(Point(C), predicate="dwithin", distance=150.0)) < 3:
+                if bad or (not core and len(real.query(Point(C), predicate="dwithin", distance=150.0)) < 3):
                     t += 4.0
                     continue
                 floors = (2 + h % 3) if mainr else (1 + (h >> 4) % 3)
                 r = h % 100
-                if mainr:
+                if core:
+                    floors = 2 + h % 2
+                    kind = "shop_house" if (mainr or cls in ("secondary", "tertiary") or r < 35) else "tn_house"
+                elif mainr:
                     kind = "commercial" if front >= 12.5 or r < 30 else ("apartment" if r < 45 else ("city_house" if r < 60 else "shop_house"))
                 else:
                     kind = "shop_house" if r < 8 else ("city_house" if r < 22 else "tn_house")
@@ -439,7 +450,7 @@ def run(cfg, roads_cfg):
                 tile(key)["blds"].append((floors, 2 | 4, cols[h % len(cols)], base, kit.names.index(name), kd,
                                           ext.astype(np.float32), (h % 1000) / 1000.0))
                 n_fill += 1
-                t += bw * sx + 1.5
+                t += bw * sx + (0.1 if core else 1.5)
     print("  infill → %d generated buildings on empty frontage (%ds)" % (n_fill, time.time() - t0), flush=True)
 
     # ---- footpaths: a kerbed strip each side of every street, stopping at the kerb of any road it meets ----
