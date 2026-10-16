@@ -71,7 +71,7 @@ def decal_mat(name, colour, rough, noise_scale, threshold, alpha_max):
     r = nt.nodes.new("ShaderNodeMapRange")
     nt.links.new(n.outputs["Fac"], r.inputs["Value"])
     r.inputs["From Min"].default_value = threshold
-    r.inputs["From Max"].default_value = threshold + 0.12
+    r.inputs["From Max"].default_value = threshold + 0.05
     r.inputs["To Max"].default_value = alpha_max
     mul = nt.nodes.new("ShaderNodeMath")
     mul.operation = "MULTIPLY"
@@ -223,6 +223,31 @@ def sign_collection():
     return c
 
 
+def bin_collection():
+    """A municipal dustbin: a green wheeled bin, a little litter round it."""
+    c = bpy.data.collections.new("Bin")
+    green = _mat("Bin Green", (0.05, 0.28, 0.1), 0.6)
+    box(c, "Bin", (0, 0, 0.55), (0.75, 0.6, 1.1), green)
+    box(c, "Lid", (0, 0, 1.12), (0.8, 0.65, 0.05), _mat("Bin Lid", (0.04, 0.2, 0.08), 0.5))
+    rng = random.Random(8)
+    for k in range(6):
+        box(c, "Litter", (rng.uniform(-0.8, 0.8), rng.uniform(-0.7, 0.7), 0.01), (rng.uniform(0.08, 0.2), rng.uniform(0.06, 0.15), 0.01),
+            _mat("Litter %d" % (k % 3), [(0.85, 0.85, 0.8), (0.7, 0.2, 0.1), (0.2, 0.35, 0.7)][k % 3], 0.8), rot=(0, 0, rng.random() * 3))
+    return c
+
+
+def flex_collection():
+    """A printed flex banner on two bamboo poles, as for a shop offer or a function (plain colour bands, no text)."""
+    c = bpy.data.collections.new("Flex")
+    bamboo = _mat("Bamboo", (0.55, 0.45, 0.25), 0.8)
+    for y in (-1.3, 1.3):
+        cyl(c, "Pole", (0, y, 1.6), 0.04, 3.2, bamboo, verts=8)
+    box(c, "Banner", (0, 0, 2.3), (0.02, 2.6, 1.2), _mat("Flex", (0.9, 0.82, 0.2), 0.6))
+    box(c, "Band", (0.012, 0, 2.6), (0.01, 2.6, 0.3), _mat("Flex Red", (0.75, 0.08, 0.05), 0.6))
+    box(c, "Band2", (0.012, 0, 1.95), (0.01, 2.6, 0.2), _mat("Flex Blue", (0.08, 0.2, 0.6), 0.6))
+    return c
+
+
 def vehicle_collections():
     out = []
     for name in ("fleet_auto", "fleet_hatchback", "fleet_sedan", "bike_scooter_0", "bike_motorcycle_1", "bike_scooter_2"):
@@ -248,6 +273,7 @@ def place(tiles, classes, inst, to_blender, b):
     pole_c, drain_c, grat_c, man_c = pole_collection(), drain_collection(), grating_collection(), manhole_collection()
     stall_c, cart_c, sign_c = tea_stall_collection(), cart_collection(), sign_collection()
     vehs = vehicle_collections()
+    bin_c, flex_c = bin_collection(), flex_collection()
     up = Vector((0, 1, 0))
 
     def M(at_g, dir_g, scale=1.0):
@@ -259,7 +285,7 @@ def place(tiles, classes, inst, to_blender, b):
         rot = d.to_track_quat('X', 'Z').to_matrix().to_4x4()
         return Matrix.Translation(p) @ rot @ Matrix.Scale(scale, 4)
 
-    counts = dict.fromkeys(["drain", "pole", "stall", "cart", "vehicle", "manhole", "decal", "sign"], 0)
+    counts = dict.fromkeys(["drain", "pole", "stall", "cart", "vehicle", "manhole", "decal", "sign", "bin", "flex"], 0)
     for t in tiles:
         for wk in t["walks"]:
             p = wk["p"]
@@ -300,13 +326,28 @@ def place(tiles, classes, inst, to_blender, b):
                 while next_thing <= along + seg:
                     q = a.lerp(c, (next_thing - along) / seg)
                     roll = rng.random()
-                    if main and roll < 0.18:
+                    if main and roll < 0.14:
                         inst(stall_c, M(q - rw * (hw - 1.0), -rw))
                         counts["stall"] += 1
-                    elif roll < 0.32:
+                    elif roll < 0.38 and vehs:
+                        # a row of two-wheelers parked on the footpath edge, angled, outside a shop
+                        bikes = [v for v in vehs if v[0].startswith("bike")]
+                        for j in range(rng.randint(3, 7)):
+                            name, vc = bikes[rng.randrange(len(bikes))]
+                            qb = q + d * (j * 0.85) + rw * (hw - 0.6)
+                            ang = rng.uniform(-0.25, 0.25)
+                            inst(vc, M(qb, (rw * math.cos(ang) + d * math.sin(ang)).normalized()))
+                            counts["vehicle"] += 1
+                    elif roll < 0.45:
+                        inst(bin_c, M(q - rw * (hw - 0.4), d))
+                        counts["bin"] += 1
+                    elif roll < 0.5 and main:
+                        inst(flex_c, M(q - rw * (hw - 0.3), -rw))
+                        counts["flex"] += 1
+                    elif roll < 0.64:
                         inst(cart_c, M(q - rw * (hw - 0.9) + Vector((0, 0.05, 0)), d))
                         counts["cart"] += 1
-                    elif roll < 0.4 and main:
+                    elif roll < 0.7 and main:
                         inst(sign_c, M(q + rw * (hw - 0.3), d))
                         counts["sign"] += 1
                     elif vehs and roll < 0.85:
@@ -319,7 +360,7 @@ def place(tiles, classes, inst, to_blender, b):
                         qv = q + rw * (hw + 0.2 + off) + Vector((0, 0.09 - (0.15 if not bike else 0.0), 0))
                         inst(vc, M(qv, rd))                                  # fleet models: nose +X
                         counts["vehicle"] += 1
-                    next_thing += rng.uniform(12, 30)
+                    next_thing += rng.uniform(5, 11) if main else rng.uniform(10, 24)
                 # red dust drifted along the kerb on the road
                 kq0 = a + rw * (hw + 0.2)
                 kq1 = c + rw * (hw + 0.2)

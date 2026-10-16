@@ -675,26 +675,144 @@ def building_collections(index):
     return out
 
 
+KIT_TEX = {1: ("R", "dark_nilgiri_stone_base.jpg", 2.5), 2: ("R", "stone_retaining_wall_base.jpg", 2.5),
+           3: ("R", "weathered_stone_coping_base.jpg", 1.5), 4: ("R", "warm_mineral_plaster_base.jpg", 3.0),
+           5: ("D", "plaster_color.jpg", 2.5), 6: ("R", "warm_natural_timber_base.jpg", 1.2),
+           7: ("R", "dark_timber_deck_base.jpg", 1.2), 8: ("R", "charcoal_standing_seam_roof_base.jpg", 2.0),
+           9: ("D", "tin_roof_color.jpg", 2.0), 10: ("D", "concrete_color.jpg", 3.0), 11: ("R", "natural_stone_paving_base.jpg", 2.5),
+           12: ("R", "parking_pavers_base.jpg", 2.0), 13: ("R", "flagstone_path_base.jpg", 2.0)}
+
+
+def kit_material():
+    """The designed buildings' look, as in the game's building_kit shader: the vertex colour carries RGB = tint and
+    A = layer / 255; each layer is a texture (box-projected in metres), 0 = plain colour, 14 = metal, 100 a lit room,
+    101 a lamp. Painted walls and concrete get the rain streaks, the darker foot and faded patches."""
+    m = bpy.data.materials.new("KitTextured")
+    m.use_nodes = True
+    nt = m.node_tree
+    p = nt.nodes["Principled BSDF"]
+    vc = nt.nodes.new("ShaderNodeVertexColor")
+    va = nt.nodes.new("ShaderNodeAttribute")
+    va.attribute_name = "Col"
+    va.attribute_type = 'GEOMETRY'
+    layer = nt.nodes.new("ShaderNodeMath")
+    layer.operation = "MULTIPLY"
+    nt.links.new(vc.outputs["Alpha"], layer.inputs[0])
+    layer.inputs[1].default_value = 255.0
+    lr = nt.nodes.new("ShaderNodeMath")
+    lr.operation = "ROUND"
+    nt.links.new(layer.outputs[0], lr.inputs[0])
+    co = nt.nodes.new("ShaderNodeTexCoord")
+    colour = vc.outputs["Color"]                                  # layer 0: plain tint
+    for li, (src, fn, tile) in KIT_TEX.items():
+        path = os.path.join(TEX_R if src == "R" else TEX, fn)
+        if not os.path.exists(path):
+            continue
+        mp = nt.nodes.new("ShaderNodeMapping")
+        mp.inputs["Scale"].default_value = (1 / tile,) * 3
+        nt.links.new(co.outputs["Object"], mp.inputs["Vector"])
+        t = nt.nodes.new("ShaderNodeTexImage")
+        t.image = _img(path)
+        t.projection = 'BOX'
+        t.projection_blend = 0.25
+        nt.links.new(mp.outputs[0], t.inputs["Vector"])
+        tint = nt.nodes.new("ShaderNodeMix")
+        tint.data_type = "RGBA"
+        tint.blend_type = "MULTIPLY"
+        tint.inputs["Factor"].default_value = 1.0
+        nt.links.new(t.outputs["Color"], tint.inputs[6])
+        nt.links.new(vc.outputs["Color"], tint.inputs[7])
+        eq = nt.nodes.new("ShaderNodeMath")
+        eq.operation = "COMPARE"
+        nt.links.new(lr.outputs[0], eq.inputs[0])
+        eq.inputs[1].default_value = li
+        eq.inputs[2].default_value = 0.25
+        sel = nt.nodes.new("ShaderNodeMix")
+        sel.data_type = "RGBA"
+        nt.links.new(eq.outputs[0], sel.inputs["Factor"])
+        nt.links.new(colour, sel.inputs[6])
+        nt.links.new(tint.outputs[2], sel.inputs[7])
+        colour = sel.outputs[2]
+    # weathering: vertical streaks, a darker foot (object z = height in the building), faded patches
+    sep = nt.nodes.new("ShaderNodeSeparateXYZ")
+    nt.links.new(co.outputs["Object"], sep.inputs[0])
+    mp2 = nt.nodes.new("ShaderNodeMapping")
+    mp2.inputs["Scale"].default_value = (7.0, 7.0, 0.35)
+    nt.links.new(co.outputs["Object"], mp2.inputs["Vector"])
+    nz = nt.nodes.new("ShaderNodeTexNoise")
+    nz.inputs["Scale"].default_value = 1.0
+    nz.inputs["Detail"].default_value = 5.0
+    nt.links.new(mp2.outputs[0], nz.inputs["Vector"])
+    streak = nt.nodes.new("ShaderNodeMapRange")
+    nt.links.new(nz.outputs["Fac"], streak.inputs["Value"])
+    streak.inputs["From Min"].default_value = 0.5
+    streak.inputs["From Max"].default_value = 0.8
+    streak.inputs["To Min"].default_value = 1.0
+    streak.inputs["To Max"].default_value = 0.78
+    foot = nt.nodes.new("ShaderNodeMapRange")
+    nt.links.new(sep.outputs["Z"], foot.inputs["Value"])
+    foot.inputs["From Min"].default_value = 0.0
+    foot.inputs["From Max"].default_value = 1.1
+    foot.inputs["To Min"].default_value = 0.65
+    foot.inputs["To Max"].default_value = 1.0
+    w = nt.nodes.new("ShaderNodeMath")
+    w.operation = "MULTIPLY"
+    nt.links.new(streak.outputs[0], w.inputs[0])
+    nt.links.new(foot.outputs[0], w.inputs[1])
+    painted = nt.nodes.new("ShaderNodeMath")                     # only plaster (4, 5) and concrete (10)
+    painted.operation = "COMPARE"
+    nt.links.new(lr.outputs[0], painted.inputs[0])
+    painted.inputs[1].default_value = 7.0
+    painted.inputs[2].default_value = 3.1
+    wsel = nt.nodes.new("ShaderNodeMix")
+    wsel.data_type = "FLOAT"
+    nt.links.new(painted.outputs[0], wsel.inputs["Factor"])
+    wsel.inputs[2].default_value = 1.0
+    nt.links.new(w.outputs[0], wsel.inputs[3])
+    weath = nt.nodes.new("ShaderNodeMix")
+    weath.data_type = "RGBA"
+    weath.blend_type = "MULTIPLY"
+    weath.inputs["Factor"].default_value = 1.0
+    nt.links.new(colour, weath.inputs[6])
+    comb = nt.nodes.new("ShaderNodeCombineXYZ")
+    for k in ("X", "Y", "Z"):
+        nt.links.new(wsel.outputs[0], comb.inputs[k])
+    nt.links.new(comb.outputs[0], weath.inputs[7])
+    nt.links.new(weath.outputs[2], p.inputs["Base Color"])
+    p.inputs["Roughness"].default_value = 0.82
+    # lit rooms and lamps glow softly by day
+    glow = nt.nodes.new("ShaderNodeMath")
+    glow.operation = "GREATER_THAN"
+    nt.links.new(lr.outputs[0], glow.inputs[0])
+    glow.inputs[1].default_value = 99.5
+    for nm in ("Emission Color", "Emission"):
+        if nm in p.inputs:
+            nt.links.new(vc.outputs["Color"], p.inputs[nm])
+    em = nt.nodes.new("ShaderNodeMath")
+    em.operation = "MULTIPLY"
+    nt.links.new(glow.outputs[0], em.inputs[0])
+    em.inputs[1].default_value = 0.6
+    nt.links.new(em.outputs[0], p.inputs["Emission Strength"])
+    return m
+
+
 def kit_materials():
-    """The kit buildings carry their look in vertex colours (RGB tint, A layer); for the render a simple shader that
-    uses the vertex colour with the plaster texture is close to the game."""
-    for m in bpy.data.materials:
-        if m.name.startswith("Kit") and not m.name.startswith("KitGlass"):
-            m.use_nodes = True
-            nt = m.node_tree
-            p = nt.nodes.get("Principled BSDF")
-            if p is None:
-                continue
-            attr = nt.nodes.new("ShaderNodeVertexColor")
-            nt.links.new(attr.outputs["Color"], p.inputs["Base Color"])
-            p.inputs["Roughness"].default_value = 0.8
-        elif m.name.startswith("KitGlass"):
-            m.use_nodes = True
-            p = m.node_tree.nodes.get("Principled BSDF")
-            if p:
-                p.inputs["Base Color"].default_value = (0.05, 0.07, 0.08, 1)
-                p.inputs["Roughness"].default_value = 0.05
-                p.inputs["Metallic"].default_value = 0.6
+    """Swap the imported Kit material for the textured one, and give the glass a dark reflective look."""
+    tex = kit_material()
+    for ob in bpy.data.objects:
+        if ob.type != 'MESH':
+            continue
+        for slot in ob.material_slots:
+            if slot.material and slot.material.name.startswith("KitGlass"):
+                g = slot.material
+                g.use_nodes = True
+                p = g.node_tree.nodes.get("Principled BSDF")
+                if p:
+                    p.inputs["Base Color"].default_value = (0.04, 0.06, 0.07, 1)
+                    p.inputs["Roughness"].default_value = 0.05
+                    p.inputs["Metallic"].default_value = 0.5
+            elif slot.material and slot.material.name.startswith("Kit"):
+                slot.material = tex
 
 
 # ----------------------------------------------------------------------------- scene, cameras
