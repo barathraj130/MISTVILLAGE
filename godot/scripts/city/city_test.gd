@@ -11,8 +11,10 @@ const MB := preload("res://scripts/drive/mesh_builder.gd")
 const Jeep := preload("res://scripts/drive/jeep.gd")
 const CityMap := preload("res://scripts/city/city_map.gd")
 const CityTraffic := preload("res://scripts/city/city_traffic.gd")
+const CityWater := preload("res://scripts/city/city_water.gd")
 
 var streamer
+var water                                   # tanks, ponds and lakes (city_water.gd)
 var cam: Camera3D
 var t := 0.0
 var auto := false
@@ -48,6 +50,10 @@ func _ready() -> void:
 	streamer = Streamer.new()
 	streamer.name = "City"
 	add_child(streamer)
+	water = CityWater.new()
+	water.name = "Water"
+	water.streamer = streamer
+	add_child(water)
 	var bm := ShaderMaterial.new()
 	bm.shader = preload("res://shaders/building.gdshader")
 	var walk := StandardMaterial3D.new()
@@ -111,11 +117,13 @@ func _ready() -> void:
 		traffic.name = "Traffic"
 		traffic.streamer = streamer
 		traffic.player = car
-		add_child(traffic)
+		if not "--notraffic" in args:
+			add_child(traffic)
 		map = CityMap.new()
 		map.name = "Map"
 		map.target = car
-		add_child(map)
+		if not "--nomap" in args:
+			add_child(map)
 	for a in args:
 		if a.begins_with("--view="):
 			for v in a.get_slice("=", 1).split(","):
@@ -327,6 +335,8 @@ func _drive_camera(dt: float) -> void:
 
 func _process(dt: float) -> void:
 	t += dt
+	if water:
+		water.target = streamer.target
 	if driving:
 		if not placed:
 			placed = _place_car(Vector3.ZERO) if t > 1.0 else false
@@ -526,6 +536,9 @@ func _log_and_shots(dt: float) -> void:
 			int(OS.get_static_memory_usage() / 1048576), int(Performance.get_monitor(Performance.RENDER_VIDEO_MEM_USED) / 1048576),
 			int(Performance.get_monitor(Performance.RENDER_TOTAL_DRAW_CALLS_IN_FRAME)), cam.position.x, cam.position.z])
 		var vp := get_viewport().get_viewport_rid()
+		print("TIMES process=%.1fms physics=%.1fms nav=%.1fms objects=%d" % [Performance.get_monitor(Performance.TIME_PROCESS) * 1000.0,
+			Performance.get_monitor(Performance.TIME_PHYSICS_PROCESS) * 1000.0, Performance.get_monitor(Performance.TIME_NAVIGATION_PROCESS) * 1000.0,
+			int(Performance.get_monitor(Performance.OBJECT_NODE_COUNT))])
 		print("PRIMS %dk gpu=%.1fms cpu=%.1fms" % [int(Performance.get_monitor(Performance.RENDER_TOTAL_PRIMITIVES_IN_FRAME) / 1000),
 			RenderingServer.viewport_get_measured_render_time_gpu(vp), RenderingServer.viewport_get_measured_render_time_cpu(vp)
 			+ RenderingServer.get_frame_setup_time_cpu()])

@@ -165,6 +165,14 @@ def run(cfg, roads_cfg):
         """UTM geometry → game frame (x = E − E0, z = −(N − N0))"""
         return shapely.transform(geom, lambda c: np.column_stack([c[:, 0] - e0, -(c[:, 1] - n0)]))
 
+    # ---- water bodies: the real tanks, ponds and lakes (tools/citygen/water.py); the ground is carved under them ----
+    import water as WATER
+    wa0 = gpd.read_file(os.path.join(bdir, "cache", "osm.gpkg"), layer="water").to_crs(cfg["crs"])
+    bodies = WATER.load(wa0, game, height)
+    btree = STRtree([b["poly"] for b in bodies]) if bodies else None
+    print("  water → %d bodies (%d walkway lakes, %d temple tanks) (%ds)" % (
+        len(bodies), sum(b["style"] == 1 for b in bodies), sum(b["style"] == 2 for b in bodies), time.time() - t0), flush=True)
+
     tiles = {}
 
     def tile(key):
@@ -792,6 +800,8 @@ def run(cfg, roads_cfg):
                     continue
                 if ytree is not None and len(ytree.query(P, predicate="dwithin", distance=0.8)):
                     continue
+                if btree is not None and len(btree.query(P, predicate="dwithin", distance=3.0)):
+                    continue
                 t["yards"].append((4, np.asarray([(x, gy(x, z), z)], dtype=np.float32)))
                 n_tree += 1
     print("  yards → %d paved, %d wall runs, %d trees (%ds)" % (n_yard, n_wall, n_tree, time.time() - t0), flush=True)
@@ -804,21 +814,29 @@ def run(cfg, roads_cfg):
             if fl & 8:
                 continue
             typ = LIFE.TYPES[(fl >> 4) & 7]
-            out, wires = [], []
-            LIFE.place_walk(typ, fl, ww * 0.5, [tuple(map(float, q)) for q in pts], lrng, out, wires)
-            for rec in out:
+            recs, wires = [], []
+            LIFE.place_walk(typ, fl, ww * 0.5, [tuple(map(float, q)) for q in pts], lrng, recs, wires)
+            for rec in recs:
                 tile((int(math.floor(rec[1] / TILE)), int(math.floor(rec[3] / TILE))))["life"].append(rec)
             for w_kind, chain in wires:
                 t["wires"].append((w_kind, np.asarray(chain, dtype=np.float32)))
-            n_life += len(out)
+            n_life += len(recs)
     print("  street life → %d things (%ds)" % (n_life, time.time() - t0), flush=True)
 
     # ---- ground, then write -------------------------------------------------------------------------
+    n_carved = 0
     for (cx, cz), t in tiles.items():
         gx = cx * TILE + np.arange(HN) * HSTEP
         gz = cz * TILE + np.arange(HN) * HSTEP
         X, Z = np.meshgrid(gx, gz)
         H = height(X.ravel(), Z.ravel()).reshape(HN, HN).astype(np.float32)
+        wet = None
+        if btree is not None:
+            tb = shapely.box(cx * TILE - 40, cz * TILE - 40, (cx + 1) * TILE + 40, (cz + 1) * TILE + 40)
+            near = [bodies[q] for q in btree.query(tb) if bodies[q]["poly"].distance(tb) < WATER.reach(bodies[q])]
+            if near:
+                wet = WATER.carve(H, X, Z, near)
+                n_carved += 1
         for cid, fl, w, pts, a0, ln, wi in t["roads"]:
             reach = w * 0.5 + 3.0
             for x, y, z in pts:
@@ -829,6 +847,9 @@ def run(cfg, roads_cfg):
                 if i1 >= i0 and j1 >= j0:
                     sub = H[i0:i1 + 1, j0:j1 + 1]
                     np.minimum(sub, y - 0.3, out=sub)
+                    if wet is not None:                       # a road across water stands on a causeway
+                        ws = wet[i0:i1 + 1, j0:j1 + 1]
+                        sub[ws] = y - 0.3
         buf = bytearray(b"CBE6")
         buf += struct.pack("<iii", cx, cz, HN)
         buf += H.astype("<f4").tobytes()
@@ -882,6 +903,8 @@ def run(cfg, roads_cfg):
     if os.path.exists(os.path.join(out, "chunks")):
         os.replace(os.path.join(out, "chunks"), old)
     os.replace(tmp, os.path.join(out, "chunks"))
+    wsize = WATER.write(os.path.join(out, "water.bin"), bodies)
+    print("  water.bin: %d bodies, %d tiles carved, %.1f KB" % (len(bodies), n_carved, wsize / 1024), flush=True)
     with open(os.path.join(out, "index.json"), "w") as f:
         json.dump(index, f, separators=(",", ":"))
     shutil.rmtree(old, ignore_errors=True)

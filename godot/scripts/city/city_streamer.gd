@@ -49,6 +49,9 @@ var kit_far_meshes: Array = []             # variant index → its far version (
 var kit_boxes: Array = []                  # variant index → AABB of the design (far stand-in and collision)
 var tree_meshes: Array = []                # [near Mesh, far LOD Mesh] per tree kind
 var bike_meshes: Array = []                # parked scooters and motorcycles
+const LIFE_CELL := 64.0
+const TREE_NEAR := 70.0                     # full trees this near (from their 64 m cell's centre), the far version beyond
+var life_far: Array = []                    # life kind → far Mesh or null (trees and bushes: veg_*_far)
 var life_meshes: Array = []                # life kind → Mesh (index.json life_kinds)
 var wire_mat: StandardMaterial3D
 var shrub_mesh: Mesh                       # planting on the medians
@@ -74,11 +77,11 @@ func _ready() -> void:
 	signal_shader = _signal_shader()
 	# Coimbatore street trees: natural neem, rain tree and gulmohar (tools/vegetation.py) and coconut palms
 	# (tools/trees_tn.py); far versions from the lighter palm / neem models
-	for pair in [["city_props/veg_neem1", "models/city_neem_3_far"], ["city_props/veg_neem2", "models/city_neem_5_far"],
-			["city_props/veg_rain1", "models/city_neem_5_far"], ["city_props/veg_gul1", "models/city_neem_3_far"],
+	for pair in [["city_props/veg_neem1", "city_props/veg_neem1_far"], ["city_props/veg_neem2", "city_props/veg_neem2_far"],
+			["city_props/veg_rain1", "city_props/veg_rain1_far"], ["city_props/veg_gul1", "city_props/veg_gul1_far"],
 			["models/city_palm_1", "models/city_palm_1_far"], ["models/city_palm_2", "models/city_palm_2_far"]]:
 		var near_m := _scene_mesh("res://assets/%s.glb" % pair[0])
-		var far_m := _gltf_mesh("res://assets/%s.glb" % pair[1])
+		var far_m: Mesh = _scene_mesh("res://assets/%s.glb" % pair[1]) if pair[1].begins_with("city_props") else _gltf_mesh("res://assets/%s.glb" % pair[1])
 		if near_m:
 			tree_meshes.append([near_m, far_m if far_m else near_m])
 	# street life (tools/citygen/life.py): one mesh per kind
@@ -90,6 +93,8 @@ func _ready() -> void:
 				path = cand % kname
 				break
 		life_meshes.append(_scene_mesh(path) if path != "" else null)
+		var far_path := "res://assets/city_props/%s_far.glb" % kname
+		life_far.append(_scene_mesh(far_path) if ResourceLoader.exists(far_path) else null)
 	shrub_mesh = _gltf_mesh("res://assets/models/veg_hedgerow_bush_0_lod.gltf")
 	pier_mesh = _gltf_mesh("res://assets/city_props/flyover_pier.glb")
 	fly_lamp_mesh = _gltf_mesh("res://assets/city_props/flyover_lamp.glb")
@@ -1094,11 +1099,11 @@ func _lens(c: Color, which: int) -> ShaderMaterial:
 	return m
 
 
-const LEAVES := {"Neem Leaf": [Color(0.03, 0.09, 0.015), Color(0.11, 0.2, 0.035)],
-	"Rain Tree Leaf": [Color(0.04, 0.12, 0.02), Color(0.14, 0.26, 0.05)],
-	"Gulmohar Leaf": [Color(0.06, 0.15, 0.02), Color(0.16, 0.3, 0.05)],
-	"Bush Leaf": [Color(0.03, 0.1, 0.02), Color(0.12, 0.24, 0.04)],
-	"Grass Blade": [Color(0.18, 0.2, 0.06), Color(0.32, 0.3, 0.1)]}
+## leaf material name → painted atlas (tools/leaf_atlas.py, copied by tools/export_life.py)
+const LEAVES := {"Neem Leaf": "neem", "Rain Tree Leaf": "rain", "Gulmohar Leaf": "gulmohar", "Bush Leaf": "bush",
+	"Prosopis Leaf": "rain"}
+static var _leaf_mats := {}
+static var _grass: ShaderMaterial
 static var _leaf_shader: Shader
 static var _bark: StandardMaterial3D
 
@@ -1140,33 +1145,46 @@ static func _game_material(mat: Material) -> Material:
 	var nm := mat.resource_name if mat else ""
 	for key in LEAVES:
 		if nm.begins_with(key):
-			if _leaf_shader == null:
-				_leaf_shader = Shader.new()
-				_leaf_shader.code = """shader_type spatial;
+			if not _leaf_mats.has(key):
+				if _leaf_shader == null:
+					_leaf_shader = Shader.new()
+					# the atlas cut out by its alpha; vertex colour r = light (dark deep in the crown), g = a yellow tint
+					_leaf_shader.code = """shader_type spatial;
 render_mode cull_disabled;
-uniform vec3 col_a : source_color;
-uniform vec3 col_b : source_color;
+uniform sampler2D atlas : source_color, filter_linear_mipmap, repeat_disable;
 void fragment() {
-	vec2 q = UV * 2.0 - 1.0;
-	if (dot(q, q) > 1.0 && UV != vec2(0.5)) discard;
-	vec3 c = COLOR.g > 0.5 ? COLOR.rgb : mix(col_a, col_b, COLOR.r);
+	vec4 t = texture(atlas, UV);
+	if (t.a < 0.5) discard;
+	vec3 c = t.rgb * mix(0.5, 1.35, COLOR.r) * mix(vec3(1.0), vec3(1.2, 1.08, 0.6), COLOR.g * 0.45);
 	ALBEDO = c;
-	ROUGHNESS = 0.6;
-	BACKLIGHT = c * 0.6;
+	ROUGHNESS = 0.55;
+	BACKLIGHT = c * 0.7;
 }
 """
-			var sm := ShaderMaterial.new()
-			sm.shader = _leaf_shader
-			sm.set_shader_parameter("col_a", LEAVES[key][0])
-			sm.set_shader_parameter("col_b", LEAVES[key][1])
-			return sm
+				var sm := ShaderMaterial.new()
+				sm.shader = _leaf_shader
+				sm.set_shader_parameter("atlas", load("res://assets/city_props/leaves/%s.png" % LEAVES[key]))
+				_leaf_mats[key] = sm
+			return _leaf_mats[key]
+	if nm.begins_with("Grass Blade"):
+		if _grass == null:
+			var sh := Shader.new()
+			sh.code = """shader_type spatial;
+render_mode cull_disabled;
+void fragment() {
+	vec3 c = mix(vec3(0.1, 0.13, 0.04), vec3(0.3, 0.3, 0.1), COLOR.r);
+	ALBEDO = c;
+	ROUGHNESS = 0.6;
+	BACKLIGHT = c * 0.5;
+}
+"""
+			_grass = ShaderMaterial.new()
+			_grass.shader = sh
+		return _grass
 	if nm.begins_with("Bark"):
 		if _bark == null:
 			_bark = StandardMaterial3D.new()
-			_bark.albedo_texture = load("res://assets/models/textures/tree_bark_base.jpg") if ResourceLoader.exists("res://assets/models/textures/tree_bark_base.jpg") else null
-			_bark.albedo_color = Color(0.55, 0.45, 0.38)
-			_bark.uv1_triplanar = true
-			_bark.uv1_scale = Vector3(2, 2, 2)
+			_bark.albedo_texture = load("res://assets/city_props/leaves/bark.png")
 			_bark.roughness = 0.95
 		return _bark
 	return mat
@@ -1183,26 +1201,40 @@ func _life(life: Array, out: Dictionary) -> void:
 		var a := v[3]
 		var x := Vector3(cos(a), 0, sin(a))
 		var bs := Basis(x, Vector3.UP, x.cross(Vector3.UP)).scaled(Vector3.ONE * v[4])
-		if not by.has(kind):
-			by[kind] = []
-		by[kind].append(Transform3D(bs, Vector3(v[0], v[1], v[2])))
+		# visibility ranges are measured from each MultiMesh's centre, so the things are grouped in 64 m cells
+		var key := Vector3i(kind, floori(v[0] / LIFE_CELL), floori(v[2] / LIFE_CELL))
+		if not by.has(key):
+			by[key] = []
+		by[key].append(Transform3D(bs, Vector3(v[0], v[1], v[2])))
 	var mms := []
 	var names: Array = index.get("life_kinds", [])
-	for kind in by:
+	for key in by:
+		var kind: int = key.x
 		var mm := MultiMesh.new()
 		mm.transform_format = MultiMesh.TRANSFORM_3D
 		mm.mesh = life_meshes[kind]
-		mm.instance_count = by[kind].size()
-		for i in by[kind].size():
-			mm.set_instance_transform(i, by[kind][i])
+		mm.instance_count = by[key].size()
+		for i in by[key].size():
+			mm.set_instance_transform(i, by[key][i])
 		var nm: String = names[kind]
+		if kind < life_far.size() and life_far[kind] != null:
+			var fm := MultiMesh.new()
+			fm.transform_format = MultiMesh.TRANSFORM_3D
+			fm.mesh = life_far[kind]
+			fm.instance_count = by[key].size()
+			for i in by[key].size():
+				fm.set_instance_transform(i, by[key][i])
+			var near := (TREE_NEAR if nm.begins_with("veg_") and not nm.begins_with("veg_bush") else 40.0) + LIFE_CELL * 0.71
+			mms.append([mm, near, 0.0])
+			mms.append([fm, (320.0 if not nm.begins_with("veg_bush") else 150.0) + LIFE_CELL * 0.71, near - 4.0])
+			continue
 		var far := 90.0
 		if nm.begins_with("veg_") or nm.begins_with("city_palm") or nm == "pole" or nm == "transformer":
 			far = 320.0
 		elif nm.begins_with("fleet") or nm.begins_with("stall") or nm.begins_with("shade") or nm.begins_with("flex") \
 				or nm == "shrine" or nm == "thatched":
 			far = 200.0
-		mms.append([mm, far])
+		mms.append([mm, far + LIFE_CELL * 0.71, 0.0])
 	out["life"] = mms
 
 
@@ -1340,9 +1372,10 @@ func _yards(yards: Array, out: Dictionary) -> void:
 			var hsh := absf(sin(q.x * 12.9898 + q.z * 78.233) * 43758.5453)
 			var ti := int(hsh) % tree_meshes.size()
 			var sc := 0.75 + fmod(hsh, 1.0) * 0.6
-			if not trees.has(ti):
-				trees[ti] = []
-			trees[ti].append(Transform3D(Basis(Vector3.UP, fmod(hsh * 7.0, TAU)).scaled(Vector3(sc, sc, sc)), q))
+			var tkey := Vector3i(ti, floori(q.x / LIFE_CELL), floori(q.z / LIFE_CELL))
+			if not trees.has(tkey):
+				trees[tkey] = []
+			trees[tkey].append(Transform3D(Basis(Vector3.UP, fmod(hsh * 7.0, TAU)).scaled(Vector3(sc, sc, sc)), q))
 	for pair in [["pave_mesh", pav], ["yard_mesh", con], ["skirt_mesh", skirt], ["wall_mesh", wall]]:
 		var t2: Array = pair[1]
 		if (t2[0] as PackedVector3Array).is_empty():
@@ -1362,14 +1395,14 @@ func _yards(yards: Array, out: Dictionary) -> void:
 		shape.set_faces(faces)
 		out["yard_shape"] = shape
 	var tm := []
-	for ti in trees:
+	for tkey in trees:
 		for lod in 2:
 			var mm := MultiMesh.new()
 			mm.transform_format = MultiMesh.TRANSFORM_3D
-			mm.mesh = tree_meshes[ti][lod]
-			mm.instance_count = trees[ti].size()
-			for i in trees[ti].size():
-				mm.set_instance_transform(i, trees[ti][i])
+			mm.mesh = tree_meshes[tkey.x][lod]
+			mm.instance_count = trees[tkey].size()
+			for i in trees[tkey].size():
+				mm.set_instance_transform(i, trees[tkey][i])
 			tm.append([mm, lod])
 	out["trees"] = tm
 	var bm2 := []
@@ -1656,9 +1689,9 @@ func _instance(k: Vector2i, d: Dictionary) -> void:
 		var tmi := MultiMeshInstance3D.new()
 		tmi.multimesh = tr[0]
 		if tr[1] == 0:
-			tmi.visibility_range_end = 220.0
+			tmi.visibility_range_end = TREE_NEAR + LIFE_CELL * 0.71
 		else:
-			tmi.visibility_range_begin = 210.0
+			tmi.visibility_range_begin = TREE_NEAR + LIFE_CELL * 0.71 - 4.0
 			tmi.visibility_range_end = 500.0
 			tmi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 		node.add_child(tmi)
@@ -1695,11 +1728,12 @@ func _instance(k: Vector2i, d: Dictionary) -> void:
 		mpi.multimesh = d["median_plants"]
 		mpi.visibility_range_end = 250.0
 		node.add_child(mpi)
-	for lm in d.get("life", []):
+	for lm in ([] if "--nolife" in OS.get_cmdline_user_args() else d.get("life", [])):
 		var lmi2 := MultiMeshInstance3D.new()
 		lmi2.multimesh = lm[0]
 		lmi2.visibility_range_end = lm[1]
-		if lm[1] < 100.0:
+		lmi2.visibility_range_begin = lm[2]
+		if lm[1] < 150.0 or lm[2] > 0.0:
 			lmi2.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 		node.add_child(lmi2)
 	if d.has("wires"):

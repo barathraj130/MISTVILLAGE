@@ -338,6 +338,22 @@ def bake(objs, name, target=9000):
                 bpy.ops.object.modifier_apply(modifier=m.name)
             except RuntimeError:
                 o.modifiers.remove(m)
+    # eyebrow strands are ~11k tiny polygons: a decimate of the joined mesh keeps them and collapses the body,
+    # and they cannot be seen at street distance — drop them, then reduce each part on its own
+    for o in [o for o in objs if "eyebrow" in o.name]:
+        objs.remove(o)
+        bpy.data.objects.remove(o, do_unlink=True)
+    tris = sum(sum(len(p.vertices) - 2 for p in o.data.polygons) for o in objs if o.type == 'MESH')
+    if tris > target:
+        for o in objs:
+            if o.type != 'MESH' or len(o.data.polygons) < 200:
+                continue
+            bpy.ops.object.select_all(action='DESELECT')
+            o.select_set(True)
+            bpy.context.view_layer.objects.active = o
+            d = o.modifiers.new("Dec", 'DECIMATE')
+            d.ratio = target / tris
+            bpy.ops.object.modifier_apply(modifier="Dec")
     bpy.ops.object.select_all(action='DESELECT')
     for o in objs:
         o.select_set(True)
@@ -346,11 +362,6 @@ def bake(objs, name, target=9000):
     bpy.ops.object.join()
     ob = bpy.context.view_layer.objects.active
     ob.name = name
-    tris = sum(len(p.vertices) - 2 for p in ob.data.polygons)
-    if tris > target:
-        d = ob.modifiers.new("Dec", 'DECIMATE')
-        d.ratio = target / tris
-        bpy.ops.object.modifier_apply(modifier="Dec")
     return ob
 
 
