@@ -273,8 +273,9 @@ func _shore(node: Node3D, b: Dictionary) -> void:
 		var seg := poly[i].distance_to(poly[j])
 		if seg > 60.0:
 			continue
-		var ym_i := L + 0.12 + (bank[i] - L - 0.12) * 0.2 + 0.06
-		var ym_j := L + 0.12 + (bank[j] - L - 0.12) * 0.2 + 0.06
+		# 1.2 m out: the carved ground's own height there (water.py: at least L + 0.12 + 0.09 d)
+		var ym_i := L + 0.12 + 0.09 * 1.2 + 0.05
+		var ym_j := ym_i
 		_quad(wet, Vector3(a[i].x, L - 0.45, a[i].y), Vector3(a[j].x, L - 0.45, a[j].y),
 			Vector3(m[j].x, ym_j, m[j].y), Vector3(m[i].x, ym_i, m[i].y), run, seg)
 		_quad(dry, Vector3(m[i].x, ym_i, m[i].y), Vector3(m[j].x, ym_j, m[j].y),
@@ -304,13 +305,13 @@ func _walkway(node: Node3D, b: Dictionary) -> void:
 	var poly: PackedVector2Array = b["poly"]
 	var L: float = b["level"]
 	var B: float = b["bund"]
-	var r0 := _offset(poly, -0.6)
+	var r0 := _offset(poly, -1.5)
 	var r1 := _offset(poly, SLOPE)
 	var w0 := _offset(poly, SLOPE + 0.3)
 	var w1 := _offset(poly, SLOPE + 4.3)
 	var st := SurfaceTool.new()
 	st.begin(Mesh.PRIMITIVE_TRIANGLES)
-	_ribbon(st, r0, r1, L - 0.35, B + 0.1, 2.4)
+	_ribbon(st, r0, r1, L - 0.9, B + 0.1, 2.4)
 	var pitch := st.commit()
 	_add(node, pitch, _mat("pitching"))
 	st = SurfaceTool.new()
@@ -566,7 +567,7 @@ func _mat(kind: String) -> Material:
 				m.ao_texture = load("res://assets/ponds/lotus_panel_ao.png")
 		"mud":
 			m.albedo_texture = load("res://assets/models/textures/highland_grass_base.jpg")
-			m.albedo_color = Color(0.32, 0.24, 0.17)
+			m.albedo_color = Color(0.55, 0.43, 0.31)
 			m.roughness = 0.55
 		"pitching":
 			m.albedo_texture = load("res://assets/models/textures/stone_retaining_wall_base.jpg") if ResourceLoader.exists("res://assets/models/textures/stone_retaining_wall_base.jpg") else load("res://assets/ponds/granite.png")

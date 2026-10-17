@@ -6,6 +6,7 @@ run for the ground, in about a minute.
 
     .venv/bin/python tools/citygen/rewater.py
 """
+import json
 import math
 import os
 import struct
@@ -46,17 +47,18 @@ def main():
     btree = STRtree([b["poly"] for b in bodies])
     print("water → %d bodies (%ds)" % (len(bodies), time.time() - t0), flush=True)
     TILE, HN, HSTEP = C.TILE, C.HN, C.HSTEP
-    keys = set()
-    for b in bodies:
-        x0, z0, x1, z1 = b["poly"].buffer(WATER.reach(b) + 20).bounds
-        for cx in range(int(math.floor(x0 / TILE)), int(math.floor(x1 / TILE)) + 1):
-            for cz in range(int(math.floor(z0 / TILE)), int(math.floor(z1 / TILE)) + 1):
-                keys.add((cx, cz))
-    done = 0
+    keys = WATER.tile_keys(bodies, TILE)
+    index = json.load(open(os.path.join(out, "index.json")))
+    done = added = 0
     for cx, cz in sorted(keys):
         fn = os.path.join(out, "chunks", "CBE_%d_%d.bin" % (cx, cz))
         if not os.path.exists(fn):
-            continue
+            # a tile with nothing but ground (the water and its shore come from city_water.gd)
+            empty = bytearray(b"CBE6") + struct.pack("<iii", cx, cz, HN) + bytes(4 * HN * HN) + struct.pack("<8i", *([0] * 8))
+            with open(fn, "wb") as f:
+                f.write(bytes(empty))
+            index["tiles"]["%d,%d" % (cx, cz)] = [0, 0]
+            added += 1
         buf = bytearray(open(fn, "rb").read())
         hn, = struct.unpack_from("<i", buf, 12)
         assert hn == HN
@@ -95,7 +97,10 @@ def main():
         os.replace(fn + ".tmp", fn)
         done += 1
     size = WATER.write(os.path.join(out, "water.bin"), bodies)
-    print("REWATER %d tiles re-shaped, water.bin %.1f KB, %ds" % (done, size / 1024, time.time() - t0), flush=True)
+    with open(os.path.join(out, "index.json"), "w") as f:
+        json.dump(index, f, separators=(",", ":"))
+    print("REWATER %d tiles re-shaped (%d new ground-only tiles), water.bin %.1f KB, %ds" % (
+        done, added, size / 1024, time.time() - t0), flush=True)
 
 
 if __name__ == "__main__":

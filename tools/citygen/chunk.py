@@ -825,6 +825,8 @@ def run(cfg, roads_cfg):
 
     # ---- ground, then write -------------------------------------------------------------------------
     n_carved = 0
+    for key in WATER.tile_keys(bodies, TILE):                 # water needs ground round it, even in empty tiles
+        tile(key)
     for (cx, cz), t in tiles.items():
         gx = cx * TILE + np.arange(HN) * HSTEP
         gz = cz * TILE + np.arange(HN) * HSTEP

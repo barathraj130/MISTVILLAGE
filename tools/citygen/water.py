@@ -93,7 +93,7 @@ def load(wa, game, height):
                 outn[i] = nrm
             q = co + outn * 6.0
             nat = np.asarray(height(q[:, 0], q[:, 1]), dtype=float)
-            bank = np.maximum(nat, level + 0.66) if st == 0 else np.full(nb, bund)
+            bank = np.clip(nat, level + 0.66, level + 0.4 + 0.35 * 6.0) if st == 0 else np.full(nb, bund)
             rect = p.minimum_rotated_rectangle
             rc = np.asarray(rect.exterior.coords)[:4]
             e1, e2 = rc[1] - rc[0], rc[2] - rc[1]
@@ -130,19 +130,36 @@ def carve(H, X, Z, bodies):
             H[:] = np.where((ex >= 0.0) & (ex < 5.0), B - 0.05, H)
             continue                                   # no causeways through a temple tank
         else:
-            depth = np.clip(0.5 + 0.2 * (-d), 0.5, 3.0 if b["style"] == 1 else 2.2)
+            if b["style"] == 1:
+                depth = np.clip(1.5 + 0.2 * (-d), 1.5, 3.0)
+            else:
+                depth = np.clip(0.5 + 0.2 * (-d), 0.5, 2.2)
             H[:] = np.where(inside, np.minimum(H, L - depth), H)
             if b["style"] == 1:
                 top = B - 0.05
-                # under the stone pitching (drawn by the game) the ground keeps 0.6 m below it
-                bank = np.where(d < SLOPE, L - 0.6 + (top - L) * np.clip(d / SLOPE, 0, 1), top)
+                # under the stone pitching (drawn by the game) the ground stays low — 1.5 m under the water — so
+                # that, between the 8 m grid points, it never rises through the stone slope
+                bank = np.where(d < SLOPE + 1.0, L - 1.5, top)
                 f = np.clip((d - SLOPE - WALK) / 14.0, 0, 1)
                 bank = bank * (1 - f) + H * f
                 H[:] = np.where((~inside) & (d < SLOPE + WALK + 14.0), bank, H)
             else:
+                # a gentle bank: dry above the water, never steeper than 1 in 3 for 20 m (no cliffs at the edge)
+                H[:] = np.where((~inside) & (d < 20.0), np.minimum(H, L + 0.4 + 0.35 * d), H)
                 H[:] = np.where((~inside) & (d < 8.0), np.maximum(H, L + 0.12 + 0.09 * d), H)
         wet |= inside
     return wet
+
+
+def tile_keys(bodies, tile):
+    """Every tile a water body or its shore reaches (they all need ground, even with nothing else in them)."""
+    keys = set()
+    for b in bodies:
+        x0, z0, x1, z1 = b["poly"].buffer(reach(b) + 20).bounds
+        for cx in range(int(math.floor(x0 / tile)), int(math.floor(x1 / tile)) + 1):
+            for cz in range(int(math.floor(z0 / tile)), int(math.floor(z1 / tile)) + 1):
+                keys.add((cx, cz))
+    return keys
 
 
 def write(path, bodies):
