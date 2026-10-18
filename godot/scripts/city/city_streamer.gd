@@ -108,7 +108,8 @@ func _ready() -> void:
 			var bm := _with_lods(_gltf_mesh("res://assets/vehicles/bike_%s_%d.glb" % [kind, ci]))
 			if bm:
 				bike_meshes.append(bm)
-	prop_meshes = {1: _signal(), 2: _shelter(), 3: _breaker()}
+	var sig: Mesh = _designed_signal()
+	prop_meshes = {1: sig if sig else _signal(), 2: _shelter(), 3: _breaker()}
 	breaker_faces = (prop_meshes[3] as Mesh).get_faces()        # read here: workers must not touch the mesh
 	kit = Kit.new()
 	if kit.setup():
@@ -1082,6 +1083,72 @@ static func signal_phase(x: float, z: float, yaw: float) -> float:
 
 
 ## Signal lenses: lit by the cycle (green 17 s, amber 3 s, red 20 s), INSTANCE_CUSTOM.r = phase.
+## The designed Coimbatore signal (tools/traffic_signal.py): pole with striped base, mast arm with two overhead
+## heads, a near-side head, the countdown timer and a FREE LEFT board. Its lenses and timer face are lit here,
+## on the same 40 s cycle the traffic obeys (signal_state); INSTANCE_CUSTOM.r carries each approach's phase.
+func _designed_signal() -> Mesh:
+	var m: Mesh = _scene_mesh("res://assets/city_props/traffic_signal.glb")
+	if m == null:
+		return null
+	for i in m.get_surface_count():
+		var cur := m.surface_get_material(i)
+		var nm := cur.resource_name if cur else ""
+		if nm.begins_with("SigLens Red"):
+			m.surface_set_material(i, _lens(Color(1.0, 0.07, 0.03), 0))
+		elif nm.begins_with("SigLens Amber"):
+			m.surface_set_material(i, _lens(Color(1.0, 0.55, 0.02), 1))
+		elif nm.begins_with("SigLens Green"):
+			m.surface_set_material(i, _lens(Color(0.1, 1.0, 0.55), 2))
+		elif nm.begins_with("SigTimer"):
+			var tm := ShaderMaterial.new()
+			tm.shader = _timer_shader()
+			m.surface_set_material(i, tm)
+	return m
+
+
+## The countdown: two seven-segment digits on the timer's face, the seconds left of red (red) or green (green),
+## dark through amber.
+static func _timer_shader() -> Shader:
+	var sh := Shader.new()
+	sh.code = """shader_type spatial;
+uniform float cycle = 40.0;
+varying float ph;
+void vertex() { ph = INSTANCE_CUSTOM.r; }
+bool seg(vec2 p, int bits) {
+	bool on = false;
+	if ((bits & 1) != 0 && p.y > 0.9 && p.x > 0.15 && p.x < 0.85) on = true;                 // a
+	if ((bits & 2) != 0 && p.x > 0.85 && p.y > 0.52 && p.y < 0.93) on = true;                // b
+	if ((bits & 4) != 0 && p.x > 0.85 && p.y > 0.07 && p.y < 0.48) on = true;                // c
+	if ((bits & 8) != 0 && p.y < 0.1 && p.x > 0.15 && p.x < 0.85) on = true;                 // d
+	if ((bits & 16) != 0 && p.x < 0.15 && p.y > 0.07 && p.y < 0.48) on = true;               // e
+	if ((bits & 32) != 0 && p.x < 0.15 && p.y > 0.52 && p.y < 0.93) on = true;               // f
+	if ((bits & 64) != 0 && p.y > 0.45 && p.y < 0.55 && p.x > 0.15 && p.x < 0.85) on = true; // g
+	return on;
+}
+void fragment() {
+	float t = mod(TIME + ph * cycle, cycle);
+	int state = t < 17.0 ? 0 : (t < 20.0 ? 1 : 2);
+	int v = state == 0 ? int(ceil(17.0 - t)) : (state == 2 ? int(ceil(40.0 - t)) : -1);
+	vec2 uv = vec2(UV.x, 1.0 - UV.y);
+	int which = uv.x < 0.5 ? 0 : 1;
+	vec2 p = (vec2(fract(uv.x * 2.0), uv.y) - vec2(0.2, 0.12)) / vec2(0.6, 0.76);
+	int masks[10] = {63, 6, 91, 79, 102, 109, 125, 7, 127, 111};
+	bool inside = p.x >= 0.0 && p.x <= 1.0 && p.y >= 0.0 && p.y <= 1.0;
+	bool lit = false;
+	bool ghost = inside && seg(p, 127);
+	if (v >= 0 && inside) {
+		int d = which == 0 ? v / 10 : v % 10;
+		lit = (which == 1 || d > 0) && seg(p, masks[d]);
+	}
+	vec3 c = state == 0 ? vec3(0.1, 1.0, 0.5) : vec3(1.0, 0.08, 0.03);
+	ALBEDO = vec3(0.015);
+	ROUGHNESS = 0.3;
+	EMISSION = lit ? c * 5.0 : (ghost ? vec3(0.012) : vec3(0.0));
+}
+"""
+	return sh
+
+
 func _signal_shader() -> Shader:
 	var sh := Shader.new()
 	sh.code = """shader_type spatial;
@@ -1093,9 +1160,9 @@ void vertex() { ph = INSTANCE_CUSTOM.r; }
 void fragment() {
 	float t = mod(TIME + ph * cycle, cycle);
 	bool on = which == 2 ? t < 17.0 : (which == 1 ? (t >= 17.0 && t < 20.0) : t >= 20.0);
-	ALBEDO = col * (on ? 0.9 : 0.12);
-	ROUGHNESS = 0.3;
-	EMISSION = on ? col * 3.5 : vec3(0.0);
+	ALBEDO = col * (on ? 0.9 : 0.06);
+	ROUGHNESS = on ? 0.3 : 0.08;
+	EMISSION = on ? col * 7.0 : vec3(0.0);
 }
 """
 	return sh

@@ -334,6 +334,42 @@ func _place_car(near: Vector3) -> bool:
 	return true
 
 
+## Jumping a red: crossing the line of a signal that faces you while it shows red. Signals come from the loaded
+## tiles ([position, yaw (the way the lights face), phase]), as the traffic reads them.
+var _sig_prev := {}
+
+
+func _red_light_check() -> void:
+	if hud == null or absf(car.speed) < 2.0:
+		return
+	var cp: Vector3 = car.global_position
+	var fwd: Vector3 = car.forward()
+	var seen := {}
+	var key := Vector2i(floori(cp.x / 256.0), floori(cp.z / 256.0))
+	for dx in [-1, 0, 1]:
+		for dz in [-1, 0, 1]:
+			var tile = streamer.loaded.get(Vector2i(key.x + dx, key.y + dz))
+			if tile == null:
+				continue
+			for s_ in (tile as Node3D).get_meta("signals", []):
+				var sp: Vector3 = s_[0]
+				if sp.distance_to(cp) > 30.0:
+					continue
+				var f := Vector3(sin(float(s_[1])), 0, cos(float(s_[1])))
+				if fwd.dot(f) > -0.7:                     # not facing me
+					continue
+				var x := Vector3.UP.cross(f)
+				var lateral := (cp - sp).dot(x)
+				if lateral < -2.0 or lateral > 14.0:      # not on this approach's lanes (they reach right of the pole)
+					continue
+				var past := (cp - sp).dot(-f)             # > 0 once past the signal
+				var id := "%d,%d" % [roundi(sp.x * 10), roundi(sp.z * 10)]
+				seen[id] = past
+				if _sig_prev.has(id) and _sig_prev[id] < 0.0 and past >= 0.0 and Streamer.signal_state(float(s_[2])) == 2:
+					hud.warn("RED LIGHT — you jumped the signal")
+	_sig_prev = seen
+
+
 func _drive_camera(dt: float) -> void:
 	# the car's pose between physics steps (physics interpolation): smooth at any frame rate
 	var jt: Transform3D = car.get_global_transform_interpolated()
@@ -393,6 +429,7 @@ func _process(dt: float) -> void:
 			_place_car(car.global_position)
 		_r_down = Input.is_key_pressed(KEY_R)
 		_drive_camera(dt)
+		_red_light_check()
 		if "--trafficshot" in OS.get_cmdline_user_args():
 			if int(t) != int(t - dt) and int(t) % 5 == 0:
 				var moving: int = traffic.vehicles.filter(func(v): return v["speed"] > 1.0).size()

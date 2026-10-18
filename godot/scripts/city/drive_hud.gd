@@ -3,17 +3,30 @@ extends Control
 ## bottom right, quiet and readable over the street.
 
 var car
+var message := ""                  # a short warning shown for a few seconds (e.g. a red light jumped)
+var message_time := 0.0
 
 func _ready() -> void:
 	set_anchors_preset(Control.PRESET_FULL_RECT)
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 
 
-func _process(_dt: float) -> void:
+func _process(dt: float) -> void:
+	message_time = maxf(0.0, message_time - dt)
 	queue_redraw()
 
 
+func warn(text: String, secs := 3.5) -> void:
+	message = text
+	message_time = secs
+
+
 func _draw() -> void:
+	if message_time > 0.0:
+		var vs0 := get_viewport_rect().size
+		var a := clampf(message_time, 0.0, 1.0)
+		draw_rect(Rect2(vs0.x * 0.5 - 260, 70, 520, 54), Color(0.55, 0.02, 0.02, 0.75 * a))
+		draw_string(ThemeDB.fallback_font, Vector2(vs0.x * 0.5 - 260, 107), message, HORIZONTAL_ALIGNMENT_CENTER, 520, 26, Color(1, 1, 1, a))
 	if car == null or car.cockpit:
 		return
 	var vs := get_viewport_rect().size

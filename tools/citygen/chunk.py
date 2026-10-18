@@ -910,6 +910,8 @@ def run(cfg, roads_cfg):
     with open(os.path.join(out, "index.json"), "w") as f:
         json.dump(index, f, separators=(",", ":"))
     shutil.rmtree(old, ignore_errors=True)
+    import resignal                                     # signals at the big junctions OSM has not tagged
+    resignal.main()
     size = sum(os.path.getsize(os.path.join(out, "chunks", n)) for n in os.listdir(os.path.join(out, "chunks")))
     print("CHUNK %d tiles, %d road pieces, %d buildings (%d designed), %.1f MB, %ds" % (
         len(tiles), n_pieces, sum(len(t["blds"]) for t in tiles.values()), n_kit, size / 1e6, time.time() - t0))
