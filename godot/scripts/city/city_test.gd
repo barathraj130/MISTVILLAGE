@@ -6,12 +6,14 @@ extends Node3D
 ##                     R back onto the nearest road, L lights, H horn, Tab map (minimap always on), F free camera (fly)
 ##   --fly             start with the free camera: WASD move, Q/E down/up, Shift fast, mouse look (click to capture)
 
+const Prof := preload("res://scripts/drive/prof.gd")
 const Streamer := preload("res://scripts/city/city_streamer.gd")
 const MB := preload("res://scripts/drive/mesh_builder.gd")
 const Jeep := preload("res://scripts/drive/jeep.gd")
 const CityMap := preload("res://scripts/city/city_map.gd")
 const CityTraffic := preload("res://scripts/city/city_traffic.gd")
 const CityWater := preload("res://scripts/city/city_water.gd")
+const DriveHud := preload("res://scripts/city/drive_hud.gd")
 
 var streamer
 var water                                   # tanks, ponds and lakes (city_water.gd)
@@ -33,6 +35,12 @@ var placed := false                         # the car waits, frozen, until the r
 var cam_mode := 0                           # 0 chase, 1 cockpit, 2 bonnet
 var _cam_prev_speed := 0.0
 var _cam_acc := 0.0
+var _cam_heading := Vector3.ZERO           # the chase camera follows a lagging heading: it swings out in corners
+var _orbit := Vector2.ZERO                 # mouse look round the car (yaw, pitch), eases back when left alone
+var _orbit_idle := 0.0
+var _shake := 0.0
+var hud: Control
+var _prof_frames := 0
 var _r_down := false
 var _jolt := 0.0
 var _vy_prev := 0.0
@@ -84,6 +92,7 @@ func _ready() -> void:
 	wall.vertex_color_use_as_albedo = true
 	streamer.set_yard_materials(yard, wall)
 	cam = Camera3D.new()
+	cam.physics_interpolation_mode = Node.PHYSICS_INTERPOLATION_MODE_OFF     # moved every frame from the car's smoothed pose
 	cam.fov = 70.0
 	cam.far = 4000.0
 	cam.position = Vector3(0, cam_y, 0)
@@ -101,11 +110,23 @@ func _ready() -> void:
 				["indicate_right", [KEY_PERIOD]], ["hazards", [KEY_SLASH]], ["steer_less", [KEY_BRACKETLEFT]],
 				["steer_more", [KEY_BRACKETRIGHT]]]:
 			if not InputMap.has_action(pair[0]):          # the drive game's keys (drive_game.gd _setup_input)
-				InputMap.add_action(pair[0])
+				InputMap.add_action(pair[0], 0.08)
 				for kc in pair[1]:
 					var ev := InputEventKey.new()
 					ev.physical_keycode = kc
 					InputMap.action_add_event(pair[0], ev)
+		# a gamepad or wheel: left stick steers, right trigger accelerates, left trigger brakes
+		for jb in [["accelerate", JOY_AXIS_TRIGGER_RIGHT, 1.0], ["brake", JOY_AXIS_TRIGGER_LEFT, 1.0],
+				["steer_left", JOY_AXIS_LEFT_X, -1.0], ["steer_right", JOY_AXIS_LEFT_X, 1.0]]:
+			var je := InputEventJoypadMotion.new()
+			je.axis = jb[1]
+			je.axis_value = jb[2]
+			InputMap.action_add_event(jb[0], je)
+		for jb in [["handbrake", JOY_BUTTON_B], ["horn", JOY_BUTTON_LEFT_STICK], ["headlights", JOY_BUTTON_DPAD_UP],
+				["shift_up", JOY_BUTTON_RIGHT_SHOULDER], ["shift_down", JOY_BUTTON_LEFT_SHOULDER]]:
+			var jbe := InputEventJoypadButton.new()
+			jbe.button_index = jb[1]
+			InputMap.action_add_event(jb[0], jbe)
 		car = Jeep.new()
 		car.name = "Car"
 		car.freeze = true
@@ -119,6 +140,12 @@ func _ready() -> void:
 		traffic.player = car
 		if not "--notraffic" in args:
 			add_child(traffic)
+		hud = DriveHud.new()
+		hud.car = car
+		var hl := CanvasLayer.new()
+		hl.add_child(hud)
+		add_child(hl)
+		traffic.physics_interpolation_mode = Node.PHYSICS_INTERPOLATION_MODE_OFF
 		map = CityMap.new()
 		map.name = "Map"
 		map.target = car
@@ -132,7 +159,7 @@ func _ready() -> void:
 			_survey_setup(int(a.get_slice("=", 1)))
 	get_viewport().scaling_3d_mode = Viewport.SCALING_3D_MODE_FSR2
 	get_viewport().scaling_3d_scale = 0.67
-	get_viewport().mesh_lod_threshold = 8.0 if "--lod8" in OS.get_cmdline_user_args() else 1.0
+	get_viewport().mesh_lod_threshold = 8.0 if "--lod8" in OS.get_cmdline_user_args() else 3.0
 	RenderingServer.viewport_set_measure_render_time(get_viewport().get_viewport_rid(), true)
 
 
@@ -161,7 +188,8 @@ func _environment() -> void:
 	sun.light_energy = 2.6
 	sun.light_color = Color(1.0, 0.94, 0.85)
 	sun.shadow_enabled = not "--noshadow" in OS.get_cmdline_user_args()
-	sun.directional_shadow_max_distance = 200.0
+	sun.directional_shadow_max_distance = 160.0
+	sun.directional_shadow_mode = DirectionalLight3D.SHADOW_PARALLEL_2_SPLITS
 	add_child(sun)
 
 
@@ -299,38 +327,56 @@ func _place_car(near: Vector3) -> bool:
 	var basis := Basis.looking_at(-dir if Jeep.FWD > 0.0 else dir, Vector3.UP)
 	car.global_transform = Transform3D(basis, Vector3(spot.x, g + 0.8, spot.z))
 	car.freeze = false
+	car.reset_physics_interpolation()
+	_cam_heading = Vector3.ZERO
 	_cam_prev_speed = 0.0
 	cam.global_position = car.global_position - dir * 9.0 + Vector3.UP * 3.0
 	return true
 
 
 func _drive_camera(dt: float) -> void:
-	var jt: Transform3D = car.global_transform
-	var fwd: Vector3 = car.forward()
+	# the car's pose between physics steps (physics interpolation): smooth at any frame rate
+	var jt: Transform3D = car.get_global_transform_interpolated()
+	var fwd: Vector3 = (jt.basis * Vector3(0, 0, 1)).normalized()
 	var flat := Vector3(fwd.x, 0.0, fwd.z).normalized()
 	var face := Basis.looking_at(fwd, Vector3.UP)
+	_shake = maxf(_shake * exp(-dt * 7.0), clampf((car.jolt - 12.0) / 60.0, 0.0, 0.35))
+	_orbit_idle += dt
+	if _orbit_idle > 1.6:
+		_orbit = _orbit.lerp(Vector2.ZERO, 1.0 - exp(-dt * 2.5))
 	match cam_mode:
 		0:
 			var acc: float = (car.speed - _cam_prev_speed) / maxf(dt, 0.001)
 			_cam_prev_speed = car.speed
 			_cam_acc = lerpf(_cam_acc, clampf(acc, -8.0, 4.0), 1.0 - exp(-dt * 3.0))
-			var back: float = car.chase_back + _cam_acc * 0.12
-			var want := jt.origin - flat * back + Vector3.UP * car.chase_up
-			cam.global_position = cam.global_position.lerp(want, 1.0 - exp(-dt * 2.4))
+			# the heading lags the car's: in a bend the camera swings out and shows the corner
+			if _cam_heading == Vector3.ZERO:
+				_cam_heading = flat
+			_cam_heading = _cam_heading.slerp(flat, 1.0 - exp(-dt * lerpf(2.2, 4.0, clampf(absf(car.speed) / 25.0, 0.0, 1.0)))).normalized()
+			var h := _cam_heading.rotated(Vector3.UP, _orbit.x)
+			var back: float = car.chase_back + _cam_acc * 0.14 + clampf(absf(car.speed) / 30.0, 0.0, 1.0) * 1.2
+			var up: float = car.chase_up + _orbit.y * back
+			var want := jt.origin - h * back + Vector3.UP * up
+			cam.global_position = cam.global_position.lerp(want, 1.0 - exp(-dt * 6.0))
 			var pivot := jt.origin + Vector3.UP * 1.6
 			var q := PhysicsRayQueryParameters3D.create(pivot, cam.global_position)
 			q.exclude = [car.get_rid()]
 			var hit := get_world_3d().direct_space_state.intersect_ray(q)
 			if not hit.is_empty():
 				cam.global_position = hit["position"] + (pivot - hit["position"]).normalized() * 0.4
-			cam.look_at(jt.origin + Vector3.UP * (car.chase_up * 0.48) + flat * 4.0)
-			cam.fov = lerpf(cam.fov, 66.0 + clampf(absf(car.speed) / 30.0, 0.0, 1.0) * 8.0, 1.0 - exp(-dt * 1.5))
+			cam.look_at(jt.origin + Vector3.UP * (car.chase_up * 0.48) + h * 4.0)
+			cam.fov = lerpf(cam.fov, 64.0 + clampf(absf(car.speed) / 30.0, 0.0, 1.0) * 10.0, 1.0 - exp(-dt * 1.5))
 		1:
 			cam.fov = 74.0
-			cam.global_transform = Transform3D(face * Basis(Vector3.RIGHT, deg_to_rad(-5.0)), jt * car.seat)
+			# head turns with the mouse; a little head movement from the road and the g-forces
+			var look := face * Basis(Vector3.UP, _orbit.x * 1.6) * Basis(Vector3.RIGHT, deg_to_rad(-5.0) + _orbit.y)
+			var bob := Vector3(0, -clampf(car.jolt / 400.0, 0.0, 0.03), -clampf(_cam_acc * 0.006, -0.04, 0.04))
+			cam.global_transform = Transform3D(look, jt * (car.seat + bob))
 		2:
 			cam.fov = 70.0
-			cam.global_transform = Transform3D(face, jt * car.bonnet)
+			cam.global_transform = Transform3D(face * Basis(Vector3.UP, _orbit.x), jt * car.bonnet)
+	if _shake > 0.001:
+		cam.global_position += Vector3(randf() - 0.5, randf() - 0.5, randf() - 0.5) * _shake * 0.12
 
 
 func _process(dt: float) -> void:
@@ -528,7 +574,46 @@ func _next_piece(from: Vector3) -> PackedVector3Array:
 	return best
 
 
+## --census: what the loaded city is made of — triangles (× instances) by node type and visibility range
+func _census() -> void:
+	var by := {}
+	var stack: Array = [streamer]
+	if water:
+		stack.append(water)
+	while not stack.is_empty():
+		var n: Node = stack.pop_back()
+		for c in n.get_children():
+			stack.append(c)
+		var tris := 0
+		var key := ""
+		if n is MeshInstance3D and n.mesh:
+			for si in n.mesh.get_surface_count():
+				var a: Array = n.mesh.surface_get_arrays(si)
+				tris += (a[Mesh.ARRAY_INDEX].size() if a[Mesh.ARRAY_INDEX] != null else a[Mesh.ARRAY_VERTEX].size()) / 3
+			key = "Mesh %s %.0f-%.0f shadow=%d" % [n.get_parent().name.left(8), n.visibility_range_begin, n.visibility_range_end, n.cast_shadow]
+		elif n is MultiMeshInstance3D and n.multimesh and n.multimesh.mesh:
+			var m: Mesh = n.multimesh.mesh
+			var per := 0
+			for si in m.get_surface_count():
+				var a: Array = m.surface_get_arrays(si)
+				per += (a[Mesh.ARRAY_INDEX].size() if a[Mesh.ARRAY_INDEX] != null else a[Mesh.ARRAY_VERTEX].size()) / 3
+			tris = per * n.multimesh.instance_count
+			key = "MM %d-tri %.0f-%.0f shadow=%d" % [per, n.visibility_range_begin, n.visibility_range_end, n.cast_shadow]
+		else:
+			continue
+		if not by.has(key):
+			by[key] = [0, 0]
+		by[key][0] += tris
+		by[key][1] += 1
+	var keys := by.keys()
+	keys.sort_custom(func(x, y): return by[x][0] > by[y][0])
+	for k in keys.slice(0, 40):
+		print("CENSUS %8dk tris  %5d nodes  %s" % [by[k][0] / 1000, by[k][1], k])
+
+
 func _log_and_shots(dt: float) -> void:
+	if "--census" in OS.get_cmdline_user_args() and int(t) == 14 and int(t - dt) == 13:
+		_census()
 	if int(t) != int(t - dt) and int(t) % 5 == 0:
 		print("CITY t=%3ds fps=%3d tiles=%3d built=%4d unloaded=%4d blds=%d designed=%d mem=%dMB vmem=%dMB draws=%d pos=(%.0f,%.0f)" % [
 			int(t), Engine.get_frames_per_second(), streamer.stats["loaded"], streamer.stats["built"], streamer.stats["unloaded"],
@@ -539,6 +624,9 @@ func _log_and_shots(dt: float) -> void:
 		print("TIMES process=%.1fms physics=%.1fms nav=%.1fms objects=%d" % [Performance.get_monitor(Performance.TIME_PROCESS) * 1000.0,
 			Performance.get_monitor(Performance.TIME_PHYSICS_PROCESS) * 1000.0, Performance.get_monitor(Performance.TIME_NAVIGATION_PROCESS) * 1000.0,
 			int(Performance.get_monitor(Performance.OBJECT_NODE_COUNT))])
+		print("PROF %s" % Prof.report(maxi(Engine.get_frames_drawn() - _prof_frames, 1)))
+		Prof.totals.clear()
+		_prof_frames = Engine.get_frames_drawn()
 		print("PRIMS %dk gpu=%.1fms cpu=%.1fms" % [int(Performance.get_monitor(Performance.RENDER_TOTAL_PRIMITIVES_IN_FRAME) / 1000),
 			RenderingServer.viewport_get_measured_render_time_gpu(vp), RenderingServer.viewport_get_measured_render_time_cpu(vp)
 			+ RenderingServer.get_frame_setup_time_cpu()])
@@ -555,6 +643,16 @@ func _log_and_shots(dt: float) -> void:
 
 
 func _unhandled_input(e: InputEvent) -> void:
+	if car and driving and e is InputEventMouseMotion and (Input.is_mouse_button_pressed(MOUSE_BUTTON_RIGHT)
+			or Input.mouse_mode == Input.MOUSE_MODE_CAPTURED):
+		_orbit.x = clampf(_orbit.x - e.relative.x * 0.004, -PI, PI)
+		_orbit.y = clampf(_orbit.y - e.relative.y * 0.003, -0.25, 0.5)
+		_orbit_idle = 0.0
+		return
+	if car and driving and e is InputEventJoypadButton and e.pressed and e.button_index == JOY_BUTTON_Y:
+		cam_mode = (cam_mode + 1) % 3
+		car.set_cockpit(cam_mode == 1)
+		return
 	if car and e is InputEventKey and e.pressed and not e.echo:
 		if e.keycode == KEY_V and driving:
 			cam_mode = (cam_mode + 1) % 3

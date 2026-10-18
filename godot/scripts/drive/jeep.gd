@@ -86,6 +86,15 @@ var _ind_mats: Array = []          # [left, right]
 var indicator := 0                 # 0 off, 1 left, -1 right, 2 hazards
 var _ind_yaw := 0.0
 var _blink := 0.0
+var jolt := 0.0                    # vertical shock this frame (m/s² change): camera shake, suspension thud
+var slip := 0.0                    # how much the tyres are sliding (0 grip .. 1 skidding): squeal
+var _vy_prev := 0.0
+var _abs_t := 0.0
+var _road: AudioStreamPlayer
+var _road_lp := [0.0, 0.0, 0.0]    # filter states: wind, rumble, squeal noise
+var _squeal_phase := 0.0
+var _thud := 0.0
+var _turbo_phase := 0.0
 var _engine: AudioStreamPlayer
 var _horn: AudioStreamPlayer
 var _engine_phase := 0.0
@@ -1117,6 +1126,13 @@ func _build_lights() -> void:
 
 
 func _build_audio() -> void:
+	_road = AudioStreamPlayer.new()
+	var rg := AudioStreamGenerator.new()
+	rg.mix_rate = 22050.0
+	rg.buffer_length = 0.12
+	_road.stream = rg
+	_road.volume_db = -14.0
+	add_child(_road)
 	for i in 2:
 		var p := AudioStreamPlayer.new()
 		var gen := AudioStreamGenerator.new()
@@ -1227,12 +1243,17 @@ func _physics_process_body(delta: float) -> void:
 	if not manual and gear >= 1 and _shift_timer <= 0.0:
 		if rpm > lerpf(2000.0, 3600.0, _thr) and gear < RATIOS.size():
 			gear += 1
-			_shift_timer = 0.3
+			_shift_timer = 0.25
 		elif rpm < 1150.0 and gear > 1:
 			gear -= 1
-			_shift_timer = 0.3
-	if _shift_timer > 0.0 or out_of_fuel:
+			_shift_timer = 0.25
+		elif _thr > 0.9 and gear > 1 and rpm < 2300.0 and RATIOS[gear - 2] / RATIOS[gear - 1] * rpm < REDLINE - 600.0:
+			gear -= 1                                   # kickdown: floor it and it drops a gear
+			_shift_timer = 0.2
+	if out_of_fuel:
 		pedal = 0.0
+	elif _shift_timer > 0.0:
+		pedal *= 0.25                                   # a torque dip while the box shifts, not a dead stop
 	var dir := -1.0 if gear == 0 else 1.0
 	var drive_force := 0.0
 	if rpm < REDLINE and absf(speed) < top_speed:
@@ -1246,8 +1267,40 @@ func _physics_process_body(delta: float) -> void:
 		br = maxf(br, 0.5 + rpm / REDLINE * 2.4)
 	if in_handbrake:
 		br = BRAKE * 1.2
+	# tyre slip (VehicleWheel3D skid info: 1 = gripping, 0 = sliding)
+	var grip := 1.0
+	var on_ground := false
+	for w in _wheels:
+		if (w as VehicleWheel3D).is_in_contact():
+			on_ground = true
+			grip = minf(grip, (w as VehicleWheel3D).get_skidinfo())
+	slip = move_toward(slip, clampf((0.75 - grip) / 0.6, 0.0, 1.0) if on_ground and absf(speed) > 2.0 else 0.0, delta * 6.0)
+	# ABS: when the wheels lock under braking, pulse the brakes (about 12 times a second)
+	_abs_t += delta
+	if br > BRAKE * 0.3 and grip < 0.45 and absf(speed) > 3.0 and not in_handbrake:
+		br *= 0.35 if fmod(_abs_t, 0.083) < 0.04 else 1.0
+	# traction control: wheelspin from a standstill eases the throttle
+	if pedal > 0.3 and grip < 0.5 and absf(speed) < 14.0:
+		drive_force *= 0.55
 	engine_force = drive_force / 4.0 * FWD
 	brake = br
+	if on_ground:
+		# anti-roll bars: the body leans into a corner but settles, it doesn't wallow
+		var fwd_axis := forward()
+		var roll := asin(clampf(global_transform.basis.x.y, -1.0, 1.0))
+		var roll_rate := angular_velocity.dot(fwd_axis)
+		apply_torque(fwd_axis * (roll * mass * 5.5 + roll_rate * mass * 0.8))
+		# yaw stability at speed (a gentle hand, like ESP), off with the handbrake
+		if not in_handbrake and absf(speed) > 8.0:
+			var yaw_rate := angular_velocity.dot(global_transform.basis.y)
+			var expect := steering * speed / 2.7
+			apply_torque(global_transform.basis.y * (expect - yaw_rate) * mass * 0.35 * smoothstep(8.0, 25.0, absf(speed)))
+	# bumps: vertical shock, for the camera and the suspension thud
+	var vy := linear_velocity.y
+	jolt = absf(vy - _vy_prev) / maxf(delta, 0.001)
+	_vy_prev = vy
+	if jolt > 18.0:
+		_thud = minf(1.0, _thud + jolt / 80.0)
 	var v := linear_velocity.length()
 	if v > 0.3:
 		apply_central_force(-linear_velocity / v * (280.0 + 0.95 * v * v + _surface_drag * minf(v, 12.0)))
@@ -1299,6 +1352,7 @@ func _process_body(delta: float) -> void:
 		_nav.map_ui = map_ui
 	_fill_engine()
 	_fill_horn(delta)
+	_fill_road()
 
 
 ## Four-cylinder diesel note: firing pulses at 2 × rpm / 60 Hz, harmonics and a load-dependent clatter.
@@ -1316,7 +1370,39 @@ func _fill_engine() -> void:
 		var pulse := pow(maxf(sin(p), 0.0), 6.0)
 		var smp := (0.6 * sin(p) + 0.35 * sin(2.0 * p + 0.3) + 0.2 * sin(3.0 * p + 1.1) + 0.12 * sin(0.5 * p)) * 0.5
 		smp += (randf() * 2.0 - 1.0) * pulse * (0.2 + 0.4 * load)
+		# turbo: a faint whistle climbing with revs, only under load
+		_turbo_phase = fmod(_turbo_phase + (900.0 + rpm * 0.6) / 22050.0, 1.0)
+		smp += sin(_turbo_phase * TAU) * 0.035 * load * clampf((rpm - 1500.0) / 2000.0, 0.0, 1.0)
 		smp *= amp
+		pb.push_frame(Vector2(smp, smp))
+
+
+## Road noise: wind (rising with the square of speed), tyre rumble on the surface (rougher off the tarmac),
+## tyre squeal when sliding, and a thud when the suspension hits a bump or a speed breaker.
+func _fill_road() -> void:
+	if _road == null:
+		return
+	if not _road.playing:
+		_road.play()
+	var pb := _road.get_stream_playback() as AudioStreamGeneratorPlayback
+	if pb == null:
+		return
+	var v := absf(speed)
+	var wind_amp := clampf(v * v / 1600.0, 0.0, 0.6)
+	var rough := 1.0 if surface == "asphalt" else 2.2
+	var rumble_amp := clampf(v / 30.0, 0.0, 0.5) * rough
+	var sq := slip * clampf(v / 6.0, 0.0, 1.0)
+	for i in pb.get_frames_available():
+		var n := randf() * 2.0 - 1.0
+		_road_lp[0] += (n - _road_lp[0]) * 0.08                      # wind: soft hiss
+		_road_lp[1] += (n - _road_lp[1]) * 0.015                     # rumble: low roar
+		_road_lp[2] += (n - _road_lp[2]) * 0.35
+		_squeal_phase = fmod(_squeal_phase + (780.0 + 140.0 * _road_lp[2]) / 22050.0, 1.0)
+		var smp: float = _road_lp[0] * wind_amp * 0.9 + _road_lp[1] * rumble_amp * 2.2
+		smp += sin(_squeal_phase * TAU) * sq * 0.18 * (0.7 + 0.3 * _road_lp[2])
+		if _thud > 0.0:
+			smp += sin(_thud * 140.0) * _thud * 0.5
+			_thud = maxf(0.0, _thud - 1.0 / 22050.0 * 9.0)
 		pb.push_frame(Vector2(smp, smp))
 
 

@@ -1,4 +1,5 @@
 extends Node3D
+const Prof := preload("res://scripts/drive/prof.gd")
 ## Traffic in the streamed city: hatchbacks, sedans, taxis, autos, and on the main roads buses and lorries, driving
 ## the real road pieces of the loaded tiles. Each keeps left in its lane, follows one-ways, picks a way at every
 ## junction (mostly straight on, sometimes turning, the big roads more likely), slows for turns, stops at red
@@ -30,6 +31,12 @@ func _ready() -> void:
 
 
 func _physics_process(delta: float) -> void:
+	var _p0 := Time.get_ticks_usec()
+	_physics_process_timed(delta)
+	Prof.add("traffic_phys", _p0)
+
+
+func _physics_process_timed(delta: float) -> void:
 	if streamer == null or player == null:
 		return
 	if streamer.stats["built"] + streamer.stats["unloaded"] != _built_seen:

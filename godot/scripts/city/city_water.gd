@@ -1,4 +1,5 @@
 extends Node3D
+const Prof := preload("res://scripts/drive/prof.gd")
 ## Coimbatore's tanks, ponds and lakes (tools/citygen/water.py → assets/city/water.bin; design tools/ponds.py,
 ## previews/ponds/). The ground under them is carved in the tiles; here each water body within NEAR of the target
 ## is built — and freed again beyond FAR:
@@ -92,6 +93,12 @@ func _ready() -> void:
 
 
 func _process(dt: float) -> void:
+	var _p0 := Time.get_ticks_usec()
+	_process_timed(dt)
+	Prof.add("water", _p0)
+
+
+func _process_timed(dt: float) -> void:
 	_t += dt
 	if target == null or _t < 0.5:
 		return

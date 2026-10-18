@@ -1,4 +1,5 @@
 extends Node3D
+const Prof := preload("res://scripts/drive/prof.gd")
 ## Streams the real Coimbatore (tools/citygen/chunk.py → assets/city/) in 256 m tiles around a target:
 ## tiles within `radius` tiles load, tiles beyond `radius + 1` unload. Reading a binary tile, building its
 ## meshes, MultiMeshes and collision shapes all happens on worker threads; the main thread only adds the
@@ -92,7 +93,10 @@ func _ready() -> void:
 			if ResourceLoader.exists(cand % kname):
 				path = cand % kname
 				break
-		life_meshes.append(_scene_mesh(path) if path != "" else null)
+		var lm: Mesh = _scene_mesh(path) if path != "" else null
+		if lm and not (kname.begins_with("veg_") or kname.begins_with("city_palm")):
+			lm = _with_lods(lm)
+		life_meshes.append(lm)
 		var far_path := "res://assets/city_props/%s_far.glb" % kname
 		life_far.append(_scene_mesh(far_path) if ResourceLoader.exists(far_path) else null)
 	shrub_mesh = _gltf_mesh("res://assets/models/veg_hedgerow_bush_0_lod.gltf")
@@ -101,7 +105,7 @@ func _ready() -> void:
 	# parked two-wheelers (tools/twowheeler.py), four paints each
 	for kind in ["scooter", "motorcycle"]:
 		for ci in 4:
-			var bm := _gltf_mesh("res://assets/vehicles/bike_%s_%d.glb" % [kind, ci])
+			var bm := _with_lods(_gltf_mesh("res://assets/vehicles/bike_%s_%d.glb" % [kind, ci]))
 			if bm:
 				bike_meshes.append(bm)
 	prop_meshes = {1: _signal(), 2: _shelter(), 3: _breaker()}
@@ -109,7 +113,7 @@ func _ready() -> void:
 	kit = Kit.new()
 	if kit.setup():
 		for vname in index.get("variants", []):
-			kit_meshes.append(kit.mesh(vname))
+			kit_meshes.append(_with_lods(kit.mesh(vname)))
 			kit_boxes.append(kit_meshes[-1].get_aabb() if kit_meshes[-1] else AABB())
 			kit_far_meshes.append(kit.mesh_far(vname))
 	else:
@@ -168,6 +172,12 @@ func _lamp() -> ArrayMesh:
 
 
 func _process(_dt: float) -> void:
+	var _p0 := Time.get_ticks_usec()
+	_process_timed(_dt)
+	Prof.add("streamer", _p0)
+
+
+func _process_timed(_dt: float) -> void:
 	if target == null:
 		return
 	var c := Vector2i(floori(target.global_position.x / tile), floori(target.global_position.z / tile))
@@ -1225,15 +1235,16 @@ func _life(life: Array, out: Dictionary) -> void:
 			for i in by[key].size():
 				fm.set_instance_transform(i, by[key][i])
 			var near := (TREE_NEAR if nm.begins_with("veg_") and not nm.begins_with("veg_bush") else 40.0) + LIFE_CELL * 0.71
-			mms.append([mm, near, 0.0])
+			mms.append([mm, near, 0.0, false])
 			mms.append([fm, (320.0 if not nm.begins_with("veg_bush") else 150.0) + LIFE_CELL * 0.71, near - 4.0])
+			mms.append([fm, near, 0.0, true])               # the near ones' shadow, from the far mesh
 			continue
-		var far := 90.0
+		var far := 60.0
 		if nm.begins_with("veg_") or nm.begins_with("city_palm") or nm == "pole" or nm == "transformer":
 			far = 320.0
 		elif nm.begins_with("fleet") or nm.begins_with("stall") or nm.begins_with("shade") or nm.begins_with("flex") \
 				or nm == "shrine" or nm == "thatched":
-			far = 200.0
+			far = 140.0
 		mms.append([mm, far + LIFE_CELL * 0.71, 0.0])
 	out["life"] = mms
 
@@ -1277,6 +1288,25 @@ func _wires(wires: Array, out: Dictionary) -> void:
 	var m := ArrayMesh.new()
 	m.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arr)
 	out["wires"] = m
+
+
+## The same mesh with automatic levels of detail (Godot picks a coarser one as it gets smaller on screen):
+## a parked bike of 8 000 triangles drops to a few hundred a street away.
+static func _with_lods(m: Mesh) -> Mesh:
+	if m == null or not (m is ArrayMesh):
+		return m
+	var im := ImporterMesh.new()
+	for si in m.get_surface_count():
+		var arr := m.surface_get_arrays(si)
+		if arr[Mesh.ARRAY_INDEX] == null:
+			var ix := PackedInt32Array()
+			ix.resize((arr[Mesh.ARRAY_VERTEX] as PackedVector3Array).size())
+			for i in ix.size():
+				ix[i] = i
+			arr[Mesh.ARRAY_INDEX] = ix
+		im.add_surface(Mesh.PRIMITIVE_TRIANGLES, arr, [], {}, m.surface_get_material(si))
+	im.generate_lods(25.0, 60.0, [])
+	return im.get_mesh()
 
 
 static func _gltf_mesh(path: String) -> Mesh:
@@ -1396,10 +1426,10 @@ func _yards(yards: Array, out: Dictionary) -> void:
 		out["yard_shape"] = shape
 	var tm := []
 	for tkey in trees:
-		for lod in 2:
+		for lod in 3:                                   # 0 near, 1 far, 2 the near set's shadow from the far mesh
 			var mm := MultiMesh.new()
 			mm.transform_format = MultiMesh.TRANSFORM_3D
-			mm.mesh = tree_meshes[tkey.x][lod]
+			mm.mesh = tree_meshes[tkey.x][mini(lod, 1)]
 			mm.instance_count = trees[tkey].size()
 			for i in trees[tkey].size():
 				mm.set_instance_transform(i, trees[tkey][i])
@@ -1690,6 +1720,11 @@ func _instance(k: Vector2i, d: Dictionary) -> void:
 		tmi.multimesh = tr[0]
 		if tr[1] == 0:
 			tmi.visibility_range_end = TREE_NEAR + LIFE_CELL * 0.71
+			tmi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		elif tr[1] == 2:
+			# the near trees' shadows come from the light far version (an eighth of the triangles)
+			tmi.visibility_range_end = TREE_NEAR + LIFE_CELL * 0.71
+			tmi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_SHADOWS_ONLY
 		else:
 			tmi.visibility_range_begin = TREE_NEAR + LIFE_CELL * 0.71 - 4.0
 			tmi.visibility_range_end = 500.0
@@ -1733,7 +1768,9 @@ func _instance(k: Vector2i, d: Dictionary) -> void:
 		lmi2.multimesh = lm[0]
 		lmi2.visibility_range_end = lm[1]
 		lmi2.visibility_range_begin = lm[2]
-		if lm[1] < 150.0 or lm[2] > 0.0:
+		if lm.size() > 3:
+			lmi2.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_SHADOWS_ONLY if lm[3] else GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		elif lm[1] < 150.0 or lm[2] > 0.0:
 			lmi2.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 		node.add_child(lmi2)
 	if d.has("wires"):
@@ -1750,7 +1787,8 @@ func _instance(k: Vector2i, d: Dictionary) -> void:
 	for bm3 in d.get("bikes", []):
 		var bmi := MultiMeshInstance3D.new()
 		bmi.multimesh = bm3
-		bmi.visibility_range_end = 80.0
+		bmi.visibility_range_end = 70.0
+		bmi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 		node.add_child(bmi)
 	if d.has("lamps"):
 		var lmi := MultiMeshInstance3D.new()

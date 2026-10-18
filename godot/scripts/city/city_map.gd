@@ -1,4 +1,5 @@
 extends CanvasLayer
+const Prof := preload("res://scripts/drive/prof.gd")
 ## The city map (data: tools/citygen/mapdata.py → assets/city/map.bin).
 ##   minimap   bottom-left, heading-up, ~600 m across, roads by class, water, your arrow, a north mark, and the
 ##             direction and distance to your destination pin
@@ -108,6 +109,12 @@ func _load() -> void:
 
 
 func _process(_dt: float) -> void:
+	var _p0 := Time.get_ticks_usec()
+	_process_timed(_dt)
+	Prof.add("map", _p0)
+
+
+func _process_timed(_dt: float) -> void:
 	# a quarter of the screen height, whatever the window and display scale
 	var h := get_viewport().get_visible_rect().size.y
 	var side := clampf(h * 0.27, 220.0, 620.0)
