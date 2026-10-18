@@ -146,6 +146,56 @@ def main():
         os.replace(fn + ".tmp", fn)
         added += len(recs)
     print("RESIGNAL %d junctions signalled, %d signal heads added" % (n_j, added), flush=True)
+    booths()
+
+
+def booths():
+    """A traffic police umbrella booth (prop 4) at a corner of every junction with four or more signal heads:
+    on the footpath behind one approach's pole, towards the junction."""
+    chunks = os.path.join(path("godot", "assets", "city"), "chunks")
+    sigs, have = [], []
+    for fn in os.listdir(chunks):
+        if fn.endswith(".bin"):
+            _, props, _, _ = parse(open(os.path.join(chunks, fn), "rb").read())
+            sigs += [p for p in props if p[0] == 1]
+            have += [(p[1], p[3]) for p in props if p[0] == 4]
+    P = np.array([[p[1], p[3]] for p in sigs])
+    H = np.array(have) if have else np.zeros((0, 2))
+    used = np.zeros(len(sigs), bool)
+    new = {}
+    for i in range(len(sigs)):
+        if used[i]:
+            continue
+        near = np.where(np.hypot(P[:, 0] - P[i, 0], P[:, 1] - P[i, 1]) < 35.0)[0]
+        used[near] = True
+        if len(near) < 4:
+            continue
+        cx, cz = P[near, 0].mean(), P[near, 1].mean()
+        if len(H) and np.hypot(H[:, 0] - cx, H[:, 1] - cz).min() < 45.0:
+            continue
+        _, x, y, z, yaw, w = sigs[near[0]]
+        f = np.array([math.sin(yaw), math.cos(yaw)])            # the lights face this way; traffic comes -f
+        d = -f
+        left = np.array([d[1], -d[0]])
+        q = np.array([x, z]) + left * 2.2 + d * 3.5
+        key = (int(math.floor(q[0] / 256.0)), int(math.floor(q[1] / 256.0)))
+        new.setdefault(key, []).append((4, float(q[0]), float(y), float(q[1]), float(yaw), 1.0))
+    added = 0
+    for (cx, cz), recs in new.items():
+        fn = os.path.join(chunks, "CBE_%d_%d.bin" % (cx, cz))
+        if not os.path.exists(fn):
+            continue
+        buf = bytearray(open(fn, "rb").read())
+        _, props, at, end = parse(buf)
+        body = bytearray(struct.pack("<i", len(props) + len(recs))) + buf[at + 4:end]
+        for r in recs:
+            body += PS.pack(*r)
+        buf = buf[:at] + body + buf[end:]
+        with open(fn + ".tmp", "wb") as f:
+            f.write(bytes(buf))
+        os.replace(fn + ".tmp", fn)
+        added += len(recs)
+    print("BOOTHS %d traffic police booths added" % added, flush=True)
 
 
 if __name__ == "__main__":

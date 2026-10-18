@@ -110,6 +110,9 @@ func _ready() -> void:
 				bike_meshes.append(bm)
 	var sig: Mesh = _designed_signal()
 	prop_meshes = {1: sig if sig else _signal(), 2: _shelter(), 3: _breaker()}
+	var booth: Mesh = _scene_mesh("res://assets/city_props/police_booth.glb")      # 4: traffic police umbrella booth
+	if booth:
+		prop_meshes[4] = booth
 	breaker_faces = (prop_meshes[3] as Mesh).get_faces()        # read here: workers must not touch the mesh
 	kit = Kit.new()
 	if kit.setup():
@@ -1033,6 +1036,8 @@ func _props(props: Array, out: Dictionary) -> void:
 		var f := Vector3(sin(pv[3]), 0, cos(pv[3]))
 		var x := Vector3.UP.cross(f).normalized()
 		var xf := Transform3D(Basis(x * (pv[4] if kind == 3 else 1.0), Vector3.UP, f), Vector3(pv[0], pv[1], pv[2]))
+		if not prop_meshes.has(kind):
+			continue
 		if not by.has(kind):
 			by[kind] = []
 		by[kind].append([xf, signal_phase(pv[0], pv[2], pv[3])])
@@ -1069,9 +1074,16 @@ func _props(props: Array, out: Dictionary) -> void:
 ## Where a signal is in its 40 s cycle (0..1): the two approaches along one axis are green together, the crossing
 ## axis half a cycle later; each junction starts at its own offset. Traffic can use the same rule.
 ## Whether a signal with this phase shows green / amber / red right now (same clock as the lenses' shader TIME).
+## Indian timing: a 90 s cycle — 40 s green, 4 s amber, 46 s red; the crossing road runs half a cycle later, so
+## each side gets one second of all-red between them.
+const SIG_CYCLE := 90.0
+const SIG_GREEN := 40.0
+const SIG_AMBER := 44.0
+
+
 static func signal_state(phase: float) -> int:
-	var t := fposmod(Time.get_ticks_msec() / 1000.0 + phase * 40.0, 40.0)
-	return 0 if t < 17.0 else (1 if t < 20.0 else 2)        # 0 green, 1 amber, 2 red
+	var t := fposmod(Time.get_ticks_msec() / 1000.0 + phase * SIG_CYCLE, SIG_CYCLE)
+	return 0 if t < SIG_GREEN else (1 if t < SIG_AMBER else 2)        # 0 green, 1 amber, 2 red
 
 
 static func signal_phase(x: float, z: float, yaw: float) -> float:
@@ -1087,7 +1099,9 @@ static func signal_phase(x: float, z: float, yaw: float) -> float:
 ## heads, a near-side head, the countdown timer and a FREE LEFT board. Its lenses and timer face are lit here,
 ## on the same 40 s cycle the traffic obeys (signal_state); INSTANCE_CUSTOM.r carries each approach's phase.
 func _designed_signal() -> Mesh:
-	var m: Mesh = _scene_mesh("res://assets/city_props/traffic_signal.glb")
+	var m: Mesh = _scene_mesh("res://assets/city_props/signal_india.glb")
+	if m == null:
+		m = _scene_mesh("res://assets/city_props/traffic_signal.glb")
 	if m == null:
 		return null
 	for i in m.get_surface_count():
@@ -1099,6 +1113,11 @@ func _designed_signal() -> Mesh:
 			m.surface_set_material(i, _lens(Color(1.0, 0.55, 0.02), 1))
 		elif nm.begins_with("SigLens Green"):
 			m.surface_set_material(i, _lens(Color(0.1, 1.0, 0.55), 2))
+		elif nm.begins_with("SigArrow"):
+			var am := ShaderMaterial.new()
+			am.shader = _arrow_shader()
+			am.set_shader_parameter("kind", 0 if nm.contains("Left") else (1 if nm.contains("Straight") else 2))
+			m.surface_set_material(i, am)
 		elif nm.begins_with("SigTimer"):
 			var tm := ShaderMaterial.new()
 			tm.shader = _timer_shader()
@@ -1106,12 +1125,43 @@ func _designed_signal() -> Mesh:
 	return m
 
 
+## A green-arrow aspect (left, straight, right) drawn on its lens quad. The left arrow is always lit (FREE LEFT);
+## straight and right only while the signal is green.
+static var _arrow_sh: Shader
+static func _arrow_shader() -> Shader:
+	if _arrow_sh:
+		return _arrow_sh
+	_arrow_sh = Shader.new()
+	_arrow_sh.code = """shader_type spatial;
+uniform int kind = 0;           // 0 left, 1 straight, 2 right
+uniform float cycle = 90.0;
+varying float ph;
+void vertex() { ph = INSTANCE_CUSTOM.r; }
+void fragment() {
+	vec2 p = vec2(UV.x, 1.0 - UV.y) * 2.0 - 1.0;
+	if (kind == 0) p = vec2(-p.x, p.y);
+	if (kind == 1) p = vec2(p.y, -p.x);
+	// an arrow pointing to +x: a shaft and a head
+	bool shaft = p.x > -0.62 && p.x < 0.15 && abs(p.y) < 0.13;
+	bool headp = p.x >= 0.1 && p.x < 0.62 && abs(p.y) < (0.62 - p.x) * 0.95;
+	bool disc = dot(p, p) < 0.95;
+	float t = mod(TIME + ph * cycle, cycle);
+	bool on = kind == 0 || t < 40.0;
+	bool glyph = disc && (shaft || headp);
+	ALBEDO = vec3(0.01, 0.02, 0.015);
+	ROUGHNESS = 0.1;
+	EMISSION = glyph ? (on ? vec3(0.1, 1.0, 0.5) * 6.0 : vec3(0.004, 0.02, 0.01)) : vec3(0.0);
+}
+"""
+	return _arrow_sh
+
+
 ## The countdown: two seven-segment digits on the timer's face, the seconds left of red (red) or green (green),
 ## dark through amber.
 static func _timer_shader() -> Shader:
 	var sh := Shader.new()
 	sh.code = """shader_type spatial;
-uniform float cycle = 40.0;
+uniform float cycle = 90.0;
 varying float ph;
 void vertex() { ph = INSTANCE_CUSTOM.r; }
 bool seg(vec2 p, int bits) {
@@ -1127,8 +1177,8 @@ bool seg(vec2 p, int bits) {
 }
 void fragment() {
 	float t = mod(TIME + ph * cycle, cycle);
-	int state = t < 17.0 ? 0 : (t < 20.0 ? 1 : 2);
-	int v = state == 0 ? int(ceil(17.0 - t)) : (state == 2 ? int(ceil(40.0 - t)) : -1);
+	int state = t < 40.0 ? 0 : (t < 44.0 ? 1 : 2);
+	int v = state == 0 ? int(ceil(40.0 - t)) : (state == 2 ? int(ceil(90.0 - t)) : -1);
 	vec2 uv = vec2(UV.x, 1.0 - UV.y);
 	int which = uv.x < 0.5 ? 0 : 1;
 	vec2 p = (vec2(fract(uv.x * 2.0), uv.y) - vec2(0.2, 0.12)) / vec2(0.6, 0.76);
@@ -1154,12 +1204,12 @@ func _signal_shader() -> Shader:
 	sh.code = """shader_type spatial;
 uniform vec3 col : source_color;
 uniform int which = 0;          // 0 red, 1 amber, 2 green
-uniform float cycle = 40.0;
+uniform float cycle = 90.0;
 varying float ph;
 void vertex() { ph = INSTANCE_CUSTOM.r; }
 void fragment() {
 	float t = mod(TIME + ph * cycle, cycle);
-	bool on = which == 2 ? t < 17.0 : (which == 1 ? (t >= 17.0 && t < 20.0) : t >= 20.0);
+	bool on = which == 2 ? t < 40.0 : (which == 1 ? (t >= 40.0 && t < 44.0) : t >= 44.0);
 	ALBEDO = col * (on ? 0.9 : 0.06);
 	ROUGHNESS = on ? 0.3 : 0.08;
 	EMISSION = on ? col * 7.0 : vec3(0.0);
