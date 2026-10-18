@@ -14,6 +14,7 @@ const CityMap := preload("res://scripts/city/city_map.gd")
 const CityTraffic := preload("res://scripts/city/city_traffic.gd")
 const CityWater := preload("res://scripts/city/city_water.gd")
 const DriveHud := preload("res://scripts/city/drive_hud.gd")
+const Fines := preload("res://scripts/city/fines.gd")
 
 var streamer
 var water                                   # tanks, ponds and lakes (city_water.gd)
@@ -40,6 +41,7 @@ var _orbit := Vector2.ZERO                 # mouse look round the car (yaw, pitc
 var _orbit_idle := 0.0
 var _shake := 0.0
 var hud: Control
+var fines                                   # wallet and e-challans (fines.gd)
 var _prof_frames := 0
 var _r_down := false
 var _jolt := 0.0
@@ -140,8 +142,12 @@ func _ready() -> void:
 		traffic.player = car
 		if not "--notraffic" in args:
 			add_child(traffic)
+		fines = Fines.new()
+		fines.load_wallet()
+		fines.persist = not ("--testdrive" in args or "--carshot" in args or "--trafficshot" in args)
 		hud = DriveHud.new()
 		hud.car = car
+		hud.fines = fines
 		var hl := CanvasLayer.new()
 		hl.add_child(hud)
 		add_child(hl)
@@ -365,9 +371,23 @@ func _red_light_check() -> void:
 				var past := (cp - sp).dot(-f)             # > 0 once past the signal
 				var id := "%d,%d" % [roundi(sp.x * 10), roundi(sp.z * 10)]
 				seen[id] = past
-				if _sig_prev.has(id) and _sig_prev[id] < 0.0 and past >= 0.0 and Streamer.signal_state(float(s_[2])) == 2:
-					hud.warn("RED LIGHT — you jumped the signal")
+				if _sig_prev.has(id) and _sig_prev[id] < 0.0 and past >= 0.0:
+					_crossed_signal(sp, Streamer.signal_state(float(s_[2])))
 	_sig_prev = seen
+
+
+## Crossing a junction's signal line: the red-light camera and the speed camera (where the junction has them).
+func _crossed_signal(sp: Vector3, state: int) -> void:
+	var kmh := absf(car.speed) * 3.6
+	if state == 2:
+		if fines and Fines.has_red_camera(sp):
+			fines.challan("Red light jumped", Fines.RED_LIGHT)
+			hud.warn("E-CHALLAN %s · red light jumped (camera)" % Fines.rupees(Fines.RED_LIGHT))
+		else:
+			hud.warn("RED LIGHT — you jumped the signal")
+	elif fines and kmh > Fines.CITY_LIMIT_KMH + 5.0 and Fines.has_speed_camera(sp):
+		fines.challan("Overspeeding %d km/h" % roundi(kmh), Fines.OVERSPEED)
+		hud.warn("E-CHALLAN %s · %d km/h in a 50 zone (camera)" % [Fines.rupees(Fines.OVERSPEED), roundi(kmh)])
 
 
 func _drive_camera(dt: float) -> void:

@@ -21,6 +21,11 @@ const BOARDS := [
 	["sign_school", 512, 512, Color(1, 1, 1), [["பள்ளி", 0, 110, Color(0.1, 0.1, 0.1), 0.6], ["SCHOOL", 1, 70, Color(0.1, 0.1, 0.1), 0.85]]],
 	["sign_noparking", 512, 512, Color(0.1, 0.25, 0.65), [["P", 1, 280, Color(1, 1, 1), 0.52]]],
 	["shrine_board", 512, 160, Color(0.85, 0.15, 0.05), [["ஸ்ரீ விநாயகர் ஆலயம்", 0, 52, Color(1, 0.9, 0.3), 0.55]]],
+	# police checking (a fictional force: NAGAR POLICE)
+	["police_check", 768, 512, Color(0.78, 0.05, 0.04), [["நிறுத்தவும்", 0, 104, Color(1, 1, 1), 0.24],
+		["STOP", 1, 150, Color(1, 1, 1), 0.55], ["காவல் சோதனை · POLICE CHECKING", 0, 40, Color(1, 0.92, 0.3), 0.86]]],
+	["police_barricade", 1024, 192, Color(0.95, 0.95, 0.93), [["நகர் காவல் · NAGAR POLICE", 0, 82, Color(0.75, 0.05, 0.04), 0.55]]],
+	["police_livery", 1024, 160, Color(1, 1, 1), [["NAGAR POLICE · நகர் காவல்", 1, 74, Color(0.05, 0.15, 0.55), 0.55]]],
 ]
 
 

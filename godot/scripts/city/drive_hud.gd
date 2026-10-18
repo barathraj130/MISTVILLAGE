@@ -3,6 +3,7 @@ extends Control
 ## bottom right, quiet and readable over the street.
 
 var car
+var fines                          # wallet and challans (fines.gd), when playing
 var message := ""                  # a short warning shown for a few seconds (e.g. a red light jumped)
 var message_time := 0.0
 
@@ -27,6 +28,13 @@ func _draw() -> void:
 		var a := clampf(message_time, 0.0, 1.0)
 		draw_rect(Rect2(vs0.x * 0.5 - 260, 70, 520, 54), Color(0.55, 0.02, 0.02, 0.75 * a))
 		draw_string(ThemeDB.fallback_font, Vector2(vs0.x * 0.5 - 260, 107), message, HORIZONTAL_ALIGNMENT_CENTER, 520, 26, Color(1, 1, 1, a))
+	if fines:
+		var vs1 := get_viewport_rect().size
+		var f1 := ThemeDB.fallback_font
+		draw_rect(Rect2(vs1.x - 250, 18, 232, 56 if fines.challans.size() > 0 else 34), Color(0, 0, 0, 0.4))
+		draw_string(f1, Vector2(vs1.x - 240, 42), "Wallet  " + fines.rupees(fines.sim.money), HORIZONTAL_ALIGNMENT_LEFT, -1, 18, Color(1, 1, 1, 0.92))
+		if fines.challans.size() > 0:
+			draw_string(f1, Vector2(vs1.x - 240, 64), "Challans due  " + fines.rupees(fines.owed()), HORIZONTAL_ALIGNMENT_LEFT, -1, 16, Color(1.0, 0.45, 0.35, 0.95))
 	if car == null or car.cockpit:
 		return
 	var vs := get_viewport_rect().size
