@@ -15,6 +15,7 @@ const CityTraffic := preload("res://scripts/city/city_traffic.gd")
 const CityWater := preload("res://scripts/city/city_water.gd")
 const DriveHud := preload("res://scripts/city/drive_hud.gd")
 const Fines := preload("res://scripts/city/fines.gd")
+const CityPolice := preload("res://scripts/city/city_police.gd")
 
 var streamer
 var water                                   # tanks, ponds and lakes (city_water.gd)
@@ -148,6 +149,13 @@ func _ready() -> void:
 		hud = DriveHud.new()
 		hud.car = car
 		hud.fines = fines
+		var police := CityPolice.new()
+		police.name = "Police"
+		police.car = car
+		police.streamer = streamer
+		police.hud = hud
+		police.fines = fines
+		add_child(police)
 		var hl := CanvasLayer.new()
 		hl.add_child(hud)
 		add_child(hl)
@@ -163,6 +171,11 @@ func _ready() -> void:
 				view.append(float(v))
 		if a.begins_with("--survey="):
 			_survey_setup(int(a.get_slice("=", 1)))
+		if a.begins_with("--policeat="):                    # x,y,z,dx,dz: a police checkpoint there (views)
+			var v: PackedStringArray = a.get_slice("=", 1).split(",")
+			var pc := CityPolice.new()
+			add_child(pc)
+			pc.place(Vector3(float(v[0]), float(v[1]), float(v[2])), Vector3(float(v[3]), 0, float(v[4])).normalized())
 	get_viewport().scaling_3d_mode = Viewport.SCALING_3D_MODE_FSR2
 	get_viewport().scaling_3d_scale = 0.67
 	get_viewport().mesh_lod_threshold = 8.0 if "--lod8" in OS.get_cmdline_user_args() else 3.0

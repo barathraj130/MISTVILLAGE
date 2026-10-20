@@ -212,16 +212,9 @@ def trees():
             k += 1
 
 
-def main():
-    args = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else []
-    out = os.path.abspath(args[args.index("--out") + 1]) if "--out" in args else os.path.join(ROOT, "previews", "police")
-    os.makedirs(out, exist_ok=True)
-    sc = TS.setup(64)
-    TS._M.clear()
-    road()
-    trees()
-    # traffic comes up +Y on the left carriageway (x < 0); the chicane: a barricade from the kerb, then one from
-    # the centre line, cones along the centre
+def checkpoint_set():
+    """The checkpoint itself (no road): origin on the road's centre line, traffic coming up +Y on the left
+    carriageway (x < 0)."""
     barricade(Vector((-5.6, 0.0, 0.0)), 0.0)
     barricade(Vector((-3.3, 0.6, 0.0)), 0.0)
     barricade(Vector((-1.4, 9.0, 0.0)), 0.0)
@@ -232,6 +225,35 @@ def main():
     police_suv(Vector((-9.4, 14.0, 0.15)), 0.0)
     policeman("street_police_stop", Vector((-2.4, -4.5, 0.0)), 0.0)
     policeman("street_police_stand", Vector((-6.4, 7.5, 0.15)), 0.35)
+
+
+def export_game():
+    """godot/assets/city_props/police_checkpoint.glb — the set as above (Blender +Y = the game's −Z: the
+    traffic comes from the game's +Z towards −Z; the checkpoint on the game's −X side of the centre line)."""
+    bpy.ops.wm.read_factory_settings(use_empty=True)
+    TS._M.clear()
+    checkpoint_set()
+    bpy.ops.object.select_all(action='SELECT')
+    out = os.path.join(ROOT, "godot", "assets", "city_props", "police_checkpoint.glb")
+    bpy.ops.export_scene.gltf(filepath=os.path.abspath(out), export_format='GLB', use_selection=True, export_yup=True,
+                              export_apply=True)
+    print("EXPORT", out, flush=True)
+
+
+def main():
+    args = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else []
+    if "--export" in args:
+        export_game()
+        return
+    out = os.path.abspath(args[args.index("--out") + 1]) if "--out" in args else os.path.join(ROOT, "previews", "police")
+    os.makedirs(out, exist_ok=True)
+    sc = TS.setup(64)
+    TS._M.clear()
+    road()
+    trees()
+    # traffic comes up +Y on the left carriageway (x < 0); the chicane: a barricade from the kerb, then one from
+    # the centre line, cones along the centre
+    checkpoint_set()
     TS.shoot(sc, os.path.join(out, "checkpoint_driver.jpg"), (-3.4, -38.0, 1.35), (-3.0, 0.0, 1.4), 30)
     TS.shoot(sc, os.path.join(out, "checkpoint_close.jpg"), (-3.0, -11.0, 1.6), (-3.2, -4.0, 1.3), 30)
     TS.shoot(sc, os.path.join(out, "checkpoint_overview.jpg"), (6.0, -20.0, 9.0), (-4.0, 3.0, 0.5), 26)
