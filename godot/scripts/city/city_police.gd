@@ -30,6 +30,8 @@ var _warned := false
 var _stopped_for := 0.0
 var _done := false
 var _prev_past := -INF
+var _grounded := false
+var _body: StaticBody3D
 
 
 func _ready() -> void:
@@ -41,6 +43,8 @@ func _ready() -> void:
 
 
 func _process(dt: float) -> void:
+	if _set != null and not _grounded:
+		_ground()
 	if car == null or _mesh == null:
 		return
 	if _set == null:
@@ -145,6 +149,28 @@ func _spawn() -> void:
 	place(at, d)
 
 
+## Sit the set on the real road surface: ray-cast down at the policeman and at each barricade's feet (the road is
+## crowned and junction surfaces are a little higher than the centre line) and lift the set to the highest.
+func _ground() -> void:
+	var space := get_world_3d().direct_space_state
+	var top := -INF
+	var pts: Array = [OFFICER]
+	for b in BARRICADES:
+		pts.append(Vector3(b[0].x - 1.1, 0, b[0].z))
+		pts.append(Vector3(b[0].x + 1.1, 0, b[0].z))
+	var xf := _set.global_transform
+	for lp in pts:
+		var w: Vector3 = xf * Vector3(lp.x, 0, lp.z)
+		var q := PhysicsRayQueryParameters3D.create(w + Vector3.UP * 6.0, w - Vector3.UP * 6.0)
+		q.exclude = [_body.get_rid()] if _body else []
+		var hit := space.intersect_ray(q)
+		if hit.is_empty():
+			return                                      # the ground isn't loaded yet: try next frame
+		top = maxf(top, hit["position"].y)
+	_set.global_position.y = top
+	_grounded = true
+
+
 ## Set the checkpoint up at `at` (on the road's centre line) for traffic going `d`.
 func place(at: Vector3, d: Vector3) -> void:
 	if _mesh == null:
@@ -157,6 +183,7 @@ func place(at: Vector3, d: Vector3) -> void:
 	mi.mesh = _mesh
 	_set.add_child(mi)
 	var body := StaticBody3D.new()
+	_body = body
 	_set.add_child(body)
 	for b in BARRICADES:
 		var cs := CollisionShape3D.new()
@@ -166,6 +193,7 @@ func place(at: Vector3, d: Vector3) -> void:
 		cs.position = b[0]
 		body.add_child(cs)
 	print("POLICE CHECK at %s heading %s" % [str(at.round()), str(d)])
+	_grounded = false
 	_age = 0.0
 	_warned = false
 	_done = false
