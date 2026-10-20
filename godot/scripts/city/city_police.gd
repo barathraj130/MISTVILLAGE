@@ -153,22 +153,24 @@ func _spawn() -> void:
 ## crowned and junction surfaces are a little higher than the centre line) and lift the set to the highest.
 func _ground() -> void:
 	var space := get_world_3d().direct_space_state
-	var top := -INF
-	var pts: Array = [OFFICER]
-	for b in BARRICADES:
-		pts.append(Vector3(b[0].x - 1.1, 0, b[0].z))
-		pts.append(Vector3(b[0].x + 1.1, 0, b[0].z))
 	var xf := _set.global_transform
+	var ys: Array = []
+	var pts: Array = [OFFICER]
+	for bb in BARRICADES:
+		pts.append(Vector3(bb[0].x, 0, bb[0].z))
 	for lp in pts:
 		var w: Vector3 = xf * Vector3(lp.x, 0, lp.z)
 		var q := PhysicsRayQueryParameters3D.create(w + Vector3.UP * 6.0, w - Vector3.UP * 6.0)
 		q.exclude = [_body.get_rid()] if _body else []
+		q.collision_mask = 1
 		var hit := space.intersect_ray(q)
 		if hit.is_empty():
 			return                                      # the ground isn't loaded yet: try next frame
-		top = maxf(top, hit["position"].y)
-	_set.global_position.y = top
+		ys.append(float(hit["position"].y))
+	# the policeman's feet decide: he must stand exactly on the road (the barricades' feet can take a few cm)
+	_set.global_position.y = ys[0]
 	_grounded = true
+	print("POLICE grounded at y=%.2f (under the policeman), barricades %s" % [ys[0], str(ys.slice(1))])
 
 
 ## Set the checkpoint up at `at` (on the road's centre line) for traffic going `d`.
