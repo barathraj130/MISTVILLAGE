@@ -16,7 +16,9 @@ const DIMS := {"hatchback": Vector3(1.7, 1.5, 3.9), "sedan": Vector3(1.75, 1.45,
 	"auto": Vector3(1.4, 1.75, 2.7), "bus": Vector3(2.55, 3.2, 11.0), "lorry": Vector3(2.5, 3.3, 8.2)}
 const LIFT := 0.09                         # road surface above its centreline points (= streamer RANK + 0.06)
 
-@export var count := 36
+@export var count := 36                    # out in the suburbs; more in the centre (BUSY)
+const BUSY := 70                           # vehicles around you in central Coimbatore
+const CENTRE_R := 4500.0                   # metres from the city origin (Gandhipuram) that count as central
 var streamer
 var player: Node3D
 var vehicles: Array = []
@@ -46,8 +48,12 @@ func _physics_process_timed(delta: float) -> void:
 	for v in vehicles.duplicate():
 		if v["pos"].distance_to(me) > 480.0 or not is_instance_valid(v["road_node"]):
 			_remove(v)
+	var want := count
+	var cd := Vector2(me.x, me.z).length()
+	if cd < CENTRE_R:
+		want = int(lerpf(float(BUSY), float(count), smoothstep(CENTRE_R * 0.5, CENTRE_R, cd)))
 	var tries := 0
-	while vehicles.size() < count and tries < 6:
+	while vehicles.size() < want and tries < 8:
 		tries += 1
 		_spawn(me)
 	for v in vehicles:
@@ -97,7 +103,8 @@ func _spawn(me: Vector3) -> void:
 	var behind := (at - me).dot(player.call("forward") if player.has_method("forward") else Vector3.ZERO) < 0.0
 	if d > 400.0 or d < (50.0 if behind else 140.0):
 		return
-	if not r["c"] in ["trunk", "primary", "secondary", "tertiary"] and _rng.randf() < 0.55:
+	var central := Vector2(me.x, me.z).length() < CENTRE_R
+	if not r["c"] in ["trunk", "primary", "secondary", "tertiary"] and _rng.randf() < (0.35 if central else 0.55):
 		return                                                  # most traffic is on the bigger roads
 	var big: bool = r["c"] in ["trunk", "primary", "secondary"]
 	var roll := _rng.randf()

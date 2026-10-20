@@ -69,7 +69,9 @@ func build(r) -> void:
 			cruise *= 0.7
 		specs.append([kind, dir, maxf(d - 1400.0, 60.0), minf(d + 1400.0, L - 90.0), cruise * rng.randf_range(0.85, 1.1), d])
 		dir = -dir
-		d += rng.randf_range(120.0, 200.0)
+		# the towns are busy: a vehicle every 55-90 m (each way alternating) in Coimbatore, Mettupalayam and
+		# Kotagiri, every 120-200 m on the open road and the ghat
+		d += rng.randf_range(55.0, 90.0) if stage in ["coimbatore", "mettupalayam", "kotagiri"] else rng.randf_range(120.0, 200.0)
 	for s in specs:
 		_spawn(s[0], s[1], s[2], s[3], s[4], s[5])
 
