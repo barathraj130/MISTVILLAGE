@@ -4,7 +4,7 @@ extends RefCounted
 ## Money is play money in rupees: nothing here touches real payments or bank details.
 
 const SAVE_PATH := "user://savegame.json"
-const MINUTES_PER_SECOND := 0.1    # 1 real minute = 6 game minutes, a day lasts 4 real hours
+const MINUTES_PER_SECOND := 0.5    # 1 real minute = 30 game minutes, a day lasts 48 real minutes (docs/GAME_RULES.md §1)
 const START_MINUTE := 6.0 * 60.0 + 30.0
 const START_MONEY := 25000
 const TANK_L := 60.0               # XUV700-class diesel tank
@@ -48,7 +48,7 @@ var _rng := RandomNumberGenerator.new()
 func _init() -> void:
 	_rng.randomize()
 	wx = WEATHER[weather].duplicate()
-	_wx_left = _rng.randf_range(40.0, 90.0)
+	_wx_left = _rng.randf_range(200.0, 450.0)
 
 
 func advance(delta: float, altitude: float) -> void:
@@ -60,9 +60,9 @@ func advance(delta: float, altitude: float) -> void:
 	if _wx_left <= 0.0:
 		var table: Dictionary = (NEXT_HILLS if altitude > 1100.0 else NEXT_PLAINS)[weather]
 		weather = _pick(table)
-		_wx_left = _rng.randf_range(25.0, 80.0)
+		_wx_left = _rng.randf_range(125.0, 400.0)       # (game minutes: every 4–13 real minutes, as before the faster clock)
 	var gm := delta * MINUTES_PER_SECOND
-	wet = minf(wet + gm / 8.0, 1.0) if wx.get("rain", 0.0) > 0.3 else maxf(wet - gm / 60.0, 0.0)
+	wet = minf(wet + gm / 40.0, 1.0) if wx.get("rain", 0.0) > 0.3 else maxf(wet - gm / 300.0, 0.0)   # soaks in ~80 s, dries in ~10 real min
 	var target: Dictionary = WEATHER[weather]
 	var k := 1.0 - exp(-delta / 40.0)
 	for key in ["cloud", "rain", "fog", "grip"]:

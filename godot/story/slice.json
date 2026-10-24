@@ -1,0 +1,1746 @@
+{
+ "note": "The vertical slice of Part 1 (docs/STORY_BIBLE.md §8). Places: lat/lon and game x/z (UTM 43N, origin Gandhipuram).",
+ "places": {
+  "home": {
+   "lat": 11.0362,
+   "lon": 76.9742,
+   "x": 686.4,
+   "z": -1984.9,
+   "en": "Home, Ganapathy",
+   "ta": "வீடு, கணபதி"
+  },
+  "raghavan_house": {
+   "lat": 11.0003,
+   "lon": 76.9762,
+   "x": 931.2,
+   "z": 1985.3,
+   "en": "Raghavan sir's house, Race Course",
+   "ta": "ராகவன் சார் வீடு, ரேஸ் கோர்ஸ்"
+  },
+  "office": {
+   "lat": 11.0162,
+   "lon": 76.9626,
+   "x": -566.8,
+   "z": 236.1,
+   "en": "Raghavan Developers, Gandhipuram",
+   "ta": "ராகவன் டெவலப்பர்ஸ், காந்திபுரம்"
+  },
+  "bank": {
+   "lat": 11.0148,
+   "lon": 76.9582,
+   "x": -1046.7,
+   "z": 394.1,
+   "en": "Kovai Nagar Cooperative Bank, 100 Feet Road",
+   "ta": "கோவை நகர் கூட்டுறவு வங்கி, 100 அடி ரோடு"
+  },
+  "police": {
+   "lat": 11.0192,
+   "lon": 76.9702,
+   "x": 261.7,
+   "z": -101.3,
+   "en": "Nagar Police Station, Gandhipuram",
+   "ta": "நகர் காவல் நிலையம், காந்திபுரம்"
+  },
+  "hotel": {
+   "lat": 11.0176,
+   "lon": 76.9652,
+   "x": -283.7,
+   "z": 79.3,
+   "en": "Hotel Anna Mess, Gandhipuram",
+   "ta": "ஹோட்டல் அண்ணா மெஸ், காந்திபுரம்"
+  },
+  "ashwin": {
+   "lat": 11.0782,
+   "lon": 76.9978,
+   "x": 3234.6,
+   "z": -6648.6,
+   "en": "Delivery: Saravanampatti",
+   "ta": "டெலிவரி: சரவணம்பட்டி"
+  },
+  "lawley_junction": {
+   "lat": 11.0128,
+   "lon": 76.9352,
+   "x": -3559.1,
+   "z": 631.7,
+   "en": "Lawley Road junction",
+   "ta": "லாலி ரோடு சந்திப்பு"
+  }
+ },
+ "people": {
+  "karthik": {
+   "en": "Karthik",
+   "ta": "கார்த்திக்",
+   "colour": "#7fc8ff",
+   "model": "person_man_shirt"
+  },
+  "amma": {
+   "en": "Amma",
+   "ta": "அம்மா",
+   "colour": "#ffb37f",
+   "model": "person_woman_saree"
+  },
+  "divya": {
+   "en": "Divya",
+   "ta": "திவ்யா",
+   "colour": "#ff8fc8",
+   "model": "person_woman_kurta"
+  },
+  "raghavan": {
+   "en": "Raghavan sir",
+   "ta": "ராகவன் சார்",
+   "colour": "#ffe07f",
+   "model": "person_elder"
+  },
+  "suresh": {
+   "en": "Suresh",
+   "ta": "சுரேஷ்",
+   "colour": "#c9a0ff",
+   "model": "person_man_lungi"
+  },
+  "clerk": {
+   "en": "Bank clerk",
+   "ta": "வங்கி கிளார்க்",
+   "colour": "#bfe3c0",
+   "model": "person_man_shirt"
+  },
+  "cook": {
+   "en": "Hotel owner",
+   "ta": "ஹோட்டல் ஓனர்",
+   "colour": "#ffd0a0",
+   "model": "person_man_lungi"
+  },
+  "ashwin": {
+   "en": "Customer",
+   "ta": "வாடிக்கையாளர்",
+   "colour": "#a0e0ff",
+   "model": "person_man_shirt"
+  }
+ },
+ "spawn": "home",
+ "steps": [
+  {
+   "do": "scene",
+   "clock": "06:30",
+   "hide_car": true,
+   "car_stays_hidden": true,
+   "keep_cast": true,
+   "cast": {
+    "amma": {
+     "pos": [
+      -3.1,
+      1.5
+     ],
+     "look": [
+      -3.1,
+      -2
+     ],
+     "anim": "Idle"
+    }
+   },
+   "shots": [
+    {
+     "cam": [
+      5,
+      10,
+      -18
+     ],
+     "look": [
+      -2.96,
+      2,
+      6
+     ],
+     "cam2": [
+      2,
+      4,
+      -7
+     ],
+     "look2": [
+      -2.96,
+      1.4,
+      1.5
+     ],
+     "dur": 6
+    }
+   ]
+  },
+  {
+   "do": "task",
+   "task": "ready",
+   "tip_who": {
+    "en": "Amma's tip",
+    "ta": "அம்மா டிப்"
+   },
+   "tip": {
+    "en": "Eat before you go. An empty stomach makes a careless driver.",
+    "ta": "சாப்பிட்டுட்டு போ. வெறும் வயிறு கவனக்குறைவான டிரைவரை உருவாக்கும்."
+   }
+  },
+  {
+   "do": "scene",
+   "hide_car": true,
+   "car_stays_hidden": true,
+   "cast": {
+    "karthik": {
+     "pos": [
+      -3.4,
+      0
+     ],
+     "look": [
+      0,
+      0
+     ]
+    },
+    "amma": {
+     "pos": [
+      -3.19,
+      1.8
+     ],
+     "look": [
+      -3.4,
+      0
+     ]
+    },
+    "divya": {
+     "pos": [
+      -3.19,
+      -1.6
+     ],
+     "look": [
+      -3.4,
+      0
+     ]
+    }
+   },
+   "shots": [
+    {
+     "cam": [
+      0.5,
+      1.7,
+      4
+     ],
+     "look": [
+      -3.19,
+      1.5,
+      -0.5
+     ],
+     "line": {
+      "who": "divya",
+      "en": "Anna, Friday. Fees. Forty-two thousand. Just reminding.",
+      "ta": "அண்ணா, வெள்ளிக்கிழமை. ஃபீஸ். நாப்பத்தி ரெண்டாயிரம். சும்மா ஞாபகப்படுத்தறேன்."
+     },
+     "do": {
+      "divya": {
+       "anim": "Talk"
+      }
+     }
+    },
+    {
+     "cam": [
+      4.2,
+      1.75,
+      -1.2
+     ],
+     "look": [
+      -3.4,
+      1.5,
+      0.2
+     ],
+     "line": {
+      "who": "karthik",
+      "en": "I know, I know. I'll ask sir.",
+      "ta": "தெரியும், தெரியும். சார்கிட்ட கேக்கறேன்."
+     },
+     "do": {
+      "divya": {
+       "anim": "Idle"
+      },
+      "karthik": {
+       "anim": "Talk"
+      }
+     }
+    },
+    {
+     "cam": [
+      3.3,
+      1.6,
+      4.5
+     ],
+     "look": [
+      -3.19,
+      1.5,
+      1.6
+     ],
+     "line": {
+      "who": "amma",
+      "en": "Go, go. And come home for dinner tonight.",
+      "ta": "போ, போ. ராத்திரி சாப்பாட்டுக்கு வீட்டுக்கு வா."
+     },
+     "do": {
+      "karthik": {
+       "anim": "Idle"
+      },
+      "amma": {
+       "anim": "Talk"
+      }
+     }
+    },
+    {
+     "cam": [
+      1.5,
+      2.2,
+      -7
+     ],
+     "look": [
+      -2.07,
+      1.2,
+      3
+     ],
+     "follow": "karthik",
+     "dur": 4.5,
+     "do": {
+      "amma": {
+       "anim": "Idle"
+      },
+      "karthik": {
+       "walk": [
+        -1.95,
+        10
+       ]
+      }
+     }
+    }
+   ]
+  },
+  {
+   "do": "jump",
+   "to": "raghavan_house",
+   "add_minutes": 25
+  },
+  {
+   "do": "scene",
+   "cast": {
+    "raghavan": {
+     "pos": [
+      -3.25,
+      2.5
+     ],
+     "look": [
+      0,
+      0
+     ]
+    }
+   },
+   "shots": [
+    {
+     "cam": [
+      2.5,
+      1.6,
+      9
+     ],
+     "look": [
+      -2.66,
+      1.4,
+      1
+     ],
+     "follow": "raghavan",
+     "line": {
+      "who": "raghavan",
+      "en": "Good morning, thambi. Traffic?",
+      "ta": "குட் மார்னிங் தம்பி. டிராஃபிக் எப்படி?"
+     },
+     "do": {
+      "raghavan": {
+       "walk": [
+        -1.63,
+        -0.8
+       ]
+      }
+     }
+    },
+    {
+     "cam": [
+      3.42,
+      1.6,
+      3
+     ],
+     "look": [
+      -1.4,
+      1.3,
+      -0.6
+     ],
+     "line": {
+      "who": "karthik",
+      "en": "Gandhipuram will be full, sir. I'll find a way.",
+      "ta": "காந்திபுரம் ஃபுல்லா இருக்கும் சார். வழி கண்டுபிடிக்கறேன்."
+     }
+    },
+    {
+     "cam": [
+      3.66,
+      1.5,
+      -3.5
+     ],
+     "look": [
+      -1.63,
+      1.4,
+      -0.6
+     ],
+     "line": {
+      "who": "raghavan",
+      "en": "Gently, gently. My back is sixty-one years old.",
+      "ta": "மெதுவா, மெதுவா. என் முதுகுக்கு அறுபத்தி ஒரு வயசு."
+     },
+     "do": {
+      "raghavan": {
+       "anim": "Talk"
+      }
+     }
+    },
+    {
+     "cam": [
+      3.9,
+      2,
+      -6
+     ],
+     "look": [
+      0,
+      1,
+      0
+     ],
+     "dur": 1.5,
+     "do": {
+      "raghavan": {
+       "hide": true
+      }
+     }
+    }
+   ]
+  },
+  {
+   "do": "talk",
+   "when": "late_morning",
+   "lines": [
+    {
+     "who": "raghavan",
+     "en": "You're late, thambi. The traffic doesn't wait for anyone, and neither do bankers.",
+     "ta": "லேட்டா வந்திருக்க தம்பி. டிராஃபிக் யாருக்காகவும் காத்திருக்காது, பேங்க்காரங்களும் அப்படித்தான்."
+    },
+    {
+     "who": "karthik",
+     "en": "Sorry, sir. It won't happen again.",
+     "ta": "சாரி சார். மறுபடி நடக்காது."
+    }
+   ]
+  },
+  {
+   "do": "drive",
+   "to": "office",
+   "radius": 50,
+   "comfort": true,
+   "goal": {
+    "en": "Drive Raghavan sir to the office in Gandhipuram, smoothly",
+    "ta": "ராகவன் சாரை காந்திபுரம் ஆஃபீஸுக்கு மெதுவா கூட்டிட்டு போங்க"
+   },
+   "ride_talk": {
+    "after": 35,
+    "lines": [
+     {
+      "who": "raghavan",
+      "en": "You see those hills, Karthik? Kotagiri is up there. Eight cottages, a tea garden, the mist every morning. The Mist Village.",
+      "ta": "அந்த மலை தெரியுதா கார்த்திக்? அங்கதான் கோத்தகிரி. எட்டு காட்டேஜ், டீ தோட்டம், தினமும் காலையில பனி. மிஸ்ட் வில்லேஜ்."
+     },
+     {
+      "who": "raghavan",
+      "en": "When it's finished, I'm done with this city.",
+      "ta": "அது முடிஞ்சதும் இந்த ஊரை விட்டுடுவேன்."
+     },
+     {
+      "who": "karthik",
+      "en": "Who'll drive you up the ghat, sir?",
+      "ta": "கோட்ல யார் சார் உங்களை ஓட்டிட்டு போவாங்க?"
+     },
+     {
+      "who": "raghavan",
+      "en": "(laughs) Who else?",
+      "ta": "(சிரிக்கிறார்) வேற யாரு?"
+     }
+    ]
+   }
+  },
+  {
+   "do": "comfort_verdict",
+   "lines": {
+    "5": {
+     "who": "raghavan",
+     "en": "Like sitting in my own chair. Here, thambi, for your tea.",
+     "ta": "என் சொந்த நாற்காலியில உட்கார்ந்த மாதிரி. இந்தா தம்பி, டீ குடிச்சுக்க.",
+     "pay": 100
+    },
+    "3": {
+     "who": "raghavan",
+     "en": "We got here. My tea didn't, but we got here.",
+     "ta": "வந்து சேர்ந்தோம். என் டீ சேரல, ஆனா நாம வந்துட்டோம்."
+    },
+    "1": {
+     "who": "raghavan",
+     "en": "Karthik. Is everything all right at home? You drove like a man with a fever.",
+     "ta": "கார்த்திக். வீட்ல எல்லாம் சரியா? காய்ச்சல் வந்தவன் மாதிரி ஓட்டின."
+    }
+   }
+  },
+  {
+   "do": "scene",
+   "clock": "10:30",
+   "cast": {
+    "raghavan": {
+     "pos": [
+      -1.63,
+      -0.8
+     ],
+     "look": [
+      -2.96,
+      3
+     ]
+    },
+    "suresh": {
+     "pos": [
+      -3.1,
+      4.5
+     ],
+     "look": [
+      -1.78,
+      0
+     ]
+    },
+    "karthik": {
+     "pos": [
+      1.4,
+      0.2
+     ],
+     "look": [
+      -2.07,
+      1
+     ]
+    }
+   },
+   "shots": [
+    {
+     "cam": [
+      3,
+      1.8,
+      -6
+     ],
+     "look": [
+      -2.37,
+      1.4,
+      2
+     ],
+     "dur": 4,
+     "do": {
+      "raghavan": {
+       "walk": [
+        -2.72,
+        2.6
+       ]
+      },
+      "karthik": {
+       "walk": [
+        -2.25,
+        1.6
+       ]
+      },
+      "suresh": {
+       "look": [
+        -2.51,
+        2
+       ]
+      }
+     }
+    },
+    {
+     "cam": [
+      2.22,
+      1.6,
+      4.5
+     ],
+     "look": [
+      -2.66,
+      1.5,
+      2.3
+     ],
+     "line": {
+      "who": "raghavan",
+      "en": "Sit, Karthik. From today you're not only my driver. Calls, bank, documents: you'll handle them.",
+      "ta": "உட்காரு கார்த்திக். இன்னையிலிருந்து நீ என் டிரைவர் மட்டும் இல்ல. கால், பேங்க், டாக்குமென்ட் எல்லாம் நீ பாத்துக்க."
+     },
+     "do": {
+      "raghavan": {
+       "look": [
+        -2.25,
+        1.6
+       ],
+       "anim": "Talk"
+      },
+      "karthik": {
+       "look": [
+        -2.72,
+        2.6
+       ]
+      }
+     }
+    },
+    {
+     "cam": [
+      2.22,
+      1.6,
+      4.5
+     ],
+     "look": [
+      -2.66,
+      1.5,
+      2.3
+     ],
+     "line": {
+      "who": "raghavan",
+      "en": "Same trust. Better salary.",
+      "ta": "அதே நம்பிக்கை. நல்ல சம்பளம்."
+     }
+    },
+    {
+     "cam": [
+      5.4,
+      1.7,
+      -0.5
+     ],
+     "look": [
+      -2.25,
+      1.55,
+      1.6
+     ],
+     "line": {
+      "who": "karthik",
+      "en": "Sir... I won't let you down.",
+      "ta": "சார்... உங்க நம்பிக்கையை கெடுக்க மாட்டேன்."
+     },
+     "do": {
+      "raghavan": {
+       "anim": "Idle"
+      },
+      "karthik": {
+       "anim": "Talk"
+      }
+     }
+    },
+    {
+     "cam": [
+      2.82,
+      1.6,
+      6.5
+     ],
+     "look": [
+      -2.96,
+      1.5,
+      4
+     ],
+     "line": {
+      "who": "suresh",
+      "en": "Congratulations, boss! Here. Company phone, in your name. Rules are rules.",
+      "ta": "வாழ்த்துக்கள் பாஸ்! இந்தா. கம்பெனி ஃபோன், உன் பேர்லதான். ரூல்ஸ் ரூல்ஸ்தான்."
+     },
+     "do": {
+      "karthik": {
+       "anim": "Idle"
+      },
+      "suresh": {
+       "walk": [
+        -2.54,
+        3.2
+       ],
+       "then": "Talk"
+      }
+     }
+    },
+    {
+     "cam": [
+      3.0,
+      1.7,
+      7
+     ],
+     "look": [
+      -2.54,
+      1.5,
+      3.2
+     ],
+     "line": {
+      "who": "suresh",
+      "en": "(turning his ring) So. Where are you taking sir tomorrow?",
+      "ta": "(மோதிரத்தைச் சுழற்றிக்கொண்டு) சரி. நாளைக்கு சாரை எங்க கூட்டிட்டு போற?"
+     }
+    },
+    {
+     "cam": [
+      2.1,
+      1.6,
+      4
+     ],
+     "look": [
+      -2.72,
+      1.5,
+      2.6
+     ],
+     "clock_note": "11:15",
+     "line": {
+      "who": "raghavan",
+      "en": "Your first job as my assistant. Take this cheque to the cooperative bank. Four lakhs, in cash.",
+      "ta": "அசிஸ்டன்டா உன் முதல் வேலை. இந்த செக்கை கூட்டுறவு வங்கிக்கு எடுத்துட்டு போ. நாலு லட்சம், கேஷா."
+     },
+     "do": {
+      "suresh": {
+       "anim": "Idle"
+      },
+      "raghavan": {
+       "anim": "Talk"
+      }
+     }
+    },
+    {
+     "cam": [
+      2.1,
+      1.6,
+      4
+     ],
+     "look": [
+      -2.72,
+      1.5,
+      2.6
+     ],
+     "line": {
+      "who": "raghavan",
+      "en": "It's for the Pudhur Vayal farmers. They were paid a fifth of what their land is worth. I'm putting that right on Friday.",
+      "ta": "புதூர் வயல் விவசாயிகளுக்கு. அவங்க நிலத்துக்கு அஞ்சுல ஒரு பங்குதான் கொடுத்தாங்க. வெள்ளிக்கிழமை அதை சரி பண்றேன்."
+     }
+    },
+    {
+     "cam": [
+      5.4,
+      1.7,
+      0
+     ],
+     "look": [
+      -2.72,
+      1.4,
+      2.6
+     ],
+     "line": {
+      "who": "raghavan",
+      "en": "(writing in a file) I'm noting it down. No one should be able to say this money went anywhere else.",
+      "ta": "(ஃபைல்ல எழுதிக்கொண்டு) எழுதி வைக்கறேன். இந்த பணம் வேற எங்கயோ போச்சுன்னு யாரும் சொல்லக்கூடாது."
+     }
+    },
+    {
+     "cam": [
+      2.1,
+      1.6,
+      4
+     ],
+     "look": [
+      -2.25,
+      1.5,
+      1.6
+     ],
+     "line": {
+      "who": "karthik",
+      "en": "I'll go and come straight back, sir.",
+      "ta": "போயிட்டு நேரா வந்துடறேன் சார்."
+     },
+     "do": {
+      "raghavan": {
+       "anim": "Idle"
+      },
+      "karthik": {
+       "anim": "Talk"
+      }
+     }
+    }
+   ]
+  },
+  {
+   "do": "drive",
+   "to": "bank",
+   "radius": 45,
+   "goal": {
+    "en": "Take the cheque to the bank on 100 Feet Road",
+    "ta": "செக்கை 100 அடி ரோடு வங்கிக்கு எடுத்துட்டு போங்க"
+   }
+  },
+  {
+   "do": "meet",
+   "who": "clerk",
+   "cast": {
+    "clerk": {
+     "pos": [
+      -2.96,
+      1.5
+     ],
+     "look": [
+      0,
+      0
+     ]
+    }
+   },
+   "goal": {
+    "en": "Walk into the bank",
+    "ta": "வங்கிக்குள்ள நடந்து போங்க"
+   }
+  },
+  {
+   "do": "talk",
+   "lines": [
+    {
+     "who": "clerk",
+     "en": "Four lakhs, cash? Authorised person... Karthik. Sign the slip, please.",
+     "ta": "நாலு லட்சம் கேஷா? அதிகாரம் பெற்றவர்... கார்த்திக். ஸ்லிப்ல கையெழுத்து போடுங்க."
+    }
+   ]
+  },
+  {
+   "do": "task",
+   "task": "sign",
+   "tip_who": {
+    "en": "Raghavan sir's tip",
+    "ta": "ராகவன் சார் டிப்"
+   },
+   "tip": {
+    "en": "Sign the same way every time, thambi. Banks compare signatures, and so do the police.",
+    "ta": "ஒவ்வொரு தடவையும் ஒரே மாதிரி கையெழுத்து போடு தம்பி. வங்கியும் ஒப்பிடும், போலீஸும் ஒப்பிடும்."
+   },
+   "header": {
+    "en": "Kovai Nagar Cooperative Bank",
+    "ta": "கோவை நகர் கூட்டுறவு வங்கி"
+   },
+   "form": {
+    "en": "CASH WITHDRAWAL SLIP",
+    "ta": "பணம் எடுப்பு சீட்டு"
+   },
+   "fields": [
+    [
+     {
+      "en": "Account",
+      "ta": "கணக்கு"
+     },
+     {
+      "en": "Raghavan Developers",
+      "ta": "ராகவன் டெவலப்பர்ஸ்"
+     }
+    ],
+    [
+     {
+      "en": "Account no.",
+      "ta": "கணக்கு எண்"
+     },
+     "0047 112 5590"
+    ],
+    [
+     {
+      "en": "Cheque no.",
+      "ta": "செக் எண்"
+     },
+     "304417"
+    ],
+    [
+     {
+      "en": "Amount",
+      "ta": "தொகை"
+     },
+     "₹4,00,000"
+    ],
+    [
+     {
+      "en": "In words",
+      "ta": "எழுத்தில்"
+     },
+     {
+      "en": "Rupees Four Lakh Only",
+      "ta": "நான்கு லட்சம் ரூபாய் மட்டும்"
+     }
+    ],
+    [
+     {
+      "en": "Authorised person",
+      "ta": "அதிகாரம் பெற்றவர்"
+     },
+     {
+      "en": "Karthik",
+      "ta": "கார்த்திக்"
+     }
+    ]
+   ],
+   "sign_label": {
+    "en": "Signature of the authorised person",
+    "ta": "அதிகாரம் பெற்றவர் கையொப்பம்"
+   }
+  },
+  {
+   "do": "talk",
+   "lines": [
+    {
+     "who": "clerk",
+     "en": "Eight bundles of fifty thousand. Count it in front of me, please.",
+     "ta": "ஐம்பதாயிரம் எட்டு கட்டு. என் முன்னாடியே எண்ணிக்கோங்க."
+    }
+   ]
+  },
+  {
+   "do": "task",
+   "task": "count",
+   "bundles": 8,
+   "short": 5,
+   "tip_who": {
+    "en": "Raghavan sir's tip",
+    "ta": "ராகவன் சார் டிப்"
+   },
+   "tip": {
+    "en": "Count every bundle yourself. Banks make mistakes too, and nobody believes the man who didn't count.",
+    "ta": "ஒவ்வொரு கட்டையும் நீயே எண்ணு. வங்கியும் தப்பு பண்ணும். எண்ணாதவனை யாரும் நம்ப மாட்டாங்க."
+   }
+  },
+  {
+   "do": "talk",
+   "when": "short_reported",
+   "lines": [
+    {
+     "who": "clerk",
+     "en": "Short? Let me see... Aiyo, yes, ninety-nine in this one. Sorry, brother. Here's the note.",
+     "ta": "குறையுதா? பாக்கறேன்... ஐயோ, ஆமா, இதுல தொண்ணூத்தி ஒம்பதுதான். சாரி அண்ணா. இந்தாங்க நோட்டு."
+    },
+    {
+     "who": "karthik",
+     "en": "Thank you. Four lakhs exactly now.",
+     "ta": "நன்றி. இப்போ சரியா நாலு லட்சம்."
+    }
+   ]
+  },
+  {
+   "do": "talk",
+   "unless": "short_reported",
+   "lines": [
+    {
+     "who": "clerk",
+     "en": "All good? Then sign the counter book... Next!",
+     "ta": "எல்லாம் சரியா? அப்போ கவுண்டர் புக்ல கையெழுத்து... அடுத்தவர்!"
+    }
+   ]
+  },
+  {
+   "do": "drive",
+   "to": "office",
+   "radius": 50,
+   "goal": {
+    "en": "Bring the cash back to the office",
+    "ta": "பணத்தை ஆஃபீஸுக்கு திருப்பி கொண்டு வாங்க"
+   }
+  },
+  {
+   "do": "scene",
+   "keep_cast": true,
+   "cast": {
+    "raghavan": {
+     "pos": [
+      -2.72,
+      2.6
+     ],
+     "look": [
+      -3.1,
+      4.2
+     ]
+    },
+    "suresh": {
+     "pos": [
+      -3.1,
+      4.2
+     ],
+     "look": [
+      -2.72,
+      2.6
+     ]
+    },
+    "karthik": {
+     "pos": [
+      1.4,
+      0.2
+     ],
+     "look": [
+      -2.37,
+      2
+     ]
+    }
+   },
+   "shots": [
+    {
+     "cam": [
+      3.0,
+      1.6,
+      6
+     ],
+     "look": [
+      -2.96,
+      1.5,
+      3.4
+     ],
+     "line": {
+      "who": "suresh",
+      "en": "Sir, just a signature. The Green Valley buyers are waiting since March.",
+      "ta": "சார், ஒரு கையெழுத்து மட்டும். கிரீன் வேலி பையர்ஸ் மார்ச்லிருந்து காத்திருக்காங்க."
+     },
+     "do": {
+      "suresh": {
+       "anim": "Talk"
+      },
+      "karthik": {
+       "walk": [
+        -2.19,
+        1.4
+       ]
+      }
+     }
+    },
+    {
+     "cam": [
+      6.0,
+      1.65,
+      6.5
+     ],
+     "look": [
+      -2.72,
+      1.5,
+      2.6
+     ],
+     "line": {
+      "who": "raghavan",
+      "en": "Not until those farmers are paid what the land is worth. Not one signature, Suresh.",
+      "ta": "அந்த விவசாயிகளுக்கு நிலத்தோட சரியான விலை கொடுக்கற வரைக்கும் இல்ல. ஒரு கையெழுத்தும் இல்ல, சுரேஷ்."
+     },
+     "do": {
+      "suresh": {
+       "anim": "Idle"
+      },
+      "raghavan": {
+       "anim": "Talk"
+      }
+     }
+    },
+    {
+     "cam": [
+      3.3,
+      1.6,
+      7
+     ],
+     "look": [
+      -3.1,
+      1.55,
+      4.2
+     ],
+     "line": {
+      "who": "suresh",
+      "en": "(a short laugh, turning his ring) Of course, sir. Your company. Your rules.",
+      "ta": "(சின்ன சிரிப்பு, மோதிரத்தைச் சுழற்றிக்கொண்டு) சரி சார். உங்க கம்பெனி. உங்க ரூல்ஸ்."
+     },
+     "do": {
+      "raghavan": {
+       "anim": "Idle"
+      }
+     }
+    },
+    {
+     "cam": [
+      2.1,
+      1.6,
+      3.5
+     ],
+     "look": [
+      -2.51,
+      1.4,
+      2
+     ],
+     "line": {
+      "who": "karthik",
+      "en": "Sir, the cash. Four lakhs.",
+      "ta": "சார், பணம். நாலு லட்சம்."
+     },
+     "do": {
+      "karthik": {
+       "anim": "Talk",
+       "look": [
+        -2.72,
+        2.6
+       ]
+      },
+      "raghavan": {
+       "look": [
+        -2.19,
+        1.4
+       ]
+      }
+     }
+    }
+   ]
+  },
+  {
+   "do": "talk",
+   "when": "short_reported",
+   "lines": [
+    {
+     "who": "raghavan",
+     "en": "You caught the bank's mistake? Good. Careful hands are worth more than fast ones. Here, buy your sister something.",
+     "ta": "வங்கி தப்பை நீ கண்டுபிடிச்சியா? நல்லது. வேகமான கையை விட கவனமான கை மதிப்பு. இந்தா, தங்கச்சிக்கு ஏதாவது வாங்கு.",
+     "pay": 200
+    }
+   ]
+  },
+  {
+   "do": "talk",
+   "unless": "short_reported",
+   "lines": [
+    {
+     "who": "raghavan",
+     "en": "(counting) Three lakh ninety-nine thousand five hundred. Thambi... count every bundle. Always. Next time it could be your name on the shortfall.",
+     "ta": "(எண்ணிக்கொண்டு) மூணு லட்சத்து தொண்ணூத்தி ஒம்பதாயிரத்து ஐநூறு. தம்பி... ஒவ்வொரு கட்டையும் எண்ணு. எப்பவும். அடுத்த தடவை குறைஞ்சா உன் பேர்தான் வரும்."
+    }
+   ]
+  },
+  {
+   "do": "talk",
+   "lines": [
+    {
+     "who": "raghavan",
+     "en": "Keep it in my brown bag, thambi. It comes home with me tonight.",
+     "ta": "என் பிரவுன் பேக்ல வை தம்பி. இன்னைக்கு ராத்திரி என்கூட வீட்டுக்கு வருது."
+    }
+   ]
+  },
+  {
+   "do": "lapse",
+   "to": "18:30",
+   "secs": 6,
+   "cam": [
+    2.5,
+    2.4,
+    -10
+   ],
+   "look": [
+    -2.96,
+    6,
+    25
+   ]
+  },
+  {
+   "do": "scene",
+   "keep_cast": true,
+   "cast": {
+    "suresh": {
+     "pos": [
+      -2.96,
+      3
+     ],
+     "look": [
+      -2.19,
+      1.4
+     ]
+    },
+    "karthik": {
+     "pos": [
+      -2.19,
+      1.4
+     ],
+     "look": [
+      -2.96,
+      3
+     ]
+    }
+   },
+   "shots": [
+    {
+     "cam": [
+      2.22,
+      1.6,
+      5
+     ],
+     "look": [
+      -2.96,
+      1.5,
+      3
+     ],
+     "line": {
+      "who": "suresh",
+      "en": "Boss! Leave the company phone here tonight. The IT boy is installing the new billing app.",
+      "ta": "பாஸ்! இன்னைக்கு ராத்திரி கம்பெனி ஃபோனை இங்கயே வச்சுட்டு போ. ஐடி பையன் புது பில்லிங் ஆப் போடறான்."
+     },
+     "do": {
+      "suresh": {
+       "anim": "Talk"
+      }
+     }
+    },
+    {
+     "cam": [
+      2.22,
+      1.6,
+      5
+     ],
+     "look": [
+      -2.96,
+      1.5,
+      3
+     ],
+     "line": {
+      "who": "suresh",
+      "en": "Good man. Tomorrow you'll have it back, good as new.",
+      "ta": "நல்ல பையன். நாளைக்கு புதுசு மாதிரி திரும்ப கிடைக்கும்."
+     }
+    }
+   ]
+  },
+  {
+   "do": "task",
+   "task": "hang",
+   "thing": "phone",
+   "tip_who": {
+    "en": "Suresh sir",
+    "ta": "சுரேஷ் சார்"
+   },
+   "tip": {
+    "en": "Plug it in properly, boss. The update needs a full battery.",
+    "ta": "சரியா சார்ஜ்ல போடு பாஸ். அப்டேட்டுக்கு ஃபுல் பேட்டரி வேணும்."
+   },
+   "title": {
+    "en": "Your desk at the office",
+    "ta": "ஆஃபீஸ்ல உங்க டேபிள்"
+   },
+   "targets": [
+    {
+     "label": {
+      "en": "Drawer",
+      "ta": "டிராயர்"
+     },
+     "wrong": {
+      "en": "Suresh sir asked you to leave it charging.",
+      "ta": "சார்ஜ்ல வைக்கச் சொன்னாரு சுரேஷ் சார்."
+     }
+    },
+    {
+     "label": {
+      "en": "Charger",
+      "ta": "சார்ஜர்"
+     },
+     "right": true
+    },
+    {
+     "label": {
+      "en": "Your pocket",
+      "ta": "உங்க பாக்கெட்"
+     },
+     "wrong": {
+      "en": "He asked you to leave it here tonight.",
+      "ta": "இன்னைக்கு ராத்திரி இங்கயே வைக்கச் சொன்னாரு."
+     }
+    }
+   ]
+  },
+  {
+   "do": "lapse",
+   "to": "20:05",
+   "secs": 6,
+   "cam": [
+    2.5,
+    2.4,
+    -10
+   ],
+   "look": [
+    -2.96,
+    6,
+    25
+   ]
+  },
+  {
+   "do": "scene",
+   "cast": {
+    "raghavan": {
+     "pos": [
+      -2.96,
+      3
+     ],
+     "look": [
+      0,
+      0
+     ]
+    }
+   },
+   "shots": [
+    {
+     "cam": [
+      3,
+      1.7,
+      6
+     ],
+     "look": [
+      -2.37,
+      1.4,
+      1.5
+     ],
+     "follow": "raghavan",
+     "dur": 4,
+     "do": {
+      "raghavan": {
+       "walk": [
+        -1.63,
+        -0.8
+       ]
+      }
+     }
+    },
+    {
+     "cam": [
+      3.9,
+      2,
+      -6
+     ],
+     "look": [
+      0,
+      1,
+      0
+     ],
+     "dur": 1.2,
+     "do": {
+      "raghavan": {
+       "hide": true
+      }
+     }
+    }
+   ]
+  },
+  {
+   "do": "drive",
+   "to": "raghavan_house",
+   "radius": 45,
+   "comfort": true,
+   "realtime": true,
+   "goal": {
+    "en": "Drive Raghavan sir home to Race Course",
+    "ta": "ராகவன் சாரை ரேஸ் கோர்ஸ் வீட்டுக்கு கூட்டிட்டு போங்க"
+   },
+   "ride_talk": {
+    "after": 25,
+    "lines": [
+     {
+      "who": "raghavan",
+      "en": "Karthik. If anything ever happens to me, remember this: those farmers trusted me.",
+      "ta": "கார்த்திக். எனக்கு ஏதாவது ஆச்சுன்னா, இதை ஞாபகம் வச்சுக்க: அந்த விவசாயிகள் என்னை நம்பினாங்க."
+     },
+     {
+      "who": "karthik",
+      "en": "Nothing will happen, sir. Don't talk like that.",
+      "ta": "ஒண்ணும் ஆகாது சார். அப்படி பேசாதீங்க."
+     },
+     {
+      "who": "raghavan",
+      "en": "(looking out of the window) No. Of course not.",
+      "ta": "(ஜன்னல் வழியா பார்த்துக்கொண்டு) இல்ல. இல்லதான்."
+     }
+    ]
+   }
+  },
+  {
+   "do": "comfort_verdict",
+   "lines": {
+    "5": {
+     "who": "raghavan",
+     "en": "Good night, thambi. Seven-thirty tomorrow. Hang the key in the box.",
+     "ta": "குட் நைட் தம்பி. நாளைக்கு ஏழரைக்கு. சாவியை பெட்டியில மாட்டிடு."
+    },
+    "3": {
+     "who": "raghavan",
+     "en": "Home in one piece. Good night, thambi. Key in the box.",
+     "ta": "ஒழுங்கா வீடு வந்தாச்சு. குட் நைட் தம்பி. சாவி பெட்டியில."
+    },
+    "1": {
+     "who": "raghavan",
+     "en": "Go home and sleep, Karthik. You need it more than I do. Key in the box.",
+     "ta": "வீட்டுக்கு போய் தூங்கு கார்த்திக். எனக்கு விட உனக்குதான் அது தேவை. சாவி பெட்டியில."
+    }
+   }
+  },
+  {
+   "do": "scene",
+   "cast": {
+    "raghavan": {
+     "pos": [
+      -1.63,
+      -0.8
+     ],
+     "look": [
+      -3.25,
+      2.5
+     ]
+    }
+   },
+   "shots": [
+    {
+     "cam": [
+      2.5,
+      1.6,
+      7
+     ],
+     "look": [
+      -2.37,
+      1.4,
+      1
+     ],
+     "follow": "raghavan",
+     "dur": 4.5,
+     "do": {
+      "raghavan": {
+       "walk": [
+        -3.25,
+        2.5
+       ]
+      }
+     }
+    }
+   ]
+  },
+  {
+   "do": "task",
+   "task": "hang",
+   "thing": "key",
+   "tip_who": {
+    "en": "Raghavan sir's tip",
+    "ta": "ராகவன் சார் டிப்"
+   },
+   "tip": {
+    "en": "The SUV key on its own hook, thambi. If it isn't there in the morning, I'll know something is wrong.",
+    "ta": "கார் சாவி அதோட கொக்கியில தம்பி. காலையில அங்க இல்லன்னா ஏதோ தப்புன்னு எனக்கு தெரியும்."
+   },
+   "title": {
+    "en": "The key box by Raghavan sir's door",
+    "ta": "ராகவன் சார் கதவு பக்கத்து சாவிப் பெட்டி"
+   },
+   "targets": [
+    {
+     "label": {
+      "en": "Gate",
+      "ta": "கேட்"
+     },
+     "wrong": {
+      "en": "That's the gate key's hook.",
+      "ta": "அது கேட் சாவி கொக்கி."
+     }
+    },
+    {
+     "label": {
+      "en": "Store room",
+      "ta": "ஸ்டோர் ரூம்"
+     },
+     "wrong": {
+      "en": "That's the store room's.",
+      "ta": "அது ஸ்டோர் ரூம் கொக்கி."
+     }
+    },
+    {
+     "label": {
+      "en": "SUV",
+      "ta": "கார்"
+     },
+     "right": true
+    },
+    {
+     "label": {
+      "en": "Garden",
+      "ta": "தோட்டம்"
+     },
+     "wrong": {
+      "en": "That's the garden shed's.",
+      "ta": "அது தோட்ட கொக்கி."
+     }
+    }
+   ]
+  },
+  {
+   "do": "jump",
+   "to": "home",
+   "clock": "21:35"
+  },
+  {
+   "do": "scene",
+   "hide_car": true,
+   "car_stays_hidden": true,
+   "cast": {
+    "divya": {
+     "pos": [
+      -3.19,
+      -1.2
+     ],
+     "look": [
+      -3.4,
+      0.5
+     ]
+    },
+    "karthik": {
+     "pos": [
+      -3.4,
+      0.5
+     ],
+     "look": [
+      -3.19,
+      -1.2
+     ]
+    }
+   },
+   "shots": [
+    {
+     "cam": [
+      1,
+      1.9,
+      4
+     ],
+     "look": [
+      -3.25,
+      1.3,
+      0
+     ],
+     "dur": 3.5,
+     "do": {
+      "divya": {
+       "anim": "Sit"
+      }
+     }
+    }
+   ]
+  },
+  {
+   "do": "task",
+   "task": "phone",
+   "mode": "offer",
+   "app": {
+    "en": "QuickBite Rider",
+    "ta": "குவிக்பைட் ரைடர்"
+   },
+   "order": [
+    {
+     "en": "Pickup 9:50 PM · Hotel Anna Mess, Gandhipuram",
+     "ta": "பிக்அப் இரவு 9:50 · ஹோட்டல் அண்ணா மெஸ், காந்திபுரம்"
+    },
+    {
+     "en": "Drop by 10:20 PM · Saravanampatti",
+     "ta": "டிராப் இரவு 10:20-க்குள் · சரவணம்பட்டி"
+    },
+    {
+     "en": "Pay ₹180 + tip",
+     "ta": "கூலி ₹180 + டிப்"
+    }
+   ]
+  },
+  {
+   "do": "jump",
+   "to": "hotel",
+   "clock": "21:50"
+  },
+  {
+   "do": "meet",
+   "who": "cook",
+   "cast": {
+    "cook": {
+     "pos": [
+      -2.81,
+      1
+     ],
+     "look": [
+      0,
+      0
+     ]
+    }
+   },
+   "goal": {
+    "en": "Pick up order #4471 at the counter",
+    "ta": "கவுண்டர்ல ஆர்டர் #4471 எடுங்க"
+   }
+  },
+  {
+   "do": "talk",
+   "lines": [
+    {
+     "who": "cook",
+     "en": "Four-four-seven-one, Saravanampatti! Two parottas, one chicken. Hot, hot, go!",
+     "ta": "நாலு நாலு ஏழு ஒண்ணு, சரவணம்பட்டி! ரெண்டு பரோட்டா, ஒரு சிக்கன். சூடா இருக்கு, போங்க!"
+    },
+    {
+     "who": "cook",
+     "en": "And thambi: get the OTP before you hand it over. No OTP, no parotta.",
+     "ta": "அப்புறம் தம்பி: கொடுக்கறதுக்கு முன்னாடி ஓடிபி வாங்கு. ஓடிபி இல்லன்னா பரோட்டா இல்ல."
+    }
+   ]
+  },
+  {
+   "do": "drive",
+   "to": "ashwin",
+   "radius": 50,
+   "realtime": true,
+   "by": "22:20",
+   "goal": {
+    "en": "Deliver to Saravanampatti by 10:20 PM",
+    "ta": "இரவு 10:20-க்குள் சரவணம்பட்டிக்கு டெலிவரி பண்ணுங்க"
+   }
+  },
+  {
+   "do": "meet",
+   "who": "ashwin",
+   "cast": {
+    "ashwin": {
+     "pos": [
+      -2.81,
+      1
+     ],
+     "look": [
+      0,
+      0
+     ]
+    }
+   },
+   "goal": {
+    "en": "Hand over the order at the door",
+    "ta": "கதவுல ஆர்டரை கொடுங்க"
+   }
+  },
+  {
+   "do": "talk",
+   "lines": [
+    {
+     "who": "ashwin",
+     "en": "Finally! The OTP? Five, five, one, two.",
+     "ta": "வந்துட்டீங்களா! ஓடிபி? அஞ்சு, அஞ்சு, ஒண்ணு, ரெண்டு."
+    }
+   ]
+  },
+  {
+   "do": "task",
+   "task": "otp",
+   "code": "5512",
+   "tip_who": {
+    "en": "Hotel owner's tip",
+    "ta": "ஹோட்டல் ஓனர் டிப்"
+   },
+   "tip": {
+    "en": "No OTP, no parotta. Type exactly what the customer says.",
+    "ta": "ஓடிபி இல்லன்னா பரோட்டா இல்ல. வாடிக்கையாளர் சொல்றதை சரியா போடு."
+   },
+   "app": {
+    "en": "QuickBite Rider",
+    "ta": "குவிக்பைட் ரைடர்"
+   },
+   "order": [
+    {
+     "en": "Order #4471 · Hotel Anna Mess",
+     "ta": "ஆர்டர் #4471 · ஹோட்டல் அண்ணா மெஸ்"
+    },
+    {
+     "en": "2 parotta, 1 chicken curry",
+     "ta": "2 பரோட்டா, 1 சிக்கன் கறி"
+    },
+    {
+     "en": "Deliver to: Ashwin, Saravanampatti",
+     "ta": "டெலிவரி: அஷ்வின், சரவணம்பட்டி"
+    }
+   ]
+  },
+  {
+   "do": "deliver_verdict",
+   "pay": {
+    "ontime": 230,
+    "late": 180
+   },
+   "lines": {
+    "ontime": [
+     {
+      "who": "ashwin",
+      "en": "Still hot! Thanks, bro. Smile, by the way, you're on my doorbell camera. Landlord's rule.",
+      "ta": "இன்னும் சூடா இருக்கு! தேங்க்ஸ் ப்ரோ. அப்புறம் சிரிங்க, என் டோர்பெல் கேமராவுல இருக்கீங்க. ஓனரோட ரூல்."
+     },
+     {
+      "who": "karthik",
+      "en": "(laughs) Good night, sir.",
+      "ta": "(சிரிக்கிறார்) குட் நைட் சார்."
+     }
+    ],
+    "late": [
+     {
+      "who": "ashwin",
+      "en": "Bro, it's cold. Next time faster, yeah? And smile for the doorbell camera, landlord's rule.",
+      "ta": "ப்ரோ, ஆறிப்போச்சு. அடுத்த தடவை சீக்கிரம், சரியா? அப்புறம் டோர்பெல் கேமராவுக்கு சிரிங்க, ஓனரோட ரூல்."
+     },
+     {
+      "who": "karthik",
+      "en": "Sorry, sir. Traffic.",
+      "ta": "சாரி சார். டிராஃபிக்."
+     }
+    ]
+   }
+  },
+  {
+   "do": "jump",
+   "to": "home",
+   "clock": "23:30"
+  },
+  {
+   "do": "scene",
+   "hide_car": true,
+   "car_stays_hidden": true,
+   "shots": [
+    {
+     "cam": [
+      4,
+      8,
+      -14
+     ],
+     "look": [
+      -2.96,
+      2,
+      4
+     ],
+     "cam2": [
+      1,
+      3,
+      -5
+     ],
+     "look2": [
+      -3.1,
+      1.8,
+      1
+     ],
+     "dur": 5
+    }
+   ]
+  },
+  {
+   "do": "task",
+   "task": "phone",
+   "mode": "call"
+  },
+  {
+   "do": "card",
+   "big": {
+    "en": "To be continued",
+    "ta": "தொடரும்"
+   },
+   "small": {
+    "en": "Next: the knock at the door.",
+    "ta": "அடுத்து: கதவு தட்டும் சத்தம்."
+   }
+  },
+  {
+   "do": "free",
+   "goal": {
+    "en": "Free drive. Coimbatore is yours (for now).",
+    "ta": "சுதந்திரமா ஓட்டுங்க. கோவை உங்களுது (இப்போதைக்கு)."
+   }
+  }
+ ]
+}

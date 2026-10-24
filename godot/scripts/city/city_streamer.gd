@@ -314,7 +314,7 @@ func _build(k: Vector2i) -> void:
 	_junctions(juncs, out)
 	_props(props, out)
 	_yards(yards, out)
-	_life(life, out)
+	_life(life, out, roads)
 	_wires(wires, out)
 	out["roads_raw"] = roads
 	_mutex.lock()
@@ -1318,13 +1318,18 @@ void fragment() {
 
 
 ## Street life: one MultiMesh per kind; people, kolams and bikes only near, trees and poles further.
-func _life(life: Array, out: Dictionary) -> void:
+func _life(life: Array, out: Dictionary, roads: Array = []) -> void:
 	var by := {}
+	var names0: Array = index.get("life_kinds", [])
+	var segs := _road_segs(roads)
 	for rec in life:
 		var kind: int = rec[0]
 		if kind >= life_meshes.size() or life_meshes[kind] == null:
 			continue
 		var v: PackedFloat32Array = rec[1]
+		var nm0: String = names0[kind] if kind < names0.size() else ""
+		if nm0.begins_with("fleet_") or nm0.begins_with("bike_") or nm0 == "cart":
+			v = _park_on_road(v, segs, 1.3 if nm0 == "fleet_lorry" else (0.95 if nm0.begins_with("fleet_") else 0.45))
 		var a := v[3]
 		var x := Vector3(cos(a), 0, sin(a))
 		var bs := Basis(x, Vector3.UP, x.cross(Vector3.UP)).scaled(Vector3.ONE * v[4])
@@ -1362,8 +1367,59 @@ func _life(life: Array, out: Dictionary) -> void:
 		elif nm.begins_with("fleet") or nm.begins_with("stall") or nm.begins_with("shade") or nm.begins_with("flex") \
 				or nm == "shrine" or nm == "thatched":
 			far = 140.0
+		if nm.begins_with("fleet") or nm.begins_with("bike_") or nm == "cart":
+			mm.set_meta("lod_bias", 6.0)            # keep detail: a coarse level drops bodies and leaves floating wheels
 		mms.append([mm, far + LIFE_CELL * 0.71, 0.0])
 	out["life"] = mms
+
+
+## The tile's drivable road centrelines as segments [a, b, half width] (flyovers left out: nothing parks up there).
+static func _road_segs(roads: Array) -> Array:
+	var segs := []
+	for r in roads:
+		if r.get("fly", false):
+			continue
+		var p: PackedFloat32Array = r["p"]
+		var half: float = float(r["w"]) * 0.5
+		for i in p.size() / 3 - 1:
+			segs.append([Vector3(p[i * 3], p[i * 3 + 1], p[i * 3 + 2]), Vector3(p[i * 3 + 3], p[i * 3 + 4], p[i * 3 + 5]), half])
+	return segs
+
+
+## A parked vehicle (from the map pipeline, its height from the terrain model) on the road the game actually built:
+## if it stands on a carriageway it's set on that road's surface (it floated above or sank into it), and if it
+## stands out in the lanes it's moved to the edge, where people really park (keep: half its width from the edge).
+static func _park_on_road(v: PackedFloat32Array, segs: Array, keep: float) -> PackedFloat32Array:
+	var q := Vector2(v[0], v[2])
+	var best := INF
+	var bp := Vector3.ZERO
+	var bn := Vector2.ZERO
+	var bh := 0.0
+	for sg in segs:
+		var a: Vector3 = sg[0]
+		var b: Vector3 = sg[1]
+		var ab := Vector2(b.x - a.x, b.z - a.z)
+		var l2 := ab.length_squared()
+		var t := 0.0 if l2 < 1e-6 else clampf((q - Vector2(a.x, a.z)).dot(ab) / l2, 0.0, 1.0)
+		var pr := a.lerp(b, t)
+		var d := (q - Vector2(pr.x, pr.z)).length()
+		if d - float(sg[2]) < best:
+			best = d - float(sg[2])
+			bp = pr
+			bh = sg[2]
+			bn = (q - Vector2(pr.x, pr.z)) / d if d > 0.01 else Vector2(-ab.y, ab.x).normalized()
+	if best > 0.6:                          # off the carriageway (a yard, a dirt shoulder): the terrain height is right
+		return v
+	var out := v.duplicate()
+	if OS.get_cmdline_user_args().has("--parklog"):
+		print("PARK dy=%.2f d_from_edge=%.2f" % [bp.y + 0.09 - v[1], bh + best - bh])
+	var d := bh + best
+	if d < bh - keep:                       # out in the lanes: to the edge
+		var e := Vector2(bp.x, bp.z) + bn * (bh - keep)
+		out[0] = e.x
+		out[2] = e.y
+	out[1] = bp.y + 0.09                    # the road surface (streamer RANK + 0.06 above the centreline points)
+	return out
 
 
 ## Overhead wires between the poles of a run: three conductors sagging 0.9 m at 8.55 m, a cable bundle lower down.
@@ -1570,6 +1626,13 @@ func _park_bikes(p: PackedFloat32Array, shop: bool, bikes: Dictionary) -> void:
 	var n := p.size() / 3
 	if n < 4:
 		return
+	# only inside a closed compound: an open wall (a front wall alone, a U open to the street) has its middle on the
+	# footpath or the road, where bikes were standing in the traffic
+	if Vector2(p[0] - p[(n - 1) * 3], p[2] - p[(n - 1) * 3 + 2]).length() > 0.5:
+		return
+	var poly := PackedVector2Array()
+	for i in n - 1:
+		poly.append(Vector2(p[i * 3], p[i * 3 + 2]))
 	var c := Vector3.ZERO
 	var best := 0.0
 	var dir := Vector3.RIGHT
@@ -1590,6 +1653,11 @@ func _park_bikes(p: PackedFloat32Array, shop: bool, bikes: Dictionary) -> void:
 	var across := Vector3(dir.z, 0, -dir.x)
 	for k in count:
 		var q := c + dir * ((k - (count - 1) * 0.5) * 0.9) + Vector3(0, 0.02, 0)
+		if not Geometry2D.is_point_in_polygon(Vector2(q.x, q.z), poly):     # the whole bike inside the yard
+			continue
+		if not Geometry2D.is_point_in_polygon(Vector2(q.x, q.z) + Vector2(dir.z, -dir.x) * 1.0, poly) \
+				or not Geometry2D.is_point_in_polygon(Vector2(q.x, q.z) - Vector2(dir.z, -dir.x) * 1.0, poly):
+			continue
 		var jit := fmod(h * (k + 3.1), 1.0)
 		var bi := posmod(int(h * (k + 1.7)), bike_meshes.size())
 		var basis := Basis.looking_at(across if jit > 0.5 else -across, Vector3.UP).rotated(Vector3.UP, PI * 0.5 + (jit - 0.5) * 0.35)
@@ -1885,6 +1953,7 @@ func _instance(k: Vector2i, d: Dictionary) -> void:
 		lmi2.multimesh = lm[0]
 		lmi2.visibility_range_end = lm[1]
 		lmi2.visibility_range_begin = lm[2]
+		lmi2.lod_bias = lm[0].get_meta("lod_bias", 1.0)
 		if lm.size() > 3:
 			lmi2.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_SHADOWS_ONLY if lm[3] else GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 		elif lm[1] < 150.0 or lm[2] > 0.0:
@@ -1905,6 +1974,7 @@ func _instance(k: Vector2i, d: Dictionary) -> void:
 		var bmi := MultiMeshInstance3D.new()
 		bmi.multimesh = bm3
 		bmi.visibility_range_end = 70.0
+		bmi.lod_bias = 6.0                  # keep detail: a coarse level drops the painted body and leaves floating wheels
 		bmi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 		node.add_child(bmi)
 	if d.has("lamps"):

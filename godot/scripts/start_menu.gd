@@ -51,6 +51,10 @@ func _ready() -> void:
 			func():
 				Engine.set_meta("continue_game", true)
 				_go(DRIVE_SCENE))
+	_button(box, "Story", "The first scenes in Coimbatore (preview). Enter: next line, T: English / தமிழ்",
+		func():
+			Engine.set_meta("story", true)
+			_go("res://scenes/city_test.tscn"))
 	_button(box, "Drive up from Coimbatore", "The real road via NH181 and the Kotagiri ghat, ending at your resort. Get out and walk in",
 		func(): _go(DRIVE_SCENE))
 	_button(box, "Start at The Mist Village", "Just the resort, with its intro film and day/night",

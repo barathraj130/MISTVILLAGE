@@ -260,8 +260,15 @@ def cart_collection():
     wood = _mat("Cart Wood", (0.4, 0.25, 0.12), 0.8)
     rubber = _mat("Cart Tyre", (0.03, 0.03, 0.03), 0.8)
     box(c, "Bed", (0, 0, 0.85), (1.6, 0.9, 0.08), wood)
+    steel = _mat("Cart Steel", (0.35, 0.35, 0.37), 0.5, 0.7)
     for s in (-1, 1):
         cyl(c, "Wheel", (0.3, s * 0.5, 0.35), 0.35, 0.08, rubber, rot=(math.pi / 2, 0, 0), verts=16)
+        cyl(c, "Hub", (0.3, s * 0.545, 0.35), 0.07, 0.03, steel, rot=(math.pi / 2, 0, 0), verts=12)
+        # the bed stands on the wheels' axle at one end and on two wooden legs at the handle end
+        box(c, "Leg", (-0.7, s * 0.36, 0.42), (0.06, 0.06, 0.84), wood)
+        box(c, "Strut", (0.3, s * 0.42, 0.6), (0.08, 0.05, 0.5), wood)
+    cyl(c, "Axle", (0.3, 0, 0.35), 0.03, 1.05, steel, rot=(math.pi / 2, 0, 0), verts=10)
+    box(c, "Brace", (-0.7, 0, 0.3), (0.05, 0.72, 0.05), wood)
     box(c, "Handle", (-1.05, 0, 0.9), (0.5, 0.06, 0.04), wood)
     rng = random.Random(4)
     cols = [(0.8, 0.45, 0.05), (0.15, 0.4, 0.08), (0.75, 0.1, 0.05), (0.9, 0.75, 0.1)]

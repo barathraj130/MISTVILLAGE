@@ -1,6 +1,7 @@
 # The Mist Village — Game Design (agreed plan, not yet built)
 
 All money, banks, police and courts are fictional. No real brands or institutions.
+The rulebook (time, money, traffic law, police, bail, work, bank, collisions, saving) is [GAME_RULES.md](GAME_RULES.md).
 
 ## Structure (updated 2026-10-11: the story is the spine)
 

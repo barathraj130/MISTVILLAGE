@@ -3,7 +3,8 @@ extends Node3D
 ##   --auto            fly north from Gandhipuram at ~90 km/h, logging fps / tiles / memory, then quit
 ##   --shots=/abs/dir  screenshots at 15 s, 45 s and 80 s (with --auto)
 ##   (no flags)        drive your car in the city: W/S/A/D, Space handbrake, V camera (chase / cockpit / bonnet),
-##                     R back onto the nearest road, L lights, H horn, Tab map (minimap always on), F free camera (fly)
+##                     R back onto the nearest road, L lights, H horn, Tab map (minimap always on),
+##                     F get out and walk / back in at the car, F9 free camera (fly)
 ##   --fly             start with the free camera: WASD move, Q/E down/up, Shift fast, mouse look (click to capture)
 
 const Prof := preload("res://scripts/drive/prof.gd")
@@ -16,6 +17,8 @@ const CityWater := preload("res://scripts/city/city_water.gd")
 const DriveHud := preload("res://scripts/city/drive_hud.gd")
 const Fines := preload("res://scripts/city/fines.gd")
 const CityPolice := preload("res://scripts/city/city_police.gd")
+const Story := preload("res://scripts/story/story.gd")
+const Walker := preload("res://scripts/player.gd")
 
 var streamer
 var water                                   # tanks, ponds and lakes (city_water.gd)
@@ -32,6 +35,12 @@ var path_i := 0
 var landed := false
 var used := {}                              # road pieces already driven (by first point)
 var car: Jeep                               # your car (play mode)
+var spawn := Vector3.ZERO                   # where the car starts (Gandhipuram, or the story's first scene)
+var story                                   # the story runner (story.gd), with --story or from the start menu
+var env: Environment
+var sun: DirectionalLight3D
+var _auto_lights := false                   # the headlights went on by themselves at dusk (story mode)
+var walker: Walker                          # you on foot (F)
 var driving := false
 var placed := false                         # the car waits, frozen, until the road under it has loaded
 var cam_mode := 0                           # 0 chase, 1 cockpit, 2 bonnet
@@ -165,6 +174,19 @@ func _ready() -> void:
 		map.target = car
 		if not "--nomap" in args:
 			add_child(map)
+		if "--story" in args or Engine.has_meta("story"):
+			story = Story.new()
+			story.name = "Story"
+			if story.load_chapter():
+				story.city = self
+				story.car = car
+				story.map = map
+				story.hud = hud
+				story.fines = fines
+				fines.persist = false                   # (the slice doesn't touch your saved game)
+				spawn = story.spawn_point()
+				car.global_position = Vector3(spawn.x, 600, spawn.z)
+				add_child(story)
 	for a in args:
 		if a.begins_with("--view="):
 			for v in a.get_slice("=", 1).split(","):
@@ -183,7 +205,7 @@ func _ready() -> void:
 
 
 func _environment() -> void:
-	var env := Environment.new()
+	env = Environment.new()
 	env.background_mode = Environment.BG_SKY
 	var sky := Sky.new()
 	var sm := ProceduralSkyMaterial.new()
@@ -202,7 +224,7 @@ func _environment() -> void:
 	var we := WorldEnvironment.new()
 	we.environment = env
 	add_child(we)
-	var sun := DirectionalLight3D.new()
+	sun = DirectionalLight3D.new()
 	sun.rotation = Vector3(deg_to_rad(-48), deg_to_rad(-35), 0)
 	sun.light_energy = 2.6
 	sun.light_color = Color(1.0, 0.94, 0.85)
@@ -210,6 +232,40 @@ func _environment() -> void:
 	sun.directional_shadow_max_distance = 160.0
 	sun.directional_shadow_mode = DirectionalLight3D.SHADOW_PARALLEL_2_SPLITS
 	add_child(sun)
+
+
+## Story mode: the sun follows the game clock (the same sky as the mountain drive, drive_game.gd): low and warm at
+## dawn and dusk, a faint blue moon at night, the sky and ambient light dimming with it; the headlights come on
+## by themselves after dusk (L still switches them).
+func _daylight() -> void:
+	if story == null or fines == null:
+		return
+	var sim = fines.sim
+	var sd: Vector3 = sim.sun_dir()
+	var day: float = sim.daylight()
+	env.background_energy_multiplier = lerpf(0.1, 1.0, day)
+	env.ambient_light_energy = lerpf(0.16, 0.45, day)          # a city's night: street lights and shops keep it grey, not black
+	env.fog_light_color = Color(0.74, 0.76, 0.8) * lerpf(0.05, 1.0, day)
+	var up := sd.y > -0.04
+	var light_dir: Vector3 = sd if up else Vector3(-sd.x, maxf(-sd.y, 0.25), sd.z).normalized()
+	if absf(light_dir.dot(Vector3.UP)) < 0.999:
+		sun.basis = Basis.looking_at(-light_dir, Vector3.UP)
+	if up:
+		sun.light_color = Color(1.0, 0.72, 0.5).lerp(Color(1.0, 0.94, 0.85), smoothstep(0.08, 0.45, sd.y))
+		sun.light_energy = 2.6 * smoothstep(-0.04, 0.15, sd.y)
+	else:
+		sun.light_color = Color(0.55, 0.65, 1.0)
+		sun.light_energy = 0.18
+	sun.shadow_enabled = sun.light_energy > 0.2 and not "--noshadow" in OS.get_cmdline_user_args()
+	if car:
+		car.night = 1.0 - day
+		if day < 0.35 and not car.lights_on and not _auto_lights:
+			car.set_lights(true)
+			_auto_lights = true
+		elif day > 0.5 and _auto_lights:
+			if car.lights_on:
+				car.set_lights(false)
+			_auto_lights = false
 
 
 func _road_material() -> Material:
@@ -358,6 +414,39 @@ func _place_car(near: Vector3) -> bool:
 var _sig_prev := {}
 
 
+## F: step out of the car (driver's door, on the right) or back in when you're next to it.
+func toggle_on_foot() -> bool:
+	if walker == null:
+		if absf(car.speed) > 1.0:
+			hud.warn("Stop the car first.", 3.0)
+			return false
+		walker = Walker.new()
+		walker.name = "OnFoot"
+		add_child(walker)
+		var door: Vector3 = car.global_position - car.global_basis.x * 1.6
+		walker.spawn_at(door + Vector3(0, 0.4, 0), car.global_position + car.forward() * 12.0)
+		walker.activate()
+		car.freeze = true
+		streamer.target = walker
+		map.target = walker
+		traffic.player = walker
+		hud.warn("On foot: WASD walk · Shift run · mouse looks · F at the car to drive", 5.0)
+		return true
+	if walker.global_position.distance_to(car.global_position) > 4.5:
+		hud.warn("Walk back to the car to drive.", 3.0)
+		return false
+	walker.deactivate()
+	walker.queue_free()
+	walker = null
+	cam.make_current()
+	car.freeze = false
+	streamer.target = car
+	map.target = car
+	traffic.player = car
+	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
+	return true
+
+
 func _red_light_check() -> void:
 	if hud == null or absf(car.speed) < 2.0:
 		return
@@ -454,14 +543,16 @@ func _process(dt: float) -> void:
 		water.target = streamer.target
 	if driving:
 		if not placed:
-			placed = _place_car(Vector3.ZERO) if t > 1.0 else false
-			cam.global_position = Vector3(0, 80, 40)
-			cam.look_at(Vector3.ZERO)
+			placed = _place_car(spawn) if t > 1.0 else false
+			cam.global_position = spawn + Vector3(0, 80, 40)
+			cam.look_at(spawn)
 			return
 		if Input.is_key_pressed(KEY_R) and not _r_down:
 			_place_car(car.global_position)
 		_r_down = Input.is_key_pressed(KEY_R)
-		_drive_camera(dt)
+		if walker == null:
+			_drive_camera(dt)
+		_daylight()
 		_red_light_check()
 		if "--trafficshot" in OS.get_cmdline_user_args():
 			if int(t) != int(t - dt) and int(t) % 5 == 0:
@@ -728,7 +819,10 @@ func _unhandled_input(e: InputEvent) -> void:
 			cam_mode = (cam_mode + 1) % 3
 			car.set_cockpit(cam_mode == 1)
 			return
-		if e.keycode == KEY_F:
+		if e.keycode == KEY_F and driving:
+			toggle_on_foot()
+			return
+		if e.keycode == KEY_F9:
 			driving = not driving
 			map.target = car if driving else cam
 			if driving:
