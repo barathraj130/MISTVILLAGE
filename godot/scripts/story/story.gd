@@ -16,6 +16,10 @@ extends Node
 ##   scene     a cutscene in the world: the cast (story people, tools/people.py) placed around the car, shots with
 ##             a camera (positions in the car's frame: x right, y up, z forward, metres), characters walking,
 ##             talking, getting in; lines as subtitles; black bars. Enter: next shot
+##   room      a scene in a room (tools/building_interiors.py: home, dev_office, bank...), loaded under the
+##             street at the place ("at"): people stand on its marks ("mark": Mark_<name>), shots use its
+##             planned cameras ("cam": "wide" → Cam_wide / Look_wide); "keep_room" keeps it (and the camera)
+##             for the tasks and talk that follow, until a drive or a jump
 ##   lapse     time passing on screen: the camera holds on the street while the clock and the sky run to "to"
 ##   meet      someone standing at the place: get out (F), walk up and press E to talk
 ##   free      free drive with a goal line, the end of the chapter
@@ -72,6 +76,9 @@ var shot_t := 0.0
 var _dur := 3.0
 var _lapse := Vector2.ZERO          # (from, to) minutes
 var _e_down := false
+var room: Node3D                    # the room a scene is playing in, under the street
+var face_light: SpotLight3D         # a soft key light on whoever is speaking (close-ups)
+const ROOMS := "res://assets/interiors/room_%s.glb"
 
 var ui: Control
 var backdrop: ColorRect
@@ -163,7 +170,7 @@ func _process(dt: float) -> void:
 			if _place_at(place_pos(cur["to"])) and t_step > (1.5 if _skip else 3.0):
 				car.visible = true
 				_next()
-		"scene":
+		"scene", "room":
 			_scene(dt)
 		"lapse":
 			var secs := float(cur.get("secs", 5.0)) * (0.3 if _skip else 1.0)
@@ -192,7 +199,7 @@ func _keys() -> void:
 				_next()
 			"talk", "comfort_verdict", "deliver_verdict":
 				_advance_line()
-			"scene":
+			"scene", "room":
 				if shot_t > 0.3:
 					_next_shot()
 	_enter_down = enter
@@ -224,6 +231,9 @@ func _next() -> void:
 	if cur.has("add_minutes") and fines:                # time that passes off screen (a ride on the scooter)
 		fines.sim.minute += float(cur["add_minutes"])
 	_jumped = false
+	if room != null and not str(cur["do"]) in ["room", "task", "talk", "comfort_verdict", "deliver_verdict", "card"]:
+		_unload_room()
+		_cams_back()
 	match str(cur["do"]):
 		"drive":
 			var p := place_pos(cur["to"])
@@ -247,6 +257,14 @@ func _next() -> void:
 			_cast(cur.get("cast", {}))
 			if cur.get("hide_car", false):
 				car.visible = false
+			_cams_on()
+			_refresh()
+			shot_i = -1
+			_next_shot()
+			return
+		"room":
+			_load_room(str(cur["room"]), str(cur.get("at", data["spawn"])))
+			_cast(cur.get("cast", {}))
 			_cams_on()
 			_refresh()
 			shot_i = -1
@@ -301,12 +319,15 @@ func _cast(spec: Dictionary) -> void:
 		if not cast.has(key):
 			var a := Actor.new()
 			add_child(a)
+			var hair_hex: String = str(data["people"].get(key, {}).get("hair", ""))
 			a.setup(str(d.get("model", data["people"].get(key, {}).get("model", "person_man_shirt"))), key,
-				Callable(city.streamer, "height_at"))
+				Callable(city.streamer, "height_at"), Color.html(hair_hex) if hair_hex != "" else Color(0, 0, 0, 0))
 			cast[key] = a
 		var act: Node3D = cast[key]
 		act.visible = true
-		if d.has("pos"):
+		if d.has("mark") and room != null:
+			_to_mark(act, str(d["mark"]))
+		elif d.has("pos"):
 			act.place(_w2(d["pos"]), _w2(d.get("look", [0.0, 0.0])))
 		if d.has("anim"):
 			act.play(str(d["anim"]))
@@ -336,6 +357,8 @@ func _cams_on() -> void:
 
 
 func _cams_back() -> void:
+	if face_light:
+		face_light.visible = false
 	for b in bars:
 		b.visible = false
 	box.visible = false
@@ -352,8 +375,14 @@ func _next_shot() -> void:
 	shot_t = 0.0
 	var shots: Array = cur.get("shots", [])
 	if shot_i >= shots.size():
-		_cams_back()
-		if not cur.get("keep_cast", false):
+		if cur.get("keep_room", false) and room != null:
+			for b in bars:                               # stay in the room: the tasks and talk play on here
+				b.visible = false
+			box.visible = false
+		else:
+			_unload_room()
+			_cams_back()
+		if not cur.get("keep_cast", false) and not cur.get("keep_room", false):
 			_clear_cast()
 		if not cur.get("car_stays_hidden", false):
 			car.visible = true
@@ -370,6 +399,12 @@ func _next_shot() -> void:
 		var act: Dictionary = sh["do"][key]
 		if act.has("walk"):
 			a.walk_to(_w2(act["walk"]), float(act.get("speed", 1.4)), str(act.get("then", "Idle")))
+		if act.has("walk_mark") and room != null:
+			var m := _mark(str(act["walk_mark"]))
+			if m:
+				a.walk_to(m.global_position, float(act.get("speed", 1.2)), str(act.get("then", "Idle")))
+		if act.has("mark") and room != null:
+			_to_mark(a, str(act["mark"]))
 		if act.has("anim"):
 			a.play(str(act["anim"]))
 		if act.has("look"):
@@ -381,7 +416,9 @@ func _next_shot() -> void:
 		if act.get("show", false):
 			a.visible = true
 	if sh.has("line") and not sh.get("fixed_cam", false) and _auto_frame(str(sh["line"]["who"])):
-		pass                                             # dialogue: framed on whoever is speaking
+		pass                                             # dialogue: framed on whoever is speaking (rooms too)
+	elif sh.get("cam") is String and room != null:
+		_room_cam(str(sh["cam"]))                        # a planned shot of the room (wide, the photos...)
 	elif sh.has("cam"):
 		_put_cam(_w3(sh["cam"]), _w3(sh.get("look", [0.0, 1.5, 0.0])))
 	if sh.has("line"):
@@ -393,6 +430,96 @@ func _next_shot() -> void:
 		_dur = 3.0
 	_dur = float(sh.get("dur", _dur))
 	_shot()
+
+
+# ---- rooms ----
+func _load_room(name: String, at_key: String) -> void:
+	if room != null and room.get_meta("room", "") == name:
+		return
+	_unload_room()
+	var path := ROOMS % name
+	if not ResourceLoader.exists(path):
+		push_warning("story: no room " + path)
+		return
+	room = (load(path) as PackedScene).instantiate() as Node3D
+	room.set_meta("room", name)
+	add_child(room)
+	var p: Vector3 = place_pos(at_key) if data["places"].has(at_key) else car.global_position
+	var g: float = city.streamer.height_at(p.x, p.z)
+	room.global_position = Vector3(p.x, (g if not is_nan(g) else car.global_position.y) - 200.0, p.z)
+	var body := StaticBody3D.new()                       # walls and furniture are solid (cameras keep out of them)
+	room.add_child(body)
+	for mi in room.find_children("*", "MeshInstance3D", true, false):
+		var cs := CollisionShape3D.new()
+		cs.shape = (mi as MeshInstance3D).mesh.create_trimesh_shape()
+		cs.transform = room.global_transform.affine_inverse() * (mi as MeshInstance3D).global_transform
+		body.add_child(cs)
+	var lights := room.find_children("Light_*", "", true, false)
+	for e in lights:                                     # the room's own lights (tools/story_rooms.py Light_ empties)
+		var l := OmniLight3D.new()
+		var kind := str(e.name).split("_")[1]
+		l.omni_range = {"tube": 6.5, "window": 5.0, "lamp": 2.2}.get(kind, 6.0)
+		l.light_energy = {"tube": 1.3, "window": 1.4, "lamp": 0.9}.get(kind, 1.2)
+		l.light_color = {"tube": Color(0.96, 0.98, 1.0), "window": Color(1.0, 0.94, 0.82),
+				"lamp": Color(1.0, 0.62, 0.28)}.get(kind, Color(1, 1, 1))
+		if kind == "tube" and (str(e.name).ends_with("_0") or str(e.name).ends_with("_1")):
+			l.shadow_enabled = true                      # soft shadows under the furniture and people
+			l.light_size = 0.25
+			l.shadow_blur = 1.5
+		(e as Node3D).add_child(l)
+	var box := AABB()                                    # a reflection probe the size of the room (polished floors, glass, steel)
+	for mi in room.find_children("*", "MeshInstance3D", true, false):
+		var b: AABB = (mi as MeshInstance3D).get_aabb()
+		box = b if box.size == Vector3.ZERO else box.merge(b)
+	var probe := ReflectionProbe.new()
+	probe.size = box.size
+	probe.position = box.get_center()
+	probe.box_projection = true
+	probe.interior = true
+	probe.enable_shadows = false
+	probe.update_mode = ReflectionProbe.UPDATE_ONCE
+	room.add_child(probe)
+	if lights.is_empty():
+		for lp in [Vector3(-2.2, 2.85, 0.6), Vector3(2.2, 2.85, -0.6), Vector3(0.0, 2.85, -2.6)]:   # the tube lights' glow
+			var l := OmniLight3D.new()
+			l.omni_range = 9.0
+			l.light_energy = 1.6
+			l.light_color = Color(1.0, 0.97, 0.92)
+			l.position = lp
+			room.add_child(l)
+	city.indoors = true
+
+
+func _unload_room() -> void:
+	if room == null:
+		return
+	room.queue_free()
+	room = null
+	city.indoors = false
+
+
+func _mark(name: String) -> Node3D:
+	return room.find_child("Mark_" + name, true, false) as Node3D if room else null
+
+
+## Stand a person on a room mark, facing the way the mark faces (the empties' Blender +Y, Godot -Z).
+func _to_mark(a: Node3D, name: String) -> void:
+	var m := _mark(name)
+	if m == null:
+		push_warning("story: no mark " + name)
+		return
+	a.floor_y = m.global_position.y
+	a.place(m.global_position, m.global_position - m.global_basis.z)
+
+
+func _room_cam(name: String) -> void:
+	var c := room.find_child("Cam_" + name, true, false) as Node3D
+	var l := room.find_child("Look_" + name, true, false) as Node3D
+	if c == null or l == null:
+		push_warning("story: no room shot " + name)
+		return
+	scene_cam.global_position = c.global_position
+	scene_cam.look_at(l.global_position, Vector3.UP)
 
 
 ## Place the scene camera at `at` looking at `look`, but never behind a wall: if something solid stands between
@@ -450,13 +577,58 @@ func _auto_frame(who: String) -> bool:
 	cands.append(sp.global_position + toward * 2.6 + Vector3.UP * 1.55)                  # the speaker alone
 	cands.append(sp.global_position + _r * 3.0 + _f * 0.8 + Vector3.UP * 1.6)
 	var at: Vector3 = cands[-1]
-	for c in cands:
-		if _clear(c, head):
-			at = c
+	var pick := -1
+	for i in cands.size():
+		if _clear(cands[i], head):
+			at = cands[i]
+			pick = i
 			break
+	if pick < 0:                                         # nothing clear (a small room): pull the best shot in, in front of the wall
+		for i in cands.size():
+			var c := _pull_in(head, cands[i])
+			if c != Vector3.INF:
+				at = c
+				pick = 10 + i
+				break
+	if _skip:
+		var fw: Vector3 = sp.global_basis.z                 # the model's front (+Z)
+		print("FRAME %s: speaker %s at %s facing %s, listener %s, camera #%d of %d at %s, faces camera: %.2f" % [who,
+			sp.who, str(sp.global_position.snapped(Vector3.ONE * 0.1)), str(fw.snapped(Vector3.ONE * 0.01)),
+			li.who if li else "-", pick, cands.size(), str(at.snapped(Vector3.ONE * 0.1)),
+			fw.dot((at - sp.global_position).normalized())])
 	scene_cam.global_position = at
 	scene_cam.look_at(head - Vector3.UP * 0.12, Vector3.UP)
+	_key_light(sp, at)
 	return true
+
+
+## A soft key light from beside the camera onto the speaker's face (the way films light close-ups).
+func _key_light(sp: Node3D, cam_at: Vector3) -> void:
+	if face_light == null:
+		face_light = SpotLight3D.new()
+		face_light.spot_range = 6.0
+		face_light.spot_angle = 22.0
+		face_light.light_energy = 2.2
+		face_light.light_color = Color(1.0, 0.94, 0.86)
+		face_light.shadow_enabled = false
+		add_child(face_light)
+	var head := sp.global_position + Vector3.UP * 1.5
+	var side := (head - cam_at).cross(Vector3.UP).normalized()
+	face_light.global_position = cam_at + side * 0.8 + Vector3.UP * 0.4
+	face_light.look_at(head, Vector3.UP)
+	face_light.visible = true
+
+
+## The camera spot on the line from the head out to `cand`, just in front of whatever stands in the way; INF if
+## that leaves it closer than a metre (no room for a shot that way).
+func _pull_in(head: Vector3, cand: Vector3) -> Vector3:
+	var q := PhysicsRayQueryParameters3D.create(head, cand)
+	var hit: Dictionary = car.get_world_3d().direct_space_state.intersect_ray(q)
+	if hit.is_empty():
+		return cand
+	var d := (cand - head).normalized()
+	var at: Vector3 = (hit["position"] as Vector3) - d * 0.3
+	return at if at.distance_to(head) >= 1.0 else Vector3.INF
 
 
 func _clear(from: Vector3, to: Vector3) -> bool:
@@ -767,7 +939,8 @@ func _refresh() -> void:
 func _shot() -> void:
 	if _shots == "":
 		return
-	await RenderingServer.frame_post_draw
+	for i in 3:                                          # (a room just loaded draws a frame or two later)
+		await RenderingServer.frame_post_draw
 	var img := get_viewport().get_texture().get_image()
 	img.save_jpg("%s/story_%02d.jpg" % [_shots, _shot_n], 0.85)
 	print("STORYSHOT %02d step %d %s line %d" % [_shot_n, step, str(cur.get("do", "")), line_i])

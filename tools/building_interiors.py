@@ -17,6 +17,14 @@ Rooms (room_<name>.glb):
     bank        branch: counters behind glass, token display, waiting chairs, a cash machine
     fuel        fuel station kiosk: counter, shelves of oil cans, a fridge, payment desk
     office      school / police / town-hall office: desks with files, steel almirahs, chairs, notice board
+    home        the story: Karthik's rented house in Ganapathy (front room with Amma's sewing machine, the family
+                photos, a lamp in the wall shrine, the kitchen corner; his own small room with a cot, the phone
+                charger, shirts and a cap on hooks)
+    dev_office  the story: Raghavan Developers, Gandhipuram (reception, Karthik's and Suresh's desks,
+                Raghavan's cabin behind a glass partition: big desk, the Mist Village photo, the Green Valley
+                file, a layout plan on the wall)
+Story rooms also carry "Mark_<who>" empties (where a person stands or sits, facing along the empty's yaw) and
+"Cam_<shot>" / "Look_<shot>" pairs (a planned camera and the point it looks at) for the cutscenes.
 
 Each room is about 10 × 8 m with a doorway in the front wall; empties: "Entry" (where you appear,
 facing in), "Exit" (stand here and press E to leave), "Staff" (where a worker stands).
@@ -302,6 +310,10 @@ def bank(M):
     box((4.4, -3.11, 1.25), (0.4, 0.02, 0.3), M["screen"], bev=0)
     tube_lights(M, ((-2, -1), (2, -1), (0, 2)))
     empty("Staff", (-1.0, D / 2 - 1.3, 0), math.pi)
+    mark("clerk", -1.0, D / 2 - 1.3, math.pi)
+    mark("karthik", -1.0, D / 2 - 2.75, 0.0)
+    shot("counter", (0.2, D / 2 - 3.6, 1.6), (-1.0, D / 2 - 1.3, 1.45))
+    shot("karthik", (-1.6, D / 2 - 1.75, 1.55), (-1.0, D / 2 - 2.75, 1.45))
 
 
 def fuel(M):
@@ -334,6 +346,138 @@ def office(M):
     fan(M, 1.5, 0)
     tube_lights(M)
     empty("Staff", (0.0, 1.4, 0), math.pi)
+
+
+def mark(name, x, y, yaw):
+    """Where a person stands (yaw: the way they face, 0 = towards +Y, the back wall)."""
+    empty("Mark_" + name, (x, y, 0), yaw)
+
+
+def shot(name, cam, look):
+    empty("Cam_" + name, cam)
+    empty("Look_" + name, look)
+
+
+def frame(M, x, y, z, w, h, picture, face=-1):
+    """A framed photo on the back wall (face=-1: facing the room from the back wall)."""
+    box((x, y, z), (w + 0.06, 0.03, h + 0.06), M["wood_dark"], bev=0.004)
+    box((x, y + face * 0.017, z), (w, 0.005, h), M[picture], bev=0)
+
+
+def home(M):
+    shell(M, "tile_red", "wall_blue", door_w=1.0)
+    # a partition: the front room (left) and Karthik's room (right), a doorway in it
+    box((2.3, -1.4, H / 2), (0.12, 1.6, H), M["wall_blue"], bev=0)
+    box((2.3, 2.9, H / 2), (0.12, 2.2, H), M["wall_blue"], bev=0)
+    box((2.3, 0.9, H - 0.4), (0.12, 2.4, 0.8), M["wall_blue"], bev=0)
+    # Amma's sewing machine table, cloth on it
+    box((-3.9, 2.9, 0.38), (1.1, 0.55, 0.76), M["wood"], bev=0.01)
+    box((-3.9, 2.9, 0.86), (0.45, 0.2, 0.2), M["machine"], bev=0.02)
+    box((-3.7, 2.9, 1.0), (0.12, 0.18, 0.12), M["machine"], bev=0.02)
+    box((-4.2, 2.8, 0.78), (0.5, 0.45, 0.03), M["cloth_pink"], bev=0)
+    chair(M, -3.9, 2.25, 0, "plastic_blue")
+    # plastic chairs, a TV on its stand, a calendar
+    for x, yaw in ((-1.9, math.pi), (-0.9, math.pi), (-1.4, 0.0)):
+        chair(M, x, 0.2 if yaw else -0.7, yaw, "plastic_red")
+    box((0.4, 3.6, 0.35), (1.0, 0.45, 0.7), M["wood_dark"], bev=0.01)
+    box((0.4, 3.62, 0.98), (0.75, 0.06, 0.48), M["screen_off"], bev=0.01)
+    box((1.6, D / 2 - 0.03, 1.6), (0.35, 0.01, 0.5), M["paper"], bev=0)
+    # the family photos: father (garlanded), the family, Karthik's college photo (no cap, as ever)
+    frame(M, -2.6, D / 2 - 0.03, 1.9, 0.4, 0.5, "photo_old")
+    box((-2.6, D / 2 - 0.06, 1.62), (0.42, 0.04, 0.05), M["garland"], bev=0.01)
+    frame(M, -1.8, D / 2 - 0.03, 1.85, 0.6, 0.45, "photo_family")
+    frame(M, -1.05, D / 2 - 0.03, 1.85, 0.35, 0.45, "photo_young")
+    # the shrine in the side wall: a niche with a brass lamp
+    box((-W / 2 + 0.05, 0.6, 1.45), (0.1, 0.7, 0.6), M["wood_dark"], bev=0.005)
+    cyl((-W / 2 + 0.2, 0.6, 1.25), 0.06, 0.12, M["brass"], 16)
+    cyl((-W / 2 + 0.2, 0.6, 1.36), 0.012, 0.03, M["flame"], 8)
+    # the kitchen corner: a platform with the gas stove, vessels on a rack
+    box((-3.9, -2.4, 0.42), (1.8, 0.6, 0.84), M["cement"], bev=0.01)
+    box((-4.2, -2.4, 0.9), (0.6, 0.4, 0.08), M["steel"], bev=0.01)
+    for k in range(4):
+        cyl((-3.6 + k * 0.22, -2.55, 0.97), 0.09, 0.18, M["steel"], 16)
+    box((-3.9, -2.68, 1.6), (1.6, 0.25, 0.04), M["wood"], bev=0)
+    for k in range(5):
+        cyl((-4.5 + k * 0.3, -2.68, 1.75), 0.1, 0.25, M["steel"], 16)
+    # the floor mat where they eat
+    box((-1.4, -1.9, 0.005), (1.6, 0.9, 0.01), M["mat_r"], bev=0)
+    # Karthik's room: a cot, a small table with the phone charger, shirts and a cap on hooks, a window
+    box((3.8, 2.6, 0.25), (1.9, 0.95, 0.5), M["wood"], bev=0.01)
+    box((3.8, 2.6, 0.55), (1.85, 0.9, 0.12), M["cloth_check"], bev=0.02)
+    box((4.5, 2.6, 0.66), (0.45, 0.6, 0.1), M["white"], bev=0.03)
+    table(M, 3.5, 0.3, 0.7, 0.45, "wood")
+    box((3.5, 0.3, 0.8), (0.07, 0.14, 0.012), M["phone"], bev=0.004)
+    box((3.75, 0.45, 0.79), (0.04, 0.03, 0.03), M["white"], bev=0)
+    for k, m in enumerate(("cloth_blue", "white", "cloth_check")):
+        box((W / 2 - 0.08, -1.6 + k * 0.5, 1.4), (0.04, 0.42, 0.6), M[m], bev=0.01)
+    cyl((W / 2 - 0.1, 0.0, 1.85), 0.12, 0.08, M["cap"], 16, rot=(0, math.pi / 2, 0))     # the cap he never wears
+    box((W / 2 - 0.02, 2.6, 1.7), (0.03, 1.0, 0.8), M["window"], bev=0)
+    fan(M, -1.4, 0.8)
+    tube_lights(M, ((-1.5, 1.5), (3.6, 1.0)), 0.9)
+    # where everyone stands, and the planned shots
+    mark("amma", -1.9, 1.0, math.pi)
+    mark("divya", -0.6, -0.4, -math.pi / 2)
+    mark("karthik", -1.4, -1.0, 0.0)
+    mark("karthik_room", 3.3, 0.9, math.pi)
+    mark("door", 0.0, -3.4, math.pi)
+    shot("wide", (1.6, -3.2, 2.1), (-1.6, 0.8, 1.0))
+    shot("amma", (-1.1, -0.7, 1.55), (-1.9, 1.0, 1.5))
+    shot("divya", (-1.6, -1.6, 1.5), (-0.6, -0.4, 1.45))
+    shot("karthik", (-1.1, 0.9, 1.55), (-1.4, -1.0, 1.5))
+    shot("room", (1.7, 3.2, 2.0), (3.6, 0.6, 0.9))
+    shot("photos", (-1.8, 1.6, 1.7), (-1.8, D / 2, 1.85))
+
+
+def dev_office(M):
+    shell(M, "tile_grey", "wall_cream")
+    # reception by the door
+    box((-2.6, -2.3, 0.55), (1.8, 0.6, 1.1), M["wood_dark"], bev=0.01)
+    box((-2.6, -2.3, 1.12), (1.9, 0.65, 0.04), M["marble"], bev=0)
+    chair(M, -2.6, -1.7, math.pi, "black_chair")
+    # Karthik's desk (the phone charger on it) and Suresh's, on the right
+    table(M, 3.2, -1.6, 1.2, 0.7, "wood")
+    chair(M, 3.2, -1.0, math.pi, "plastic_blue")
+    box((3.55, -1.75, 0.79), (0.04, 0.03, 0.03), M["white"], bev=0)
+    box((2.85, -1.7, 0.84), (0.35, 0.25, 0.1), M["file_b"], bev=0)
+    table(M, 3.2, 1.3, 1.4, 0.8, "wood_dark")
+    chair(M, 3.2, 2.0, math.pi, "black_chair")
+    box((3.0, 1.3, 0.8), (0.4, 0.28, 0.02), M["laptop"], bev=0.004)
+    box((3.0, 1.43, 0.92), (0.4, 0.02, 0.26), M["screen"], bev=0)
+    # Raghavan's cabin behind a glass partition, back left
+    box((-3.3, 0.5, 1.2), (3.4, 0.03, 2.4), M["glass"], bev=0)
+    box((-0.6, 0.5, 1.2), (0.06, 0.06, 2.4), M["steel"], bev=0)
+    box((-2.8, 2.7, 0.4), (2.0, 0.95, 0.8), M["wood_dark"], bev=0.01)        # the big desk
+    box((-2.8, 2.7, 0.81), (2.05, 1.0, 0.03), M["glass_top"], bev=0)
+    chair(M, -2.8, 3.4, math.pi, "black_chair")
+    chair(M, -3.3, 1.8, 0.0, "black_chair")
+    chair(M, -2.3, 1.8, 0.0, "black_chair")
+    box((-3.4, 2.5, 0.92), (0.22, 0.03, 0.17), M["wood"], bev=0.004)        # the Mist Village photo on the desk
+    box((-3.4, 2.485, 0.92), (0.19, 0.005, 0.14), M["photo_hills"], bev=0)
+    for k in range(3):                                                    # files, the green one is Green Valley
+        box((-2.2, 2.75, 0.85 + k * 0.04), (0.35, 0.26, 0.035), M[("file_green", "file_r", "file_b")[k]], bev=0)
+    frame(M, -2.8, D / 2 - 0.03, 1.85, 1.6, 0.9, "layout_plan")              # the layout plan on the wall
+    box((-4.5, 3.6, 1.0), (0.9, 0.5, 2.0), M["almirah"], bev=0.01)
+    cyl((-0.9, 3.5, 0.3), 0.22, 0.6, M["pot"], 16)
+    cyl((-0.9, 3.5, 0.9), 0.35, 0.7, M["plant"], 10)
+    box((4.5, 3.6, 0.6), (0.35, 0.35, 1.2), M["white"], bev=0.02)           # water dispenser
+    box((1.2, D / 2 - 0.06, 1.6), (1.4, 0.04, 0.9), M["cork"], bev=0)
+    fan(M, -2.8, 2.0)
+    fan(M, 2.5, -0.5)
+    tube_lights(M, ((-2.8, 2.0), (2.5, 0.0), (-2.5, -2.0)))
+    mark("raghavan_desk", -2.8, 3.35, math.pi)
+    mark("visitor_l", -3.3, 1.2, 0.0)                                        # standing in front of the chairs
+    mark("visitor_r", -2.3, 1.2, 0.0)
+    mark("suresh", -1.3, 2.3, math.pi / 2)
+    mark("karthik_desk", 3.2, -0.95, math.pi)
+    mark("suresh_desk", 3.2, 2.05, math.pi)
+    mark("reception", -2.6, -1.65, math.pi)
+    mark("door", 0.0, -3.4, 0.0)
+    shot("cabin", (0.4, -0.6, 2.0), (-2.8, 2.6, 1.1))
+    shot("raghavan", (-2.5, 1.0, 1.35), (-2.8, 3.35, 1.25))
+    shot("karthik", (-2.6, 3.6, 1.45), (-3.3, 1.75, 1.15))
+    shot("suresh", (-2.4, 1.2, 1.5), (-1.3, 2.3, 1.5))
+    shot("desk", (1.9, -2.9, 1.6), (3.2, -1.3, 0.9))
+    shot("hall", (-4.2, -3.3, 2.2), (2.5, 1.0, 1.0))
 
 
 def materials():
@@ -369,11 +513,20 @@ def materials():
         "green": ("Green", (0.1, 0.45, 0.25), 0.5), "file_r": ("FileRed", (0.6, 0.15, 0.1), 0.8),
         "file_b": ("FileBuff", (0.8, 0.7, 0.45), 0.8), "almirah": ("Almirah", (0.4, 0.45, 0.42), 0.4, 0.6),
         "cork": ("Cork", (0.6, 0.45, 0.28), 0.9),
+        "machine": ("SewingMachine", (0.08, 0.08, 0.08), 0.35, 0.3), "cloth_pink": ("ClothPink", (0.85, 0.4, 0.55), 0.9),
+        "cloth_blue": ("ClothBlue", (0.3, 0.5, 0.8), 0.9), "cloth_check": ("ClothCheck", (0.6, 0.25, 0.2), 0.9),
+        "plastic_red": ("PlasticRed", (0.7, 0.12, 0.1), 0.5), "black_chair": ("ChairBlack", (0.06, 0.06, 0.07), 0.6),
+        "screen_off": ("ScreenOff", (0.03, 0.03, 0.035), 0.15), "photo_old": ("PhotoOld", (0.55, 0.5, 0.42), 0.8),
+        "photo_family": ("PhotoFamily", (0.45, 0.4, 0.35), 0.7), "photo_young": ("PhotoYoung", (0.35, 0.4, 0.5), 0.7),
+        "garland": ("Garland", (0.95, 0.55, 0.1), 0.9), "phone": ("PhoneBlack", (0.02, 0.02, 0.025), 0.2),
+        "cap": ("Cap", (0.08, 0.08, 0.1), 0.8), "window": ("Window", (0.75, 0.85, 0.95), 0.1, 0, (0.9, 0.95, 1.0), 1.2),
+        "laptop": ("Laptop", (0.25, 0.25, 0.27), 0.4, 0.6), "photo_hills": ("PhotoHills", (0.3, 0.5, 0.35), 0.6),
+        "file_green": ("FileGreen", (0.15, 0.5, 0.25), 0.8), "layout_plan": ("LayoutPlan", (0.88, 0.86, 0.75), 0.9),
     }.items()}
 
 
 ROOMS = {"kirana": kirana, "restaurant": restaurant, "tea": tea, "hotel": hotel, "temple": temple,
-         "hospital": hospital, "bank": bank, "fuel": fuel, "office": office}
+         "hospital": hospital, "bank": bank, "fuel": fuel, "office": office, "home": home, "dev_office": dev_office}
 
 
 def finish(out):

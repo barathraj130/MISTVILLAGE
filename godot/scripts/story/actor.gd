@@ -12,9 +12,13 @@ var who := ""                          # the person's key in the chapter (raghav
 var _target := Vector3.INF
 var _speed := 1.4
 var _after := "Idle"
+var floor_y := NAN                     # standing in a room: its floor height (the city's ground isn't there)
 
 
-func setup(person: String, key: String, height_fn: Callable) -> void:
+const HAIR_MARKS := ["short0", "braid", "bob0", "long0", "ponytail", "afro", "hair"]
+
+
+func setup(person: String, key: String, height_fn: Callable, hair := Color(0, 0, 0, 0)) -> void:
 	who = key
 	ground = height_fn
 	var path := PEOPLE % person
@@ -23,6 +27,8 @@ func setup(person: String, key: String, height_fn: Callable) -> void:
 		return
 	model = (load(path) as PackedScene).instantiate() as Node3D
 	add_child(model)
+	if hair.a > 0.0:
+		_tint_hair(hair)
 	var aps := model.find_children("*", "AnimationPlayer", true, false)
 	if not aps.is_empty():
 		anim = aps[0] as AnimationPlayer
@@ -32,9 +38,27 @@ func setup(person: String, key: String, height_fn: Callable) -> void:
 	play("Idle")
 
 
+## The hair's colour (the exported hair texture is a light brown; Blender's tint doesn't survive the export): the
+## hair material's albedo multiplies its texture.
+func _tint_hair(c: Color) -> void:
+	for mi in model.find_children("*", "MeshInstance3D", true, false):
+		var m3 := mi as MeshInstance3D
+		for i in m3.mesh.get_surface_count():
+			var mat := m3.get_active_material(i)
+			if mat == null:
+				continue
+			var nm := mat.resource_name.to_lower()
+			if HAIR_MARKS.any(func(k): return nm.contains(k)) and mat is BaseMaterial3D:
+				var dup := (mat as BaseMaterial3D).duplicate() as BaseMaterial3D
+				dup.albedo_color = c
+				m3.set_surface_override_material(i, dup)
+
+
 func play(name: String) -> void:
 	if anim and anim.has_animation(name) and anim.current_animation != name:
-		anim.play(name, 0.25)
+		anim.play(name, 0.3)
+	if anim:
+		anim.speed_scale = (_speed / 1.5) if name == "Walk" else 1.0   # the cycle covers ~1.5 m a second: no sliding feet
 
 
 ## Stand at (x, z) on the ground, facing towards `look` (a point).
@@ -62,6 +86,8 @@ func walking() -> bool:
 
 
 func _h(x: float, z: float) -> float:
+	if not is_nan(floor_y):
+		return floor_y
 	if ground.is_valid():
 		var g: float = ground.call(x, z)
 		if not is_nan(g):

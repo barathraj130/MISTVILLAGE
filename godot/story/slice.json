@@ -71,49 +71,57 @@
    "en": "Karthik",
    "ta": "கார்த்திக்",
    "colour": "#7fc8ff",
-   "model": "person_man_shirt"
+   "model": "story_karthik",
+   "hair": "#0f0c0a"
   },
   "amma": {
    "en": "Amma",
    "ta": "அம்மா",
    "colour": "#ffb37f",
-   "model": "person_woman_saree"
+   "model": "story_amma",
+   "hair": "#5a554f"
   },
   "divya": {
    "en": "Divya",
    "ta": "திவ்யா",
    "colour": "#ff8fc8",
-   "model": "person_woman_kurta"
+   "model": "story_divya",
+   "hair": "#0e0b09"
   },
   "raghavan": {
    "en": "Raghavan sir",
    "ta": "ராகவன் சார்",
    "colour": "#ffe07f",
-   "model": "person_elder"
+   "model": "story_raghavan",
+   "hair": "#9a958c"
   },
   "suresh": {
    "en": "Suresh",
    "ta": "சுரேஷ்",
    "colour": "#c9a0ff",
-   "model": "person_man_lungi"
+   "model": "story_suresh",
+   "hair": "#121010"
   },
   "clerk": {
    "en": "Bank clerk",
    "ta": "வங்கி கிளார்க்",
    "colour": "#bfe3c0",
-   "model": "person_man_shirt"
+   "model": "story_clerk",
+   "hair": "#141110"
   },
   "cook": {
    "en": "Hotel owner",
    "ta": "ஹோட்டல் ஓனர்",
    "colour": "#ffd0a0",
-   "model": "person_man_lungi"
+   "model": "story_cook",
+   "hair": "#2a2622"
   },
   "ashwin": {
    "en": "Customer",
    "ta": "வாடிக்கையாளர்",
    "colour": "#a0e0ff",
-   "model": "person_man_shirt"
+   "model": "story_ashwin",
+   "hair": "#0f0c0a"
   }
  },
  "spawn": "home",
@@ -164,6 +172,30 @@
    ]
   },
   {
+   "do": "room",
+   "room": "home",
+   "at": "home",
+   "keep_room": true,
+   "cast": {
+    "amma": {
+     "mark": "amma"
+    },
+    "divya": {
+     "mark": "divya"
+    }
+   },
+   "shots": [
+    {
+     "cam": "wide",
+     "dur": 3
+    },
+    {
+     "cam": "photos",
+     "dur": 2.5
+    }
+   ]
+  },
+  {
    "do": "task",
    "task": "ready",
    "tip_who": {
@@ -176,53 +208,23 @@
    }
   },
   {
-   "do": "scene",
-   "hide_car": true,
-   "car_stays_hidden": true,
+   "do": "room",
+   "room": "home",
+   "at": "home",
    "cast": {
-    "karthik": {
-     "pos": [
-      -3.4,
-      0
-     ],
-     "look": [
-      0,
-      0
-     ]
-    },
     "amma": {
-     "pos": [
-      -3.19,
-      1.8
-     ],
-     "look": [
-      -3.4,
-      0
-     ]
+     "mark": "amma"
     },
     "divya": {
-     "pos": [
-      -3.19,
-      -1.6
-     ],
-     "look": [
-      -3.4,
-      0
-     ]
+     "mark": "divya"
+    },
+    "karthik": {
+     "mark": "karthik"
     }
    },
    "shots": [
     {
-     "cam": [
-      0.5,
-      1.7,
-      4
-     ],
-     "look": [
-      -3.19,
-      1.5,
-      -0.5
-     ],
+     "cam": "divya",
      "line": {
       "who": "divya",
       "en": "Anna, Friday. Fees. Forty-two thousand. Just reminding.",
@@ -235,16 +237,7 @@
      }
     },
     {
-     "cam": [
-      4.2,
-      1.75,
-      -1.2
-     ],
-     "look": [
-      -3.4,
-      1.5,
-      0.2
-     ],
+     "cam": "karthik",
      "line": {
       "who": "karthik",
       "en": "I know, I know. I'll ask sir.",
@@ -260,16 +253,7 @@
      }
     },
     {
-     "cam": [
-      3.3,
-      1.6,
-      4.5
-     ],
-     "look": [
-      -3.19,
-      1.5,
-      1.6
-     ],
+     "cam": "amma",
      "line": {
       "who": "amma",
       "en": "Go, go. And come home for dinner tonight.",
@@ -285,27 +269,14 @@
      }
     },
     {
-     "cam": [
-      1.5,
-      2.2,
-      -7
-     ],
-     "look": [
-      -2.07,
-      1.2,
-      3
-     ],
-     "follow": "karthik",
-     "dur": 4.5,
+     "cam": "wide",
+     "dur": 3.5,
      "do": {
       "amma": {
        "anim": "Idle"
       },
       "karthik": {
-       "walk": [
-        -1.95,
-        10
-       ]
+       "walk_mark": "door"
       }
      }
     }
@@ -489,85 +460,28 @@
    }
   },
   {
-   "do": "scene",
+   "do": "room",
+   "room": "dev_office",
+   "at": "office",
    "clock": "10:30",
    "cast": {
     "raghavan": {
-     "pos": [
-      -1.63,
-      -0.8
-     ],
-     "look": [
-      -2.96,
-      3
-     ]
-    },
-    "suresh": {
-     "pos": [
-      -3.1,
-      4.5
-     ],
-     "look": [
-      -1.78,
-      0
-     ]
+     "mark": "raghavan_desk"
     },
     "karthik": {
-     "pos": [
-      1.4,
-      0.2
-     ],
-     "look": [
-      -2.07,
-      1
-     ]
+     "mark": "visitor_l"
+    },
+    "suresh": {
+     "mark": "suresh_desk"
     }
    },
    "shots": [
     {
-     "cam": [
-      3,
-      1.8,
-      -6
-     ],
-     "look": [
-      -2.37,
-      1.4,
-      2
-     ],
-     "dur": 4,
-     "do": {
-      "raghavan": {
-       "walk": [
-        -2.72,
-        2.6
-       ]
-      },
-      "karthik": {
-       "walk": [
-        -2.25,
-        1.6
-       ]
-      },
-      "suresh": {
-       "look": [
-        -2.51,
-        2
-       ]
-      }
-     }
+     "cam": "cabin",
+     "dur": 3
     },
     {
-     "cam": [
-      2.22,
-      1.6,
-      4.5
-     ],
-     "look": [
-      -2.66,
-      1.5,
-      2.3
-     ],
+     "cam": "raghavan",
      "line": {
       "who": "raghavan",
       "en": "Sit, Karthik. From today you're not only my driver. Calls, bank, documents: you'll handle them.",
@@ -575,31 +489,12 @@
      },
      "do": {
       "raghavan": {
-       "look": [
-        -2.25,
-        1.6
-       ],
        "anim": "Talk"
-      },
-      "karthik": {
-       "look": [
-        -2.72,
-        2.6
-       ]
       }
      }
     },
     {
-     "cam": [
-      2.22,
-      1.6,
-      4.5
-     ],
-     "look": [
-      -2.66,
-      1.5,
-      2.3
-     ],
+     "cam": "raghavan",
      "line": {
       "who": "raghavan",
       "en": "Same trust. Better salary.",
@@ -607,16 +502,7 @@
      }
     },
     {
-     "cam": [
-      5.4,
-      1.7,
-      -0.5
-     ],
-     "look": [
-      -2.25,
-      1.55,
-      1.6
-     ],
+     "cam": "karthik",
      "line": {
       "who": "karthik",
       "en": "Sir... I won't let you down.",
@@ -632,45 +518,32 @@
      }
     },
     {
-     "cam": [
-      2.82,
-      1.6,
-      6.5
-     ],
-     "look": [
-      -2.96,
-      1.5,
-      4
-     ],
+     "cam": "hall",
+     "dur": 3,
+     "do": {
+      "karthik": {
+       "anim": "Idle"
+      },
+      "suresh": {
+       "walk_mark": "suresh"
+      }
+     }
+    },
+    {
+     "cam": "suresh",
      "line": {
       "who": "suresh",
       "en": "Congratulations, boss! Here. Company phone, in your name. Rules are rules.",
       "ta": "வாழ்த்துக்கள் பாஸ்! இந்தா. கம்பெனி ஃபோன், உன் பேர்லதான். ரூல்ஸ் ரூல்ஸ்தான்."
      },
      "do": {
-      "karthik": {
-       "anim": "Idle"
-      },
       "suresh": {
-       "walk": [
-        -2.54,
-        3.2
-       ],
-       "then": "Talk"
+       "anim": "Talk"
       }
      }
     },
     {
-     "cam": [
-      3.0,
-      1.7,
-      7
-     ],
-     "look": [
-      -2.54,
-      1.5,
-      3.2
-     ],
+     "cam": "suresh",
      "line": {
       "who": "suresh",
       "en": "(turning his ring) So. Where are you taking sir tomorrow?",
@@ -678,16 +551,7 @@
      }
     },
     {
-     "cam": [
-      2.1,
-      1.6,
-      4
-     ],
-     "look": [
-      -2.72,
-      1.5,
-      2.6
-     ],
+     "cam": "raghavan",
      "clock_note": "11:15",
      "line": {
       "who": "raghavan",
@@ -704,16 +568,7 @@
      }
     },
     {
-     "cam": [
-      2.1,
-      1.6,
-      4
-     ],
-     "look": [
-      -2.72,
-      1.5,
-      2.6
-     ],
+     "cam": "raghavan",
      "line": {
       "who": "raghavan",
       "en": "It's for the Pudhur Vayal farmers. They were paid a fifth of what their land is worth. I'm putting that right on Friday.",
@@ -721,16 +576,7 @@
      }
     },
     {
-     "cam": [
-      5.4,
-      1.7,
-      0
-     ],
-     "look": [
-      -2.72,
-      1.4,
-      2.6
-     ],
+     "cam": "cabin",
      "line": {
       "who": "raghavan",
       "en": "(writing in a file) I'm noting it down. No one should be able to say this money went anywhere else.",
@@ -738,16 +584,7 @@
      }
     },
     {
-     "cam": [
-      2.1,
-      1.6,
-      4
-     ],
-     "look": [
-      -2.25,
-      1.5,
-      1.6
-     ],
+     "cam": "karthik",
      "line": {
       "who": "karthik",
       "en": "I'll go and come straight back, sir.",
@@ -774,24 +611,24 @@
    }
   },
   {
-   "do": "meet",
-   "who": "clerk",
+   "do": "room",
+   "room": "coopbank",
+   "at": "bank",
+   "keep_room": true,
    "cast": {
     "clerk": {
-     "pos": [
-      -2.96,
-      1.5
-     ],
-     "look": [
-      0,
-      0
-     ]
+     "mark": "clerk"
+    },
+    "karthik": {
+     "mark": "karthik"
     }
    },
-   "goal": {
-    "en": "Walk into the bank",
-    "ta": "வங்கிக்குள்ள நடந்து போங்க"
-   }
+   "shots": [
+    {
+     "cam": "counter",
+     "dur": 2.5
+    }
+   ]
   },
   {
    "do": "talk",
@@ -941,52 +778,24 @@
    }
   },
   {
-   "do": "scene",
-   "keep_cast": true,
+   "do": "room",
+   "room": "dev_office",
+   "at": "office",
+   "keep_room": true,
    "cast": {
     "raghavan": {
-     "pos": [
-      -2.72,
-      2.6
-     ],
-     "look": [
-      -3.1,
-      4.2
-     ]
+     "mark": "raghavan_desk"
     },
     "suresh": {
-     "pos": [
-      -3.1,
-      4.2
-     ],
-     "look": [
-      -2.72,
-      2.6
-     ]
+     "mark": "suresh"
     },
     "karthik": {
-     "pos": [
-      1.4,
-      0.2
-     ],
-     "look": [
-      -2.37,
-      2
-     ]
+     "mark": "visitor_r"
     }
    },
    "shots": [
     {
-     "cam": [
-      3.0,
-      1.6,
-      6
-     ],
-     "look": [
-      -2.96,
-      1.5,
-      3.4
-     ],
+     "cam": "suresh",
      "line": {
       "who": "suresh",
       "en": "Sir, just a signature. The Green Valley buyers are waiting since March.",
@@ -995,26 +804,11 @@
      "do": {
       "suresh": {
        "anim": "Talk"
-      },
-      "karthik": {
-       "walk": [
-        -2.19,
-        1.4
-       ]
       }
      }
     },
     {
-     "cam": [
-      6.0,
-      1.65,
-      6.5
-     ],
-     "look": [
-      -2.72,
-      1.5,
-      2.6
-     ],
+     "cam": "raghavan",
      "line": {
       "who": "raghavan",
       "en": "Not until those farmers are paid what the land is worth. Not one signature, Suresh.",
@@ -1030,16 +824,7 @@
      }
     },
     {
-     "cam": [
-      3.3,
-      1.6,
-      7
-     ],
-     "look": [
-      -3.1,
-      1.55,
-      4.2
-     ],
+     "cam": "suresh",
      "line": {
       "who": "suresh",
       "en": "(a short laugh, turning his ring) Of course, sir. Your company. Your rules.",
@@ -1052,16 +837,7 @@
      }
     },
     {
-     "cam": [
-      2.1,
-      1.6,
-      3.5
-     ],
-     "look": [
-      -2.51,
-      1.4,
-      2
-     ],
+     "cam": "karthik",
      "line": {
       "who": "karthik",
       "en": "Sir, the cash. Four lakhs.",
@@ -1069,17 +845,7 @@
      },
      "do": {
       "karthik": {
-       "anim": "Talk",
-       "look": [
-        -2.72,
-        2.6
-       ]
-      },
-      "raghavan": {
-       "look": [
-        -2.19,
-        1.4
-       ]
+       "anim": "Talk"
       }
      }
     }
@@ -1134,42 +900,21 @@
    ]
   },
   {
-   "do": "scene",
-   "keep_cast": true,
+   "do": "room",
+   "room": "dev_office",
+   "at": "office",
+   "keep_room": true,
    "cast": {
-    "suresh": {
-     "pos": [
-      -2.96,
-      3
-     ],
-     "look": [
-      -2.19,
-      1.4
-     ]
-    },
     "karthik": {
-     "pos": [
-      -2.19,
-      1.4
-     ],
-     "look": [
-      -2.96,
-      3
-     ]
+     "mark": "karthik_desk"
+    },
+    "suresh": {
+     "mark": "suresh_desk"
     }
    },
    "shots": [
     {
-     "cam": [
-      2.22,
-      1.6,
-      5
-     ],
-     "look": [
-      -2.96,
-      1.5,
-      3
-     ],
+     "cam": "desk",
      "line": {
       "who": "suresh",
       "en": "Boss! Leave the company phone here tonight. The IT boy is installing the new billing app.",
@@ -1182,16 +927,7 @@
      }
     },
     {
-     "cam": [
-      2.22,
-      1.6,
-      5
-     ],
-     "look": [
-      -2.96,
-      1.5,
-      3
-     ],
+     "cam": "desk",
      "line": {
       "who": "suresh",
       "en": "Good man. Tomorrow you'll have it back, good as new.",
@@ -1470,49 +1206,26 @@
    "clock": "21:35"
   },
   {
-   "do": "scene",
-   "hide_car": true,
-   "car_stays_hidden": true,
+   "do": "room",
+   "room": "home",
+   "at": "home",
+   "keep_room": true,
    "cast": {
-    "divya": {
-     "pos": [
-      -3.19,
-      -1.2
-     ],
-     "look": [
-      -3.4,
-      0.5
-     ]
-    },
     "karthik": {
-     "pos": [
-      -3.4,
-      0.5
-     ],
-     "look": [
-      -3.19,
-      -1.2
-     ]
+     "mark": "karthik_room"
+    },
+    "divya": {
+     "mark": "divya"
     }
    },
    "shots": [
     {
-     "cam": [
-      1,
-      1.9,
-      4
-     ],
-     "look": [
-      -3.25,
-      1.3,
-      0
-     ],
-     "dur": 3.5,
-     "do": {
-      "divya": {
-       "anim": "Sit"
-      }
-     }
+     "cam": "wide",
+     "dur": 2.5
+    },
+    {
+     "cam": "room",
+     "dur": 2.5
     }
    ]
   },
@@ -1716,6 +1429,23 @@
       1
      ],
      "dur": 5
+    }
+   ]
+  },
+  {
+   "do": "room",
+   "room": "home",
+   "at": "home",
+   "keep_room": true,
+   "cast": {
+    "karthik": {
+     "mark": "karthik_room"
+    }
+   },
+   "shots": [
+    {
+     "cam": "room",
+     "dur": 3
     }
    ]
   },

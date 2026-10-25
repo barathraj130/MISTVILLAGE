@@ -41,6 +41,7 @@ var env: Environment
 var sun: DirectionalLight3D
 var _auto_lights := false                   # the headlights went on by themselves at dusk (story mode)
 var walker: Walker                          # you on foot (F)
+var indoors := false                        # a story scene in a room under the street: no sun, room light
 var driving := false
 var placed := false                         # the car waits, frozen, until the road under it has loaded
 var cam_mode := 0                           # 0 chase, 1 cockpit, 2 bonnet
@@ -240,6 +241,24 @@ func _environment() -> void:
 func _daylight() -> void:
 	if story == null or fines == null:
 		return
+	if indoors:                                 # in a room: lit by its own lights, the sun can't reach it
+		sun.light_energy = 0.0
+		env.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
+		env.ambient_light_color = Color(0.86, 0.82, 0.75)    # light bounced off distemper walls is warm
+		env.ambient_light_energy = 0.32
+		env.background_energy_multiplier = 0.0
+		env.fog_light_color = Color(0.05, 0.05, 0.05)
+		env.ssil_enabled = true                  # the walls and floor light each other (cheap bounce light)
+		env.ssil_intensity = 1.4
+		env.ssao_intensity = 2.4
+		env.glow_enabled = true                  # tube lights and screens glow a little
+		env.glow_intensity = 0.5
+		env.glow_hdr_threshold = 1.2
+		return
+	env.ambient_light_source = Environment.AMBIENT_SOURCE_SKY
+	env.ssil_enabled = false
+	env.ssao_intensity = 2.0
+	env.glow_enabled = false
 	var sim = fines.sim
 	var sd: Vector3 = sim.sun_dir()
 	var day: float = sim.daylight()

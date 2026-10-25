@@ -48,13 +48,12 @@ const CHORE_MIN := {"alarm": 0, "brush": 5, "bath": 12, "dress": 6, "eat": 12, "
 var chore := 0
 var minutes := 0
 var _prog := 0.0                                # this chore's progress 0..1
-var _last_x := 0.0
-var _scrub := false
 var _picked := {}                               # dress: shirt; pocket: items in; eat: idlis eaten
 var shirt := ""
 var reached_cap := false
 var _pocket_items := ["wallet", "phone", "scooter key", "house key"]
 var _drag_item := ""
+var groom := preload("res://scripts/story/groom.gd").new()   # brushing and bathing as touch play
 # otp
 var _code := ""
 var _keys: Array = []                           # [Rect2, label]
@@ -288,6 +287,14 @@ func _process(dt: float) -> void:
 		bundles[_counting]["counted"] = minf(bundles[_counting]["counted"] + dt / 1.1, 1.0)
 		if bundles[_counting]["counted"] >= 1.0:
 			_counting = -1
+	if kind == "ready" and chore < CHORES.size() and CHORES[chore] in ["brush", "bath"]:
+		groom.area = _chore_rects()["area"]               # (the window may have changed size)
+		groom.process(dt)
+		if groom.said_new:
+			groom.said_new = false
+			_say(groom.said, DARK)
+		if groom.done and not skip:
+			_next_chore()
 	if kind == "hang" and _home == Vector2.ZERO:
 		var p := _panel()
 		_home = Vector2(p.get_center().x, p.end.y - 70.0)
@@ -560,7 +567,7 @@ func _chore_rects() -> Dictionary:
 			out["snooze"] = Rect2(c + Vector2(-230, 140), Vector2(200, 54))
 			out["up"] = Rect2(c + Vector2(30, 140), Vector2(200, 54))
 		"brush", "bath":
-			out["area"] = Rect2(c - Vector2(220, 150), Vector2(440, 280))
+			out["area"] = Rect2(p.position.x + 230, p.position.y + 10, p.size.x - 245, p.size.y - 120)
 		"dress":
 			var names := ["blue", "white", "check", "cap"]
 			for i in 4:
@@ -578,6 +585,10 @@ func _chore_rects() -> Dictionary:
 func _ready_input(e: InputEvent) -> void:
 	var r := _chore_rects()
 	var ch: String = CHORES[chore]
+	if ch == "brush" or ch == "bath":
+		groom.input(e)
+		queue_redraw()
+		return
 	if e is InputEventMouseButton and e.button_index == MOUSE_BUTTON_LEFT:
 		if e.pressed:
 			match ch:
@@ -590,14 +601,6 @@ func _ready_input(e: InputEvent) -> void:
 							_next_chore()
 					elif r["up"].has_point(e.position):
 						_next_chore()
-				"brush", "bath":
-					if r["area"].has_point(e.position):
-						_scrub = true
-						_last_x = e.position.x
-						if ch == "bath":                            # one mug of water per click
-							_prog = minf(_prog + 1.0 / 7.0, 1.0)
-							if _prog >= 1.0:
-								_next_chore()
 				"dress":
 					for k in ["blue", "white", "check"]:
 						if r[k].has_point(e.position):
@@ -621,7 +624,6 @@ func _ready_input(e: InputEvent) -> void:
 							_drag_item = it
 							_thing = e.position
 		else:
-			_scrub = false
 			if ch == "pocket" and _drag_item != "":
 				if r["pocket"].grow(30.0).has_point(_thing):
 					_picked[_drag_item] = true
@@ -629,12 +631,6 @@ func _ready_input(e: InputEvent) -> void:
 						_next_chore()
 				_drag_item = ""
 	elif e is InputEventMouseMotion:
-		if ch == "brush" and _scrub and r["area"].has_point(e.position):
-			_prog = minf(_prog + absf(e.position.x - _last_x) / 2400.0, 1.0)
-			_last_x = e.position.x
-			if _prog >= 1.0:
-				_scrub = false
-				_next_chore()
 		if ch == "pocket" and _drag_item != "":
 			_thing = e.position
 	queue_redraw()
@@ -648,6 +644,8 @@ func _next_chore() -> void:
 	_prog = 0.0
 	_picked = {}
 	stage_changed.emit()
+	if chore < CHORES.size() and CHORES[chore] in ["brush", "bath"]:
+		groom.start(CHORES[chore], _chore_rects()["area"], lang, self)
 	if chore >= CHORES.size():
 		_done({"minutes": minutes, "shirt": shirt, "reached_cap": reached_cap, "late_morning": minutes > 45})
 	queue_redraw()
@@ -681,28 +679,8 @@ func _draw_ready(p: Rect2) -> void:
 			_text(c + Vector2(-100, 0), L("ALARM", "அலாரம்"), 22, Color(1, 0.8, 0.3), 200, HORIZONTAL_ALIGNMENT_CENTER)
 			_btn(r["snooze"], L("Snooze (+10 min)", "ஸ்னூஸ் (+10 நிமி)"), true)
 			_btn(r["up"], L("Get up", "எழுந்திரு"), true)
-		"brush":
-			var a: Rect2 = r["area"]
-			draw_rect(a, Color(0.85, 0.92, 0.95))                                                    # the mirror
-			draw_rect(Rect2(a.get_center() - Vector2(120, 40), Vector2(240, 80)), Color(0.95, 0.95, 0.92))   # teeth
-			for k in 8:
-				draw_line(a.get_center() + Vector2(-120 + k * 30, -40), a.get_center() + Vector2(-120 + k * 30, 40), Color(0.8, 0.8, 0.78), 2.0)
-			var bx := a.get_center().x + sin(_t * 6.0) * 90.0 if _prog < 0.05 else get_local_mouse_position().x
-			draw_rect(Rect2(Vector2(bx - 70, a.get_center().y + 46), Vector2(140, 12)), Color(0.2, 0.5, 0.85))   # the brush
-			draw_rect(Rect2(Vector2(bx - 70, a.get_center().y + 30), Vector2(40, 16)), Color(1, 1, 1))
-			_text(Vector2(a.position.x, a.end.y + 26), L("Hold the mouse and scrub left and right", "மவுஸை அழுத்தி இடம் வலமா தேய்"), 17, DARK, a.size.x, HORIZONTAL_ALIGNMENT_CENTER)
-			_bar(Rect2(a.position.x, a.end.y + 40, a.size.x, 14), _prog)
-		"bath":
-			var a: Rect2 = r["area"]
-			draw_rect(a, Color(0.7, 0.78, 0.8))                                                      # the bathroom tiles
-			for k in 6:
-				draw_line(Vector2(a.position.x + k * a.size.x / 6, a.position.y), Vector2(a.position.x + k * a.size.x / 6, a.end.y), Color(0.6, 0.68, 0.7), 1.0)
-			draw_rect(Rect2(a.get_center() + Vector2(-80, 20), Vector2(160, 110)), Color(0.15, 0.4, 0.7))   # the bucket
-			draw_rect(Rect2(a.get_center() + Vector2(90, -20), Vector2(50, 40)), Color(0.9, 0.35, 0.2))      # the mug
-			for k in int(_prog * 7.0):
-				draw_circle(a.get_center() + Vector2(-60 + k * 20, -60 + (k % 2) * 14), 6.0, Color(0.6, 0.85, 1.0))
-			_text(Vector2(a.position.x, a.end.y + 26), L("Click to pour mug after mug", "கிளிக் பண்ணி மக் மக்கா ஊத்து"), 17, DARK, a.size.x, HORIZONTAL_ALIGNMENT_CENTER)
-			_bar(Rect2(a.position.x, a.end.y + 40, a.size.x, 14), _prog)
+		"brush", "bath":
+			groom.draw(self, font)
 		"dress":
 			var cols := {"blue": Color(0.3, 0.5, 0.8), "white": Color(0.95, 0.95, 0.93), "check": Color(0.7, 0.3, 0.25)}
 			for k in ["blue", "white", "check"]:
