@@ -44,6 +44,7 @@ def age(years):
 
 
 # name, gender, years, weight, muscle, height, skin, hair, brows, outfit, pose, colours
+KHAKI = (0.55, 0.43, 0.25)
 PEOPLE = [
     ("man_shirt_walk", 1.0, 32, 0.5, 0.55, 0.55, "young_african_male", "short02", "mindfront_eyebrows_03", "trousers", "walk", [(0.55, 0.7, 0.85)]),
     ("man_shirt_stand", 1.0, 41, 0.6, 0.5, 0.5, "middleage_african_male", "short04", "eyebrow004", "trousers", "stand", [(0.85, 0.85, 0.82)]),
@@ -51,11 +52,23 @@ PEOPLE = [
     ("man_lungi", 1.0, 36, 0.5, 0.6, 0.52, "young_african_male", "short02", "mindfront_eyebrows_03", "lungi", "stand", [(0.15, 0.3, 0.55)]),
     ("woman_saree_red", 0.0, 34, 0.55, 0.4, 0.42, "cutoff3d_indian_female_enhanced", "braid01", "mindfront_eyebrows_08", "saree", "stand", [(0.7, 0.06, 0.12)]),
     ("woman_saree_green", 0.0, 45, 0.65, 0.4, 0.4, "cutoff3d_indian_female_enhanced", "bob02", "mindfront_eyebrows_08", "saree", "stand", [(0.1, 0.45, 0.25)]),
-    ("woman_saree_blue", 0.0, 27, 0.48, 0.42, 0.45, "cutoff3d_indian_female_enhanced", "ponytail01", "mindfront_eyebrows_10", "saree", "stand", [(0.12, 0.2, 0.6)]),
+    ("woman_saree_blue", 0.0, 27, 0.48, 0.42, 0.45, "cutoff3d_indian_female_enhanced", "braid01", "mindfront_eyebrows_10", "saree", "stand", [(0.12, 0.2, 0.6)]),
     ("schoolboy", 1.0, 12, 0.45, 0.45, 0.42, "young_african_male", "short02", "mindfront_eyebrows_03", "school", "walk", [(0.95, 0.95, 0.95)]),
+    # heroines (close-up quality only): long open hair from strands, the hair proxy is not used
+    ("heroine_saree", 0.0, 23, 0.45, 0.2, 0.5, "callharvey3d_midtoned_female", "none", "mindfront_eyebrows_08", "saree", "stand", [(0.55, 0.05, 0.25)]),
+    ("heroine_modern", 0.0, 21, 0.42, 0.2, 0.52, "callharvey3d_midtoned_female", "none", "mindfront_eyebrows_10", "modern_f", "stand", [(0.7, 0.12, 0.22)]),
+    # traffic police at a checking point: khaki uniform, peaked cap, belt; one in a fluorescent vest holding up a
+    # hand to stop you, one standing by
+    ("police_stop", 1.0, 38, 0.66, 0.62, 0.56, "middleage_african_male", "short04", "eyebrow004", "police_vest", "stop", [KHAKI]),
+    ("police_stand", 1.0, 46, 0.72, 0.55, 0.53, "middleage_african_male", "short02", "mindfront_eyebrows_03", "police", "stand", [KHAKI]),
+    # two-wheeler riders, seated, hands on the grips (tools/riders.py puts them on the bikes, with helmets)
+    ("rider_man_blue", 1.0, 29, 0.5, 0.55, 0.55, "young_african_male", "short02", "mindfront_eyebrows_03", "trousers", "ride", [(0.25, 0.4, 0.7)]),
+    ("rider_man_cream", 1.0, 44, 0.62, 0.5, 0.52, "middleage_african_male", "short04", "eyebrow004", "trousers", "ride", [(0.86, 0.82, 0.72)]),
+    ("rider_woman_salwar", 0.0, 27, 0.48, 0.4, 0.45, "cutoff3d_indian_female_enhanced", "braid01", "mindfront_eyebrows_08", "modern_f", "ride", [(0.72, 0.15, 0.38)]),
 ]
 
-STRIDE = {"walk": 1.0, "stand": 0.0}
+GRIP_CURL = 60.0                                                 # degrees each finger joint bends round a grip
+STRIDE = {"walk": 1.0, "stand": 0.0, "stop": 0.0, "ride": 0.0}
 
 
 def cloth(name, colour, rough=0.9, pattern=None):
@@ -99,10 +112,44 @@ def tint(obj, rgb, amount=1.0):
                     nt.links.new(mix.outputs[2], to)
 
 
+def police_kit(h, outfit, objs):
+    """A peaked cap (khaki crown, dark band, black visor), recoloured in the vest version: a fluorescent
+    yellow-green traffic vest with a silver reflective band over the khaki shirt; set after posing (the cap is
+    placed on the posed head)."""
+    bpy.context.view_layer.update()
+    dg = bpy.context.evaluated_depsgraph_get()
+    ev = h.evaluated_get(dg)
+    # the head: the highest points near the body's middle (a raised hand stands higher than the head)
+    allv = [ev.matrix_world @ v.co for v in ev.data.vertices]
+    mid = sum(v.x for v in allv) / len(allv)
+    top = [v for v in allv if abs(v.x - mid) < 0.13]
+    zmax = max(v.z for v in top)
+    head = [v for v in top if v.z > zmax - 0.12]
+    cx = sum(v.x for v in head) / len(head)
+    cy = sum(v.y for v in head) / len(head)
+    import quality as Q
+    head_r = max(abs(v.x - cx) for v in top if v.z > zmax - 0.1)
+    cap = Q.police_cap(cx, cy, zmax, min(max(head_r, 0.075), 0.11))
+    objs.append(cap)
+    if outfit == "police_vest":
+        for o in objs:
+            if o.get("outfit") == "police_vest":
+                vest = cloth("Traffic Vest", (0.75, 0.95, 0.05), 0.55)
+                silver = cloth("Vest Band", (0.85, 0.85, 0.85), 0.25)
+                o.data.materials.append(vest)
+                o.data.materials.append(silver)
+                iv = len(o.data.materials) - 2
+                for p in o.data.polygons:
+                    z = sum(o.data.vertices[i].co.z for i in p.vertices) / len(p.vertices)
+                    if 1.0 < z < 1.42 and p.material_index == 0:
+                        p.material_index = iv + (1 if 1.12 < z < 1.17 else 0)
+
+
 def plain_clothes(obj, colour, outfit):
     """No printed logos: the shirt or top in a plain cloth colour; trousers (jeans) dark grey or school navy."""
     cl = cloth("Top %s" % outfit, colour, 0.85)
-    legs = cloth("Pants %s" % outfit, (0.05, 0.08, 0.2) if outfit == "school" else (0.12, 0.12, 0.13), 0.8)
+    legs = cloth("Pants %s" % outfit, (0.05, 0.08, 0.2) if outfit == "school" else
+                 ((0.5, 0.39, 0.22) if outfit.startswith("police") else (0.12, 0.12, 0.13)), 0.8)
     me = obj.data
     me.materials.clear()
     me.materials.append(cl)
@@ -148,9 +195,32 @@ def pose(arm, kind, rng, arm_angle=52):
         rotate_bone(arm, "lowerleg01.R", 'X', math.radians(-15))
         rotate_bone(arm, "upperarm01.R", 'X', math.radians(18))
         rotate_bone(arm, "upperarm01.L", 'X', math.radians(-16))
+    if kind == "ride":                                           # seated on a two-wheeler (forward is -Y)
+        for side, sg in (("L", 1), ("R", -1)):
+            rotate_bone(arm, "upperleg01." + side, 'X', math.radians(-78))     # thighs forward along the seat
+            rotate_bone(arm, "upperleg01." + side, 'Z', math.radians(sg * 8))   # knees a little apart
+            rotate_bone(arm, "lowerleg01." + side, 'X', math.radians(80))      # shins down to the footrests
+            rotate_bone(arm, "upperarm01." + side, 'Y', math.radians(-sg * 22))  # out towards the grip ends
+            rotate_bone(arm, "upperarm01." + side, 'X', math.radians(-38))     # arms forward and down to the grips
+            rotate_bone(arm, "lowerarm01." + side, 'X', math.radians(-12))
+        for pb in arm.pose.bones:                                  # fingers closed round the grips
+            if pb.name.startswith("finger") and pb.name[-2:] in (".L", ".R"):
+                thumb = pb.name.startswith("finger1")
+                pb.rotation_mode = 'XYZ'
+                pb.rotation_euler = (math.radians(GRIP_CURL * (0.5 if thumb else 1.0)), 0.0, 0.0)
+        bpy.context.view_layer.update()
+        print("FINGERS", sorted(b.name for b in arm.pose.bones if b.name.startswith("finger") and b.name.endswith(".L")),
+              flush=True)
+        rotate_bone(arm, "spine03", 'X', math.radians(-8))                     # a slight lean forward
+        rotate_bone(arm, "neck01", 'Z', rng.uniform(-0.1, 0.1))
+        return
     if not s:                                                    # stand with the feet closer together
         rotate_bone(arm, "upperleg01.L", 'Y', math.radians(7))       # feet in under the hips
         rotate_bone(arm, "upperleg01.R", 'Y', math.radians(-7))
+    if kind == "stop":                                           # right hand raised, palm to the traffic
+        rotate_bone(arm, "upperarm01.R", 'Y', math.radians(40))
+        rotate_bone(arm, "upperarm01.R", 'X', math.radians(-75))
+        rotate_bone(arm, "lowerarm01.R", 'X', math.radians(-55))
     rotate_bone(arm, "neck01", 'Z', rng.uniform(-0.15, 0.15))
 
 
@@ -201,6 +271,22 @@ def lathe(name, profile, mat, segs=40, pleats=0.0):
     return o
 
 
+def blouse_cut(top, colour):
+    """The saree blouse from the T-shirt: sleeves cut above the elbow, the hem above the waist, a contrasting
+    colour (a darker shade of the saree's own)."""
+    me = top.data
+    bm = bmesh.new()
+    bm.from_mesh(me)
+    kill = [f for f in bm.faces if any(abs(v.co.x) > 0.27 or v.co.z < 1.1 for v in f.verts)]
+    bmesh.ops.delete(bm, geom=kill, context='FACES')
+    bm.to_mesh(me)
+    bm.free()
+    me.materials.clear()
+    me.materials.append(cloth("Blouse", (colour[0] * 0.55 + 0.05, colour[1] * 0.55 + 0.04, colour[2] * 0.55 + 0.03), 0.55))
+    for p in me.polygons:
+        p.material_index = 0
+
+
 def wrap(kind, colour, stride):
     """Lower-body garments as cloth tubes over the legs (fitted to a standing MakeHuman adult)."""
     parts = []
@@ -221,6 +307,13 @@ def wrap(kind, colour, stride):
         gold = cloth("Zari", (0.85, 0.62, 0.12), 0.4)
         rx, z, k = prof[-1]
         parts.append(lathe("Zari", [(rx + 0.003, 0.12, k), (rx + 0.003, 0.05, k)], gold, segs=56))
+        if BODY.get("quality"):
+            import quality as Q
+            top = BODY.get("top")
+            if top is not None:                          # a fitted blouse: short sleeves, the midriff bare
+                blouse_cut(top, colour)
+            parts.append(Q.drape_pallu(BODY["obj"], top, colour, BODY["rng"]))
+            return parts
         # pallu: a band from the waist at the right, across the chest, over the left shoulder, hanging down the back;
         # the band's width lies on the body's surface (perpendicular to its run and to the outward normal)
         pts = [(-0.13, -0.1, 1.02, 0.12), (-0.06, -0.125, 1.14, 0.15), (0.02, -0.13, 1.26, 0.16), (0.09, -0.1, 1.37, 0.13),
@@ -255,22 +348,38 @@ def wrap(kind, colour, stride):
     return parts
 
 
-def build(spec, x=0.0, rng=None):
+def build(spec, x=0.0, rng=None, quality=False, face_seed=None, tone=None):
+    """quality: close-up quality (tools/humans/quality.py) — a face of its own (face_seed), high-poly eyes,
+    eyelashes, teeth, the upgraded skin with stubble, strand hair and moustache (men)."""
     name, g, yrs, w, mu, hgt, skin, hair, brows, outfit, kind, colours = spec
     rng = rng or random.Random(hash(name) & 0xffff)
+    import quality as Q
     h = HS.create_human()
     h.name = name
     for k, v in (("gender", g), ("age", age(yrs)), ("weight", w), ("muscle", mu), ("height", hgt),
                  ("african", 0.45), ("asian", 0.13), ("caucasian", 0.42)):
         HOP.set_value(k, v, entity_reference=h)
     TS.reapply_macro_details(h)
+    if quality:
+        Q.face_shape(h, random.Random(face_seed if face_seed is not None else hash(name)), feminine=g < 0.5,
+                     strength=0.75 if name.startswith("heroine") else 0.55)
+        Q.expression(h, random.Random((face_seed or 0) + 7), smile=(0.4 if g < 0.5 else 0.2) * random.Random(face_seed or 1).uniform(0.6, 1.1))
+        if g < 0.5:                                      # softer: less muscle
+            HOP.set_value("muscle", min(mu, 0.3), entity_reference=h)
+            TS.reapply_macro_details(h)
     arm = HS.add_builtin_rig(h, "default")
     sk = asset(skin + ".mhmat", "skins")
     if sk:
         HS.set_character_skin(sk, h, skin_type="MAKESKIN")
     objs = [h]
-    for sub, fname, typ in (("eyes", "low-poly.mhclo", "Eyes"), ("eyebrows", brows + ".mhclo", "Eyebrows"),
-                            ("hair", hair + ".mhclo", "Hair")):
+    parts = (("eyes", "low-poly.mhclo", "Eyes"), ("eyebrows", brows + ".mhclo", "Eyebrows"), ("hair", hair + ".mhclo", "Hair"))
+    if quality:
+        parts = (("eyes", "high-poly.mhclo", "Eyes"), ("eyebrows", brows + ".mhclo", "Eyebrows"),
+                 ("eyelashes", ("mindfront_eyelashes_02" if g > 0.5 else "mindfront_eyelashes_04") + ".mhclo", "Eyelashes"),
+                 ("teeth", "teeth_base.mhclo", "Teeth"), ("tongue", "tongue01.mhclo", "Tongue"), ("hair", hair + ".mhclo", "Hair"))
+    if quality and g > 0.5:
+        parts = tuple(pp for pp in parts if pp[2] != "Hair")
+    for sub, fname, typ in parts:
         p = asset(fname, sub)
         if p:
             o = HS.add_mhclo_asset(p, h, asset_type=typ, subdiv_levels=0, material_type="MAKESKIN")
@@ -278,19 +387,22 @@ def build(spec, x=0.0, rng=None):
                 tint(o, (0.05, 0.04, 0.035) if yrs < 55 else (0.45, 0.44, 0.42), 0.9)
             objs.append(o)
     top = {"trousers": "male_casualsuit03", "veshti": "male_casualsuit03", "lungi": "male_casualsuit06",
-           "saree": "female_casualsuit02", "school": "male_casualsuit03"}[outfit]
+           "saree": "female_casualsuit02", "school": "male_casualsuit03", "police": "male_casualsuit03",
+           "police_vest": "male_casualsuit03", "modern_f": "female_casualsuit01"}[outfit]
     p = asset(top + ".mhclo", "clothes")
     if p:
         c = HS.add_mhclo_asset(p, h, asset_type="Clothes", subdiv_levels=0, material_type="MAKESKIN")
         shirt = {"trousers": colours[0], "veshti": (0.92, 0.92, 0.88), "lungi": (0.55, 0.62, 0.7),
                  "saree": (colours[0][0] * 0.6 + 0.25, colours[0][1] * 0.6 + 0.2, colours[0][2] * 0.6 + 0.15),
-                 "school": (0.95, 0.95, 0.95)}[outfit]
+                 "school": (0.95, 0.95, 0.95), "police": KHAKI, "police_vest": KHAKI, "modern_f": colours[0]}[outfit]
         plain_clothes(c, shirt, outfit)
         objs.append(c)
     shoes = asset("shoes0%d.mhclo" % (1 + rng.randrange(3)), "clothes")
-    if shoes and outfit in ("trousers", "school"):
+    if shoes and outfit in ("trousers", "school", "police", "police_vest", "modern_f"):
         objs.append(HS.add_mhclo_asset(shoes, h, asset_type="Clothes", subdiv_levels=0, material_type="MAKESKIN"))
     pose(arm, kind, rng, 30 if outfit == "saree" else 52)
+    if outfit.startswith("police"):
+        police_kit(h, outfit, objs)
     # bake the pose into the meshes
     for o in objs:
         bpy.context.view_layer.objects.active = o
@@ -322,7 +434,39 @@ def build(spec, x=0.0, rng=None):
             bv.append(tuple(h.matrix_world @ v.co))
     BODY["verts"] = [v for v in bv if v[2] < 1.08]
     BODY["cy"] = sum(v[1] for v in BODY["verts"]) / max(len(BODY["verts"]), 1)
+    BODY["obj"] = h
+    BODY["top"] = next((o for o in objs if o.get("outfit") == outfit), None)
+    BODY["quality"] = quality
+    BODY["rng"] = rng
     objs += wrap(outfit, colours[0], STRIDE[kind])
+    if quality:
+        lm = Q.landmarks(h)
+        man = g > 0.5
+        grey = max(0.0, (yrs - 38) / 35.0)
+        if man:
+            Q.stubble(h, lm, 0.55 + 0.4 * rng.random())
+        else:
+            eyes_o = next((o for o in objs if "high-poly" in o.name.lower() or o.name.lower().endswith(".eyes")), None)
+            objs.append(Q.feminine(h, lm, eyes_o, rng))
+        Q.skin_upgrade(h, tone if tone is not None else rng.uniform(0.86, 1.05), stubble_mask=man,
+                       detail=(0.35 + 0.45 * min(1.0, yrs / 60.0)) if man else (0.08 + 0.25 * min(1.0, yrs / 60.0)) * (0.4 if name.startswith("heroine") else 1.0),
+                       pores=0.12 if man else (0.025 if name.startswith("heroine") else 0.05))
+        if not man and "braid" in hair:
+            objs.append(Q.jasmine(lm, rng))
+        for o in objs:                                   # woven cloth on shirts and tops
+            if o.get("outfit") in ("trousers", "school", "modern_f") and o.data.materials:
+                c0 = o.data.materials[0].node_tree.nodes["Principled BSDF"].inputs["Base Color"].default_value
+                o.data.materials[0] = Q.fabric("Shirt Weave", (c0[0], c0[1], c0[2]))
+        if man:
+            for o in objs:
+                if o.name.lower().startswith(name.lower() + ".") and "short" in o.name.lower():
+                    Q.matte(o)
+            objs.append(Q.strand_hair(h, lm, rng, grey=grey, count=14000, part=rng.choice((-1.0, 1.0))))
+            style = rng.choice(("full", "full", "thin", "none")) if not outfit.startswith("police") else "full"
+            m = Q.moustache(h, lm, rng, style, grey * 0.6)
+            if m:
+                objs.append(m)
+        objs.append(h) if h not in objs else None
     for o in objs:
         o.location.x += x
     return objs
@@ -411,9 +555,11 @@ def preview(out):
     print("PREVIEW", out, flush=True)
 
 
-def export(out_dir):
+def export(out_dir, only=None):
     os.makedirs(out_dir, exist_ok=True)
     for spec in PEOPLE:
+        if only and not spec[0].startswith(only):
+            continue
         for o in list(bpy.data.objects):
             bpy.data.objects.remove(o, do_unlink=True)
         objs = build(spec, 0.0)
@@ -430,4 +576,4 @@ if __name__ == "__main__":
     if "--preview" in args:
         preview(os.path.abspath(args[args.index("--preview") + 1]))
     if "--export" in args:
-        export(os.path.abspath(args[args.index("--export") + 1]))
+        export(os.path.abspath(args[args.index("--export") + 1]), args[args.index("--only") + 1] if "--only" in args else None)
