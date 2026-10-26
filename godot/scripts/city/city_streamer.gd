@@ -20,6 +20,7 @@ const FLOOR := 3.2
 const KIT_NEAR := 120.0                    # full designs out to here, then their far versions
 const KIT_RANGE := 900.0                   # far versions out to here; beyond, plain stand-ins (in the haze)
 const KERB := 0.2
+const EDGE_W := {4: 1.25, 5: 1.05, 6: 1.6, 7: 1.2}     # street-edge strips' widths by street type (_street_edge)
 const LAMP_STEP := 32.0
 const MARK := {"motorway": 3, "trunk": 3, "primary": 2, "secondary": 2, "tertiary": 1, "unclassified": 1, "residential": 1}
 
@@ -318,7 +319,7 @@ func _build(k: Vector2i) -> void:
 	_ground(k, hn, h, out)
 	_roads(roads, out)
 	_buildings(blds, out)
-	_walks(walks, out)
+	_walks(walks, out, [k, hn, h, float(index["hstep"]), tile])
 	_junctions(juncs, out)
 	_props(props, out)
 	_yards(yards, out)
@@ -831,6 +832,31 @@ func _buildings(blds: Array, out: Dictionary) -> void:
 	out["n_kit"] = kits.values().reduce(func(acc, a): return acc + a.size(), 0)
 
 
+## The tile's ground height at x, z (g = [tile key, n, heights, step, tile size]): the same two triangles per cell as
+## _ground (held at the tile's edge for points just over it).
+static func _ground_at(g: Array, x: float, z: float) -> float:
+	var k: Vector2i = g[0]
+	var n: int = g[1]
+	var h: PackedFloat32Array = g[2]
+	var st: float = g[3]
+	var fx := clampf((x - k.x * float(g[4])) / st, 0.0, n - 1.0)
+	var fz := clampf((z - k.y * float(g[4])) / st, 0.0, n - 1.0)
+	var j := clampi(int(floor(fx)), 0, n - 2)
+	var i := clampi(int(floor(fz)), 0, n - 2)
+	var u := fx - j
+	var v := fz - i
+	if u + v <= 1.0:
+		return h[i * n + j] + (h[i * n + j + 1] - h[i * n + j]) * u + (h[(i + 1) * n + j] - h[i * n + j]) * v
+	var h11 := h[(i + 1) * n + j + 1]
+	return h11 + (h[(i + 1) * n + j] - h11) * (1.0 - u) + (h[i * n + j + 1] - h11) * (1.0 - v)
+
+
+## Where a face hanging from p (a footpath's back, a strip's end) stops: in the ground below it, however far down
+## the land lies (roads on banks stand metres over it), and at least 0.3 m down.
+static func _down(g: Array, p: Vector3) -> Vector3:
+	return Vector3(p.x, minf(p.y - 0.3, _ground_at(g, p.x, p.z) - 0.15), p.z)
+
+
 ## Streets without a footpath (docs/COIMBATORE_STREETS.md): colony — a 0.5 m concrete edge strip flush with the
 ## road and a slab-covered drain behind it; old town — an open drain channel at the road edge with slab bridges;
 ## industrial and outskirts — a gravel shoulder. The strip data sits at footpath height, at least 0.15 above the road
@@ -838,7 +864,7 @@ func _buildings(blds: Array, out: Dictionary) -> void:
 ## under the ground (it covered them: a strip of bare earth between the road and the houses). Where the ground
 ## stands higher, a face drops from the strip's road edge to the road.
 func _street_edge(kb: Array, faces: PackedVector3Array, a: Vector3, b: Vector3, ra: Vector3, rb: Vector3, hw: float,
-		styp: int, along: float, L: float) -> void:
+		styp: int, along: float, L: float, g: Array) -> void:
 	var dn := Vector3(0, -0.04, 0)
 	var e0 := a + ra * (hw + 0.2) + dn
 	var e1 := b + rb * (hw + 0.2) + dn
@@ -846,7 +872,6 @@ func _street_edge(kb: Array, faces: PackedVector3Array, a: Vector3, b: Vector3, 
 	var slab := Color(0.56, 0.55, 0.52)
 	var dark := Color(0.04, 0.04, 0.035)
 	var gravel := Color(0.55, 0.42, 0.32)
-	var down := Vector3(0, -0.4, 0)
 	var rd := (ra + rb).normalized()
 	_quad(kb, e1, e0, e0 + Vector3(0, -0.6, 0), e1 + Vector3(0, -0.6, 0), rd,
 		concrete if styp == 4 else (slab if styp == 5 else gravel), Vector2.ZERO, Vector2.ZERO, Vector2.ZERO, Vector2.ZERO, Vector2.ZERO)
@@ -858,7 +883,7 @@ func _street_edge(kb: Array, faces: PackedVector3Array, a: Vector3, b: Vector3, 
 		var d1 := s1 - rb * 0.75 + Vector3(0, 0.02, 0)
 		_quad(kb, s0 + Vector3(0, 0.02, 0), s1 + Vector3(0, 0.02, 0), d1, d0, Vector3.UP, slab,
 			Vector2.ZERO, Vector2.ZERO, Vector2.ZERO, Vector2.ZERO, Vector2.ZERO)
-		_quad(kb, d0, d1, d1 + down, d0 + down, -ra, slab, Vector2.ZERO, Vector2.ZERO, Vector2.ZERO, Vector2.ZERO, Vector2.ZERO)
+		_quad(kb, d0, d1, _down(g, d1), _down(g, d0), -ra, slab, Vector2.ZERO, Vector2.ZERO, Vector2.ZERO, Vector2.ZERO, Vector2.ZERO)
 		faces.append_array([e0, e1, d1, e0, d1, d0])
 	elif styp == 5:
 		var w := 0.45
@@ -868,7 +893,9 @@ func _street_edge(kb: Array, faces: PackedVector3Array, a: Vector3, b: Vector3, 
 		_quad(kb, e0 + low, e1 + low, o1 + low, o0 + low, Vector3.UP, dark, Vector2.ZERO, Vector2.ZERO, Vector2.ZERO, Vector2.ZERO, Vector2.ZERO)
 		_quad(kb, e0, e1, e1 + low, e0 + low, -ra, slab, Vector2.ZERO, Vector2.ZERO, Vector2.ZERO, Vector2.ZERO, Vector2.ZERO)
 		_quad(kb, o1, o0, o0 + low, o1 + low, ra, slab, Vector2.ZERO, Vector2.ZERO, Vector2.ZERO, Vector2.ZERO, Vector2.ZERO)
-		_quad(kb, o0, o1, o1 - ra * 0.6, o0 - ra * 0.6, Vector3.UP, concrete, Vector2.ZERO, Vector2.ZERO, Vector2.ZERO, Vector2.ZERO, Vector2.ZERO)
+		_quad(kb, o0, o1, o1 - rb * 0.6, o0 - ra * 0.6, Vector3.UP, concrete, Vector2.ZERO, Vector2.ZERO, Vector2.ZERO, Vector2.ZERO, Vector2.ZERO)
+		_quad(kb, o0 - ra * 0.6, o1 - rb * 0.6, _down(g, o1 - rb * 0.6), _down(g, o0 - ra * 0.6), -rd, slab,
+			Vector2.ZERO, Vector2.ZERO, Vector2.ZERO, Vector2.ZERO, Vector2.ZERO)
 		if int(along / 5.0) != int((along + L) / 5.0):                     # a slab bridge to the doors
 			var mid := e0.lerp(e1, 0.5) + Vector3(0, 0.02, 0)
 			var dd := (e1 - e0).normalized()
@@ -880,12 +907,13 @@ func _street_edge(kb: Array, faces: PackedVector3Array, a: Vector3, b: Vector3, 
 		var g0 := e0 - ra * w2 + Vector3(0, -0.03, 0)
 		var g1 := e1 - rb * w2 + Vector3(0, -0.03, 0)
 		_quad(kb, e0, e1, g1, g0, Vector3.UP, gravel, Vector2.ZERO, Vector2.ZERO, Vector2.ZERO, Vector2.ZERO, Vector2.ZERO)
+		_quad(kb, g0, g1, _down(g, g1), _down(g, g0), -rd, gravel, Vector2.ZERO, Vector2.ZERO, Vector2.ZERO, Vector2.ZERO, Vector2.ZERO)
 		faces.append_array([e0, e1, g1, e0, g1, g0])
 
 
 ## Footpath strips: paver top, a skirt down the outer edge into the ground, and the kerb on the road side
 ## (painted black and white on the main roads); streetlights every LAMP_STEP metres on the bigger streets.
-func _walks(walks: Array, out: Dictionary) -> void:
+func _walks(walks: Array, out: Dictionary, g: Array) -> void:
 	var top := [PackedVector3Array(), PackedVector3Array(), PackedColorArray(), PackedVector2Array(), PackedVector2Array(), PackedInt32Array()]
 	var kb := [PackedVector3Array(), PackedVector3Array(), PackedColorArray(), PackedVector2Array(), PackedVector2Array(), PackedInt32Array()]
 	var faces := PackedVector3Array()
@@ -934,7 +962,7 @@ func _walks(walks: Array, out: Dictionary) -> void:
 			var bo := b - rws[i + 1] * hw
 			var styp := (fl >> 4) & 7                   # street type (tools/citygen/life.py TYPES)
 			if styp >= 4 and (fl & 8) == 0:
-				_street_edge(kb, faces, a, b, rws[i], rws[i + 1], hw, styp, along, L)
+				_street_edge(kb, faces, a, b, rws[i], rws[i + 1], hw, styp, along, L, g)
 				along += L
 				continue
 			var sep := (fl & 8) != 0                     # a separator / median: planted, kerbed both sides
@@ -951,8 +979,7 @@ func _walks(walks: Array, out: Dictionary) -> void:
 				_quad(top, ai, bi, bo, ao, Vector3.UP, Color.WHITE, Vector2(hw, along) / 2.0, Vector2(hw, along + L) / 2.0,
 					Vector2(-hw, along + L) / 2.0, Vector2(-hw, along) / 2.0, Vector2.ZERO)
 			faces.append_array([ai, bi, bo, ai, bo, ao])
-			var dn := Vector3(0, -0.7, 0)
-			_quad(kb, ao, bo, bo + dn, ao + dn, -rw, col if sep else Color(0.5, 0.48, 0.45), Vector2.ZERO, Vector2.ZERO,
+			_quad(kb, ao, bo, _down(g, bo), _down(g, ao), -rw, col if sep else Color(0.5, 0.48, 0.45), Vector2.ZERO, Vector2.ZERO,
 				Vector2.ZERO, Vector2.ZERO, Vector2.ZERO)
 			# kerb: 0.2 m wide, a touch above the footpath, its face dropping to the road
 			var up := Vector3(0, 0.02, 0)
@@ -969,6 +996,26 @@ func _walks(walks: Array, out: Dictionary) -> void:
 					lamps.append(Transform3D(Basis(xz, Vector3.UP, rw), q))
 					next_lamp += LAMP_STEP
 			along += L
+		# its two ends close down into the ground: where a strip stops (a junction, a gate) it stood open over the land
+		if (fl & 8) == 0:
+			var st := (fl >> 4) & 7
+			for e in [[0, -1.0], [n - 1, 1.0]]:
+				var q: int = e[0]
+				var tq := pts[mini(q + 1, n - 1)] - pts[maxi(q - 1, 0)]
+				tq.y = 0.0
+				if tq.length() < 0.001:
+					continue
+				tq = tq.normalized() * float(e[1])
+				var near_e: Vector3
+				var far_e: Vector3
+				if st >= 4:
+					near_e = pts[q] + rws[q] * (hw + 0.2) + Vector3(0, -0.04, 0)
+					far_e = near_e - rws[q] * EDGE_W.get(st, 1.2)
+				else:
+					near_e = pts[q] + rws[q] * (hw + KERB) + Vector3(0, 0.02, 0)
+					far_e = pts[q] - rws[q] * hw
+				_quad(kb, near_e, far_e, _down(g, far_e), _down(g, near_e), tq, Color(0.5, 0.48, 0.45),
+					Vector2.ZERO, Vector2.ZERO, Vector2.ZERO, Vector2.ZERO, Vector2.ZERO)
 	if not seps.is_empty():
 		var smm := MultiMesh.new()
 		smm.transform_format = MultiMesh.TRANSFORM_3D
