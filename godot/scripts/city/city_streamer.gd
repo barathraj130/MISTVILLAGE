@@ -833,10 +833,13 @@ func _buildings(blds: Array, out: Dictionary) -> void:
 
 ## Streets without a footpath (docs/COIMBATORE_STREETS.md): colony — a 0.5 m concrete edge strip flush with the
 ## road and a slab-covered drain behind it; old town — an open drain channel at the road edge with slab bridges;
-## industrial and outskirts — a gravel shoulder. The strip data sits at footpath height; streets are flush (−0.15).
+## industrial and outskirts — a gravel shoulder. The strip data sits at footpath height, at least 0.15 above the road
+## and 0.05 above the ground; the edges sit 0.04 below that: just over the road's surface (lifted 0.09) and never
+## under the ground (it covered them: a strip of bare earth between the road and the houses). Where the ground
+## stands higher, a face drops from the strip's road edge to the road.
 func _street_edge(kb: Array, faces: PackedVector3Array, a: Vector3, b: Vector3, ra: Vector3, rb: Vector3, hw: float,
 		styp: int, along: float, L: float) -> void:
-	var dn := Vector3(0, -0.15, 0)
+	var dn := Vector3(0, -0.04, 0)
 	var e0 := a + ra * (hw + 0.2) + dn
 	var e1 := b + rb * (hw + 0.2) + dn
 	var concrete := Color(0.7, 0.69, 0.66)
@@ -844,6 +847,9 @@ func _street_edge(kb: Array, faces: PackedVector3Array, a: Vector3, b: Vector3, 
 	var dark := Color(0.04, 0.04, 0.035)
 	var gravel := Color(0.55, 0.42, 0.32)
 	var down := Vector3(0, -0.4, 0)
+	var rd := (ra + rb).normalized()
+	_quad(kb, e1, e0, e0 + Vector3(0, -0.6, 0), e1 + Vector3(0, -0.6, 0), rd,
+		concrete if styp == 4 else (slab if styp == 5 else gravel), Vector2.ZERO, Vector2.ZERO, Vector2.ZERO, Vector2.ZERO, Vector2.ZERO)
 	if styp == 4:
 		var s0 := e0 - ra * 0.5
 		var s1 := e1 - rb * 0.5
@@ -953,7 +959,7 @@ func _walks(walks: Array, out: Dictionary) -> void:
 			var ki := ai + rws[i] * KERB + up
 			var kj := bi + rws[i + 1] * KERB + up
 			_quad(kb, ai + up, bi + up, kj, ki, Vector3.UP, col, Vector2.ZERO, Vector2.ZERO, Vector2.ZERO, Vector2.ZERO, Vector2.ZERO)
-			var drop := Vector3(0, -0.4, 0)
+			var drop := Vector3(0, -0.7, 0)                # (to below the road even where the footpath is 0.55 up)
 			_quad(kb, ki, kj, kj + drop, ki + drop, rw, col, Vector2.ZERO, Vector2.ZERO, Vector2.ZERO, Vector2.ZERO, Vector2.ZERO)
 			faces.append_array([ai + up, bi + up, kj, ai + up, kj, ki])
 			if fl & 2 and not sep:
