@@ -46,6 +46,8 @@ static func paint_for(kind: String, rng: RandomNumberGenerator) -> Color:
 ## A recoloured model (wheels in place), +Z forward, standing on y = 0.
 static func model(kind: String, paint: Color) -> Node3D:
 	var path: String = DIR % MODEL[kind]
+	if kind == "auto" and ResourceLoader.exists(DIR % "auto2"):
+		path = DIR % "auto2"                    # the Sketchfab three-wheeler (tools/sketchfab_vehicles.py), its own paint
 	if not _scenes.has(path):
 		_scenes[path] = load(path)
 	var root := Node3D.new()

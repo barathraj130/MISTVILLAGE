@@ -159,7 +159,7 @@ func _ready() -> void:
 			add_child(traffic)
 		fines = Fines.new()
 		fines.load_wallet()
-		fines.persist = not ("--testdrive" in args or "--carshot" in args or "--trafficshot" in args)
+		fines.persist = not ("--testdrive" in args or "--carshot" in args or " ".join(args).contains("--trafficshot"))
 		hud = DriveHud.new()
 		hud.car = car
 		hud.fines = fines
@@ -577,7 +577,7 @@ func _process(dt: float) -> void:
 			_drive_camera(dt)
 		_daylight()
 		_red_light_check()
-		if "--trafficshot" in OS.get_cmdline_user_args():
+		if " ".join(OS.get_cmdline_user_args()).contains("--trafficshot"):
 			if int(t) != int(t - dt) and int(t) % 5 == 0:
 				var moving: int = traffic.vehicles.filter(func(v): return v["speed"] > 1.0).size()
 				var sp := 0.0
@@ -587,7 +587,13 @@ func _process(dt: float) -> void:
 					sp / maxf(1, traffic.vehicles.size()) * 3.6, Engine.get_frames_per_second()])
 			if t > 30.0 and shots_dir != "":
 				var near = null
+				var want := ""                          # --trafficshot=auto: the nearest of that kind
+				for a in OS.get_cmdline_user_args():
+					if a.begins_with("--trafficshot="):
+						want = a.get_slice("=", 1)
 				for v in traffic.vehicles:
+					if want != "" and v["kind"] != want:
+						continue
 					if near == null or v["pos"].distance_to(car.global_position) < near["pos"].distance_to(car.global_position):
 						near = v
 				if near != null:

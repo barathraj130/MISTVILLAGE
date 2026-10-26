@@ -54,6 +54,8 @@ const LIFE_CELL := 64.0
 const TREE_NEAR := 70.0                     # full trees this near (from their 64 m cell's centre), the far version beyond
 var life_far: Array = []                    # life kind → far Mesh or null (trees and bushes: veg_*_far)
 var life_meshes: Array = []                # life kind → Mesh (index.json life_kinds)
+var life_names: Array = []                 # life kind → name (index.json life_kinds, then our own extra kinds)
+var bhel_kind := -1                        # the snack cart (life_bhel.glb): it stands in for every third push cart
 var wire_mat: StandardMaterial3D
 var shrub_mesh: Mesh                       # planting on the medians
 var pier_mesh: Mesh                        # flyover pier and lamp (tools/flyover.py)
@@ -99,6 +101,12 @@ func _ready() -> void:
 		life_meshes.append(lm)
 		var far_path := "res://assets/city_props/%s_far.glb" % kname
 		life_far.append(_scene_mesh(far_path) if ResourceLoader.exists(far_path) else null)
+	life_names = index.get("life_kinds", []).duplicate()
+	if "cart" in life_names and ResourceLoader.exists("res://assets/city_props/life_bhel.glb"):
+		bhel_kind = life_meshes.size()
+		life_meshes.append(_with_lods(_scene_mesh("res://assets/city_props/life_bhel.glb")))
+		life_far.append(null)
+		life_names.append("bhel")
 	shrub_mesh = _gltf_mesh("res://assets/models/veg_hedgerow_bush_0_lod.gltf")
 	pier_mesh = _gltf_mesh("res://assets/city_props/flyover_pier.glb")
 	fly_lamp_mesh = _gltf_mesh("res://assets/city_props/flyover_lamp.glb")
@@ -1320,7 +1328,7 @@ void fragment() {
 ## Street life: one MultiMesh per kind; people, kolams and bikes only near, trees and poles further.
 func _life(life: Array, out: Dictionary, roads: Array = []) -> void:
 	var by := {}
-	var names0: Array = index.get("life_kinds", [])
+	var names0: Array = life_names
 	var segs := _road_segs(roads)
 	for rec in life:
 		var kind: int = rec[0]
@@ -1328,6 +1336,10 @@ func _life(life: Array, out: Dictionary, roads: Array = []) -> void:
 			continue
 		var v: PackedFloat32Array = rec[1]
 		var nm0: String = names0[kind] if kind < names0.size() else ""
+		if nm0 == "cart" and bhel_kind >= 0 and posmod(floori(v[0] * 7.0 + v[2] * 13.0), 3) == 0:
+			kind = bhel_kind                        # a bhel puri cart instead of fruit (the same spot each visit)
+			if OS.is_debug_build() and "--where=bhel" in OS.get_cmdline_user_args():
+				print("BHEL at %.1f,%.1f,%.1f" % [v[0], v[1], v[2]])
 		if nm0.begins_with("fleet_") or nm0.begins_with("bike_") or nm0 == "cart":
 			v = _park_on_road(v, segs, 1.3 if nm0 == "fleet_lorry" else (0.95 if nm0.begins_with("fleet_") else 0.45))
 		var a := v[3]
@@ -1339,7 +1351,7 @@ func _life(life: Array, out: Dictionary, roads: Array = []) -> void:
 			by[key] = []
 		by[key].append(Transform3D(bs, Vector3(v[0], v[1], v[2])))
 	var mms := []
-	var names: Array = index.get("life_kinds", [])
+	var names: Array = life_names
 	for key in by:
 		var kind: int = key.x
 		var mm := MultiMesh.new()
@@ -1365,9 +1377,9 @@ func _life(life: Array, out: Dictionary, roads: Array = []) -> void:
 		if nm.begins_with("veg_") or nm.begins_with("city_palm") or nm == "pole" or nm == "transformer":
 			far = 320.0
 		elif nm.begins_with("fleet") or nm.begins_with("stall") or nm.begins_with("shade") or nm.begins_with("flex") \
-				or nm == "shrine" or nm == "thatched":
+				or nm == "shrine" or nm == "thatched" or nm == "bhel":
 			far = 140.0
-		if nm.begins_with("fleet") or nm.begins_with("bike_") or nm == "cart":
+		if nm.begins_with("fleet") or nm.begins_with("bike_") or nm == "cart" or nm == "bhel":
 			mm.set_meta("lod_bias", 6.0)            # keep detail: a coarse level drops bodies and leaves floating wheels
 		mms.append([mm, far + LIFE_CELL * 0.71, 0.0])
 	out["life"] = mms
