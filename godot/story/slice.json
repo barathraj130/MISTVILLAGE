@@ -64,6 +64,30 @@
    "z": 631.7,
    "en": "Lawley Road junction",
    "ta": "லாலி ரோடு சந்திப்பு"
+  },
+  "lunch_murugan": {
+   "x": -646.5,
+   "z": -33.2,
+   "lat": 11.0186,
+   "lon": 76.96188,
+   "en": "Sri Murugan Mess, Gandhipuram",
+   "ta": "ஸ்ரீ முருகன் மெஸ், காந்திபுரம்"
+  },
+  "lunch_gowri": {
+   "x": -272.0,
+   "z": 203.6,
+   "lat": 11.01646,
+   "lon": 76.96531,
+   "en": "Gowri Meals Hall, Gandhipuram",
+   "ta": "கௌரி சாப்பாட்டு ஹால், காந்திபுரம்"
+  },
+  "lunch_kovai": {
+   "x": -232.8,
+   "z": 111.1,
+   "lat": 11.0173,
+   "lon": 76.96567,
+   "en": "Kovai Tiffin Centre, Gandhipuram",
+   "ta": "கோவை டிஃபன் சென்டர், காந்திபுரம்"
   }
  },
  "people": {
@@ -198,14 +222,56 @@
   {
    "do": "task",
    "task": "ready",
-   "tip_who": {
-    "en": "Amma's tip",
-    "ta": "அம்மா டிப்"
+   "chores": [
+    "alarm"
+   ]
+  },
+  {
+   "do": "home",
+   "room": "home",
+   "at": "home",
+   "start": "karthik_room",
+   "cast": {
+    "amma": {
+     "mark": "amma_kitchen"
+    },
+    "divya": {
+     "mark": "divya"
+    }
    },
-   "tip": {
-    "en": "Eat before you go. An empty stomach makes a careless driver.",
-    "ta": "சாப்பிட்டுட்டு போ. வெறும் வயிறு கவனக்குறைவான டிரைவரை உருவாக்கும்."
-   }
+   "visits": [
+    {
+     "to": "bathroom",
+     "task": "ready",
+     "chores": [
+      "brush",
+      "bath"
+     ],
+     "goal": {
+      "en": "Go to the bathroom: brush and bathe",
+      "ta": "பாத்ரூம் போங்க: பல் தேய்ச்சு குளிங்க"
+     },
+     "prompt": {
+      "en": "brush and bathe",
+      "ta": "பல் தேய்ச்சு குளிங்க"
+     }
+    },
+    {
+     "to": "wardrobe",
+     "task": "ready",
+     "chores": [
+      "dress"
+     ],
+     "goal": {
+      "en": "Get dressed: your shirts are on the hooks in your room",
+      "ta": "டிரஸ் பண்ணுங்க: உங்க ரூம்ல சட்டைகள்"
+     },
+     "prompt": {
+      "en": "pick a shirt",
+      "ta": "சட்டை எடுங்க"
+     }
+    }
+   ]
   },
   {
    "do": "room",
@@ -278,6 +344,71 @@
       "karthik": {
        "walk_mark": "door"
       }
+     }
+    }
+   ]
+  },
+  {
+   "do": "home",
+   "room": "home",
+   "at": "home",
+   "start": "karthik",
+   "late_after": "07:15",
+   "cast": {
+    "amma": {
+     "mark": "amma_kitchen"
+    }
+   },
+   "tip_who": {
+    "en": "Amma's tip",
+    "ta": "அம்மா டிப்"
+   },
+   "tip": {
+    "en": "Eat before you go. An empty stomach makes a careless driver.",
+    "ta": "சாப்பிட்டுட்டு போ. வெறும் வயிறு கவனக்குறைவான டிரைவரை உருவாக்கும்."
+   },
+   "visits": [
+    {
+     "to": "kitchen",
+     "task": "meal",
+     "home": true,
+     "home_meal": true,
+     "food": "idli",
+     "minutes": 12,
+     "title": {
+      "en": "Breakfast: Amma's idli",
+      "ta": "காலை சாப்பாடு: அம்மாவின் இட்லி"
+     },
+     "tip_who": {
+      "en": "Amma's tip",
+      "ta": "அம்மா டிப்"
+     },
+     "tip": {
+      "en": "Eat before you go. An empty stomach makes a careless driver.",
+      "ta": "சாப்பிட்டுட்டு போ. வெறும் வயிறு கவனக்குறைவான டிரைவரை உருவாக்கும்."
+     },
+     "goal": {
+      "en": "Breakfast: Amma is in the kitchen",
+      "ta": "காலை சாப்பாடு: அம்மா கிச்சன்ல இருக்காங்க"
+     },
+     "prompt": {
+      "en": "eat breakfast",
+      "ta": "சாப்பிடுங்க"
+     }
+    },
+    {
+     "to": "door_shelf",
+     "task": "ready",
+     "chores": [
+      "pocket"
+     ],
+     "goal": {
+      "en": "Your wallet, phone and keys: the shelf by the door",
+      "ta": "பர்ஸ், ஃபோன், சாவி: கதவு பக்கத்து ஷெல்ஃப்"
+     },
+     "prompt": {
+      "en": "take your things",
+      "ta": "எடுத்துக்கோங்க"
      }
     }
    ]
@@ -886,6 +1017,149 @@
   },
   {
    "do": "lapse",
+   "to": "13:05",
+   "secs": 4,
+   "cam": [
+    2.5,
+    2.4,
+    -10
+   ],
+   "look": [
+    -2.96,
+    6,
+    25
+   ]
+  },
+  {
+   "do": "eat_out",
+   "goal": {
+    "en": "Lunch break: find a place to eat nearby (get out and walk in)",
+    "ta": "மதிய சாப்பாடு: பக்கத்துல ஒரு இடம் தேடுங்க (இறங்கி உள்ளே போங்க)"
+   },
+   "eateries": [
+    "lunch_murugan",
+    "lunch_gowri",
+    "lunch_kovai",
+    "hotel"
+   ],
+   "minutes": 25,
+   "tip_who": {
+    "en": "A tip from the cashier",
+    "ta": "கேஷியர் டிப்"
+   },
+   "tip": {
+    "en": "Full meals are the best value if you're hungry: unlimited rice.",
+    "ta": "பசியா இருந்தா ஃபுல் மீல்ஸ் தான் லாபம்: சாதம் அளவில்லாம."
+   },
+   "menus": {
+    "lunch_murugan": [
+     {
+      "name": {
+       "en": "Full meals",
+       "ta": "ஃபுல் மீல்ஸ்"
+      },
+      "price": 120,
+      "food": "meals"
+     },
+     {
+      "name": {
+       "en": "Parotta & salna",
+       "ta": "பரோட்டா சால்னா"
+      },
+      "price": 70,
+      "food": "parotta"
+     },
+     {
+      "name": {
+       "en": "Curd rice",
+       "ta": "தயிர் சாதம்"
+      },
+      "price": 50,
+      "food": "curd_rice"
+     }
+    ],
+    "lunch_gowri": [
+     {
+      "name": {
+       "en": "Full meals",
+       "ta": "ஃபுல் மீல்ஸ்"
+      },
+      "price": 110,
+      "food": "meals"
+     },
+     {
+      "name": {
+       "en": "Mini meals",
+       "ta": "மினி மீல்ஸ்"
+      },
+      "price": 80,
+      "food": "meals"
+     },
+     {
+      "name": {
+       "en": "Curd rice",
+       "ta": "தயிர் சாதம்"
+      },
+      "price": 45,
+      "food": "curd_rice"
+     }
+    ],
+    "lunch_kovai": [
+     {
+      "name": {
+       "en": "Masala dosa",
+       "ta": "மசாலா தோசை"
+      },
+      "price": 65,
+      "food": "dosa"
+     },
+     {
+      "name": {
+       "en": "Idli vada",
+       "ta": "இட்லி வடை"
+      },
+      "price": 50,
+      "food": "idli"
+     },
+     {
+      "name": {
+       "en": "Parotta & salna",
+       "ta": "பரோட்டா சால்னா"
+      },
+      "price": 75,
+      "food": "parotta"
+     }
+    ],
+    "hotel": [
+     {
+      "name": {
+       "en": "Full meals",
+       "ta": "ஃபுல் மீல்ஸ்"
+      },
+      "price": 130,
+      "food": "meals"
+     },
+     {
+      "name": {
+       "en": "Parotta & salna",
+       "ta": "பரோட்டா சால்னா"
+      },
+      "price": 80,
+      "food": "parotta"
+     },
+     {
+      "name": {
+       "en": "Masala dosa",
+       "ta": "மசாலா தோசை"
+      },
+      "price": 70,
+      "food": "dosa"
+     }
+    ]
+   }
+  },
+  {
+   "do": "lapse",
    "to": "18:30",
    "secs": 6,
    "cam": [
@@ -1447,6 +1721,39 @@
     {
      "cam": "room",
      "dur": 3
+    }
+   ]
+  },
+  {
+   "do": "home",
+   "room": "home",
+   "at": "home",
+   "start": "karthik_room",
+   "cast": {
+    "amma": {
+     "mark": "amma_kitchen"
+    }
+   },
+   "visits": [
+    {
+     "to": "kitchen",
+     "task": "meal",
+     "home": true,
+     "home_meal": true,
+     "food": "dosa",
+     "minutes": 15,
+     "title": {
+      "en": "Dinner: Amma kept dosa for you",
+      "ta": "இரவு சாப்பாடு: அம்மா தோசை வச்சிருக்காங்க"
+     },
+     "goal": {
+      "en": "Dinner: Amma kept it warm in the kitchen",
+      "ta": "இரவு சாப்பாடு: அம்மா கிச்சன்ல சூடா வச்சிருக்காங்க"
+     },
+     "prompt": {
+      "en": "eat dinner",
+      "ta": "சாப்பிடுங்க"
+     }
     }
    ]
   },

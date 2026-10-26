@@ -178,6 +178,17 @@ def make_textures():
         gr[ys, xs] = c
         gr[np.clip(ys + 1, 0, n - 1), xs] = c
     T["granite_black"] = _save("granite_black", gr)
+    # bathroom: blue glazed wall tiles (10 cm), small grey anti-skid floor tiles
+    bt = _tint((0.55, 0.72, 0.85), n, 0.04, 31, 3)
+    for k in range(0, n, n // 6):
+        bt[k:k + 4, :] = (0.85, 0.88, 0.9)
+        bt[:, k:k + 4] = (0.85, 0.88, 0.9)
+    T["bath_tiles"] = _save("bath_tiles", bt)
+    bf = _tint((0.55, 0.56, 0.56), n, 0.08, 32, 4)
+    for k in range(0, n, n // 8):
+        bf[k:k + 4, :] = (0.35, 0.36, 0.36)
+        bf[:, k:k + 4] = (0.35, 0.36, 0.36)
+    T["bath_floor"] = _save("bath_floor", bf)
     # the bank's floor: grey-white speckled granite slabs, 1 per texture with a thin joint
     bg = _tint((0.74, 0.73, 0.71), n, 0.06, 9, 4)
     ys, xs = rng.integers(0, n, 20000), rng.integers(0, n, 20000)
@@ -411,7 +422,7 @@ def chair_poly(x, y, yaw, colour=None):
 def shell(w, d, h, floor, wall, ceiling, dado=None, dado_h=1.0, door_w=1.0, door_x=0.0, windows=()):
     """Floor, ceiling, four walls (a doorway in the front one at door_x), a painted dado band, skirting, and
     window openings: windows = [(wall 'L'|'R'|'B', centre along it, width, sill, height)] with bars and a
-    bright sky beyond."""
+    bright sky beyond; a sill of 0 makes it a doorway into a room beyond (no bars, no sky: a door frame)."""
     t = 0.12
     box((0, 0, -0.05), (w, d, 0.1), floor)
     box((0, 0, h + 0.05), (w, d, 0.1), ceiling)
@@ -426,6 +437,8 @@ def shell(w, d, h, floor, wall, ceiling, dado=None, dado_h=1.0, door_w=1.0, door
             segs.append((a, c - ww / 2))
             a = c + ww / 2
             for z0, z1 in ((0, sill), (sill + wh, h)):                     # under and over the window
+                if z1 - z0 < 0.01:
+                    continue
                 cc = Vector((pos[0], pos[1], (z0 + z1) / 2))
                 if along == "x":
                     cc.x = c
@@ -459,8 +472,13 @@ def shell(w, d, h, floor, wall, ceiling, dado=None, dado_h=1.0, door_w=1.0, door
         for side, (pos, sz, along) in walls.items():
             if along == "x":
                 box((0, pos[1] - t / 2 - 0.006, dado_h / 2), (w, 0.012, dado_h), dado)
-            else:
-                box((pos[0] + (t / 2 + 0.006) * (1 if pos[0] < 0 else -1), 0, dado_h / 2), (0.012, d, dado_h), dado)
+                continue
+            a = -d / 2                                                     # (broken at doorways)
+            for _, c, ww, sill, wh in sorted([wd for wd in windows if wd[0] == side and wd[3] <= 0.01], key=lambda wd: wd[1]):
+                if c - ww / 2 - a > 0.01:
+                    box((pos[0] + (t / 2 + 0.006) * (1 if pos[0] < 0 else -1), (a + c - ww / 2) / 2, dado_h / 2), (0.012, c - ww / 2 - a, dado_h), dado)
+                a = c + ww / 2
+            box((pos[0] + (t / 2 + 0.006) * (1 if pos[0] < 0 else -1), (a + d / 2) / 2, dado_h / 2), (0.012, d / 2 - a, dado_h), dado)
     # windows: frame, iron bars, open shutters, sky
     bars = mat("window_bars", (0.1, 0.12, 0.1), 0.4, 0.6)
     shutter = mat("shutter_green", (0.15, 0.4, 0.28), 0.5)
@@ -469,6 +487,12 @@ def shell(w, d, h, floor, wall, ceiling, dado=None, dado_h=1.0, door_w=1.0, door
         inward = Vector((0, -1, 0)) if side == "B" else (Vector((1, 0, 0)) if side == "L" else Vector((-1, 0, 0)))
         centre = Vector((c if along == "x" else pos[0], c if along == "y" else pos[1], sill + wh / 2))
         span = Vector((1, 0, 0)) if along == "x" else Vector((0, 1, 0))
+        if sill <= 0.01:                                               # a doorway: just its wooden frame
+            top_sz = (ww + 0.14, 0.18, 0.08) if along == "x" else (0.18, ww + 0.14, 0.08)
+            box(centre + Vector((0, 0, wh / 2 + 0.04)), top_sz, wood, 0.005)
+            for s in (-1, 1):
+                box(centre + span * s * (ww / 2 + 0.035), (0.07, 0.18, wh) if along == "x" else (0.18, 0.07, wh), wood, 0.005)
+            continue
         for k in range(int(ww / 0.12)):
             p = centre + span * (-ww / 2 + 0.06 + k * 0.12)
             box(p, (0.016, 0.016, wh) if True else None, bars)
@@ -577,6 +601,60 @@ def almirah(x, y, yaw=0.0, mirror=True):
 
 
 # ============================================================================ the rooms
+def bathroom(T, wall_x, door_y):
+    """The bathroom off the hall (beyond its left wall at wall_x, the doorway at door_y): a bucket bath room as in
+    any Coimbatore house: blue glazed tiles to shoulder height, a grey floor tiled to a drain, the tap low on the
+    wall with a bucket and mug under it, a low plastic stool, a shelf with soap and the toothbrush cup, a small
+    mirror, a high ventilator window, a bulb."""
+    w, d, h = 1.7, 1.7, H
+    x0 = wall_x - 0.06 - w / 2                                           # its centre
+    y0 = door_y
+    tile = mat("bath_tiles", (1, 1, 1), 0.15, tex=T["bath_tiles"], scale=0.6)
+    floor_t = mat("bath_floor", (1, 1, 1), 0.3, tex=T["bath_floor"], scale=0.6)
+    paint = mat("bath_paint", (0.86, 0.9, 0.9), 0.85)
+    box((x0, y0, -0.05), (w + 0.24, d + 0.24, 0.1), floor_t)
+    box((x0, y0, h + 0.05), (w + 0.24, d + 0.24, 0.1), paint)
+    t = 0.12
+    box((x0 - w / 2 - t / 2, y0, h / 2), (t, d + 2 * t, h), paint)               # the far wall
+    for s in (-1, 1):
+        box((x0, y0 + s * (d / 2 + t / 2), h / 2), (w, t, h), paint)
+    for s in (-1, 1):                                                    # the tiles, to shoulder height
+        box((x0, y0 + s * (d / 2 - 0.006), 0.8), (w, 0.012, 1.6), tile)
+    box((x0 - w / 2 + 0.006, y0, 0.8), (0.012, d, 1.6), tile)
+    box((x0 - w / 2 + 0.3, y0 - d / 2 + 0.3, 0.003), (0.12, 0.12, 0.006), mat("drain", (0.3, 0.3, 0.32), 0.3, 0.8))
+    steel = mat("steel", (0.74, 0.75, 0.77), 0.32, 0.55)
+    tap_x = x0 - w / 2 + 0.06
+    cyl((tap_x + 0.06, y0, 0.62), 0.016, 0.12, steel, 12, rot=(0, math.pi / 2, 0))     # the tap
+    cyl((tap_x + 0.11, y0, 0.58), 0.012, 0.08, steel, 12)
+    cyl((tap_x + 0.03, y0, 0.66), 0.025, 0.04, steel, 12, rot=(0, math.pi / 2, 0))
+    bucket = mat("bucket_blue", (0.12, 0.35, 0.75), 0.35)
+    cyl((tap_x + 0.28, y0, 0.2), 0.17, 0.4, bucket, 32, r2=0.21)
+    cyl((tap_x + 0.28, y0, 0.37), 0.195, 0.01, mat("water", (0.35, 0.6, 0.8), 0.05), 32)
+    mug = mat("mug_orange", (0.95, 0.4, 0.15), 0.35)
+    cyl((tap_x + 0.55, y0 + 0.28, 0.06), 0.06, 0.12, mug, 20)
+    stool = mat("plastic_red", (0.7, 0.1, 0.08), 0.4)
+    box((x0 + 0.1, y0 - 0.35, 0.22), (0.32, 0.32, 0.04), stool, 0.02)
+    for sx in (-1, 1):
+        for sy in (-1, 1):
+            box((x0 + 0.1 + sx * 0.13, y0 - 0.35 + sy * 0.13, 0.1), (0.03, 0.03, 0.2), stool)
+    shelf_y = y0 + d / 2 - 0.1
+    box((x0 - 0.2, shelf_y, 1.25), (0.5, 0.16, 0.02), mat("shelf_white", (0.95, 0.95, 0.93), 0.3), 0.004)
+    box((x0 - 0.35, shelf_y, 1.28), (0.09, 0.05, 0.03), mat("soap", (0.95, 0.62, 0.48), 0.4), 0.01)
+    cyl((x0 - 0.12, shelf_y, 1.31), 0.03, 0.1, mat("cup_green", (0.3, 0.65, 0.4), 0.3), 16)
+    for k in range(2):                                                   # toothbrushes in the cup
+        cyl((x0 - 0.13 + k * 0.02, shelf_y, 1.4), 0.004, 0.16, mat("brush_%d" % k, ((0.2, 0.5, 0.9), (0.9, 0.3, 0.3))[k], 0.3), 8, rot=(0.1 * (k - 0.5), 0, 0))
+    box((x0 - 0.2, shelf_y + 0.04, 1.6), (0.36, 0.01, 0.45), mat("mirror", (0.85, 0.88, 0.9), 0.02, 1.0))
+    box((x0 - 0.2, y0 - d / 2 - 0.0, 2.45), (0.5, 0.02, 0.3), mat("daylight", (1, 1, 1), 0.5, emit=(1.0, 0.98, 0.92), strength=2.2))   # the ventilator
+    for k in range(4):
+        box((x0 - 0.38 + k * 0.12, y0 - d / 2 + 0.01, 2.45), (0.02, 0.02, 0.3), mat("window_bars", (0.1, 0.12, 0.1), 0.4, 0.6))
+    cyl((x0, y0, h - 0.08), 0.04, 0.08, mat("bulb", (1, 1, 0.9), 0.3, emit=(1.0, 0.95, 0.85), strength=6), 16)
+    light("tube", (x0, y0, h - 0.3), 9)
+    # (the door: a plank door standing open into the bathroom)
+    box((wall_x - 0.06 - 0.02, y0 + 0.4 + 0.33, 1.05), (0.04, 0.68, 2.05), mat("door_teak", (1, 1, 1), 0.5,
+        tex=os.path.join(GTEX, "dark_timber_deck_base.jpg"), scale=1.0), 0.005, rot=(0, 0, 0.0))
+    shot("bathroom", (wall_x + 0.9, y0 - 0.1, 1.6), (x0 - 0.3, y0, 0.7))
+
+
 def home(T):
     W, D = 7.6, 6.0
     floor = mat("red_oxide", (1, 1, 1), 0.18, tex=T["red_oxide"], scale=2.0)
@@ -584,7 +662,9 @@ def home(T):
     dado = mat("dado_blue", (1, 1, 1), 0.3, tex=T["dado_blue"], scale=1.0)
     ceil = mat("ceiling_white", (0.93, 0.93, 0.9), 0.95)
     shell(W, D, H, floor, wall, ceil, dado, 1.0, door_w=1.0, door_x=-1.2,
-          windows=[("L", 0.6, 1.0, 0.9, 1.2), ("R", 1.6, 0.9, 0.9, 1.2), ("B", 2.6, 0.7, 1.1, 0.9)])
+          windows=[("L", 1.75, 0.9, 0.9, 1.2), ("R", 1.6, 0.9, 0.9, 1.2), ("B", 2.6, 0.7, 1.1, 0.9),
+                   ("L", -0.45, 0.8, 0.0, 2.1)])                           # the bathroom's doorway off the hall
+    bathroom(T, -W / 2 - 0.12, -0.45)
     # partitions: the hall (left), Karthik's room (right back), the kitchen (left back)
     part = wall
     box((1.4, 1.2, H / 2), (0.1, 3.6, H), part)                     # hall | Karthik's room, a doorway at y=-0.4
@@ -668,6 +748,18 @@ def home(T):
     mark("karthik", -1.1, -1.5, 0.0)
     mark("karthik_room", 2.3, 0.5, math.pi)
     mark("door", -1.2, -2.6, math.pi)
+    # the places Karthik walks to in the morning (story "home" visits)
+    mark("bathroom", -4.75, -0.45, -math.pi / 2)                          # inside, at the tap and bucket
+    mark("wardrobe", 3.15, -0.45, -math.pi / 2)                           # his shirts on the hooks
+    mark("kitchen", -1.95, 0.75, math.pi / 2)                             # at the kitchen doorway, Amma inside
+    mark("amma_kitchen", -3.0, 1.4, -math.pi / 2)
+    mark("door_shelf", -0.5, -2.35, math.pi)                              # the shelf by the door: wallet, phone, keys
+    box((-0.5, -D / 2 + 0.11, 1.05), (0.5, 0.18, 0.025), mat("timber", (1, 1, 1), 0.55), 0.004)
+    box((-0.62, -D / 2 + 0.11, 1.075), (0.11, 0.08, 0.02), mat("wallet_brown", (0.35, 0.2, 0.1), 0.6), 0.004)
+    box((-0.45, -D / 2 + 0.11, 1.07), (0.075, 0.15, 0.01), mat("phone_black", (0.02, 0.02, 0.025), 0.15), 0.003)
+    for k in range(2):                                                   # the keys on hooks below
+        cyl((-0.3 + k * 0.08, -D / 2 + 0.04, 0.95), 0.006, 0.03, mat("brass", (0.8, 0.6, 0.25), 0.3, 1.0), 8, rot=(math.pi / 2, 0, 0))
+        box((-0.3 + k * 0.08, -D / 2 + 0.06, 0.9), (0.02, 0.004, 0.06), mat("steel", (0.74, 0.75, 0.77), 0.32, 0.55))
     shot("wide", (0.45, -2.55, 2.2), (-1.6, 1.2, 1.0))
     shot("amma", (-1.0, -0.8, 1.55), (-1.5, 0.5, 1.5))
     shot("divya", (-1.0, 0.15, 1.5), (-0.5, -0.6, 1.4))
@@ -1386,6 +1478,13 @@ def preview(name, out_dir):
     sc.render.filepath = os.path.join(out_dir, "room_%s.jpg" % name)
     bpy.ops.render.render(write_still=True)
     print("PREVIEW", sc.render.filepath, flush=True)
+    be = bpy.data.objects.get("Cam_bathroom")                            # (the home: its bathroom too)
+    if be is not None:
+        cam.location = be.location
+        cam.rotation_euler = (bpy.data.objects["Look_bathroom"].location - be.location).to_track_quat('-Z', 'Y').to_euler()
+        sc.render.filepath = os.path.join(out_dir, "room_%s_bathroom.jpg" % name)
+        bpy.ops.render.render(write_still=True)
+        print("PREVIEW", sc.render.filepath, flush=True)
 
 
 def main():

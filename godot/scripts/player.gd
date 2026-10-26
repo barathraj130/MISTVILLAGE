@@ -24,6 +24,7 @@ var model: Node3D
 var anim: AnimationPlayer
 var _model_yaw := PI
 const AVATAR := "res://assets/people/person_man_shirt.glb"
+static var avatar := ""            # who you are on foot, when not the default (the story: Karthik himself)
 
 
 func _init() -> void:
@@ -51,8 +52,9 @@ func _init() -> void:
 	camera.far = 40000.0
 	camera.fov = 70.0
 	arm.add_child(camera)
-	if ResourceLoader.exists(AVATAR):
-		model = (load(AVATAR) as PackedScene).instantiate() as Node3D
+	var who := avatar if avatar != "" else AVATAR
+	if ResourceLoader.exists(who):
+		model = (load(who) as PackedScene).instantiate() as Node3D
 		model.rotation.y = _model_yaw
 		add_child(model)
 		anim = model.find_children("*", "AnimationPlayer", true, false)[0] as AnimationPlayer

@@ -22,6 +22,11 @@ extends Node
 ##             for the tasks and talk that follow, until a drive or a jump
 ##   lapse     time passing on screen: the camera holds on the street while the clock and the sky run to "to"
 ##   meet      someone standing at the place: get out (F), walk up and press E to talk
+##   home      walk the house yourself (the room, "room"/"at"): "visits" in order, each a place in it ("to": its
+##             mark) where E does that place's task (the bathroom: brush and bathe; the kitchen: a meal from the
+##             month's groceries...); a marker shows where to go next
+##   eat_out   find somewhere to eat: "eateries" (places) on the map; on foot at any door, E: its menu, paid from
+##             the wallet
 ##   free      free drive with a goal line, the end of the chapter
 ## Any step may have "when": flag / "unless": flag (results of earlier tasks) and is skipped otherwise; any line
 ## may "pay" an amount into the wallet when it's shown (a tip from the owner, a customer).
@@ -34,6 +39,7 @@ extends Node
 const Sim := preload("res://scripts/drive/sim.gd")
 const Tasks := preload("res://scripts/story/tasks.gd")
 const Actor := preload("res://scripts/story/actor.gd")
+const Walker := preload("res://scripts/player.gd")
 const CHAPTER := "res://story/slice.json"
 
 var city                            # city_test.gd: car placement, `placed`
@@ -76,6 +82,11 @@ var shot_t := 0.0
 var _dur := 3.0
 var _lapse := Vector2.ZERO          # (from, to) minutes
 var _e_down := false
+var _visit := 0                       # home: which visit of the house is next
+var _in_task := false                 # home / eat_out: a task is open
+var _ring: MeshInstance3D             # home: the marker on the floor where to go
+var _note := ""                       # home: a line under the goal for a few seconds (the car's HUD is off indoors)
+var _note_t := 0.0
 var room: Node3D                    # the room a scene is playing in, under the street
 var face_light: SpotLight3D         # a soft key light on whoever is speaking (close-ups)
 const ROOMS := "res://assets/interiors/room_%s.glb"
@@ -163,6 +174,10 @@ func _process(dt: float) -> void:
 				_advance_line()
 		"drive":
 			_drive(dt)
+		"home":
+			_home()
+		"eat_out":
+			_eat_out()
 		"comfort_verdict", "deliver_verdict":
 			if _skip and t_step > 1.2:
 				_advance_line()
@@ -231,7 +246,7 @@ func _next() -> void:
 	if cur.has("add_minutes") and fines:                # time that passes off screen (a ride on the scooter)
 		fines.sim.minute += float(cur["add_minutes"])
 	_jumped = false
-	if room != null and not str(cur["do"]) in ["room", "task", "talk", "comfort_verdict", "deliver_verdict", "card"]:
+	if room != null and not str(cur["do"]) in ["room", "task", "talk", "comfort_verdict", "deliver_verdict", "card", "home"]:
 		_unload_room()
 		_cams_back()
 	if cur.has("vehicle") and car.vehicle != str(cur["vehicle"]):     # (the night delivery is on his scooter)
@@ -285,6 +300,22 @@ func _next() -> void:
 			var a: Node3D = cast.get(cur["who"])
 			if a:
 				map.pin = Vector2(a.global_position.x, a.global_position.z)
+		"home":
+			_load_room(str(cur["room"]), str(cur.get("at", data["spawn"])))
+			_cast(cur.get("cast", {}))
+			_visit = 0
+			_in_task = false
+			_walk_in(str(cur.get("start", "karthik_room")))
+		"eat_out":
+			_in_task = false
+			var best := Vector3.INF
+			for k in cur["eateries"]:
+				var q := place_pos(str(k))
+				if best == Vector3.INF or q.distance_to(car.global_position) < best.distance_to(car.global_position):
+					best = q
+			map.pin = Vector2(best.x, best.z)
+			_beam.visible = true
+			_beam.global_position = Vector3(best.x, car.global_position.y + 30.0, best.z)
 		"deliver_verdict":
 			var k := "ontime" if on_time else "late"
 			var pay := int(cur["pay"][k])
@@ -683,8 +714,144 @@ func _task_done(result: Dictionary) -> void:
 		flags[k] = result[k]
 	if result.has("minutes") and fines:                 # chores take game time
 		fines.sim.minute += float(result["minutes"])
-	print("STORY task %s → %s" % [cur.get("task", ""), str(result)])
+	if int(result.get("paid", 0)) > 0 and fines:         # a meal out, from the wallet
+		fines.sim.money -= int(result["paid"])
+		hud.warn(("Paid  −₹%d" if lang == "en" else "கொடுத்தது  −₹%d") % int(result["paid"]), 4.0)
+	print("STORY task %s → %s" % [cur.get("task", cur.get("do", "")), str(result)])
+	_in_task = false
+	if str(cur.get("do", "")) == "home":
+		var v: Dictionary = cur["visits"][_visit]
+		if v.get("home_meal", false) and result.get("ate", false) and fines:   # a meal at home: the groceries
+			fines.sim.groceries = maxi(fines.sim.groceries - 1, 0)
+			_note = ("Groceries: %d meals left this month" if lang == "en" else "மளிகை: இந்த மாசம் இன்னும் %d வேளை") % fines.sim.groceries
+			_note_t = 5.0
+		_visit += 1
+		if _visit >= cur["visits"].size():
+			if cur.has("late_after") and fines:          # out of the house after this: late (for later steps)
+				var hm: PackedStringArray = str(cur["late_after"]).split(":")
+				flags["late_morning"] = fines.sim.minute > float(hm[0]) * 60.0 + float(hm[1])
+			_walk_out()
+			_next()
+		return
 	_next()
+
+
+## You on foot in the house: Karthik himself (the story cast's model), standing at a mark of the room.
+func _walk_in(at_mark: String) -> void:
+	var m := _mark(at_mark)
+	if m == null:
+		return
+	if city.walker == null:
+		Walker.avatar = "res://assets/people/story_karthik.glb"
+		city.walker = Walker.new()
+		city.walker.name = "OnFoot"
+		city.add_child(city.walker)
+		Walker.avatar = ""
+	city.walker.spawn_at(m.global_position + Vector3.UP * 0.1, m.global_position - m.global_basis.z)
+	city.walker.activate()
+	car.visible = false
+	car.freeze = true
+	_cams_back()
+	map.visible = false                                   # (no city map or speedometer indoors)
+	hud.visible = false
+	city.walker.camera.make_current()
+	if _ring == null:                                    # a soft ring on the floor where to go next
+		_ring = MeshInstance3D.new()
+		var tm := TorusMesh.new()
+		tm.inner_radius = 0.42
+		tm.outer_radius = 0.5
+		_ring.mesh = tm
+		var rm := StandardMaterial3D.new()
+		rm.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+		rm.albedo_color = Color(1.0, 0.8, 0.25)
+		rm.emission_enabled = true
+		rm.emission = Color(1.0, 0.75, 0.2)
+		_ring.material_override = rm
+		add_child(_ring)
+	_ring.visible = true
+
+
+func _walk_out() -> void:
+	if _ring:
+		_ring.visible = false
+	if city.walker:
+		city.walker.deactivate()
+		city.walker.queue_free()
+		city.walker = null
+	car.visible = true
+	car.freeze = false
+	map.visible = true
+	hud.visible = true
+	city.cam.make_current()
+
+
+## Walking the house: go to the next place (the ring), E there does what you came for.
+func _home() -> void:
+	if _in_task or city.walker == null:
+		return
+	var v: Dictionary = cur["visits"][_visit]
+	var m := _mark(str(v["to"]))
+	if m == null:
+		_task_done({})
+		return
+	var at := m.global_position
+	_ring.global_position = at + Vector3.UP * 0.03 + Vector3(0, sin(t_step * 4.0) * 0.02, 0)
+	var near := Vector2(city.walker.global_position.x - at.x, city.walker.global_position.z - at.z).length() < 1.1
+	var e := Input.is_key_pressed(KEY_E)
+	if (near and e and not _e_down) or (_skip and t_step > 0.8):
+		t_step = 0.0
+		_start_visit(v)
+	_e_down = e
+	_note_t -= get_process_delta_time()
+	goal.text = tr_(v["goal"]) + ("\n" + ("E: " if lang == "en" else "E: ") + tr_(v.get("prompt", {"en": "go", "ta": "போ"})) if near else "") \
+		+ ("\n" + _note if _note_t > 0.0 else "")
+
+
+func _start_visit(v: Dictionary) -> void:
+	_in_task = true
+	var spec: Dictionary = v.duplicate()
+	if v.get("home_meal", false) and fines and fines.sim.groceries <= 0:
+		# the month's groceries are finished: the next month's bought now (the kirana delivers)
+		fines.sim.money -= fines.sim.GROCERY_COST
+		fines.sim.groceries += fines.sim.GROCERY_MEALS
+		_note = ("Groceries finished: this month's bought  −₹%d" if lang == "en" else "மளிகை தீர்ந்துச்சு: இந்த மாச மளிகை  −₹%d") % fines.sim.GROCERY_COST
+		_note_t = 6.0
+	if fines:
+		spec["wallet"] = fines.sim.money
+	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
+	tasks.start(str(v.get("task", "ready")), spec, lang, _skip)
+
+
+## Somewhere to eat: on foot at the door of any of the eateries, E for the menu.
+func _eat_out() -> void:
+	if _in_task:
+		return
+	var here: Vector3 = city.walker.global_position if city.walker else car.global_position
+	var near_k := ""
+	for k in cur["eateries"]:
+		var q := place_pos(str(k))
+		if Vector2(here.x - q.x, here.z - q.z).length() < 8.0:
+			near_k = str(k)
+	var e := Input.is_key_pressed(KEY_E)
+	if (near_k != "" and city.walker != null and e and not _e_down) or (_skip and t_step > 1.0):
+		if near_k == "":
+			near_k = str(cur["eateries"][0])
+		_in_task = true
+		_beam.visible = false
+		map.pin = null
+		var spec: Dictionary = cur.duplicate()
+		spec["title"] = data["places"][near_k]
+		spec["menu"] = cur["menus"].get(near_k, cur["menus"].values()[0])
+		if fines:
+			spec["wallet"] = fines.sim.money
+		Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
+		tasks.start("meal", spec, lang, _skip)
+	_e_down = e
+	var hint := ""
+	if near_k != "":
+		hint = ("F: get out of the car" if lang == "en" else "F: காரை விட்டு இறங்குங்க") if city.walker == null else \
+			(("E: go in and eat at " if lang == "en" else "E: சாப்பிட உள்ளே போங்க: ") + tr_(data["places"][near_k]))
+	goal.text = tr_(cur["goal"]) + ("\n" + hint if hint != "" else "")
 
 
 func _advance_line() -> void:
@@ -911,8 +1078,8 @@ func _refresh() -> void:
 	big.visible = kind in ["card", "jump"]
 	small.visible = kind in ["card", "jump"]
 	box.visible = false
-	goal.visible = kind in ["drive", "free", "meet"]
-	clock.visible = kind in ["drive", "free", "talk", "comfort_verdict", "deliver_verdict", "task", "lapse", "meet"]
+	goal.visible = kind in ["drive", "free", "meet", "home", "eat_out"]
+	clock.visible = kind in ["drive", "free", "talk", "comfort_verdict", "deliver_verdict", "task", "lapse", "meet", "home", "eat_out"]
 	if step < 0:
 		big.visible = false                          # (no title shown: the story's name would give it away)
 		small.visible = true

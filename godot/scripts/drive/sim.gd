@@ -36,6 +36,11 @@ const HOURS := {
 var minute := START_MINUTE         # minute of the day
 var day := 1
 var money := START_MONEY
+## The household's food at home, in meals: the month's groceries (rice, dal, oil, vegetables, milk) bought at
+## once; every meal eaten at home uses one. Eating out is paid from the wallet instead.
+const GROCERY_MEALS := 90              # a month for the family, counted in Karthik's meals
+const GROCERY_COST := 4500             # the month's groceries at the kirana, rupees
+var groceries := 40                    # this month's, already half used when the story starts
 var fuel := START_FUEL * TANK_L    # litres
 var weather := "clear"
 var wx := {}                       # the blended weather now: cloud, rain, fog, grip
@@ -138,7 +143,7 @@ func daylight() -> float:
 
 # ----------------------------------------------------------------------------- save / load
 func save(extra: Dictionary) -> void:
-	var data := {"minute": minute, "day": day, "money": money, "fuel": fuel, "weather": weather,
+	var data := {"minute": minute, "day": day, "money": money, "fuel": fuel, "weather": weather, "groceries": groceries,
 		"saved_at": Time.get_datetime_string_from_system()}
 	data.merge(extra)
 	var f := FileAccess.open(SAVE_PATH, FileAccess.WRITE)
@@ -161,6 +166,7 @@ func load_save() -> Dictionary:
 	minute = float(data.get("minute", minute))
 	day = int(data.get("day", day))
 	money = int(data.get("money", money))
+	groceries = int(data.get("groceries", groceries))
 	fuel = clampf(float(data.get("fuel", fuel)), 0.0, TANK_L)
 	weather = String(data.get("weather", weather))
 	if not WEATHER.has(weather):

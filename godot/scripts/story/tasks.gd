@@ -9,6 +9,8 @@ extends Control
 ##   ready  getting ready in the morning, chore by chore (alarm, brush, bath, dress, breakfast, pockets), each a
 ##          small hands-on picture; every chore costs game minutes (result "minutes"), the shirt and whether you
 ##          reached for the cap are remembered
+##   meal   a meal: eating out, the menu with prices (paid from the wallet: result "paid"); at home, Amma's plate
+##          (from the month's groceries); then eat it, item by item, off the banana leaf
 ## Every task can carry a tip (advice from the owner, a boss, a hotel owner) shown above it.
 
 signal finished(result: Dictionary)
@@ -43,7 +45,8 @@ var _drag := false
 var _thing := Vector2.ZERO
 var _home := Vector2.ZERO
 # ready
-const CHORES := ["alarm", "brush", "bath", "dress", "eat", "pocket"]
+const ALL_CHORES := ["alarm", "brush", "bath", "dress", "eat", "pocket"]
+var chores: Array = ALL_CHORES                  # this visit's chores (the morning is walked: a few at each place)
 const CHORE_MIN := {"alarm": 0, "brush": 5, "bath": 12, "dress": 6, "eat": 12, "pocket": 3}
 var chore := 0
 var minutes := 0
@@ -53,6 +56,9 @@ var shirt := ""
 var reached_cap := false
 var _pocket_items := ["wallet", "phone", "scooter key", "house key"]
 var _drag_item := ""
+# meal
+var _meal_pick := -1                            # the dish chosen (-1: still reading the menu)
+var _eaten := {}
 var groom := preload("res://scripts/story/groom.gd").new()   # brushing and bathing as touch play
 # otp
 var _code := ""
@@ -75,12 +81,18 @@ func start(k: String, s: Dictionary, language: String, testing := false) -> void
 	_msg = ""
 	_answered = false
 	if kind == "ready":
+		chores = spec.get("chores", ALL_CHORES)
 		chore = 0
 		minutes = 0
 		_prog = 0.0
 		_picked = {}
 		shirt = ""
 		reached_cap = false
+		if not chores.is_empty() and chores[0] in ["brush", "bath"]:
+			groom.start(chores[0], _chore_rects()["area"], lang, self)
+	if kind == "meal":
+		_meal_pick = -1 if not spec.get("home", false) else 0
+		_eaten = {}
 	if kind == "count":
 		bundles.clear()
 		var short_i := int(spec.get("short", -1))
@@ -190,6 +202,8 @@ func _gui_input(e: InputEvent) -> void:
 				queue_redraw()
 		"ready":
 			_ready_input(e)
+		"meal":
+			_meal_input(e)
 		"phone":
 			if e is InputEventMouseButton and e.button_index == MOUSE_BUTTON_LEFT and e.pressed:
 				var ph := _phone()
@@ -217,7 +231,7 @@ func _unhandled_key_input(e: InputEvent) -> void:
 		elif e.keycode == KEY_BACKSPACE:
 			_otp_key("⌫")
 		accept_event()
-	elif kind == "ready" and e.keycode == KEY_Z and chore < CHORES.size() and CHORES[chore] == "bath":
+	elif kind == "ready" and e.keycode == KEY_Z and chore < chores.size() and chores[chore] == "bath":
 		groom.set_zoom(not groom.zoom)                  # the bath: whole, or close on his face
 		queue_redraw()
 		accept_event()
@@ -291,7 +305,7 @@ func _process(dt: float) -> void:
 		bundles[_counting]["counted"] = minf(bundles[_counting]["counted"] + dt / 1.1, 1.0)
 		if bundles[_counting]["counted"] >= 1.0:
 			_counting = -1
-	if kind == "ready" and chore < CHORES.size() and CHORES[chore] in ["brush", "bath"]:
+	if kind == "ready" and chore < chores.size() and chores[chore] in ["brush", "bath"]:
 		groom.area = _chore_rects()["area"]               # (the window may have changed size)
 		groom.process(dt)
 		if groom.said_new:
@@ -332,10 +346,15 @@ func _process(dt: float) -> void:
 			"phone":
 				if _t > 2.0:
 					_phone_answer(true)
+			"meal":
+				if _t > 2.2:
+					var menu: Array = spec.get("menu", [])
+					var price := 0 if spec.get("home", false) or menu.is_empty() else int(menu[0]["price"])
+					_done({"paid": price, "ate": true, "meal": str(spec.get("food", "meals")), "minutes": int(spec.get("minutes", 15))})
 			"ready":
 				if _t > 1.6:
 					_t = 1.0
-					if CHORES[chore] == "dress":
+					if chores[chore] == "dress":
 						shirt = "blue"
 					_next_chore()
 	queue_redraw()
@@ -370,6 +389,8 @@ func _draw() -> void:
 			_draw_otp(p)
 		"ready":
 			_draw_ready(p)
+		"meal":
+			_draw_meal(p)
 		"phone":
 			_draw_phone()
 	if _msg_t > 0.0 and _msg != "":
@@ -566,7 +587,7 @@ func _chore_rects() -> Dictionary:
 	var p := _panel()
 	var c := p.get_center() + Vector2(90, 10)
 	var out := {}
-	match CHORES[chore]:
+	match chores[chore]:
 		"alarm":
 			out["snooze"] = Rect2(c + Vector2(-230, 140), Vector2(200, 54))
 			out["up"] = Rect2(c + Vector2(30, 140), Vector2(200, 54))
@@ -588,7 +609,7 @@ func _chore_rects() -> Dictionary:
 
 func _ready_input(e: InputEvent) -> void:
 	var r := _chore_rects()
-	var ch: String = CHORES[chore]
+	var ch: String = chores[chore]
 	if ch == "brush" or ch == "bath":
 		groom.input(e)
 		queue_redraw()
@@ -641,17 +662,23 @@ func _ready_input(e: InputEvent) -> void:
 
 
 func _next_chore() -> void:
-	if chore >= CHORES.size():
+	if chore >= chores.size():
 		return
-	minutes += int(CHORE_MIN[CHORES[chore]])
+	minutes += int(CHORE_MIN[chores[chore]])
 	chore += 1
 	_prog = 0.0
 	_picked = {}
 	stage_changed.emit()
-	if chore < CHORES.size() and CHORES[chore] in ["brush", "bath"]:
-		groom.start(CHORES[chore], _chore_rects()["area"], lang, self)
-	if chore >= CHORES.size():
-		_done({"minutes": minutes, "shirt": shirt, "reached_cap": reached_cap, "late_morning": minutes > 45})
+	if chore < chores.size() and chores[chore] in ["brush", "bath"]:
+		groom.start(chores[chore], _chore_rects()["area"], lang, self)
+	if chore >= chores.size():
+		var res := {"minutes": minutes}                  # (only what this visit did: a later visit mustn't undo it)
+		if "dress" in chores:
+			res["shirt"] = shirt
+			res["reached_cap"] = reached_cap
+		if chores.size() == ALL_CHORES.size():
+			res["late_morning"] = minutes > 45
+		_done(res)
 	queue_redraw()
 
 
@@ -663,18 +690,18 @@ func _draw_ready(p: Rect2) -> void:
 	draw_rect(Rect2(p.end.x - 190, p.position.y + 40, 140, 120), Color(0.3, 0.45, 0.3), false, 6.0)
 	var names := {"alarm": L("Wake up", "எழுந்திரு"), "brush": L("Brush your teeth", "பல் தேய்"), "bath": L("Bath", "குளி"),
 		"dress": L("Get dressed", "டிரஸ் பண்ணு"), "eat": L("Breakfast", "சாப்பிடு"), "pocket": L("Wallet, phone, keys", "பர்ஸ், ஃபோன், சாவி")}
-	for i in CHORES.size():
+	for i in chores.size():
 		var y := p.position.y + 50 + i * 40
 		var col := GOOD if i < chore else (DARK if i == chore else Color(0.55, 0.55, 0.55))
-		_text(Vector2(p.position.x + 24, y), ("✔ " if i < chore else ("▸ " if i == chore else "   ")) + str(names[CHORES[i]]), 19, col)
+		_text(Vector2(p.position.x + 24, y), ("✔ " if i < chore else ("▸ " if i == chore else "   ")) + str(names[chores[i]]), 19, col)
 	var h := 6 * 60 + 30 + minutes
 	_text(Vector2(p.position.x + 24, p.end.y - 28), L("Clock: ", "நேரம்: ") + "%d:%02d AM" % [h / 60, h % 60] +
 		L("   (leave by 7:15)", "   (7:15-க்குள் கிளம்பணும்)"), 18, BAD if minutes > 45 else DARK)
-	if chore >= CHORES.size():
+	if chore >= chores.size():
 		return
 	var r := _chore_rects()
 	var c := p.get_center() + Vector2(90, 10)
-	match CHORES[chore]:
+	match chores[chore]:
 		"alarm":
 			draw_rect(Rect2(c - Vector2(110, 180), Vector2(220, 300)), Color(0.08, 0.08, 0.1))      # the phone
 			draw_rect(Rect2(c - Vector2(100, 170), Vector2(200, 280)), Color(0.15, 0.2, 0.35))
@@ -726,6 +753,107 @@ func _draw_ready(p: Rect2) -> void:
 				draw_rect(Rect2(at.position + Vector2(20, 10), at.size - Vector2(40, 30)), icol[it])
 				_text(Vector2(at.position.x - 10, at.end.y + 12), _item_name(it), 16, DARK, at.size.x + 20, HORIZONTAL_ALIGNMENT_CENTER)
 			_text(Vector2(c.x - 300, pk.end.y + 30), L("Drag everything into your pocket", "எல்லாத்தையும் பாக்கெட்டுக்குள்ள இழு"), 18, DARK, 600, HORIZONTAL_ALIGNMENT_CENTER)
+
+
+# ---- meals ----
+const FOOD_ITEMS := {"idli": ["idli", "idli", "idli", "idli", "vada"], "meals": ["rice", "sambar", "rasam", "poriyal", "kootu", "curd", "appalam"],
+	"parotta": ["parotta", "parotta", "salna", "egg"], "dosa": ["dosa", "chutney", "sambar"],
+	"curd_rice": ["curd rice", "pickle", "appalam"]}
+const FOOD_COL := {"idli": Color(0.97, 0.96, 0.9), "vada": Color(0.75, 0.5, 0.2), "rice": Color(0.97, 0.97, 0.94),
+	"sambar": Color(0.8, 0.45, 0.12), "rasam": Color(0.7, 0.25, 0.1), "poriyal": Color(0.45, 0.65, 0.25),
+	"kootu": Color(0.85, 0.75, 0.3), "curd": Color(0.98, 0.98, 0.96), "appalam": Color(0.95, 0.85, 0.55),
+	"parotta": Color(0.9, 0.75, 0.45), "salna": Color(0.65, 0.3, 0.1), "egg": Color(0.98, 0.95, 0.85),
+	"dosa": Color(0.88, 0.65, 0.3), "chutney": Color(0.95, 0.95, 0.85), "curd rice": Color(0.97, 0.97, 0.95),
+	"pickle": Color(0.75, 0.2, 0.1)}
+
+
+func _meal_food() -> String:
+	if spec.get("home", false):
+		return str(spec.get("food", "idli"))
+	var menu: Array = spec.get("menu", [])
+	return str(menu[_meal_pick].get("food", "meals")) if _meal_pick >= 0 and _meal_pick < menu.size() else "meals"
+
+
+func _meal_rects() -> Dictionary:
+	var p := _panel()
+	var c := p.get_center() + Vector2(0, 10)
+	var out := {}
+	if _meal_pick < 0:
+		var menu: Array = spec.get("menu", [])
+		for i in menu.size():
+			out["dish%d" % i] = Rect2(c + Vector2(-260, -150 + i * 78), Vector2(520, 64))
+		out["leave"] = Rect2(c + Vector2(-150, 180), Vector2(300, 44))
+	else:
+		var items: Array = FOOD_ITEMS[_meal_food()]
+		for i in items.size():
+			var a := TAU * float(i) / items.size() - PI * 0.5
+			out["item%d" % i] = Rect2(c + Vector2(cos(a) * 150, sin(a) * 110) - Vector2(48, 38), Vector2(96, 76))
+	return out
+
+
+func _meal_input(e: InputEvent) -> void:
+	if not (e is InputEventMouseButton and e.button_index == MOUSE_BUTTON_LEFT and e.pressed):
+		return
+	var r := _meal_rects()
+	if _meal_pick < 0:
+		var menu: Array = spec.get("menu", [])
+		for i in menu.size():
+			if r["dish%d" % i].has_point(e.position):
+				var price := int(menu[i].get("price", 0))
+				if price > int(spec.get("wallet", 1 << 30)):
+					_say(L("Not enough money for that.", "அதுக்கு பணம் போதாது."), BAD)
+					return
+				_meal_pick = i
+				_say(L("Paid ₹%d. Here's your plate." % price, "₹%d கொடுத்தாச்சு. இதோ சாப்பாடு." % price), GOOD)
+		if r["leave"].has_point(e.position):
+			_done({"paid": 0, "ate": false})
+		queue_redraw()
+		return
+	for k in r:
+		if r[k].has_point(e.position) and not _eaten.has(k):
+			_eaten[k] = true
+			if _eaten.size() == r.size():
+				var paid := 0
+				if not spec.get("home", false):
+					paid = int(spec["menu"][_meal_pick].get("price", 0))
+				_say(L("That was good.", "நல்லா இருந்துச்சு."), GOOD)
+				get_tree().create_timer(0.8).timeout.connect(func(): _done({"paid": paid, "ate": true,
+					"meal": _meal_food(), "minutes": int(spec.get("minutes", 15))}))
+	queue_redraw()
+
+
+func _draw_meal(p: Rect2) -> void:
+	draw_rect(p, Color(0.93, 0.9, 0.82) if spec.get("home", false) else Color(0.86, 0.9, 0.84))
+	var c := p.get_center() + Vector2(0, 10)
+	var r := _meal_rects()
+	_text(Vector2(p.position.x + 24, p.position.y + 40), t_(spec.get("title", {"en": "Meal", "ta": "சாப்பாடு"})), 24, DARK)
+	if spec.has("wallet") and not spec.get("home", false):
+		_text(Vector2(p.end.x - 260, p.position.y + 40), L("Wallet ", "பர்ஸ் ") + _rupees(int(spec["wallet"])), 20, DARK, 236, HORIZONTAL_ALIGNMENT_RIGHT)
+	if _meal_pick < 0:
+		var menu: Array = spec.get("menu", [])
+		draw_rect(Rect2(c + Vector2(-290, -190), Vector2(580, 340)), Color(0.08, 0.28, 0.16))           # the menu board
+		_text(c + Vector2(-290, -160), L("MENU", "மெனு"), 24, Color(1, 0.9, 0.5), 580, HORIZONTAL_ALIGNMENT_CENTER)
+		for i in menu.size():
+			var b: Rect2 = r["dish%d" % i]
+			draw_rect(b, Color(1, 1, 1, 0.08))
+			_text(b.position + Vector2(18, 41), t_(menu[i]["name"]), 22, Color(0.97, 0.97, 0.92))
+			_text(b.position + Vector2(0, 41), "₹%d" % int(menu[i]["price"]), 22, Color(1, 0.85, 0.4), b.size.x - 18, HORIZONTAL_ALIGNMENT_RIGHT)
+		_btn(r["leave"], L("Not hungry: leave", "பசியில்ல: போகலாம்"), true)
+		_text(Vector2(c.x - 300, c.y + 250), L("Pick a dish (you pay at the counter)", "ஒரு உணவை தேர்ந்தெடு (கவுண்டரில் பணம்)"), 18, DARK, 600, HORIZONTAL_ALIGNMENT_CENTER)
+		return
+	draw_circle(c + Vector2(0, -10), 210.0, Color(0.2, 0.45, 0.15))                   # the banana leaf
+	draw_line(c + Vector2(-200, -10), c + Vector2(200, -10), Color(0.35, 0.6, 0.25), 3.0)
+	var items: Array = FOOD_ITEMS[_meal_food()]
+	for i in items.size():
+		var k := "item%d" % i
+		if _eaten.has(k):
+			continue
+		var b: Rect2 = r[k]
+		var col: Color = FOOD_COL.get(items[i], Color.WHITE)
+		draw_circle(b.get_center(), 36.0, col)
+		draw_circle(b.get_center(), 36.0, col.darkened(0.25), false, 2.0)
+		_text(Vector2(b.position.x - 10, b.end.y + 14), str(items[i]), 15, DARK, b.size.x + 20, HORIZONTAL_ALIGNMENT_CENTER)
+	_text(Vector2(c.x - 300, c.y + 230), L("Click each thing to eat it", "ஒவ்வொன்றையும் கிளிக் பண்ணி சாப்பிடு"), 18, DARK, 600, HORIZONTAL_ALIGNMENT_CENTER)
 
 
 func _item_name(it: String) -> String:
