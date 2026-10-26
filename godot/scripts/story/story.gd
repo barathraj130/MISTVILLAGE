@@ -234,6 +234,8 @@ func _next() -> void:
 	if room != null and not str(cur["do"]) in ["room", "task", "talk", "comfort_verdict", "deliver_verdict", "card"]:
 		_unload_room()
 		_cams_back()
+	if cur.has("vehicle") and car.vehicle != str(cur["vehicle"]):     # (the night delivery is on his scooter)
+		car.configure(str(cur["vehicle"]))
 	match str(cur["do"]):
 		"drive":
 			var p := place_pos(cur["to"])

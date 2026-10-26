@@ -595,11 +595,20 @@ func _process(dt: float) -> void:
 				return
 		if "--carshot" in OS.get_cmdline_user_args() and t > 5.0:      # side view of the car (checking the model)
 			var ct := car.global_transform
-			cam.global_position = ct.origin + ct.basis.x * 5.0 + Vector3.UP * 1.0
-			cam.look_at(ct.origin + Vector3.UP * 0.6)
+			var two: bool = car.SPECS[car.vehicle].get("rider", false)          # a two-wheeler: closer, at the rider
+			cam.global_position = ct.origin + ct.basis.x * (2.6 if two else 5.0) + ct.basis.z * (0.8 if two else 0.0) + Vector3.UP * (1.2 if two else 1.0)
+			cam.look_at(ct.origin + Vector3.UP * (0.95 if two else 0.6))
 			if t > 6.0 and shots_dir != "":
 				get_viewport().get_texture().get_image().save_jpg(shots_dir + "/car.jpg", 0.85)
 				print("WHEELS %d %s" % [car._wheels.size(), str(car._wheels.map(func(w): return w.get_child_count()))])
+				if car._rider:
+					for ap in car._rider.find_children("*", "AnimationPlayer", true, false):
+						print("RIDER anim=%s playing=%s pos=%s" % [ap.current_animation, ap.is_playing(), str(car._rider.position)])
+					for sk in car._rider.find_children("*", "Skeleton3D", true, false):
+						var s3 := sk as Skeleton3D
+						for bn in ["thigh_l", "hand_l", "foot_l", "head"]:
+							var gp: Vector3 = car.global_transform.affine_inverse() * (s3.global_transform * s3.get_bone_global_pose(s3.find_bone(bn)).origin)
+							print("RIDER %s in scooter frame %s" % [bn, str(gp.snapped(Vector3.ONE * 0.01))])
 				get_tree().quit()
 			return
 		if "--testdrive" in OS.get_cmdline_user_args():          # self-test: accelerate, report, screenshot, quit

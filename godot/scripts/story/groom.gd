@@ -7,6 +7,8 @@ extends RefCounted
 ##          giggles); rinse the foam away with the mug; towel him dry
 ## tasks.gd owns the panel; it forwards input to `input()`, calls `process()` every frame and `draw()` from its
 ## own _draw, and moves on when `done` turns true.
+## With the pictures of tools/story_groom.py (assets/story/groom) it is the real Karthik: his own face rendered in
+## each expression, the real props; without them, a drawn stand-in.
 
 const SKIN := Color(0.8, 0.6, 0.45)
 const SKIN_DARK := Color(0.66, 0.46, 0.33)
@@ -50,6 +52,16 @@ var cells := {}                                 # bath: soaped body cells
 var beads: Array = []                           # bath: water beads on his skin, towelled off
 var sparkle := 0.0
 
+const DIR := "res://assets/story/groom/"
+const PROP_SIZE := {"brush": 230.0, "tube": 170.0, "tumbler": 120.0, "mug": 150.0, "soap": 120.0, "towel": 170.0}
+var real := false                               # the rendered pictures are there
+var pics := {}                                  # name -> Texture2D
+var meta := {}                                  # groom.json: the teeth (brush) and the head (bath), as fractions
+var mask: Image                                 # bath: white where he is (the framing on screen)
+var masks := {}                                 # "" (the whole of him) and "_close" (face and chest)
+var zoom := false                               # bath: the player's close framing (mouse wheel, Z, the button)
+var _cells_n := -1
+
 var _audio: AudioStreamPlayer
 var _scrub_snd: AudioStreamPlayer
 var _sounds := {}
@@ -71,6 +83,9 @@ func start(m: String, a: Rect2, language: String, host: Node) -> void:
 	sparkle = 0.0
 	_wait = 0.0
 	face = "normal"
+	zoom = false
+	_cells_n = -1
+	_load()
 	if mode == "brush":
 		stage = "paste"
 		stains.clear()
@@ -78,7 +93,8 @@ func start(m: String, a: Rect2, language: String, host: Node) -> void:
 		rng.seed = 7
 		for i in 9:                             # on the upper and lower rows of teeth
 			var up := i % 2 == 0
-			stains.append({"p": Vector2(rng.randf_range(-70, 70), -14.0 if up else 22.0), "r": rng.randf_range(11, 17), "dirt": 1.0})
+			stains.append({"p": Vector2(rng.randf_range(-70, 70), -14.0 if up else 22.0), "r": rng.randf_range(11, 17), "dirt": 1.0,
+				"u": Vector2(rng.randf_range(-0.7, 0.7), -0.3 if up else 0.32)})
 	else:
 		stage = "wet"
 	_say("")
@@ -91,6 +107,57 @@ func start(m: String, a: Rect2, language: String, host: Node) -> void:
 		host.add_child(_scrub_snd)
 		_sounds = {"pop": _tone(0.07, 900.0, 1600.0, 0.0), "ting": _tone(0.6, 2600.0, 2600.0, 0.0, true),
 			"splash": _noise(0.55, 0.5), "scrub": _noise(0.22, 0.12), "gargle": _gargle(1.1), "spit": _noise(0.25, 0.35)}
+
+
+## The rendered pictures, once (tools/story_groom.py).
+func _load() -> void:
+	if not pics.is_empty() or not FileAccess.file_exists(DIR + "groom.json"):
+		real = not pics.is_empty()
+		return
+	meta = JSON.parse_string(FileAccess.get_file_as_string(DIR + "groom.json"))
+	var names := ["brush_idle", "brush_blink", "brush_open", "brush_giggle", "brush_puff", "brush_spit", "brush_grin"]
+	for f in ["idle", "blink", "shiver", "giggle", "squeeze", "grin"]:
+		names += ["bath_%s_dry" % f, "bath_%s_wet" % f]
+	for n in names:
+		if ResourceLoader.exists(DIR + n + ".jpg"):
+			pics[n] = load(DIR + n + ".jpg")
+	for k in PROP_SIZE.keys() + ["brush_paste"]:
+		if ResourceLoader.exists(DIR + "prop_%s.png" % k):
+			pics["prop_" + k] = load(DIR + "prop_%s.png" % k)
+	for key in ["", "_close"]:
+		if ResourceLoader.exists(DIR + "bath_mask%s.png" % key):
+			var im := (load(DIR + "bath_mask%s.png" % key) as Texture2D).get_image()
+			if im.is_compressed():
+				im.decompress()
+			masks[key] = im
+	for f in ["idle", "blink", "shiver", "giggle", "squeeze", "grin"]:
+		for st in ["dry", "wet"]:
+			var n := "bath_%s_%s_close" % [f, st]
+			if ResourceLoader.exists(DIR + n + ".jpg"):
+				pics[n] = load(DIR + n + ".jpg")
+	mask = masks.get("", null)
+	real = pics.has("brush_open") and pics.has("bath_idle_dry") and mask != null
+
+
+func _frac(v: Variant) -> Vector2:              # a point given as fractions of the picture, on the screen
+	return area.position + Vector2(float(v[0]) * area.size.x, float(v[1]) * area.size.y)
+
+
+func _teeth() -> Rect2:
+	var r: Array = meta["brush"]["teeth"]
+	var a := _frac([r[0], r[1]])
+	return Rect2(a, _frac([r[2], r[3]]) - a)
+
+
+func _stain_at(s: Dictionary) -> Vector2:
+	if real:
+		var tr := _teeth()
+		return tr.get_center() + s["u"] * tr.size * 0.5
+	return _mouth() + s["p"]
+
+
+func _stain_r(s: Dictionary) -> float:
+	return _teeth().size.y * 0.16 * (float(s["r"]) / 14.0) if real else float(s["r"])
 
 
 func L(en: String, ta: String) -> String:
@@ -119,10 +186,14 @@ func _c() -> Vector2:
 
 
 func _mouth() -> Vector2:                       # brush: the open mouth's centre
+	if real:
+		return _teeth().get_center()
 	return _c() + Vector2(0, 92)
 
 
 func _head_c() -> Vector2:                      # bath: his head
+	if real:
+		return _frac(meta["bath"]["head" + _key()])
 	return _c() + Vector2(-60, -120)
 
 
@@ -185,7 +256,63 @@ func _tool_at(name: String) -> Vector2:
 	return hand if held == name else _tool_home(name)
 
 
+## The bath's two framings: "" (all of him) and "_close" (face and chest). Foam, beads and soaped cells are kept in
+## the whole picture's frame (offsets from its centre, in pixels) and shown in whichever framing is on screen.
+func _key() -> String:
+	return "_close" if zoom and _can_zoom() else ""
+
+
+func _can_zoom() -> bool:
+	return real and mode == "bath" and masks.has("_close") and meta.get("bath", {}).has("head_close")
+
+
+func _zk() -> float:                            # how much bigger things look close up
+	if _key() == "":
+		return 1.0
+	var b: Dictionary = meta["bath"]
+	return (float(b["hip_close"][1]) - float(b["head_close"][1])) / (float(b["hip"][1]) - float(b["head"][1]))
+
+
+func _w2s(rel: Vector2) -> Vector2:             # whole-picture offset -> the screen, in the framing shown
+	var pt := _c() + rel
+	if _key() == "":
+		return pt
+	var b: Dictionary = meta["bath"]
+	var u := (pt - area.position) / area.size
+	var hw := Vector2(float(b["head"][0]), float(b["head"][1]))
+	var hc := Vector2(float(b["head_close"][0]), float(b["head_close"][1]))
+	return area.position + (hc + (u - hw) * _zk()) * area.size
+
+
+func _s2w(p: Vector2) -> Vector2:               # the screen -> whole-picture offset
+	if _key() == "":
+		return p - _c()
+	var b: Dictionary = meta["bath"]
+	var u := (p - area.position) / area.size
+	var hw := Vector2(float(b["head"][0]), float(b["head"][1]))
+	var hc := Vector2(float(b["head_close"][0]), float(b["head_close"][1]))
+	return area.position + (hw + (u - hc) / _zk()) * area.size - _c()
+
+
+func _on_mask(im: Image, u: Vector2) -> bool:
+	if u.x < 0.0 or u.y < 0.0 or u.x >= 1.0 or u.y >= 1.0:
+		return false
+	return im.get_pixel(int(u.x * im.get_width()), int(u.y * im.get_height())).r > 0.5
+
+
+func _on_body_wide(rel: Vector2) -> bool:       # on him, by the whole picture (whatever is on screen)
+	if real:
+		return _on_mask(masks[""], (_c() + rel - area.position) / area.size)
+	return _on_body(_c() + rel)
+
+
+func _zoom_btn() -> Rect2:
+	return Rect2(area.end.x - 150, area.position.y + 10, 140, 34)
+
+
 func _on_body(p: Vector2) -> bool:              # bath: is p on him (head, torso, arms)?
+	if real:
+		return _on_mask(masks[_key()], (p - area.position) / area.size)
 	var h := _head_c()
 	if ((p - h) / Vector2(72, 84)).length() < 1.0:
 		return true
@@ -196,15 +323,19 @@ func _on_body(p: Vector2) -> bool:              # bath: is p on him (head, torso
 
 
 func _cell(p: Vector2) -> Vector2i:
-	return Vector2i(floori((p.x - _c().x) / 34.0), floori((p.y - _c().y) / 34.0))
+	var w := _s2w(p)
+	return Vector2i(floori(w.x / 34.0), floori(w.y / 34.0))
 
 
 func _body_cells() -> int:                      # how many soap cells his body has
+	if _cells_n >= 0:
+		return _cells_n
 	var n := 0
-	for x in range(-8, 4):
-		for y in range(-7, 6):
-			if _on_body(_c() + Vector2(x * 34 + 17, y * 34 + 17)):
+	for x in range(-12, 12):
+		for y in range(-8, 6):                       # head to knees (the shins needn't be soaped)
+			if _on_body_wide(Vector2(x * 34 + 17, y * 34 + 17)):
 				n += 1
+	_cells_n = n
 	return n
 
 
@@ -219,9 +350,15 @@ func input(e: InputEvent) -> void:
 		if down:
 			_rub(p, moved)
 		_last = p
+	elif e is InputEventMouseButton and e.pressed and e.button_index in [MOUSE_BUTTON_WHEEL_UP, MOUSE_BUTTON_WHEEL_DOWN]:
+		if _can_zoom():
+			set_zoom(e.button_index == MOUSE_BUTTON_WHEEL_UP)
 	elif e is InputEventMouseButton and e.button_index == MOUSE_BUTTON_LEFT:
 		hand = e.position
 		_last = hand
+		if e.pressed and _can_zoom() and _zoom_btn().has_point(hand):
+			set_zoom(not zoom)
+			return
 		if e.pressed:
 			down = true
 			for k in _tools():
@@ -234,6 +371,15 @@ func input(e: InputEvent) -> void:
 		else:
 			down = false
 			_let_go()
+
+
+## The bath seen whole or close up (the water in the air is let go: it was falling in the other framing).
+func set_zoom(on: bool) -> void:
+	if on == zoom or not _can_zoom():
+		return
+	zoom = on
+	drops.clear()
+	_play("pop")
 
 
 func _hint_wrong(k: String) -> void:
@@ -266,11 +412,12 @@ func _rub(p: Vector2, moved: float) -> void:
 	if moved <= 0.0:
 		return
 	if mode == "brush" and held == "brush" and stage == "scrub":
-		var tip := p + Vector2(-58, -6)            # the bristles are at the brush's left end
+		var tip := p if real else p + Vector2(-58, -6)    # the bristles: at the hand (real), the brush's left end (drawn)
 		var m := _mouth()
-		if ((tip - m) / Vector2(115, 62)).length() < 1.0:
+		var reach := _teeth().size * 0.7 if real else Vector2(115, 62)
+		if ((tip - m) / reach).length() < 1.0:
 			for s in stains:
-				if tip.distance_to(m + s["p"]) < s["r"] + 16.0:
+				if tip.distance_to(_stain_at(s)) < _stain_r(s) + 16.0:
 					s["dirt"] = maxf(s["dirt"] - moved / 260.0, 0.0)
 			if randf() < moved / 30.0 and foam.size() < 70:
 				var rel := tip - _c() + Vector2(randf_range(-14, 14), randf_range(-10, 10))
@@ -291,22 +438,22 @@ func _rub(p: Vector2, moved: float) -> void:
 				_say(L("Sparkling! Give him the tumbler to rinse.", "பளிச்! கொப்பளிக்க டம்ளரை கொடு."))
 	elif mode == "bath" and held == "soap" and stage == "soap" and _on_body(p):
 		var c := _cell(p)
-		if not cells.has(c):
+		if not cells.has(c) and c.y < 6:
 			cells[c] = true
 		if randf() < moved / 18.0 and foam.size() < 160:
-			foam.append({"p": p - _c() + Vector2(randf_range(-12, 12), randf_range(-12, 12)), "r": randf_range(9, 19), "w": randf() * TAU})
+			foam.append({"p": _s2w(p) + Vector2(randf_range(-12, 12), randf_range(-12, 12)) / _zk(), "r": randf_range(9, 19), "w": randf() * TAU})
 		if not _scrub_snd.playing:
 			_scrub_snd.stream = _sounds["scrub"]
 			_scrub_snd.play()
 		if face != "giggle" and randf() < 0.015:
 			_react("giggle", 1.0)
 			_say([L("Heehee! Stop, it tickles!", "ஹிஹி! போதும், கூச்சமா இருக்கு!"), L("Mysore sandal... nice.", "மைசூர் சாண்டல்... நல்லா இருக்கு.")][randi() % 2])
-		if float(cells.size()) / maxf(_body_cells(), 1) > 0.8:
+		if float(cells.size()) / maxf(_body_cells(), 1) > 0.7:
 			stage = "rinse"
 			_say(L("All soapy! Now rinse him with the mug.", "முழுக்க சோப்பு! இப்போ மக்கால கழுவு."))
 	elif mode == "bath" and held == "towel" and stage == "towel" and _on_body(p):
 		for i in range(beads.size() - 1, -1, -1):
-			if (beads[i]["p"] + _c()).distance_to(p) < 40.0:
+			if _w2s(beads[i]["p"]).distance_to(p) < 40.0 * _zk():
 				beads.remove_at(i)
 		wet = maxf(wet - moved / 1800.0, 0.0)
 		if beads.is_empty():
@@ -349,18 +496,20 @@ func process(dt: float) -> void:
 					_say(L("Now the soap — rub it all over.", "இப்போ சோப்பு — எல்லா இடத்துலயும் தேய்."))
 			elif stage == "rinse":
 				for j in range(foam.size() - 1, -1, -1):
-					if (foam[j]["p"] + _c()).distance_to(d["p"]) < 26.0:
+					if _w2s(foam[j]["p"]).distance_to(d["p"]) < 26.0 * _zk():
 						foam.remove_at(j)
 						if randf() < 0.3:
-							beads.append({"p": d["p"] - _c() + Vector2(randf_range(-10, 10), randf_range(-6, 6))})
+							beads.append({"p": _s2w(d["p"]) + Vector2(randf_range(-10, 10), randf_range(-6, 6))})
 				if face != "squeeze" and _face_t <= 0.0:
 					_react("squeeze", 0.8)
 				if foam.size() < 4:
 					foam.clear()
 					stage = "towel"
-					while beads.size() < 14:
-						var bp := Vector2(randf_range(-170, 40), randf_range(-170, 120))
-						if _on_body(bp + _c()):
+					var tries := 0
+					while beads.size() < 14 and tries < 2000:
+						tries += 1
+						var bp := Vector2(randf_range(-0.45, 0.45) * area.size.x, randf_range(-0.45, 0.45) * area.size.y)
+						if _on_body_wide(bp):
 							beads.append({"p": bp})
 					_say(L("Squeaky clean! Dry him with the towel.", "சுத்தம்! டவலால துடை."))
 		if d["life"] <= 0.0 or d["p"].y > area.end.y:
@@ -389,23 +538,38 @@ func process(dt: float) -> void:
 
 # ---- drawing ----
 func draw(ci: CanvasItem, font: Font) -> void:
-	ci.draw_rect(area, Color(0.82, 0.9, 0.93) if mode == "brush" else Color(0.74, 0.84, 0.86))
-	_tiles(ci)
-	if mode == "brush":
-		_draw_face(ci)
+	if real:
+		ci.draw_texture_rect(pics[_frame()], area, false)
+		if mode == "brush" and _frame() in ["brush_open", "brush_giggle"]:
+			for s in stains:                                 # the yellow on his teeth, fading as you scrub
+				if s["dirt"] > 0.02:
+					var col := Color(0.85, 0.68, 0.25, 0.6 * s["dirt"])
+					ci.draw_circle(_stain_at(s), _stain_r(s), col)
 	else:
-		_draw_bather(ci)
+		ci.draw_rect(area, Color(0.82, 0.9, 0.93) if mode == "brush" else Color(0.74, 0.84, 0.86))
+		_tiles(ci)
+		if mode == "brush":
+			_draw_face(ci)
+		else:
+			_draw_bather(ci)
+	var zk := _zk()
 	for f in foam:
-		var p: Vector2 = f["p"] + _c() + Vector2(sin(t * 3.0 + f["w"]), cos(t * 2.5 + f["w"])) * 1.5
-		ci.draw_circle(p, f["r"] + 1.5, FOAM_EDGE)
-		ci.draw_circle(p, f["r"], FOAM)
-		ci.draw_circle(p + Vector2(-f["r"] * 0.35, -f["r"] * 0.35), f["r"] * 0.25, Color(1, 1, 1, 0.9))
+		var p: Vector2 = _w2s(f["p"]) + Vector2(sin(t * 3.0 + f["w"]), cos(t * 2.5 + f["w"])) * 1.5
+		var r: float = f["r"] * zk
+		if not area.grow(-r).has_point(p):                   # (kept inside the picture)
+			continue
+		ci.draw_circle(p, r + 1.5, FOAM_EDGE)
+		ci.draw_circle(p, r, FOAM)
+		ci.draw_circle(p + Vector2(-r * 0.35, -r * 0.35), r * 0.25, Color(1, 1, 1, 0.9))
 	for b in beads:
-		var p: Vector2 = b["p"] + _c()
-		ci.draw_circle(p, 4.0, Color(0.7, 0.9, 1.0, 0.8))
-		ci.draw_circle(p + Vector2(-1.2, -1.2), 1.4, Color(1, 1, 1))
+		var p: Vector2 = _w2s(b["p"])
+		if not area.has_point(p):
+			continue
+		ci.draw_circle(p, 4.0 * zk, Color(0.7, 0.9, 1.0, 0.8))
+		ci.draw_circle(p + Vector2(-1.2, -1.2) * zk, 1.4 * zk, Color(1, 1, 1))
 	for d in drops:
-		ci.draw_line(d["p"], d["p"] - d["v"] * 0.02, WATER, 3.0)
+		if area.has_point(d["p"]) or not real:
+			ci.draw_line(d["p"], d["p"] - d["v"] * 0.02, WATER, 3.0)
 	if sparkle > 0.0:
 		for k in 5:
 			var a := float(k) / 5.0 * TAU + t
@@ -420,7 +584,41 @@ func draw(ci: CanvasItem, font: Font) -> void:
 	if act != "" and held == "" and _wait <= 0.0:          # a pulsing ring on what to pick up next
 		var r := 46.0 + 6.0 * sin(t * 6.0)
 		ci.draw_arc(_tool_home(act), r, 0, TAU, 40, Color(1, 0.85, 0.2, 0.9), 4.0)
+	if _can_zoom():                                          # the player's framing: all of him, or close on his face
+		var zb := _zoom_btn()
+		ci.draw_rect(zb, Color(0.1, 0.1, 0.12, 0.7))
+		ci.draw_string(font, zb.position + Vector2(0, 23), L("Zoom out (Z)", "தூரமா (Z)") if zoom else L("Zoom in (Z)", "அருகில் (Z)"),
+			HORIZONTAL_ALIGNMENT_CENTER, zb.size.x, 16, Color.WHITE)
 	ci.draw_string(font, Vector2(area.position.x, area.end.y + 24), _instruction(), HORIZONTAL_ALIGNMENT_CENTER, area.size.x, 17, INK)
+
+
+## Which picture of him, for what is happening now.
+func _frame() -> String:
+	if mode == "brush":
+		match face:
+			"puff":
+				return "brush_puff"
+			"spit":
+				return "brush_spit"
+			"grin":
+				return "brush_grin"
+			"giggle":
+				return "brush_giggle"
+		if stage == "scrub" or (stage == "rinse" and held == "tumbler"):
+			return "brush_open"
+		if stage == "shine":
+			return "brush_grin"
+		return "brush_blink" if _blink < 0.0 else "brush_idle"
+	var f := "idle"
+	match face:
+		"shiver", "giggle", "squeeze", "grin":
+			f = face
+		_:
+			if stage == "fresh":
+				f = "grin"
+			elif _blink < 0.0:
+				f = "blink"
+	return "bath_%s_%s%s" % [f, "wet" if wet > 0.3 or stage in ["soap", "rinse", "towel"] else "dry", _key()]
 
 
 func _instruction() -> String:
@@ -623,6 +821,17 @@ func _draw_bather(ci: CanvasItem) -> void:
 
 
 func _draw_tool(ci: CanvasItem, k: String, p: Vector2, using: bool) -> void:
+	if real and pics.has("prop_" + k):
+		var tex: Texture2D = pics["prop_brush_paste"] if k == "brush" and pasted and pics.has("prop_brush_paste") else pics["prop_" + k]
+		var sz: float = PROP_SIZE[k]
+		var at := p
+		if k == "brush" and held == "brush":                 # held: the bristles are where your hand is
+			at = p + Vector2(sz * 0.34, sz * 0.02)
+		var tilt := -0.9 if k == "mug" and using else 0.0
+		ci.draw_set_transform(at, tilt, Vector2.ONE)
+		ci.draw_texture_rect(tex, Rect2(Vector2(-sz, -sz) * 0.5, Vector2(sz, sz)), false)
+		ci.draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+		return
 	match k:
 		"brush":
 			ci.draw_rect(Rect2(p + Vector2(-60, -8), Vector2(130, 16)), Color(0.2, 0.55, 0.9))

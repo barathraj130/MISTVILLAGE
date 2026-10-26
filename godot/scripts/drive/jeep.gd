@@ -162,6 +162,14 @@ const SPECS := {
 	"delivery": {"name": "Delivery truck", "kenney": "delivery", "len": 5.2, "w": 1.95, "h": 2.3, "mass": 2400.0, "radius": 0.36, "torque": 0.8, "top": 32.0},
 	"tractor": {"name": "Tractor", "kenney": "tractor", "len": 3.9, "w": 1.9, "h": 2.4, "mass": 2500.0, "radius": 0.5, "torque": 1.0, "top": 9.0},
 	"bike": {"name": "Motorbike", "built": "bike", "len": 2.0, "w": 0.8, "h": 1.4, "mass": 230.0, "radius": 0.31, "torque": 0.16, "top": 26.0, "rider": true},
+	## Karthik's own scooter (tools/story_scooter.py) with him riding it in his helmet (the story's night delivery)
+	"karthik_scooter": {"name": "Karthik's scooter", "glb": "res://assets/vehicles/karthik_scooter.glb", "mass": 190.0,
+		"com": Vector3(0, 0.5, -0.1), "radius": 0.24, "rest": 0.12, "travel": 0.1, "stiff": 40.0, "torque": 0.11,
+		"top": 21.0, "seat": Vector3(0, 1.62, -0.2), "glass": "NoGlass", "head": ["Headlamp"], "tail": ["TailLamp"],
+		"lamp": Vector3(0.0, 1.02, 0.5), "boxes": [[Vector3(0.6, 0.9, 1.85), Vector3(0, 0.55, -0.15)]],
+		"ind": [Vector3(0.2, 0.9, 0.49), Vector3(0.135, 0.6, -0.9), Vector3(0.1, 0.5, -0.92)], "rider": true,
+		"two_wheeler": true, "rider_model": "story_karthik", "helmet": "res://assets/vehicles/helmet.glb",
+		"hip": Vector3(0, 0.945, -0.17)},
 	"scooter": {"name": "Scooter", "built": "scooter", "len": 1.8, "w": 0.75, "h": 1.4, "mass": 190.0, "radius": 0.25, "torque": 0.11, "top": 21.0, "rider": true},
 }
 const START_VEHICLE := "luxury_suv"
@@ -256,9 +264,12 @@ func configure(kind: String, paint := Color(0, 0, 0, 0)) -> void:
 		for c in _cab_parts:
 			c.visible = false
 		# a person on it: seated, feet on the pegs, hands on the bars
-		_rider = RiderPose.make(randi() % 7, 0.6 if kind == "bike" else 0.5)
+		if sp.has("rider_model"):
+			_rider = _story_rider(sp)
+		else:
+			_rider = RiderPose.make(randi() % 7, 0.6 if kind == "bike" else 0.5)
+			_rider.position = RiderPose.seat_offset(kind)
 		_rider.name = "Rider"
-		_rider.position = RiderPose.seat_offset(kind)
 		add_child(_rider)
 		seat = Vector3(0, 1.62, -0.2)
 	elif sp.get("interior", false):
@@ -476,6 +487,92 @@ func _build_glb_wheels(sp: Dictionary) -> void:
 		var xf: Transform3D = cw[1]
 		var w := _wheel(Vector3(xf.origin.x, xf.origin.y + sp["rest"], xf.origin.z), cw[2], sp)
 		w.add_child(cw[0])
+	if sp.get("two_wheeler", false) and not _coupe_wheels.is_empty():
+		# two wheels in line can't stand: a pair of unseen outriggers keeps it upright (an arcade scooter)
+		var y: float = (_coupe_wheels[0][1] as Transform3D).origin.y + float(sp["rest"])
+		for sx in [-0.32, 0.32]:
+			var o := _wheel(Vector3(sx, y, 0.0), false, sp)
+			o.use_as_traction = false
+
+
+## The story's own person riding (scripts/story people, the cast's "Ride" clip, tools/humans/story_cast.py): the
+## hips on the seat, and the helmet (tools/story_scooter.py) put on once the pose has settled.
+const HELMET_OFFSET := Vector3(0.0, 0.0385, -0.0112)      # from the head bone (tools/story_scooter.py prints it)
+const RIDE_HIP := Vector3(0.0, 0.9963, -0.0049)           # the person's hip point in the Ride pose
+
+func _story_rider(sp: Dictionary) -> Node3D:
+	var path := "res://assets/people/%s.glb" % sp["rider_model"]
+	var node := (load(path) as PackedScene).instantiate() as Node3D
+	var aps := node.find_children("*", "AnimationPlayer", true, false)
+	if not aps.is_empty():
+		var ap := aps[0] as AnimationPlayer
+		if ap.has_animation("Ride"):
+			ap.get_animation("Ride").loop_mode = Animation.LOOP_LINEAR
+			node.ready.connect(func() -> void: ap.play("Ride"))
+	var hip: Vector3 = sp["hip"]
+	node.position = hip - RIDE_HIP
+	for mi in node.find_children("*", "MeshInstance3D", true, false):
+		var m3 := mi as MeshInstance3D
+		for i in m3.mesh.get_surface_count():                # his hair dark (the export's hair texture is light)
+			var mat := m3.get_active_material(i)
+			if mat and mat.resource_name.to_lower().contains("short") and mat is BaseMaterial3D:
+				var dup := (mat as BaseMaterial3D).duplicate() as BaseMaterial3D
+				dup.albedo_color = Color(0.06, 0.05, 0.04)
+				m3.set_surface_override_material(i, dup)
+	node.ready.connect(func() -> void: get_tree().create_timer(0.15).timeout.connect(
+		_settle_rider.bind(node, hip, String(sp.get("helmet", "")))))
+	return node
+
+
+## Once the Ride pose is on: his hips exactly on the seat (measured from his own skeleton), then the helmet on.
+func _settle_rider(rider: Node3D, hip: Vector3, helmet: String) -> void:
+	if not is_instance_valid(rider):
+		return
+	var sks := rider.find_children("*", "Skeleton3D", true, false)
+	if sks.is_empty():
+		return
+	var sk := sks[0] as Skeleton3D
+	var l := sk.find_bone("thigh_l")
+	var r := sk.find_bone("thigh_r")
+	if l >= 0 and r >= 0:
+		var mid := (sk.get_bone_global_pose(l).origin + sk.get_bone_global_pose(r).origin) * 0.5
+		var at := global_transform.affine_inverse() * (sk.global_transform * mid)     # his hips, in the scooter's frame
+		rider.position += hip - at
+		rider.force_update_transform()
+	if helmet != "" and ResourceLoader.exists(helmet):
+		_put_on_helmet(rider, helmet)
+
+
+func _put_on_helmet(rider: Node3D, path: String) -> void:
+	if not is_instance_valid(rider):
+		return
+	var sks := rider.find_children("*", "Skeleton3D", true, false)
+	if sks.is_empty():
+		return
+	var sk := sks[0] as Skeleton3D
+	var bi := sk.find_bone("head")
+	if bi < 0:
+		return
+	var att := BoneAttachment3D.new()                      # the helmet moves with his head
+	att.bone_name = "head"
+	sk.add_child(att)
+	var hel := (load(path) as PackedScene).instantiate() as Node3D
+	att.add_child(hel)
+	for mi in hel.find_children("*", "MeshInstance3D", true, false):    # the shell's gloss-black paint (its Blender
+		var m3 := mi as MeshInstance3D                                   # colour is a shader the export can't carry)
+		for i in m3.mesh.get_surface_count():
+			var mat := m3.mesh.surface_get_material(i) as BaseMaterial3D
+			if mat and mat.resource_name.begins_with("Helmet Paint"):
+				var paint := mat.duplicate() as BaseMaterial3D
+				paint.albedo_color = Color(0.035, 0.035, 0.04)
+				paint.roughness = 0.2
+				paint.clearcoat_enabled = true
+				paint.clearcoat = 1.0
+				m3.set_surface_override_material(i, paint)
+	var bone := sk.get_bone_global_pose(bi)                 # (the attachment follows the bone from the next frame)
+	var head := sk.global_transform * bone
+	var want := Transform3D(rider.global_basis, head.origin + rider.global_basis * HELMET_OFFSET)
+	hel.transform = bone.affine_inverse() * (sk.global_transform.affine_inverse() * want)
 
 
 func _wheel(pos: Vector3, front: bool, sp: Dictionary) -> VehicleWheel3D:

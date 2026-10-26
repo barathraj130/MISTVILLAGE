@@ -308,6 +308,8 @@ def clip(arm, name, frames):
     act = bpy.data.actions.new(name)
     act.use_fake_user = True
     arm.animation_data_create()
+    for tr in arm.animation_data.nla_tracks:          # the clips made before this one must not shape its pose
+        tr.mute = True
     arm.animation_data.action = act
     for f, fn in frames:
         rest(arm)
@@ -368,12 +370,93 @@ def sit(a):
     turn(a, "lowerarm_r", 'X', -40)
 
 
+# ---- riding Karthik's scooter (tools/bikes_real.py FIT["scooter"]: X forward, Y left, Z up) ----
+RIDE = dict(hip=Vector((-0.17, 0.0, 0.945)), grip=Vector((0.335, 0.345, 1.05)), foot=Vector((0.14, 0.13, 0.338)), lean=6.0)
+CURL = 68.0
+
+
+def head_of(arm, name):
+    return arm.matrix_world @ arm.pose.bones[name].head
+
+
+def tail_of(arm, name):
+    return arm.matrix_world @ arm.pose.bones[name].tail
+
+
+def qturn(arm, name, q):
+    """Rotate a pose bone (and all below it) about its head by the world rotation q."""
+    pb = arm.pose.bones[name]
+    m = arm.matrix_world @ pb.matrix
+    t = m.translation.copy()
+    pb.matrix = arm.matrix_world.inverted() @ (Matrix.Translation(t) @ q.to_matrix().to_4x4() @ Matrix.Translation(-t) @ m)
+    bpy.context.view_layer.update()
+
+
+def aim(arm, name, tip, target):
+    p = head_of(arm, name)
+    qturn(arm, name, (tip() - p).rotation_difference(Vector(target) - p))
+
+
+def two_bone(root, target, l1, l2, pole):
+    d = target - root
+    dist = min(d.length, l1 + l2 - 1e-3)
+    n = d.normalized()
+    a = (l1 * l1 - l2 * l2 + dist * dist) / (2 * dist)
+    h = math.sqrt(max(l1 * l1 - a * a, 0.0))
+    return root + n * a + (pole - n * pole.dot(n)).normalized() * h
+
+
+def ride(a):
+    """Sitting on the scooter: hips on the seat (they stay where they are; the game puts the scooter under them),
+    back a little forward, head up, hands round the grips, feet flat on the floorboard."""
+    hip_h = (head_of(a, "thigh_l") + head_of(a, "thigh_r")) / 2
+
+    def to_h(p):                                       # a point of the scooter in the person's frame
+        d = Vector(p) - RIDE["hip"]
+        return hip_h + Vector((d.y, -d.x, d.z))
+    lean = math.radians(RIDE["lean"] + 4.0)
+    qturn(a, "spine_02", Quaternion((1, 0, 0), lean * 0.55))
+    qturn(a, "spine_03", Quaternion((1, 0, 0), lean * 0.45))
+    qturn(a, "neck_01", Quaternion((1, 0, 0), -lean * 0.9))
+    for side, sg in (("l", 1), ("r", -1)):
+        hj = head_of(a, "thigh_" + side)
+        kn0, an0 = head_of(a, "calf_" + side), head_of(a, "foot_" + side)
+        ankle = to_h(Vector((RIDE["foot"].x - 0.05, sg * RIDE["foot"].y, RIDE["foot"].z + 0.085)))
+        knee = two_bone(hj, ankle, (kn0 - hj).length, (an0 - kn0).length, Vector((sg * 0.25, -1.0, 0.35)))
+        aim(a, "thigh_" + side, lambda: head_of(a, "calf_" + side), knee)
+        aim(a, "calf_" + side, lambda: head_of(a, "foot_" + side), ankle)
+        aim(a, "foot_" + side, lambda: tail_of(a, "foot_" + side), ankle + Vector((sg * 0.02, -0.12, -0.06)))
+        sh = head_of(a, "upperarm_" + side)
+        el0, wr0 = head_of(a, "lowerarm_" + side), head_of(a, "hand_" + side)
+        grip = to_h(Vector((RIDE["grip"].x, sg * RIDE["grip"].y, RIDE["grip"].z)))
+        wrist = to_h(Vector((RIDE["grip"].x - 0.075, sg * (RIDE["grip"].y - 0.02), RIDE["grip"].z + 0.025)))
+        elbow = two_bone(sh, wrist, (el0 - sh).length, (wr0 - el0).length, Vector((sg * 1.0, 0.25, -0.9)))
+        aim(a, "upperarm_" + side, lambda: head_of(a, "lowerarm_" + side), elbow)
+        aim(a, "lowerarm_" + side, lambda: head_of(a, "hand_" + side), wrist)
+        mid = "middle_01_" + side
+        if mid in a.pose.bones:
+            aim(a, "hand_" + side, lambda: head_of(a, mid), grip + Vector((0, -0.025, 0.035)))
+        for f in ("index", "middle", "ring", "pinky"):               # the fingers closed round the grip
+            for j in (1, 2, 3):
+                bn = "%s_0%d_%s" % (f, j, side)
+                if bn in a.pose.bones:
+                    qturn(a, bn, Quaternion((1, 0, 0), math.radians(CURL * (0.8 if j == 1 else 1.0))))
+        for j in (1, 2, 3):                                           # the thumb wrapped under the grip
+            bn = "thumb_0%d_%s" % (j, side)
+            if bn in a.pose.bones:
+                qturn(a, bn, Quaternion((1, 0, 0), math.radians(40 if j > 1 else 25)))
+                qturn(a, bn, Quaternion((0, 0, 1), math.radians(-sg * 12)))
+
+
 def animate(arm):
     clip(arm, "Idle", [(1, lambda a: idle(a, -1)), (37, lambda a: idle(a, 1)), (73, lambda a: idle(a, -1))])
     clip(arm, "Talk", [(1, lambda a: talk(a, -1)), (13, lambda a: talk(a, 1)), (25, lambda a: talk(a, -0.4)),
                        (37, lambda a: talk(a, 1)), (49, lambda a: talk(a, -1))])
     clip(arm, "Walk", [(1 + 2 * k, (lambda kk: (lambda a: walk_phase(a, (kk % 12) / 12.0)))(k)) for k in range(13)])
     clip(arm, "Sit", [(1, sit), (25, sit)])
+    clip(arm, "Ride", [(1, ride), (25, ride)])
+    for tr in arm.animation_data.nla_tracks:
+        tr.mute = False
     rest(arm)
     arms_down(arm)
 

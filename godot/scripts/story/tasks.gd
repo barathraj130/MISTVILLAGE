@@ -217,6 +217,10 @@ func _unhandled_key_input(e: InputEvent) -> void:
 		elif e.keycode == KEY_BACKSPACE:
 			_otp_key("⌫")
 		accept_event()
+	elif kind == "ready" and e.keycode == KEY_Z and chore < CHORES.size() and CHORES[chore] == "bath":
+		groom.set_zoom(not groom.zoom)                  # the bath: whole, or close on his face
+		queue_redraw()
+		accept_event()
 	elif kind == "sign" and (e.keycode == KEY_ENTER or e.keycode == KEY_KP_ENTER) and _ink > 120.0:
 		_done({"signed": true, "strokes": strokes.size()})
 		accept_event()
