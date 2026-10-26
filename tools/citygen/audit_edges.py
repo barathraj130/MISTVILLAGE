@@ -28,7 +28,7 @@ from lib.tiles import read_tile  # noqa: E402
 KERB = 0.2                     # = chunk.py / city_streamer.gd KERB
 LIFT = 0.09                    # road surface above its centreline points (city_streamer.gd RANK + 0.06)
 EDGE_DN = 0.04                 # street-edge strips below the footpath line (city_streamer.gd _street_edge dn)
-KERB_UP, KERB_DROP = 0.02, 0.7  # kerb top over the footpath, its face's drop (city_streamer.gd _walks)
+KERB_UP, KERB_DROP = 0.02, 1.0  # kerb top over the footpath, its face's drop (city_streamer.gd _walks)
 FACE = 1.2
 NO_WALK = ("footway", "track")
 
@@ -109,10 +109,11 @@ def main():
                     continue
                 c["edge_samples"] += 1
                 ex, ez = m[0] + rx * (hw + KERB), m[2] + rz * (hw + KERB)      # where the road edge should be
-                h = tree.query_nearest(Point(ex, ez))
-                h = int(h[0]) if hasattr(h, "__len__") else int(h)
+                E = Point(ex, ez)                                    # the nearest road *edge* (a wide road beside a
+                hs = [int(q) for q in tree.query(E.buffer(12.0))] or [int(np.atleast_1d(tree.query_nearest(E))[0])]
+                h = min(hs, key=lambda q: roads[q][0].distance(E) - roads[q][1]["w"] * 0.5)    # narrow one counts)
                 line, r = roads[h]
-                d = line.distance(Point(ex, ez)) - r["w"] * 0.5
+                d = line.distance(E) - r["w"] * 0.5
                 ry = road_y(r["p"], line, ex, ez) + LIFT
                 where = "%.0f,%.0f" % (m[0], m[2])
                 if d > 0.3:

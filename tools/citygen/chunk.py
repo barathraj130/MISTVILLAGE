@@ -486,6 +486,55 @@ def run(cfg, roads_cfg):
     walkzone = shapely.buffer(lines2, np.array([q[2] for q in road_lines]) * 0.5 + KERB + WALK, cap_style="flat")
     wtree = STRtree(walkzone)
 
+    def tile_ground(cx, cz, t):
+        """The tile's ground as the game draws it (8 m grid): the satellite heights, carved under water, and lowered
+        to 0.3 below every road within half its width + 3 m (so the ground never pokes through a road)."""
+        gx = cx * TILE + np.arange(HN) * HSTEP
+        gz = cz * TILE + np.arange(HN) * HSTEP
+        X, Z = np.meshgrid(gx, gz)
+        H = height(X.ravel(), Z.ravel()).reshape(HN, HN).astype(np.float32)
+        wet = None
+        if btree is not None:
+            tb = shapely.box(cx * TILE - 40, cz * TILE - 40, (cx + 1) * TILE + 40, (cz + 1) * TILE + 40)
+            near = [bodies[q] for q in btree.query(tb) if bodies[q]["poly"].distance(tb) < WATER.reach(bodies[q])]
+            if near:
+                wet = WATER.carve(H, X, Z, near)
+                t["carved"] = 1
+        for cid, fl, w, pts, a0, ln, wi in t["roads"]:
+            reach = w * 0.5 + 3.0
+            for x, y, z in pts:
+                i0 = int(max(0, math.floor((z - cz * TILE - reach) / HSTEP)))
+                i1 = int(min(HN - 1, math.ceil((z - cz * TILE + reach) / HSTEP)))
+                j0 = int(max(0, math.floor((x - cx * TILE - reach) / HSTEP)))
+                j1 = int(min(HN - 1, math.ceil((x - cx * TILE + reach) / HSTEP)))
+                if i1 >= i0 and j1 >= j0:
+                    sub = H[i0:i1 + 1, j0:j1 + 1]
+                    np.minimum(sub, y - 0.3, out=sub)
+                    if wet is not None:                       # a road across water stands on a causeway
+                        ws = wet[i0:i1 + 1, j0:j1 + 1]
+                        sub[ws] = y - 0.3
+        return H
+
+    def mesh_h(x, z):
+        """The drawn ground's height at x, z: the same two triangles per 8 m cell as city_streamer.gd _ground."""
+        key = (int(math.floor(x / TILE)), int(math.floor(z / TILE)))
+        t = tiles.get(key)
+        if t is None or "H" not in t:
+            return float(height(np.array([x]), np.array([z]))[0])
+        H = t["H"]
+        fx = min(max((x - key[0] * TILE) / HSTEP, 0.0), HN - 1.0)
+        fz = min(max((z - key[1] * TILE) / HSTEP, 0.0), HN - 1.0)
+        j, i = min(int(fx), HN - 2), min(int(fz), HN - 2)
+        u, v = fx - j, fz - i
+        if u + v <= 1.0:
+            return float(H[i, j] + (H[i, j + 1] - H[i, j]) * u + (H[i + 1, j] - H[i, j]) * v)
+        return float(H[i + 1, j + 1] + (H[i + 1, j] - H[i + 1, j + 1]) * (1 - u) + (H[i, j + 1] - H[i + 1, j + 1]) * (1 - v))
+
+    t_g = time.time()
+    for (cx_, cz_), t in tiles.items():                         # the ground first: footpaths are set on it
+        t["H"] = tile_ground(cx_, cz_, t)
+    print("  ground → %d tiles (%ds)" % (len(tiles), time.time() - t_g), flush=True)
+
     def surface(ri, x, z):
         """top of the road ribbon at (x, z) on road ri (city_streamer.gd lifts each class a little)"""
         l2, l3, w, cls = road_lines[ri]
@@ -501,7 +550,7 @@ def run(cfg, roads_cfg):
             # a narrow kerbed median strip on its right
             median = road_oneway[ri] and s > 0
             ww = MEDIAN if median else WALK
-            off = shapely.offset_curve(l2, s * (w * 0.5 + KERB + ww * 0.5), join_style="mitre", mitre_limit=2.0)
+            off = shapely.offset_curve(l2, s * (w * 0.5 + KERB + ww * 0.5), join_style="round", quad_segs=4)   # round: mitred bends swung out
             if off.is_empty:
                 continue
             hits = [h for h in ctree2.query(off, predicate="intersects") if h != ri]
@@ -517,9 +566,7 @@ def run(cfg, roads_cfg):
                 ry = np.array([max([surface(ri, x, z)] + [surface(h, x, z) for h in
                                wtree.query(Point(x, z), predicate="dwithin", distance=0.3) if road_lines[h][3] not in NO_WALK])
                                for x, z in c])
-                gy = height(c[:, 0], c[:, 1])
-                y = np.clip(np.maximum(ry + 0.15, gy + 0.05), ry + 0.15, ry + 0.55) + 0.004 * (ri % 5)
-                pts = np.column_stack([c[:, 0], y, c[:, 1]]).astype(np.float32)
+                gy = np.array([mesh_h(x, z) for x, z in c])         # the ground as drawn (lowered beside roads)
                 # offset_curve keeps the line's direction: a left (+) offset has the road on its right
                 fl = (1 if mainr else 0) | (2 if mainr or cls == "tertiary" else 0) | (4 if s > 0 else 0)
                 # a strip squeezed between this road and another one just beyond it: a kerbed separator, not a footpath
@@ -531,6 +578,15 @@ def run(cfg, roads_cfg):
                 else:
                     mx, mz = float(c[len(c) // 2][0]), float(c[len(c) // 2][1])
                     fl |= LIFE.TYPES.index(LIFE.street_type(cls, mx, mz, near_kinds(mx, mz))) << 4
+                if (fl >> 4) & 7 >= 4 and not fl & 8:
+                    # a street without a footpath: its edge strip (drawn 0.04 under this line) lies flush with the
+                    # road, raised only where the drawn ground beside it stands higher
+                    y = np.clip(gy + 0.08, ry + 0.06, ry + 0.3)
+                else:
+                    # a footpath: a kerb's height over the road, more where the ground behind is higher (0.55 at most)
+                    y = np.clip(np.maximum(ry + 0.15, gy + 0.05), ry + 0.15, ry + 0.55)
+                y = y + 0.004 * (ri % 5)
+                pts = np.column_stack([c[:, 0], y, c[:, 1]]).astype(np.float32)
                 cid = classes.index(cls) if cls in classes else 0
                 keys = [(int(math.floor((pts[i, 0] + pts[i + 1, 0]) * 0.5 / TILE)), int(math.floor((pts[i, 2] + pts[i + 1, 2]) * 0.5 / TILE)))
                         for i in range(len(pts) - 1)]
@@ -828,30 +884,8 @@ def run(cfg, roads_cfg):
     for key in WATER.tile_keys(bodies, TILE):                 # water needs ground round it, even in empty tiles
         tile(key)
     for (cx, cz), t in tiles.items():
-        gx = cx * TILE + np.arange(HN) * HSTEP
-        gz = cz * TILE + np.arange(HN) * HSTEP
-        X, Z = np.meshgrid(gx, gz)
-        H = height(X.ravel(), Z.ravel()).reshape(HN, HN).astype(np.float32)
-        wet = None
-        if btree is not None:
-            tb = shapely.box(cx * TILE - 40, cz * TILE - 40, (cx + 1) * TILE + 40, (cz + 1) * TILE + 40)
-            near = [bodies[q] for q in btree.query(tb) if bodies[q]["poly"].distance(tb) < WATER.reach(bodies[q])]
-            if near:
-                wet = WATER.carve(H, X, Z, near)
-                n_carved += 1
-        for cid, fl, w, pts, a0, ln, wi in t["roads"]:
-            reach = w * 0.5 + 3.0
-            for x, y, z in pts:
-                i0 = int(max(0, math.floor((z - cz * TILE - reach) / HSTEP)))
-                i1 = int(min(HN - 1, math.ceil((z - cz * TILE + reach) / HSTEP)))
-                j0 = int(max(0, math.floor((x - cx * TILE - reach) / HSTEP)))
-                j1 = int(min(HN - 1, math.ceil((x - cx * TILE + reach) / HSTEP)))
-                if i1 >= i0 and j1 >= j0:
-                    sub = H[i0:i1 + 1, j0:j1 + 1]
-                    np.minimum(sub, y - 0.3, out=sub)
-                    if wet is not None:                       # a road across water stands on a causeway
-                        ws = wet[i0:i1 + 1, j0:j1 + 1]
-                        sub[ws] = y - 0.3
+        H = t["H"] if "H" in t else tile_ground(cx, cz, t)
+        n_carved += t.get("carved", 0)
         buf = bytearray(b"CBE6")
         buf += struct.pack("<iii", cx, cz, HN)
         buf += H.astype("<f4").tobytes()
@@ -912,6 +946,8 @@ def run(cfg, roads_cfg):
     shutil.rmtree(old, ignore_errors=True)
     import resignal                                     # signals at the big junctions OSM has not tagged
     resignal.main()
+    import clearprops                                   # signals and shelters that landed on a road: to the kerb
+    clearprops.main()
     size = sum(os.path.getsize(os.path.join(out, "chunks", n)) for n in os.listdir(os.path.join(out, "chunks")))
     print("CHUNK %d tiles, %d road pieces, %d buildings (%d designed), %.1f MB, %ds" % (
         len(tiles), n_pieces, sum(len(t["blds"]) for t in tiles.values()), n_kit, size / 1e6, time.time() - t0))

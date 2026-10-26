@@ -103,7 +103,10 @@ def main():
                 hit = [h for h in tree.query(strip, predicate="intersects") if strip.intersection(carr[h]).area > 0.3]
                 if hit:
                     c["walk_on_road"] += 1
-            # kerb: footpath top at least 10 cm above every carriageway beside it
+            # kerb: footpath top at least 10 cm above every carriageway beside it (streets without a footpath have a
+            # flush edge strip instead: street types 4-7)
+            if (w["fl"] >> 4) & 7 >= 4 and not w["fl"] & 8:
+                continue
             mid = p[len(p) // 2]
             P = Point(mid[0], mid[2])
             hs = [surface(h, P) for h in near_carr(P.buffer(w["w"] * 0.5 + 0.6))]

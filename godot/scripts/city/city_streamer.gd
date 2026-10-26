@@ -986,7 +986,8 @@ func _walks(walks: Array, out: Dictionary, g: Array) -> void:
 			var ki := ai + rws[i] * KERB + up
 			var kj := bi + rws[i + 1] * KERB + up
 			_quad(kb, ai + up, bi + up, kj, ki, Vector3.UP, col, Vector2.ZERO, Vector2.ZERO, Vector2.ZERO, Vector2.ZERO, Vector2.ZERO)
-			var drop := Vector3(0, -0.7, 0)                # (to below the road even where the footpath is 0.55 up)
+			var drop := Vector3(0, -1.0, 0)                # (below the road even where the footpath is 0.55 up, or the
+			                                               # road beside it lies lower at a junction)
 			_quad(kb, ki, kj, kj + drop, ki + drop, rw, col, Vector2.ZERO, Vector2.ZERO, Vector2.ZERO, Vector2.ZERO, Vector2.ZERO)
 			faces.append_array([ai + up, bi + up, kj, ai + up, kj, ki])
 			if fl & 2 and not sep:
