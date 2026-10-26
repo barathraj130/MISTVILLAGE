@@ -423,7 +423,7 @@ def chair_poly(x, y, yaw, colour=None):
 SF = {}                                                                  # one import per prop (and per room)
 
 
-def _sketchfab_mesh(path, drop, keep, decimate, recolour):
+def _sketchfab_mesh(path, drop, keep, decimate, recolour, paint=()):
     """Import a Sketchfab glb once: its meshes (less `drop`, or only `keep`) baked into one mesh, thinned, its
     textures no bigger than 512 px (they're small things in the room). The objects go; the mesh stays for sketchfab() to copy."""
     before = set(bpy.data.objects)
@@ -454,6 +454,9 @@ def _sketchfab_mesh(path, drop, keep, decimate, recolour):
                     b.inputs["Base Color"].default_value = (*colour[:3], 1)
                     if len(colour) > 3:
                         b.inputs["Metallic"].default_value = colour[3]
+            for part, x0, y0, x1, y1, dx in paint:
+                if ms.material and part == ms.material.name:
+                    _paint_over(ms.material, x0, y0, x1, y1, dx)
             if ms.material and ms.material.use_nodes:
                 for n in ms.material.node_tree.nodes:
                     im = getattr(n, "image", None)
@@ -468,18 +471,38 @@ def _sketchfab_mesh(path, drop, keep, decimate, recolour):
     bpy.data.objects.remove(ob, do_unlink=True)
     return me
 
-def sketchfab(name, loc, size, yaw=0.0, drop=(), keep=None, by="height", decimate=1200, recolour=None):
+def _paint_over(m, x0, y0, x1, y1, dx):
+    """Cover a patch of a material's textures (colour, shine, bumps) with the texture dx pixels to its right (once per
+    image)."""
+    for n in m.node_tree.nodes:
+        im = getattr(n, "image", None)
+        if im is None or im.get("painted_%d_%d" % (x0, y0)):
+            continue
+        w, h = im.size
+        px = np.empty(w * h * 4, dtype=np.float32)
+        im.pixels.foreach_get(px)
+        px = px.reshape(h, w, 4)
+        r0, r1 = h - y1, h - y0                                          # Blender rows start at the bottom
+        px[r0:r1, x0:x1] = px[r0:r1, x0 + dx:x1 + dx]
+        im.pixels.foreach_set(px.ravel())
+        im.update()
+        im["painted_%d_%d" % (x0, y0)] = True
+
+
+def sketchfab(name, loc, size, yaw=0.0, drop=(), keep=None, by="height", decimate=1200, recolour=None, paint=()):
     """A Sketchfab prop (mapdata/sketchfab/props/<name>.glb) joined into one mesh, its feet at loc, scaled so its
     height (by="height") or widest side (by="width") is `size` metres. drop / keep: mesh-name parts to leave out or
     to keep only (a model's table, its backdrop). Meshes over `decimate` triangles are thinned. recolour: {material
-    name part: colour} for models that came without textures. Returns None (and the caller builds its own) if the
+    name part: colour} for models that came without textures. paint: (material name part, x0, y0, x1, y1, dx) patches
+of its textures (pixels, from the top left) covered with the paint dx pixels to the right: a brand name or
+logo out (the game has no real brands). Returns None (and the caller builds its own) if the
     file isn't on this machine."""
     path = os.path.join(SKETCHFAB, name + ".glb")
     if not os.path.exists(path):
         return None
-    key = (name, tuple(drop), tuple(keep or ()), tuple(sorted((recolour or {}).items())))
+    key = (name, tuple(drop), tuple(keep or ()), tuple(sorted((recolour or {}).items())), tuple(paint))
     if key not in SF:
-        SF[key] = _sketchfab_mesh(path, drop, keep, decimate, recolour)
+        SF[key] = _sketchfab_mesh(path, drop, keep, decimate, recolour, paint)
     ob = _link(bpy.data.objects.new("Prop_" + name, SF[key].copy()))     # copies share the materials and images
     vs = [v.co for v in ob.data.vertices]
     lo = Vector([min(v[i] for v in vs) for i in range(3)])
@@ -798,7 +821,8 @@ def home(T):
     box((-3.3, 2.6, 0.9), (0.62, 0.38, 0.08), steel, 0.01)
     for s in (-1, 1):
         cyl((-3.3 + s * 0.15, 2.6, 0.95), 0.07, 0.02, black, 16)
-    if sketchfab("indane_gas_cylinder_-_low_poly", (-2.66, 2.06, 0.0), 0.68, yaw=2.4) is None:
+    unbrand = (("Cylinder_1", 245, 65, 412, 325, 185), ("Cylinder_1", 240, 595, 412, 825, 185))   # its maker's name and logo
+    if sketchfab("indane_gas_cylinder_-_low_poly", (-2.66, 2.06, 0.0), 0.68, yaw=2.4, paint=unbrand) is None:
         cyl((-3.3, 2.55, 0.3), 0.15, 0.55, mat("cylinder_red", (0.7, 0.08, 0.06), 0.35), 20)
     cyl((-2.75, 2.2, 0.75), 0.006, 0.3, mat("hose_black", (0.05, 0.05, 0.05), 0.6), 8, rot=(0.9, 0, 0.5))   # the hose up to the stove
     box((-3.1, 2.84, 1.55), (1.2, 0.25, 0.03), wood)
