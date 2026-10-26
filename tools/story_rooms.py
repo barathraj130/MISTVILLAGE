@@ -19,7 +19,7 @@ Empties for the game: Entry / Exit, Mark_<who> (a person's spot, facing the empt
 (planned cameras), Light_tube_* / Light_window_* / Light_lamp_* (where the room's light comes from).
 Blender -Y is the room's front (the door), so in Godot the door faces +Z.
 
-    Blender -b --factory-startup --python tools/story_rooms.py -- [names...] [--preview previews/rooms]
+    Blender -b --factory-startup --python tools/story_rooms.py -- [names...] [--preview previews/rooms] [--no-export]
 """
 import math
 import os
@@ -37,6 +37,7 @@ TEX = os.path.join(OUT, "tex")
 GTEX = os.path.join(ROOT, "godot", "assets", "models", "textures")
 DTEX = os.path.join(ROOT, "godot", "assets", "drive", "tex")
 CHAIR = os.path.join(ROOT, "mapdata", "polyhaven", "plastic_monobloc_chair_01", "plastic_monobloc_chair_01.gltf")
+SKETCHFAB = os.path.join(ROOT, "mapdata", "sketchfab", "props")    # CC-BY models, credited in docs/DATA_SOURCES.md
 H = 3.0                       # ceiling height (houses); offices and the bank set their own
 
 
@@ -418,6 +419,77 @@ def chair_poly(x, y, yaw, colour=None):
     box((x, y, 0.44), (0.44, 0.42, 0.04), mat("plastic_red", (0.7, 0.1, 0.08), 0.4), 0.01)
 
 
+
+SF = {}                                                                  # one import per prop (and per room)
+
+
+def _sketchfab_mesh(path, drop, keep, decimate, recolour):
+    """Import a Sketchfab glb once: its meshes (less `drop`, or only `keep`) baked into one mesh, thinned, its
+    textures no bigger than 512 px (they're small things in the room). The objects go; the mesh stays for sketchfab() to copy."""
+    before = set(bpy.data.objects)
+    bpy.ops.import_scene.gltf(filepath=path)
+    new = [o for o in bpy.data.objects if o not in before]
+    meshes = [o for o in new if o.type == 'MESH' and not any(d in o.name for d in drop)
+              and (keep is None or any(k in o.name for k in keep))]
+    for o in meshes:                                                     # bake the model's own transforms in first
+        o.data = o.data.copy()
+        o.data.transform(o.matrix_world)
+    for o in new:
+        if o not in meshes:
+            bpy.data.objects.remove(o, do_unlink=True)
+    bpy.ops.object.select_all(action='DESELECT')
+    for o in meshes:
+        o.parent = None
+        o.matrix_world = Matrix.Identity(4)
+        tris = sum(len(f.vertices) - 2 for f in o.data.polygons)
+        if tris > decimate:
+            md = o.modifiers.new("thin", 'DECIMATE')
+            md.ratio = decimate / tris
+            bpy.context.view_layer.objects.active = o
+            bpy.ops.object.modifier_apply(modifier=md.name)
+        for ms in o.material_slots:
+            for part, colour in (recolour or {}).items():
+                if ms.material and part in ms.material.name:
+                    b = ms.material.node_tree.nodes.get("Principled BSDF")
+                    b.inputs["Base Color"].default_value = (*colour[:3], 1)
+                    if len(colour) > 3:
+                        b.inputs["Metallic"].default_value = colour[3]
+            if ms.material and ms.material.use_nodes:
+                for n in ms.material.node_tree.nodes:
+                    im = getattr(n, "image", None)
+                    if im is not None and max(im.size) > 512:
+                        im.scale(*(max(1, v * 512 // max(im.size)) for v in im.size))
+        o.select_set(True)
+    bpy.context.view_layer.objects.active = meshes[0]
+    if len(meshes) > 1:
+        bpy.ops.object.join()
+    ob = bpy.context.view_layer.objects.active
+    me = ob.data
+    bpy.data.objects.remove(ob, do_unlink=True)
+    return me
+
+def sketchfab(name, loc, size, yaw=0.0, drop=(), keep=None, by="height", decimate=1200, recolour=None):
+    """A Sketchfab prop (mapdata/sketchfab/props/<name>.glb) joined into one mesh, its feet at loc, scaled so its
+    height (by="height") or widest side (by="width") is `size` metres. drop / keep: mesh-name parts to leave out or
+    to keep only (a model's table, its backdrop). Meshes over `decimate` triangles are thinned. recolour: {material
+    name part: colour} for models that came without textures. Returns None (and the caller builds its own) if the
+    file isn't on this machine."""
+    path = os.path.join(SKETCHFAB, name + ".glb")
+    if not os.path.exists(path):
+        return None
+    key = (name, tuple(drop), tuple(keep or ()), tuple(sorted((recolour or {}).items())))
+    if key not in SF:
+        SF[key] = _sketchfab_mesh(path, drop, keep, decimate, recolour)
+    ob = _link(bpy.data.objects.new("Prop_" + name, SF[key].copy()))     # copies share the materials and images
+    vs = [v.co for v in ob.data.vertices]
+    lo = Vector([min(v[i] for v in vs) for i in range(3)])
+    hi = Vector([max(v[i] for v in vs) for i in range(3)])
+    k = size / ((hi - lo).z if by == "height" else max((hi - lo).x, (hi - lo).y))
+    centre = Vector(((lo.x + hi.x) / 2, (lo.y + hi.y) / 2, lo.z))
+    ob.data.transform(Matrix.Translation(loc) @ Matrix.Rotation(yaw, 4, 'Z') @ Matrix.Scale(k, 4) @ Matrix.Translation(-centre))
+    return ob
+
+
 # ---- furniture pieces ----
 def shell(w, d, h, floor, wall, ceiling, dado=None, dado_h=1.0, door_w=1.0, door_x=0.0, windows=()):
     """Floor, ceiling, four walls (a doorway in the front one at door_x), a painted dado band, skirting, and
@@ -550,6 +622,10 @@ def tube_light(x, y, z, along_x=True, k=0):
 
 
 def ceiling_fan(x, y, h):
+    fan = sketchfab("ceiling_fan_lp", (x, y, h - 0.62), 1.2, by="width", decimate=4000)
+    if fan is not None:
+        cyl((x, y, h - 0.2), 0.012, 0.4, mat("steel", (0.74, 0.75, 0.77), 0.32, 0.55), 8)   # the down-rod
+        return
     white = mat("fan_white", (0.9, 0.9, 0.88), 0.4)
     cyl((x, y, h - 0.25), 0.015, 0.5, mat("steel", (0.74, 0.75, 0.77), 0.32, 0.55), 8)
     cyl((x, y, h - 0.55), 0.11, 0.1, white, 20)
@@ -627,9 +703,9 @@ def bathroom(T, wall_x, door_y):
     cyl((tap_x + 0.06, y0, 0.62), 0.016, 0.12, steel, 12, rot=(0, math.pi / 2, 0))     # the tap
     cyl((tap_x + 0.11, y0, 0.58), 0.012, 0.08, steel, 12)
     cyl((tap_x + 0.03, y0, 0.66), 0.025, 0.04, steel, 12, rot=(0, math.pi / 2, 0))
-    bucket = mat("bucket_blue", (0.12, 0.35, 0.75), 0.35)
-    cyl((tap_x + 0.28, y0, 0.2), 0.17, 0.4, bucket, 32, r2=0.21)
-    cyl((tap_x + 0.28, y0, 0.37), 0.195, 0.01, mat("water", (0.35, 0.6, 0.8), 0.05), 32)
+    if sketchfab("plastic_bucket", (tap_x + 0.3, y0, 0.0), 0.4, yaw=0.6) is None:
+        cyl((tap_x + 0.28, y0, 0.2), 0.17, 0.4, mat("bucket_blue", (0.12, 0.35, 0.75), 0.35), 32, r2=0.21)
+    cyl((tap_x + 0.3, y0, 0.33), 0.19, 0.01, mat("water", (0.35, 0.6, 0.8), 0.05), 32)
     mug = mat("mug_orange", (0.95, 0.4, 0.15), 0.35)
     cyl((tap_x + 0.55, y0 + 0.28, 0.06), 0.06, 0.12, mug, 20)
     stool = mat("plastic_red", (0.7, 0.1, 0.08), 0.4)
@@ -640,7 +716,10 @@ def bathroom(T, wall_x, door_y):
     shelf_y = y0 + d / 2 - 0.1
     box((x0 - 0.2, shelf_y, 1.25), (0.5, 0.16, 0.02), mat("shelf_white", (0.95, 0.95, 0.93), 0.3), 0.004)
     box((x0 - 0.35, shelf_y, 1.28), (0.09, 0.05, 0.03), mat("soap", (0.95, 0.62, 0.48), 0.4), 0.01)
-    cyl((x0 - 0.12, shelf_y, 1.31), 0.03, 0.1, mat("cup_green", (0.3, 0.65, 0.4), 0.3), 16)
+    ceramic = {"ceramic": (0.93, 0.93, 0.9), "metal": (0.74, 0.75, 0.77, 0.8)}
+    if sketchfab("basic_bathroom_accessories", (x0 - 0.12, shelf_y, 1.26), 0.1, keep=("toothbrushHolder",), recolour=ceramic) is None:
+        cyl((x0 - 0.12, shelf_y, 1.31), 0.03, 0.1, mat("cup_green", (0.3, 0.65, 0.4), 0.3), 16)
+    sketchfab("basic_bathroom_accessories", (x0 - 0.02, shelf_y, 1.26), 0.15, keep=("soapDispenser",), recolour=ceramic)
     for k in range(2):                                                   # toothbrushes in the cup
         cyl((x0 - 0.13 + k * 0.02, shelf_y, 1.4), 0.004, 0.16, mat("brush_%d" % k, ((0.2, 0.5, 0.9), (0.9, 0.3, 0.3))[k], 0.3), 8, rot=(0.1 * (k - 0.5), 0, 0))
     box((x0 - 0.2, shelf_y + 0.04, 1.6), (0.36, 0.01, 0.45), mat("mirror", (0.85, 0.88, 0.9), 0.02, 1.0))
@@ -719,7 +798,9 @@ def home(T):
     box((-3.3, 2.6, 0.9), (0.62, 0.38, 0.08), steel, 0.01)
     for s in (-1, 1):
         cyl((-3.3 + s * 0.15, 2.6, 0.95), 0.07, 0.02, black, 16)
-    cyl((-3.3, 2.55, 0.3), 0.15, 0.55, mat("cylinder_red", (0.7, 0.08, 0.06), 0.35), 20)
+    if sketchfab("indane_gas_cylinder_-_low_poly", (-2.66, 2.06, 0.0), 0.68, yaw=2.4) is None:
+        cyl((-3.3, 2.55, 0.3), 0.15, 0.55, mat("cylinder_red", (0.7, 0.08, 0.06), 0.35), 20)
+    cyl((-2.75, 2.2, 0.75), 0.006, 0.3, mat("hose_black", (0.05, 0.05, 0.05), 0.6), 8, rot=(0.9, 0, 0.5))   # the hose up to the stove
     box((-3.1, 2.84, 1.55), (1.2, 0.25, 0.03), wood)
     for k in range(5):
         cyl((-3.6 + k * 0.25, 2.84, 1.68), 0.09, 0.22, steel, 16)
@@ -767,6 +848,7 @@ def home(T):
     shot("photos", (-0.7, 1.4, 1.65), (-0.7, D / 2, 1.9))
     shot("room", (1.9, -1.8, 1.9), (2.8, 1.0, 0.8))
     shot("kitchen", (-2.65, 0.45, 1.8), (-3.3, 2.6, 1.0))
+    shot("breakfast", (-0.7, 0.4, 1.3), (-1.6, 1.5, 0.2))
 
 
 def dev_office(T):
@@ -956,6 +1038,7 @@ def mess(T):
     mark("door", 0.0, -3.0, 0.0)
     shot("counter", (1.8, -3.2, 1.6), (3.3, -2.0, 1.45))
     shot("wide", (-4.0, -3.0, 2.3), (1.0, 1.0, 1.0))
+    shot("table", (0.9, -2.7, 1.5), (0.0, -1.6, 0.75))
 
 
 def police(T):
@@ -1255,6 +1338,8 @@ def home_detail(T):
     cyl((-1.9, 1.7, 0.53), 0.13, 0.26, steel, 20, r2=0.08)
     for k in range(2):
         cyl((-1.78 + k * 0.08, 1.58, 0.44), 0.03, 0.08, steel, 12, r2=0.035)
+    sketchfab("idli_south_indian_food", (-1.35, 1.2, 0.012), 0.48, yaw=-0.3, drop=("Material.026",), by="width")
+    sketchfab("tea_glass__chai_glass_indian_style", (-2.02, 1.82, 0.4), 0.1, drop=("Object_11",))
     # a calendar text, a small family sign
     text("2026", (0.8, D / 2 - 0.035, 1.47), 0.06, mat("ink_red", (0.7, 0.05, 0.05), 0.6), "-y")
 
@@ -1360,7 +1445,11 @@ def mess_detail(T):
     for x in (-2.6, 0.0, 2.6):
         for yy in (-1.6, 0.6):
             cyl((x + 0.6, yy, 0.86), 0.06, 0.18, steel, 16, r2=0.05)
-            box((x - 0.2, yy - 0.2, 0.77), (0.4, 0.3, 0.004), mat("banana_leaf", (0.2, 0.5, 0.18), 0.6))
+            if (x, yy) in ((0.0, -1.6), (-2.6, 0.6)):
+                sketchfab("idli_south_indian_food", (x - 0.2, yy - 0.15, 0.77), 0.46, drop=("Material.026",), by="width")
+                sketchfab("tea_glass__chai_glass_indian_style", (x + 0.35, yy - 0.15, 0.77), 0.1, drop=("Object_11",))
+            else:
+                box((x - 0.2, yy - 0.2, 0.77), (0.4, 0.3, 0.004), mat("banana_leaf", (0.2, 0.5, 0.18), 0.6))
     box((-W / 2 + 0.03, -1.0, 1.65), (0.02, 1.6, 0.6), mat("mirror", (0.85, 0.88, 0.9), 0.02, 1.0))
     # the kitchen beyond the hatch: a warm glow, a steaming pot
     box((0.0, D / 2 - 0.012, 1.3), (2.6, 0.01, 1.04), mat("kitchen_glow", (0.4, 0.25, 0.1), 0.8, emit=(1.0, 0.55, 0.25), strength=1.2))
@@ -1428,6 +1517,7 @@ ROOMS = {"home": home, "dev_office": dev_office, "coopbank": coopbank, "mess": m
 def reset():
     bpy.ops.wm.read_factory_settings(use_empty=True)
     M.clear()
+    SF.clear()
 
 
 def export(name):
@@ -1445,7 +1535,7 @@ def export(name):
     print("ROOM", name, "%.1f MB" % (os.path.getsize(path) / 1e6), flush=True)
 
 
-def preview(name, out_dir):
+def preview(name, out_dir, shots=()):
     """A look inside from the room's wide shot, lit by its lights (Eevee)."""
     sc = bpy.context.scene
     engines = [e.identifier for e in sc.render.bl_rna.properties["engine"].enum_items]
@@ -1485,11 +1575,21 @@ def preview(name, out_dir):
         sc.render.filepath = os.path.join(out_dir, "room_%s_bathroom.jpg" % name)
         bpy.ops.render.render(write_still=True)
         print("PREVIEW", sc.render.filepath, flush=True)
+    for s in shots:                                                      # --shots kitchen,meal: more of the room
+        ce, le = bpy.data.objects.get("Cam_" + s), bpy.data.objects.get("Look_" + s)
+        if ce is None or le is None:
+            continue
+        cam.location = ce.location
+        cam.rotation_euler = (le.location - ce.location).to_track_quat('-Z', 'Y').to_euler()
+        sc.render.filepath = os.path.join(out_dir, "room_%s_%s.jpg" % (name, s))
+        bpy.ops.render.render(write_still=True)
+        print("PREVIEW", sc.render.filepath, flush=True)
 
 
 def main():
     args = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else []
     prev = args[args.index("--preview") + 1] if "--preview" in args else None
+    shots = args[args.index("--shots") + 1].split(",") if "--shots" in args else ()
     names = [a for a in args if a in ROOMS] or list(ROOMS)
     for name in names:
         reset()
@@ -1498,10 +1598,11 @@ def main():
         DETAIL[name](T)
         if prev:                                          # the preview first: the export joins everything
             import copy  # noqa: F401
-            preview(name, os.path.abspath(prev))
+            preview(name, os.path.abspath(prev), shots)
             for o in [o for o in bpy.data.objects if o.type == 'LIGHT' or o.name == "Cam"]:
                 bpy.data.objects.remove(o, do_unlink=True)
-        export(name)
+        if "--no-export" not in args:                     # (--no-export: look first, the game keeps its rooms)
+            export(name)
 
 
 if __name__ == "__main__":

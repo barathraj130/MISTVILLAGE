@@ -121,7 +121,11 @@ func _ready() -> void:
 				["steer_right", [KEY_D, KEY_RIGHT]], ["handbrake", [KEY_SPACE]], ["horn", [KEY_H]], ["headlights", [KEY_L]],
 				["toggle_manual", [KEY_M]], ["shift_up", [KEY_X]], ["shift_down", [KEY_Z]], ["indicate_left", [KEY_COMMA]],
 				["indicate_right", [KEY_PERIOD]], ["hazards", [KEY_SLASH]], ["steer_less", [KEY_BRACKETLEFT]],
-				["steer_more", [KEY_BRACKETRIGHT]]]:
+				["steer_more", [KEY_BRACKETRIGHT]],
+				# on foot (player.gd: the house walk, eateries, meeting people)
+				["move_forward", [KEY_W, KEY_UP]], ["move_back", [KEY_S, KEY_DOWN]], ["move_left", [KEY_A, KEY_LEFT]],
+				["move_right", [KEY_D, KEY_RIGHT]], ["jump", [KEY_SPACE]], ["run", [KEY_SHIFT]],
+				["release_mouse", [KEY_ALT]]]:
 			if not InputMap.has_action(pair[0]):          # the drive game's keys (drive_game.gd _setup_input)
 				InputMap.add_action(pair[0], 0.08)
 				for kc in pair[1]:
