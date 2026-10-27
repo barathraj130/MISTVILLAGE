@@ -591,7 +591,7 @@ func _auto_frame(who: String) -> bool:
 	for o in others:
 		if li == null or o.global_position.distance_to(sp.global_position) < li.global_position.distance_to(sp.global_position):
 			li = o
-	var head := sp.global_position + Vector3.UP * 1.45
+	var head := sp.global_position + Vector3.UP * (1.05 if sp.get("seated") else 1.45)     # (seated: lower)
 	if li != null:
 		sp.face(li.global_position)                      # people talk to each other, not to the camera
 	# candidate shots, best first; the first with a clear view of the speaker's face wins

@@ -1,5 +1,6 @@
 extends Node3D
-## A story character in the world: one of the animated people (tools/people.py: Idle, Walk, Run, Sit, Talk),
+## A story character in the world: one of the animated people (tools/people.py: Idle, Walk, Run, Sit, Talk; the
+## story cast also SitTalk, talking from a chair),
 ## standing on the ground, who can face a point, talk, sit, or walk to a spot. Used by cutscenes and by people
 ## you walk up to and talk to (E).
 
@@ -13,6 +14,7 @@ var _target := Vector3.INF
 var _speed := 1.4
 var _after := "Idle"
 var floor_y := NAN                     # standing in a room: its floor height (the city's ground isn't there)
+var seated := false                    # on a chair (Sit, SitTalk): keeps facing the way the chair does
 
 
 const HAIR_MARKS := ["short0", "braid", "bob0", "long0", "ponytail", "afro", "hair"]
@@ -33,7 +35,7 @@ func setup(person: String, key: String, height_fn: Callable, hair := Color(0, 0,
 	if not aps.is_empty():
 		anim = aps[0] as AnimationPlayer
 		for a in anim.get_animation_list():
-			if not a.begins_with("Sit"):
+			if a != "Sit":                       # (SitTalk's gestures loop like Talk's)
 				anim.get_animation(a).loop_mode = Animation.LOOP_LINEAR
 	play("Idle")
 
@@ -55,6 +57,7 @@ func _tint_hair(c: Color) -> void:
 
 
 func play(name: String) -> void:
+	seated = name.begins_with("Sit")
 	if anim and anim.has_animation(name) and anim.current_animation != name:
 		anim.play(name, 0.3)
 	if anim:
@@ -70,6 +73,8 @@ func place(at: Vector3, look: Vector3) -> void:
 
 
 func face(look: Vector3) -> void:
+	if seated:                               # on a chair: turning would leave the chair behind
+		return
 	var d := Vector3(look.x - global_position.x, 0.0, look.z - global_position.z)
 	if d.length() > 0.01:
 		rotation.y = atan2(d.x, d.z)          # the people models face +Z (as player.gd)

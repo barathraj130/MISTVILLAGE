@@ -849,6 +849,7 @@ def home(T):
     ceiling_fan(-0.6, 0.6, H)
     ceiling_fan(2.6, 1.2, H)
     mark("amma", -1.5, 0.5, math.pi)
+    chair_poly(-1.5, 0.53, math.pi, (0.72, 0.12, 0.1))                    # Amma's chair by the curtain, facing the door as she does
     mark("divya", -0.5, -0.6, 0.74)
     mark("karthik", -1.1, -1.5, 0.0)
     mark("karthik_room", 2.3, 0.5, math.pi)
@@ -866,7 +867,7 @@ def home(T):
         cyl((-0.3 + k * 0.08, -D / 2 + 0.04, 0.95), 0.006, 0.03, mat("brass", (0.8, 0.6, 0.25), 0.3, 1.0), 8, rot=(math.pi / 2, 0, 0))
         box((-0.3 + k * 0.08, -D / 2 + 0.06, 0.9), (0.02, 0.004, 0.06), mat("steel", (0.74, 0.75, 0.77), 0.32, 0.55))
     shot("wide", (0.45, -2.55, 2.2), (-1.6, 1.2, 1.0))
-    shot("amma", (-1.0, -0.8, 1.55), (-1.5, 0.5, 1.5))
+    shot("amma", (-1.0, -0.75, 1.32), (-1.5, 0.5, 1.12))                 # (she sits on the chair at her mark)
     shot("divya", (-1.0, 0.15, 1.5), (-0.5, -0.6, 1.4))
     shot("karthik", (-1.25, 0.0, 1.6), (-1.1, -1.5, 1.5))
     shot("photos", (-0.7, 1.4, 1.65), (-0.7, D / 2, 1.9))

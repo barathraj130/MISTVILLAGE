@@ -202,7 +202,8 @@
    "keep_room": true,
    "cast": {
     "amma": {
-     "mark": "amma"
+     "mark": "amma",
+     "anim": "Sit"
     },
     "divya": {
      "mark": "divya"
@@ -279,7 +280,8 @@
    "at": "home",
    "cast": {
     "amma": {
-     "mark": "amma"
+     "mark": "amma",
+     "anim": "Sit"
     },
     "divya": {
      "mark": "divya"
@@ -330,7 +332,7 @@
        "anim": "Idle"
       },
       "amma": {
-       "anim": "Talk"
+       "anim": "SitTalk"
       }
      }
     },
@@ -339,7 +341,7 @@
      "dur": 3.5,
      "do": {
       "amma": {
-       "anim": "Idle"
+       "anim": "Sit"
       },
       "karthik": {
        "walk_mark": "door"

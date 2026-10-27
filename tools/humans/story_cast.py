@@ -661,6 +661,8 @@ def animate(arm):
     clip(arm, "Walk", [(1 + 2 * k, (lambda kk: (lambda a: walk_phase(a, (kk % 12) / 12.0)))(k)) for k in range(13)])
     clip(arm, "Run", [(1 + 2 * k, (lambda kk: (lambda a: run_phase(a, (kk % 8) / 8.0)))(k)) for k in range(9)])
     clip(arm, "Sit", [(1, sit), (25, sit)])
+    clip(arm, "SitTalk", [(f, (lambda kk: (lambda a: (sit(a), talk(a, kk))))(k))
+                          for f, k in ((1, -1), (13, 1), (25, -0.4), (37, 1), (49, -1))])   # talking from a chair
     clip(arm, "Ride", [(1, ride), (25, ride)])
     for tr in arm.animation_data.nla_tracks:
         tr.mute = False
