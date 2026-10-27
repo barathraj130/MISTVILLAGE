@@ -328,17 +328,26 @@ def saree(h, arm, top, colour, rng):
     me.materials.append(mat)
     for pl in me.polygons:
         pl.use_smooth = True
-    # skin it: the waist rides the pelvis, lower down each side follows its thigh, blended across the middle
+    # skin it: the waist rides the pelvis, down to the knees each side follows its thigh, below the knees its shin
+    # (mostly), blended across the middle. (Thighs alone carried the whole skirt: seated, the thighs go forward
+    # and the skirt below the knees stuck straight out like a bell instead of falling with the shins.)
     left_x = arm.data.bones["thigh_l"].head_local.x
     sgn = 1.0 if left_x > 0 else -1.0
-    groups = {n: sk.vertex_groups.new(name=n) for n in ("pelvis", "thigh_l", "thigh_r")}
+    hip_z = (arm.matrix_world @ arm.data.bones["thigh_l"].head_local).z
+    knee_z = (arm.matrix_world @ arm.data.bones["calf_l"].head_local).z
+    groups = {n: sk.vertex_groups.new(name=n) for n in ("pelvis", "thigh_l", "thigh_r", "calf_l", "calf_r")}
     for v in me.vertices:
-        hf = (z1 - v.co.z) / (z1 - z0)
-        leg = max(0.0, min(1.0, (hf - 0.08) / 0.5)) * 0.9
+        z = v.co.z
+        pel = max(0.0, min(1.0, (z - (hip_z - 0.08)) / 0.1))           # the waist and hips: the pelvis
+        shin = max(0.0, min(1.0, ((knee_z + 0.06) - z) / 0.18)) * 0.85  # below the knee: mostly the shin
+        thigh = (1.0 - pel) * (1.0 - shin)
+        calf = (1.0 - pel) * shin
         side = max(0.0, min(1.0, 0.5 + 1.4 * sgn * v.co.x / 0.2))
-        groups["pelvis"].add([v.index], 1.0 - leg, 'REPLACE')
-        groups["thigh_l"].add([v.index], leg * side, 'REPLACE')
-        groups["thigh_r"].add([v.index], leg * (1.0 - side), 'REPLACE')
+        groups["pelvis"].add([v.index], pel, 'REPLACE')
+        groups["thigh_l"].add([v.index], thigh * side, 'REPLACE')
+        groups["thigh_r"].add([v.index], thigh * (1.0 - side), 'REPLACE')
+        groups["calf_l"].add([v.index], calf * side, 'REPLACE')
+        groups["calf_r"].add([v.index], calf * (1.0 - side), 'REPLACE')
     sk.parent = arm
     am = sk.modifiers.new("Armature", 'ARMATURE')
     am.object = arm
