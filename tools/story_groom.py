@@ -177,10 +177,44 @@ class Gnm:
                 bpy.data.objects.remove(o, do_unlink=True)
         import random
         self.strands = list(G.brows_and_lashes(self.head, random.Random(SEED), False))
-        m = Q.moustache(self.head, G.lm_of(self.head), random.Random(SEED), "thin")
+        m = self.moustache()
         if m is not None:
             self.strands.append(m)
         bpy.context.view_layer.update()
+
+    def moustache(self):
+        """The thin moustache, grown once on the resting face and then carried by the upper lip: each hair moves
+        with the point of skin it grows from. (Grown afresh for each face it was looked for at a fixed height under
+        the nose: a grin or an open mouth pulls the lip away from there and it vanished.)"""
+        import random
+        from mathutils.kdtree import KDTree
+        mw = self.head.matrix_world
+        vw = np.array([tuple(mw @ v.co) for v in self.head.data.vertices], np.float64)
+        if getattr(self, "_m0", None) is None:
+            m = Q.moustache(self.head, G.lm_of(self.head), random.Random(SEED), "thin")
+            if m is None:
+                return None
+            pos = np.empty(len(m.data.points) * 3, np.float32)
+            m.data.points.foreach_get("position", pos)
+            pos = pos.reshape(-1, 3)
+            kd = KDTree(len(vw))
+            for i, co in enumerate(vw):
+                kd.insert(co, i)
+            kd.balance()
+            starts = [c.first_point_index for c in m.data.curves]
+            sizes = [c.points_length for c in m.data.curves]
+            root = np.array([kd.find(Vector(pos[st]))[1] for st in starts])
+            per_point = np.repeat(root, sizes)
+            self._m0 = (m.data.copy(), pos.copy(), per_point, vw.copy())
+            self._m0[0].use_fake_user = True
+            return m
+        data0, pos0, per_point, v0 = self._m0
+        cd = data0.copy()
+        moved = pos0 + (vw[per_point] - v0[per_point]).astype(np.float32)
+        cd.points.foreach_set("position", moved.ravel())
+        ob = bpy.data.objects.new("Moustache", cd)
+        bpy.context.scene.collection.objects.link(ob)
+        return ob
 
     def teeth_points(self):
         w = G._group("teeth")
