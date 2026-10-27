@@ -20,7 +20,7 @@ ROOT = os.path.join(HERE, "..")
 SRC = os.path.join(ROOT, "mapdata", "sketchfab", "people")
 OUT = os.path.join(ROOT, "godot", "assets", "people")
 TRIS = 9000
-TRIS_MORE = {"woman_saree_green": 24000}     # her blouse and pleats tear when thinned that far
+TRIS_MORE = {"woman_saree_green": 24000, "man_veshti": 40000}   # cloth folds that tear when thinned that far
 
 # name: (file, height m, pose: "arms" | frame of its own animation, turn: degrees about Z; they face -Y as imported, like
 # the city's own street people)
@@ -34,6 +34,8 @@ PEOPLE = {
     "woman_office2": ("carla_rigged_001_-_rigged_3d_business_women", 1.58, "arms", 0),
     # (indian_man_in_dhoti is left out: its body is a featureless cloth tube from shoulders to ankles, rig on its side)
     "man_old_coat": ("old_man_in_coat_-_human_riged_model", 1.64, "arms", 0),
+    "man_veshti": ("south_indian_men_._traditional_fit", 1.70, "arms", 0),           # (no rig: already standing)
+    "man_dhoti": ("dhoti-clad_man_in_traditional_indian_attire", 1.65, "arms", 0),
 }
 
 
@@ -126,6 +128,8 @@ def build(name):
         bpy.ops.object.join()
     ob = bpy.context.view_layer.objects.active
     ob.name = ob.data.name = "sf_" + name
+    while len(ob.data.uv_layers) > 1:                     # one UV map: the city's mesh merge refuses extra UV sets
+        ob.data.uv_layers.remove(ob.data.uv_layers[-1])
     tris = sum(len(p.vertices) - 2 for p in ob.data.polygons)
     budget = TRIS_MORE.get(name, TRIS)
     if tris > budget:

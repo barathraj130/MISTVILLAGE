@@ -42,6 +42,8 @@ models may be used inside the game but not redistributed as standalone files.
 | Mom dress (saree and blouse) | Habib Siddick | CC-BY 4.0 | https://sketchfab.com/3d-models/mom-dress-saree-and-blouse-e5eeac0236714098a27fdbe13aedcb09 |
 | Traditional Saree | Mobin Mithun | CC-BY 4.0 | https://sketchfab.com/3d-models/traditional-saree-c70eeeafd37c4d8aa138b61a45821c25 |
 | FREE Male Fashion Hair collection 02 lowpoly | Vincent Page | CC-BY 4.0 | https://sketchfab.com/3d-models/free-male-fashion-hair-collection-02-lowpoly-bd74c3f6166c41778474cbe0485dda1d |
+| South Indian Men . traditional fit | pranayeesaha0009 | CC-BY 4.0 | https://sketchfab.com/3d-models/south-indian-men-traditional-fit-c57eaa2b3afc4f258a60c4909a419772 |
+| Dhoti-Clad Man in Traditional Indian Attire | ravitejareddy9381 | CC-BY 4.0 | https://sketchfab.com/3d-models/dhoti-clad-man-in-traditional-indian-attire-052dff295ffa40a69628d9960c0580c9 |
 | Basic Bathroom Accessories | jdbensonCG | CC-BY 4.0 | https://sketchfab.com/3d-models/basic-bathroom-accessories-f64505fbb1954c9b9222bc74e20a560a |
 | Plastic Bucket | MaX3Dd | CC-BY 4.0 | https://sketchfab.com/3d-models/plastic-bucket-006d0f237b4141ac93960fa51d6f0634 |
 | Indane Gas Cylinder - Low Poly | Ponraj G | CC-BY 4.0 | https://sketchfab.com/3d-models/indane-gas-cylinder-low-poly-1462c782c4c346cc944dc41e3a74ca4a |
