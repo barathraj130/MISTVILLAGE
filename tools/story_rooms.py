@@ -859,6 +859,8 @@ def home(T):
     mark("wardrobe", 3.15, -0.45, -math.pi / 2)                           # his shirts on the hooks
     mark("kitchen", -1.95, 0.75, math.pi / 2)                             # at the kitchen doorway, Amma inside
     mark("amma_kitchen", -3.0, 1.4, -math.pi / 2)
+    mark("amma_dinner", -1.45, 2.12, math.pi)                            # at dinner: on her chair by the dining corner
+    chair_poly(-1.45, 2.15, math.pi, (0.72, 0.12, 0.1))
     mark("door_shelf", -0.5, -2.35, math.pi)                              # the shelf by the door: wallet, phone, keys
     box((-0.5, -D / 2 + 0.11, 1.05), (0.5, 0.18, 0.025), mat("timber", (1, 1, 1), 0.55), 0.004)
     box((-0.62, -D / 2 + 0.11, 1.075), (0.11, 0.08, 0.02), mat("wallet_brown", (0.35, 0.2, 0.1), 0.6), 0.004)

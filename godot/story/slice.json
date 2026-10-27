@@ -1733,7 +1733,8 @@
    "start": "karthik_room",
    "cast": {
     "amma": {
-     "mark": "amma_kitchen"
+     "mark": "amma_dinner",
+     "anim": "Sit"
     }
    },
    "visits": [
