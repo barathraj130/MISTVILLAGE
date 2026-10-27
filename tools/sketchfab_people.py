@@ -32,6 +32,8 @@ PEOPLE = {
     "woman_saree_green": ("indian_woman_in_saree", 1.58, 0, 0),
     "woman_office": ("claudia_rigged_002_-_3d_rigged_business_women", 1.60, "arms", 0),
     "woman_office2": ("carla_rigged_001_-_rigged_3d_business_women", 1.58, "arms", 0),
+    # (indian_man_in_dhoti is left out: its body is a featureless cloth tube from shoulders to ankles, rig on its side)
+    "man_old_coat": ("old_man_in_coat_-_human_riged_model", 1.64, "arms", 0),
 }
 
 

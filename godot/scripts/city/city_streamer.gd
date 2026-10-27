@@ -59,7 +59,7 @@ var life_names: Array = []                 # life kind → name (index.json life
 var bhel_kind := -1                        # the snack cart (life_bhel.glb): it stands in for every third push cart
 ## The Sketchfab street crowd (tools/sketchfab_people.py): each stands in for every third standing man / woman of the
 ## city's own (always the same person at the same spot); walkers keep their own figures.
-const SF_PEOPLE := {"men": ["sf_man_kurta_blue", "sf_man_kurta_red", "sf_man_suit", "sf_man_office"],
+const SF_PEOPLE := {"men": ["sf_man_kurta_blue", "sf_man_kurta_red", "sf_man_suit", "sf_man_office", "sf_man_old_coat"],
 	"women": ["sf_woman_saree_green", "sf_woman_office", "sf_woman_office2"]}
 const SF_STANDS_FOR := {"street_man_shirt_stand": "men", "street_man_veshti": "men", "street_man_lungi": "men",
 	"street_woman_saree_red": "women", "street_woman_saree_green": "women", "street_woman_saree_blue": "women"}
