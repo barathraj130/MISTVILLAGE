@@ -105,8 +105,17 @@ class Gnm:
         self.face({})
 
     def grow_hair(self):
-        """His short haircut: MakeHuman's own hair mesh (the story cast's, a clean modern cut) seated on the GNM
-        head, grown a little about the skull's centre so the scan never pokes through."""
+        """His haircut as in the game (the story cast's: a combed side part from the Sketchfab hair collection),
+        fitted again to the GNM head (the one the cast build put on fits MakeHuman's head, not this one)."""
+        if os.path.exists(C.HAIRS):
+            for o in [o for o in bpy.data.objects if o.type == 'MESH' and o.name.startswith("Hair")]:
+                bpy.data.objects.remove(o, do_unlink=True)
+            spec = [c for c in C.CAST if c[0] == "karthik"][0]
+            self.hair = C.sketchfab_hair(self.head, None, spec[7][3:] if spec[7].startswith("sf:") else "hair09",
+                                         (0.012, 0.01, 0.009))      # (Cycles' bright bathroom light: darker)
+            return
+        """(Without the collection: MakeHuman's own hair mesh, grown a little about the skull's centre so the scan
+        never pokes through.)"""
         hair = [o for o in bpy.data.objects if o.type == 'MESH' and "short0" in o.name.lower()]
         if hair:
             lm = G.lm_of(self.head)

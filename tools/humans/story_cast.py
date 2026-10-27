@@ -155,7 +155,8 @@ def sketchfab_hair(body, arm, style, colour):
     """A hairstyle from the Sketchfab hair collection (Vincent Page, CC-BY; docs/DATA_SOURCES.md) fitted to this
     head: the style (and its scalp cap) comes off its bust, scaled so the bust's skull (its width and depth 6 cm
     under the crown) matches this one's, set just under the crown, pushed out wherever the scalp would show
-    through, and skinned to the head bone."""
+    through, and skinned to the head bone (arm None: left as it is, for a still). body: the head it sits on (a
+    whole body uses its "head" vertex group; a head alone, all of it)."""
     from mathutils.bvhtree import BVHTree
     before = set(bpy.data.objects)
     bpy.ops.import_scene.gltf(filepath=os.path.abspath(HAIRS))
@@ -220,17 +221,19 @@ def sketchfab_hair(body, arm, style, colour):
     mat.use_nodes = True
     b = mat.node_tree.nodes["Principled BSDF"]
     b.inputs["Base Color"].default_value = (*colour, 1)
-    b.inputs["Roughness"].default_value = 0.5
-    if "Coat Weight" in b.inputs:
-        b.inputs["Coat Weight"].default_value = 0.15
+    b.inputs["Roughness"].default_value = 0.85                 # (the cards caught bright lights at grazing angles:
+    if "Specular IOR Level" in b.inputs:                       # grey streaks; hair reads matte and dark)
+        b.inputs["Specular IOR Level"].default_value = 0.12
     hair.data.materials.append(mat)
-    for p in hair.data.polygons:
+    for p in hair.data.polygons:                           # (the style and its cap came with a material each)
+        p.material_index = 0
         p.use_smooth = True
-    vg = hair.vertex_groups.new(name="head")
-    vg.add(range(len(hair.data.vertices)), 1.0, 'REPLACE')
-    hair.parent = arm
-    md = hair.modifiers.new("Armature", 'ARMATURE')
-    md.object = arm
+    if arm is not None:                                    # (a still, like the grooming pictures, has no rig)
+        vg = hair.vertex_groups.new(name="head")
+        vg.add(range(len(hair.data.vertices)), 1.0, 'REPLACE')
+        hair.parent = arm
+        md = hair.modifiers.new("Armature", 'ARMATURE')
+        md.object = arm
     print("CAST hair %s: skull x%.2f y%.2f, %d points pushed out of the scalp, %d tris" % (
         style, sx, sy, pushed, sum(len(p.vertices) - 2 for p in hair.data.polygons)), flush=True)
     return hair
