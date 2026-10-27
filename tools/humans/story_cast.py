@@ -2,8 +2,8 @@
 The story's main cast as game characters (docs/STORY_BIBLE.md): MakeHuman bodies (MPFB2) built the way
 street_people.py builds them (skins, eyes, brows, lashes, hair, clothes) with a face of their own
 (quality.face_shape), but KEEPING the skeleton (MPFB's 53-bone game rig) so they can move in the game, with
-hand-keyed clips named like the street people's (tools/people.py): Idle (breathing), Talk (a gesture, a nod),
-Walk (a 1 s cycle), Sit (on a chair). Exported as godot/assets/people/story_<key>.glb for scripts/story/actor.gd.
+hand-keyed clips named like the street people's (tools/people.py): Idle (breathing, weight shifting), Talk (a
+gesture, a nod), Walk (a 1 s cycle), Run (two strides in 16 frames), Sit (hands on the thighs), Ride (the scooter). Exported as godot/assets/people/story_<key>.glb for scripts/story/actor.gd.
 
     Blender -b --python tools/humans/story_cast.py -- [--only karthik,amma] [--preview out.jpg]
 
@@ -23,10 +23,11 @@ import street_people as SP  # noqa: E402
 
 OUT = os.path.join(HERE, "..", "..", "godot", "assets", "people")
 # key, gender (1 man), years, weight, muscle, height, skin, hair, brows, outfit, main colour, face seed
+# (hair "sf:<style>": a style from the Sketchfab hair collection, fitted to the head: sketchfab_hair)
 # skin tones across the range you see in Coimbatore: fair (Suresh, Divya, the clerk, Ashwin), medium brown
 # (Karthik, Amma, the hotel owner), dark (Raghavan)
 CAST = [
-    ("karthik", 1.0, 28, 0.5, 0.55, 0.58, "young_asian_male", "short02", "mindfront_eyebrows_03", "trousers",
+    ("karthik", 1.0, 28, 0.5, 0.55, 0.58, "young_asian_male", "sf:hair09", "mindfront_eyebrows_03", "trousers",
      (0.25, 0.42, 0.7), 404),
     ("raghavan", 1.0, 61, 0.6, 0.45, 0.52, "old_african_male", "short01", "eyebrow004", "veshti",
      (0.95, 0.95, 0.92), 303),
@@ -142,7 +143,97 @@ def build(c):
             bpy.ops.object.select_all(action='DESELECT')
             o.select_set(True)
             bpy.ops.object.shape_key_remove(all=True, apply_mix=True)
+    if hair.startswith("sf:"):
+        objs.append(sketchfab_hair(h, arm, hair[3:], (0.025, 0.02, 0.018)))
     return arm, objs
+
+
+HAIRS = os.path.join(HERE, "..", "..", "mapdata", "sketchfab", "people", "free_male_fashion_hair_collection_02_lowpoly.glb")
+
+
+def sketchfab_hair(body, arm, style, colour):
+    """A hairstyle from the Sketchfab hair collection (Vincent Page, CC-BY; docs/DATA_SOURCES.md) fitted to this
+    head: the style (and its scalp cap) comes off its bust, scaled so the bust's skull (its width and depth 6 cm
+    under the crown) matches this one's, set just under the crown, pushed out wherever the scalp would show
+    through, and skinned to the head bone."""
+    from mathutils.bvhtree import BVHTree
+    before = set(bpy.data.objects)
+    bpy.ops.import_scene.gltf(filepath=os.path.abspath(HAIRS))
+    new = [o for o in bpy.data.objects if o not in before]
+    num = style.replace("hair", "").lstrip("0")
+    parts = [o for o in new if o.type == 'MESH' and o.name.split("_")[0] in (style, "hair%scap" % num, "hair%s" % num + "cap")]
+    for o in new:                                          # bake every transform in (the busts sit in a grid)
+        if o.type == 'MESH':
+            o.data = o.data.copy()
+            o.data.transform(o.matrix_world)
+    hv = [v.co.copy() for o in parts for v in o.data.vertices]
+    hc = sum(hv, Vector()) / len(hv)
+    def centre(o):
+        vs = [v.co for i, v in enumerate(o.data.vertices) if i % 50 == 0]
+        return sum(vs, Vector()) / len(vs)
+    bust = min((o for o in new if o.type == 'MESH' and not o.name.startswith("hair")), key=lambda o: (centre(o) - hc).xy.length)
+    bv = [v.co for v in bust.data.vertices if (v.co - hc).xy.length < 0.2]
+
+    def skull(vs):
+        top = max(v.z for v in vs)
+        ring = [v for v in vs if top - 0.07 < v.z < top - 0.05]
+        xs, ys = [v.x for v in ring], [v.y for v in ring]
+        return top, max(xs) - min(xs), max(ys) - min(ys), Vector(((max(xs) + min(xs)) / 2, (max(ys) + min(ys)) / 2))
+    bpy.context.view_layer.update()
+    dg = bpy.context.evaluated_depsgraph_get()
+    be = body.evaluated_get(dg)
+    me = be.to_mesh()
+    gi = body.vertex_groups["head"].index if "head" in body.vertex_groups else None
+    heads = [be.matrix_world @ v.co for v in me.vertices
+             if gi is None or any(g.group == gi and g.weight > 0.5 for g in body.data.vertices[v.index].groups)]
+    t1, w1, d1, c1 = skull(heads)
+    t0, w0, d0, c0 = skull(bv)
+    sx, sy = w1 / w0, d1 / d0
+    # height as the width (a deep skull made it stand tall); 1 cm down so the front comes to the hairline
+    m = (Matrix.Translation(Vector((c1.x, c1.y, t1 - 0.01))) @ Matrix.Diagonal((sx, sy, min(sx, sy), 1.0))
+         @ Matrix.Translation(-Vector((c0.x, c0.y, t0))))
+    for o in parts:
+        o.data.transform(m)
+    # wherever the scalp would show through, out just past it
+    tri = [tuple(p.vertices) for p in me.polygons]
+    tree = BVHTree.FromPolygons([be.matrix_world @ v.co for v in me.vertices], tri)
+    pushed = 0
+    for o in parts:
+        for v in o.data.vertices:
+            loc, nrm, _, dist = tree.find_nearest(v.co, 0.08)
+            if loc is not None and (v.co - loc).dot(nrm) < 0.004:
+                v.co = loc + nrm * 0.004
+                pushed += 1
+    be.to_mesh_clear()
+    for o in [o for o in new if o not in parts]:
+        bpy.data.objects.remove(o, do_unlink=True)
+    bpy.ops.object.select_all(action='DESELECT')
+    for o in parts:
+        o.select_set(True)
+    bpy.context.view_layer.objects.active = parts[0]
+    if len(parts) > 1:
+        bpy.ops.object.join()
+    hair = bpy.context.view_layer.objects.active
+    hair.name = hair.data.name = "Hair"
+    hair.data.materials.clear()
+    mat = bpy.data.materials.new("Hair")
+    mat.use_nodes = True
+    b = mat.node_tree.nodes["Principled BSDF"]
+    b.inputs["Base Color"].default_value = (*colour, 1)
+    b.inputs["Roughness"].default_value = 0.5
+    if "Coat Weight" in b.inputs:
+        b.inputs["Coat Weight"].default_value = 0.15
+    hair.data.materials.append(mat)
+    for p in hair.data.polygons:
+        p.use_smooth = True
+    vg = hair.vertex_groups.new(name="head")
+    vg.add(range(len(hair.data.vertices)), 1.0, 'REPLACE')
+    hair.parent = arm
+    md = hair.modifiers.new("Armature", 'ARMATURE')
+    md.object = arm
+    print("CAST hair %s: skull x%.2f y%.2f, %d points pushed out of the scalp, %d tris" % (
+        style, sx, sy, pushed, sum(len(p.vertices) - 2 for p in hair.data.polygons)), flush=True)
+    return hair
 
 
 # ---- the saree ----
@@ -292,9 +383,8 @@ def lower(arm, bone, dz):
 
 
 def arms_down(arm):
-    """The game rig rests in an A-pose (arms ~45° down): bring them down to the sides."""
-    turn(arm, "upperarm_l", 'Y', 40)
-    turn(arm, "upperarm_r", 'Y', -40)
+    """The game rig rests in an A-pose (arms ~45° down): the neutral standing pose every clip starts from (relax)."""
+    relax(arm)
 
 
 def key_all(arm, frame):
@@ -322,7 +412,15 @@ def clip(arm, name, frames):
     tr.strips.new(name, int(frames[0][0]), act)
 
 
-def idle(a, k):                     # breathing, a small look about
+def idle(a, k):                     # breathing, the weight shifting from foot to foot, a small look about
+    pb = a.pose.bones.get("pelvis")
+    if pb is not None:                                     # hips over one foot, then the other
+        m = a.matrix_world @ pb.matrix
+        m.translation.x += 0.012 * k
+        pb.matrix = a.matrix_world.inverted() @ m
+        bpy.context.view_layer.update()
+    turn(a, "pelvis", 'Y', -1.5 * k)
+    turn(a, "spine_02", 'Y', 1.2 * k)
     turn(a, "spine_02", 'X', -1.2 * k)
     turn(a, "head", 'Z', 2.5 * k)
 
@@ -360,14 +458,48 @@ def walk_phase(a, t):
     turn(a, "neck_01", 'Z', 3.0 * sw)
 
 
+def run_phase(a, t):
+    """One moment of the run cycle, t in [0, 1) (two strides in 16 frames, ~3.9 m/s): the thighs swing further than
+    walking (+35° forward, -30° back), the trailing knee folds right up (~105°) as it comes through, the standing
+    leg gives on landing; the body leans into it and lifts off between steps; the arms bent near 90° pump against
+    the legs, the chest turns with them a little, the head stays steady."""
+    w = 2.0 * math.pi * t
+    sw = math.sin(w)
+    turn(a, "spine_01", 'X', 9.0)                          # leaning into the run
+    turn(a, "neck_01", 'X', -7.0)
+    turn(a, "thigh_l", 'X', -(2.5 + 32.5 * sw))
+    turn(a, "thigh_r", 'X', -(2.5 - 32.5 * sw))
+    turn(a, "calf_l", 'X', 18.0 + 87.0 * max(0.0, math.cos(w + 0.6)) ** 1.3)
+    turn(a, "calf_r", 'X', 18.0 + 87.0 * max(0.0, math.cos(w + 0.6 - math.pi)) ** 1.3)
+    turn(a, "foot_l", 'X', 12.0 * sw - 8.0)
+    turn(a, "foot_r", 'X', -12.0 * sw - 8.0)
+    lower(a, "pelvis", -0.07 + 0.05 * abs(math.sin(w + 0.4)))     # down on landing, up off the toes
+    turn(a, "pelvis", 'Z', 7.0 * sw)
+    turn(a, "spine_03", 'Z', -10.0 * sw)
+    turn(a, "upperarm_l", 'X', 48.0 * sw + 10.0)           # the hands pump from the chest back past the hips
+    turn(a, "upperarm_r", 'X', -48.0 * sw + 10.0)
+    turn(a, "lowerarm_l", 'X', -(70.0 - 12.0 * sw))
+    turn(a, "lowerarm_r", 'X', -(70.0 + 12.0 * sw))
+    turn(a, "neck_01", 'Z', 3.0 * sw)
+
+
 def sit(a):
     lower(a, "pelvis", -0.42)
     turn(a, "thigh_l", 'X', -84)
     turn(a, "thigh_r", 'X', -84)
     turn(a, "calf_l", 'X', 84)
     turn(a, "calf_r", 'X', 84)
-    turn(a, "lowerarm_l", 'X', -40)
-    turn(a, "lowerarm_r", 'X', -40)
+    for side, sg in (("l", 1.0), ("r", -1.0)):            # the hands resting on the thighs
+        sh = head_of(a, "upperarm_" + side)
+        el0, wr0 = head_of(a, "lowerarm_" + side), head_of(a, "hand_" + side)
+        knee, hip = head_of(a, "calf_" + side), head_of(a, "thigh_" + side)
+        wrist = hip.lerp(knee, 0.45) + Vector((sg * 0.04, 0.0, 0.09))
+        elbow = two_bone(sh, wrist, (el0 - sh).length, (wr0 - el0).length, Vector((sg * 0.6, 0.6, -0.4)))
+        aim(a, "upperarm_" + side, lambda: head_of(a, "lowerarm_" + side), elbow)
+        aim(a, "lowerarm_" + side, lambda: head_of(a, "hand_" + side), wrist)
+        mid = "middle_01_" + side
+        if mid in a.pose.bones:
+            aim(a, "hand_" + side, lambda: head_of(a, mid), knee + Vector((sg * 0.03, 0.0, 0.06)))
 
 
 # ---- riding Karthik's scooter (tools/bikes_real.py FIT["scooter"]: X forward, Y left, Z up) ----
@@ -448,11 +580,74 @@ def ride(a):
                 qturn(a, bn, Quaternion((0, 0, 1), math.radians(-sg * 12)))
 
 
+def curl_fingers(a, side, deg, thumb_deg):
+    """Close the fingers towards the palm by deg at each joint (less at the knuckle), the thumb a little in. The bend
+    axis is the knuckle line (index to pinky); its sign is whichever brings the fingertip towards the palm."""
+    knuckles = head_of(a, "index_01_" + side) - head_of(a, "pinky_01_" + side)
+    if knuckles.length < 1e-4:
+        return
+    axis = knuckles.normalized()
+    palm = head_of(a, "thumb_01_" + side)
+    for f in ("index", "middle", "ring", "pinky"):
+        chain = ["%s_0%d_%s" % (f, j, side) for j in (1, 2, 3)]
+        if any(b not in a.pose.bones for b in chain):
+            continue
+        tip = lambda: tail_of(a, chain[2])                               # noqa: E731
+        d0 = (tip() - palm).length
+        qturn(a, chain[0], Quaternion(axis, math.radians(10)))
+        sgn = 1.0 if (tip() - palm).length < d0 else -1.0
+        qturn(a, chain[0], Quaternion(axis, math.radians(-10)))
+        for j, b in enumerate(chain):
+            qturn(a, b, Quaternion(axis, sgn * math.radians(deg * (0.7 if j == 0 else 1.0))))
+    for j in (1, 2, 3):
+        b = "thumb_0%d_%s" % (j, side)
+        if b in a.pose.bones:
+            qturn(a, b, Quaternion(axis, math.radians(thumb_deg) * (1 if side == "l" else -1)))
+
+
+def hang_arm(a, side, out=0.10, back=0.04, bend=0.18):
+    """An arm hanging at the side (the character faces -Y, its left is +X): the elbow just out from the waist and a
+    little behind the shoulder line, the forearm a touch forward, the wrist straight, the palm towards the thigh."""
+    sg = 1.0 if side == "l" else -1.0
+    sh = head_of(a, "upperarm_" + side)
+    l1 = (head_of(a, "lowerarm_" + side) - sh).length
+    elbow = sh + Vector((sg * out, back, -1.0)).normalized() * l1
+    aim(a, "upperarm_" + side, lambda: head_of(a, "lowerarm_" + side), elbow)
+    el = head_of(a, "lowerarm_" + side)
+    l2 = (head_of(a, "hand_" + side) - el).length
+    wrist = el + Vector((sg * 0.03, -bend, -1.0)).normalized() * l2
+    aim(a, "lowerarm_" + side, lambda: head_of(a, "hand_" + side), wrist)
+    fdir = (head_of(a, "hand_" + side) - el).normalized()
+    mid = "middle_01_" + side
+    if mid in a.pose.bones:                                # the hand straight on from the forearm
+        aim(a, "hand_" + side, lambda: head_of(a, mid), head_of(a, "hand_" + side) + fdir * 0.09)
+    # palm to the thigh: turn the forearm about its own line until the knuckles (pinky to index) point forward
+    if "index_01_" + side in a.pose.bones:
+        k = head_of(a, "index_01_" + side) - head_of(a, "pinky_01_" + side)
+        k -= fdir * k.dot(fdir)
+        want = Vector((0, -1, 0)) - fdir * (-fdir.y)
+        if k.length > 1e-4 and want.length > 1e-4:
+            ang = k.normalized().angle(want.normalized())
+            if k.normalized().cross(want.normalized()).dot(fdir) < 0:
+                ang = -ang
+            qturn(a, "lowerarm_" + side, Quaternion(fdir, ang))
+
+
+def relax(a):
+    """Standing at ease: arms hanging beside the body, elbows soft, fingers gently curled."""
+    if "upperarm_l" not in a.pose.bones:
+        return
+    for side in ("l", "r"):
+        hang_arm(a, side)
+        curl_fingers(a, side, 18.0, 12.0)
+
+
 def animate(arm):
     clip(arm, "Idle", [(1, lambda a: idle(a, -1)), (37, lambda a: idle(a, 1)), (73, lambda a: idle(a, -1))])
     clip(arm, "Talk", [(1, lambda a: talk(a, -1)), (13, lambda a: talk(a, 1)), (25, lambda a: talk(a, -0.4)),
                        (37, lambda a: talk(a, 1)), (49, lambda a: talk(a, -1))])
     clip(arm, "Walk", [(1 + 2 * k, (lambda kk: (lambda a: walk_phase(a, (kk % 12) / 12.0)))(k)) for k in range(13)])
+    clip(arm, "Run", [(1 + 2 * k, (lambda kk: (lambda a: run_phase(a, (kk % 8) / 8.0)))(k)) for k in range(9)])
     clip(arm, "Sit", [(1, sit), (25, sit)])
     clip(arm, "Ride", [(1, ride), (25, ride)])
     for tr in arm.animation_data.nla_tracks:

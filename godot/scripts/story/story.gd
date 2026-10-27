@@ -745,6 +745,8 @@ func _walk_in(at_mark: String) -> void:
 		Walker.avatar = "res://assets/people/story_karthik.glb"
 		city.walker = Walker.new()
 		city.walker.name = "OnFoot"
+		city.walker.walk_speed = 1.6                     # the cast's Walk covers 1.5 m/s, its Run 3.9 m/s: no sliding feet
+		city.walker.run_speed = 4.2
 		city.add_child(city.walker)
 		Walker.avatar = ""
 	city.walker.spawn_at(m.global_position + Vector3.UP * 0.1, m.global_position - m.global_basis.z)

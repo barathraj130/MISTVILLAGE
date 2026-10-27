@@ -25,6 +25,7 @@ var anim: AnimationPlayer
 var _model_yaw := PI
 const AVATAR := "res://assets/people/person_man_shirt.glb"
 static var avatar := ""            # who you are on foot, when not the default (the story: Karthik himself)
+var avatar_run_stride := false     # a story cast model: its Run covers ~3.9 m/s at speed 1
 
 
 func _init() -> void:
@@ -53,6 +54,7 @@ func _init() -> void:
 	camera.fov = 70.0
 	arm.add_child(camera)
 	var who := avatar if avatar != "" else AVATAR
+	avatar_run_stride = who.contains("/story_")          # the story cast's own Run (tools/humans/story_cast.py)
 	if ResourceLoader.exists(who):
 		model = (load(who) as PackedScene).instantiate() as Node3D
 		model.rotation.y = _model_yaw
@@ -147,13 +149,16 @@ func _animate(delta: float) -> void:
 		_model_yaw = lerp_angle(_model_yaw, want, 1.0 - exp(-delta * 10.0))
 		model.rotation.y = _model_yaw
 	var a := "Idle"
-	if sp > 4.2:
+	var has_run := anim.has_animation("Run")
+	if sp > (2.6 if has_run else 99.0):
 		a = "Run"
 	elif sp > 0.3:
 		a = "Walk"
 	if anim.current_animation != a:
 		anim.play(a, 0.2)
-	anim.speed_scale = clampf(sp / (1.4 if a == "Walk" else 5.5), 0.6, 1.6) if a != "Idle" else 1.0
+	# each cycle covers a stride: the cast's Walk ~1.5 m/s, its Run ~3.9 m/s at speed 1 (the resort figure's run 5.5)
+	var stride := 1.5 if a == "Walk" else (3.9 if avatar_run_stride else 5.5)
+	anim.speed_scale = clampf(sp / stride, 0.6, 1.8) if a != "Idle" else 1.0
 
 
 ## CharacterBody3D cannot climb steps on its own: if something low blocks us

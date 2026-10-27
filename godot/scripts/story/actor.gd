@@ -58,7 +58,8 @@ func play(name: String) -> void:
 	if anim and anim.has_animation(name) and anim.current_animation != name:
 		anim.play(name, 0.3)
 	if anim:
-		anim.speed_scale = (_speed / 1.5) if name == "Walk" else 1.0   # the cycle covers ~1.5 m a second: no sliding feet
+		# each cycle covers a stride (Walk ~1.5 m a second, Run ~3.9 at speed 1): no sliding feet
+		anim.speed_scale = (_speed / 1.5) if name == "Walk" else ((_speed / 3.9) if name == "Run" else 1.0)
 
 
 ## Stand at (x, z) on the ground, facing towards `look` (a point).
