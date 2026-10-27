@@ -57,6 +57,13 @@ var life_far: Array = []                    # life kind → far Mesh or null (tr
 var life_meshes: Array = []                # life kind → Mesh (index.json life_kinds)
 var life_names: Array = []                 # life kind → name (index.json life_kinds, then our own extra kinds)
 var bhel_kind := -1                        # the snack cart (life_bhel.glb): it stands in for every third push cart
+## The Sketchfab street crowd (tools/sketchfab_people.py): each stands in for every third standing man / woman of the
+## city's own (always the same person at the same spot); walkers keep their own figures.
+const SF_PEOPLE := {"men": ["sf_man_kurta_blue", "sf_man_kurta_red", "sf_man_suit", "sf_man_office"],
+	"women": ["sf_woman_saree_green", "sf_woman_office", "sf_woman_office2"]}
+const SF_STANDS_FOR := {"street_man_shirt_stand": "men", "street_man_veshti": "men", "street_man_lungi": "men",
+	"street_woman_saree_red": "women", "street_woman_saree_green": "women", "street_woman_saree_blue": "women"}
+var sf_kinds := {}                         # "men" / "women" → their life kind indices
 var wire_mat: StandardMaterial3D
 var shrub_mesh: Mesh                       # planting on the medians
 var pier_mesh: Mesh                        # flyover pier and lamp (tools/flyover.py)
@@ -108,6 +115,15 @@ func _ready() -> void:
 		life_meshes.append(_with_lods(_scene_mesh("res://assets/city_props/life_bhel.glb")))
 		life_far.append(null)
 		life_names.append("bhel")
+	for group in SF_PEOPLE:
+		sf_kinds[group] = []
+		for nm in SF_PEOPLE[group]:
+			var pp := "res://assets/people/%s.glb" % nm
+			if ResourceLoader.exists(pp):
+				sf_kinds[group].append(life_meshes.size())
+				life_meshes.append(_with_lods(_scene_mesh(pp)))
+				life_far.append(null)
+				life_names.append(nm)
 	shrub_mesh = _gltf_mesh("res://assets/models/veg_hedgerow_bush_0_lod.gltf")
 	pier_mesh = _gltf_mesh("res://assets/city_props/flyover_pier.glb")
 	fly_lamp_mesh = _gltf_mesh("res://assets/city_props/flyover_lamp.glb")
@@ -1394,6 +1410,13 @@ func _life(life: Array, out: Dictionary, roads: Array = []) -> void:
 			kind = bhel_kind                        # a bhel puri cart instead of fruit (the same spot each visit)
 			if OS.is_debug_build() and "--where=bhel" in OS.get_cmdline_user_args():
 				print("BHEL at %.1f,%.1f,%.1f" % [v[0], v[1], v[2]])
+		elif SF_STANDS_FOR.has(nm0):
+			var grp: Array = sf_kinds.get(SF_STANDS_FOR[nm0], [])
+			var hsh := floori(v[0] * 7.0 + v[2] * 13.0)
+			if not grp.is_empty() and posmod(hsh, 3) == 0:
+				kind = grp[posmod(hsh / 3, grp.size())]
+				if OS.is_debug_build() and "--where=people" in OS.get_cmdline_user_args():
+					print("PERSON %s at %.1f,%.1f,%.1f yaw %.2f" % [life_names[kind], v[0], v[1], v[2], v[3]])
 		if nm0.begins_with("fleet_") or nm0.begins_with("bike_") or nm0 == "cart":
 			v = _park_on_road(v, segs, 1.3 if nm0 == "fleet_lorry" else (0.95 if nm0.begins_with("fleet_") else 0.45))
 		var a := v[3]
