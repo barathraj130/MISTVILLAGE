@@ -67,6 +67,7 @@ var _jumped := false
 var on_time := true                 # the last deadline ("by") was met
 var _skip_minutes := 0.0            # (testing) game minutes a skipped real-time drive would have taken
 var _shot_n := 0
+var _peek := -1                     # (testing) the house visit the walker was set down near
 var _beam: MeshInstance3D
 var flags := {}                     # what the player did in tasks (short_found, signed, ...)
 var _paid := {}                     # lines that already paid (step:line)
@@ -800,8 +801,24 @@ func _home() -> void:
 	_ring.global_position = at + Vector3.UP * 0.03 + Vector3(0, sin(t_step * 4.0) * 0.02, 0)
 	var near := Vector2(city.walker.global_position.x - at.x, city.walker.global_position.z - at.z).length() < 1.1
 	var e := Input.is_key_pressed(KEY_E)
-	if (near and e and not _e_down) or (_skip and t_step > 0.8):
+	if _skip and v.get("home_meal", false) and _peek == -1 and t_step > 0.2:   # (testing: walk him up to the meal)
+		_peek = _visit
+		var from: Vector3 = city.walker.global_position
+		var d := Vector3(at.x - from.x, 0.0, at.z - from.z)
+		if d.length() > 2.4:
+			var look := at                              # (turned a little towards whoever is home, in the picture)
+			for k in cast:
+				look = (at + (cast[k] as Node3D).global_position) * 0.5
+			city.walker.spawn_at(at - d.normalized() * 2.4, look)
+			city.walker._pitch = -0.45                 # (looking down a little, at the room rather than the fan)
+			city.walker.head.rotation.x = -0.45
+	if _peek == _visit and t_step > 0.7:
+		_peek = -2 - _visit
+		t_step = 0.0                                    # (the meal card opens a second after the picture)
+		_shot()
+	if (near and e and not _e_down) or (_skip and t_step > 1.0):
 		t_step = 0.0
+		_peek = -1
 		_start_visit(v)
 	_e_down = e
 	_note_t -= get_process_delta_time()
@@ -848,6 +865,7 @@ func _eat_out() -> void:
 			spec["wallet"] = fines.sim.money
 		Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 		tasks.start("meal", spec, lang, _skip)
+		_shot()                                         # (testing: the menu)
 	_e_down = e
 	var hint := ""
 	if near_k != "":
