@@ -28,6 +28,8 @@ extends Node
 ##   eat_out   find somewhere to eat: "eateries" (places) on the map; on foot at any door, E: inside (room_mess, or
 ##             "rooms": place → room, e.g. the five-star's restaurant), Karthik at a table, its menu, paid from
 ##             the wallet
+##   gigs      a delivery shift on the rider app: orders one after another (a restaurant of "pickups", a neighbourhood
+##             of "drops", pay by distance, a tip when on time); E takes the order, Q ends the shift (or "until")
 ##   free      free drive with a goal line, the end of the chapter
 ## Any step may have "when": flag / "unless": flag (results of earlier tasks) and is skipped otherwise; any line
 ## may "pay" an amount into the wallet when it's shown (a tip from the owner, a customer).
@@ -69,6 +71,10 @@ var _jumped := false
 var on_time := true                 # the last deadline ("by") was met
 var _skip_minutes := 0.0            # (testing) game minutes a skipped real-time drive would have taken
 var _shot_n := 0
+var _gig := {}                       # the delivery shift ("gigs"): the order on offer or under way
+var _gig_done := 0                   # orders delivered this shift
+var _gig_earned := 0                 # and what they paid
+var _q_down := false
 var _peek := -1                     # (testing) the house visit the walker was set down near
 var _beam: MeshInstance3D
 var flags := {}                     # what the player did in tasks (short_found, signed, ...)
@@ -199,6 +205,8 @@ func _process(dt: float) -> void:
 				_next()
 		"meet":
 			_meet()
+		"gigs":
+			_gigs(dt)
 		"free":
 			_tick_clock(dt)
 			if _skip and t_step > 4.0:
@@ -245,7 +253,9 @@ func _next() -> void:
 		cur = data["steps"][step]
 	if cur.has("clock") and fines:
 		var hm: PackedStringArray = str(cur["clock"]).split(":")
-		fines.sim.minute = float(hm[0]) * 60.0 + float(hm[1])
+		var to := float(hm[0]) * 60.0 + float(hm[1])
+		if not cur.get("clock_forward", false) or _since_noon(to) > _since_noon(fines.sim.minute):
+			fines.sim.minute = to                        # ("clock_forward": only ever later, e.g. after a long shift)
 	if cur.has("add_minutes") and fines:                # time that passes off screen (a ride on the scooter)
 		fines.sim.minute += float(cur["add_minutes"])
 	_jumped = false
@@ -309,6 +319,11 @@ func _next() -> void:
 			_visit = 0
 			_in_task = false
 			_walk_in(str(cur.get("start", "karthik_room")))
+		"gigs":
+			_gig = {}
+			_gig_done = 0
+			_gig_earned = 0
+			_gig_offer()
 		"eat_out":
 			_in_task = false
 			var best := Vector3.INF
@@ -920,6 +935,129 @@ func claims_e(p: Vector3) -> bool:
 	return false
 
 
+## Minutes since noon (so 11 PM is before 12:30 AM): comparing night times across midnight.
+func _since_noon(m: float) -> float:
+	return fmod(m - 720.0 + 2880.0, 1440.0)
+
+
+## A delivery shift on the rider app: an order is offered (a restaurant to pick up from, a neighbourhood to drop
+## at, the pay and the time to be there by); E takes it, Q ends the shift. Ride to the restaurant, then to the
+## customer: paid on arrival (with a tip when on time), and the next order comes in. The shift ends on Q or at
+## "until"; the story goes on (home).
+func _gig_offer() -> void:
+	var here: Vector3 = car.global_position
+	var picks: Array = cur["pickups"].duplicate()
+	picks.sort_custom(func(a, b): return place_pos(str(a)).distance_to(here) < place_pos(str(b)).distance_to(here))
+	var pick: String = str(picks[randi() % mini(3, picks.size())])         # one of the three nearest restaurants
+	var drops: Array = cur["drops"].filter(func(k): return place_pos(str(k)).distance_to(place_pos(pick)) > 900.0)
+	if drops.is_empty():
+		drops = cur["drops"]
+	var drop: String = str(drops[randi() % drops.size()])
+	var km := (here.distance_to(place_pos(pick)) + place_pos(pick).distance_to(place_pos(drop))) * 1.3 / 1000.0
+	var ride_km := place_pos(pick).distance_to(place_pos(drop)) * 1.3 / 1000.0
+	var pay := int(round((30.0 + ride_km * 12.0) / 5.0)) * 5
+	var by := fmod((fines.sim.minute if fines else 1320.0) + km / float(cur.get("speed_kmh", 25.0)) * 60.0 + 12.0, 1440.0)
+	_gig = {"state": "offer", "pick": pick, "drop": drop, "pay": pay, "by": by, "no": 4472 + _gig_done + randi() % 20}
+	map.pin = null
+	_beam.visible = false
+	goal.text = ""
+	t_step = 0.0
+	get_tree().create_timer(4.2 if not _skip else 4.6).timeout.connect(_shot)   # (testing: each order as it comes in)
+
+
+func _gig_goal() -> void:
+	var app: String = tr_(cur.get("app", {"en": "QuickBite Rider", "ta": "குவிக்பைட் ரைடர்"}))
+	var en := lang == "en"
+	var shift := ("Shift: %d delivered · ₹%d" if en else "ஷிஃப்ட்: %d டெலிவரி · ₹%d") % [_gig_done, _gig_earned]
+	var by := _clock12_of(float(_gig.get("by", 0.0)))
+	match str(_gig.get("state", "")):
+		"offer":
+			goal.text = "%s · %s #%d\n%s %s → %s\n₹%d · %s %s\n%s\n%s" % [app, "New order" if en else "புது ஆர்டர்", _gig["no"],
+				"Pickup" if en else "பிக்அப்", tr_(data["places"][_gig["pick"]]), tr_(data["places"][_gig["drop"]]), _gig["pay"],
+				"drop by" if en else "டிராப்", by, "E: accept · Q: end the shift and go home" if en else "E: ஏத்துக்கோ · Q: ஷிஃப்ட் முடிச்சு வீட்டுக்கு", shift]
+		"pickup":
+			goal.text = "%s #%d: %s %s\n%s" % [app, _gig["no"], "pick up at" if en else "பிக்அப்:", tr_(data["places"][_gig["pick"]]), shift]
+		"drop":
+			goal.text = "%s #%d: %s %s %s %s\n%s" % [app, _gig["no"], "deliver to" if en else "டெலிவரி:", tr_(data["places"][_gig["drop"]]),
+				"by" if en else "நேரம்", by, shift]
+
+
+func _clock12_of(m: float) -> String:
+	var h := int(m / 60.0) % 24
+	return "%d:%02d %s" % [(h + 11) % 12 + 1, int(m) % 60, "AM" if h < 12 else "PM"]
+
+
+func _gigs(dt: float) -> void:
+	_tick_clock(dt)
+	var e := Input.is_key_pressed(KEY_E)
+	var q := Input.is_key_pressed(KEY_Q)
+	var e_hit := e and not _e_down
+	var q_hit := q and not _q_down
+	_e_down = e
+	_q_down = q
+	var late_night: bool = fines != null and cur.has("until") and _since_noon(fines.sim.minute) > _since_noon(_hhmm(str(cur["until"])))
+	match str(_gig.get("state", "")):
+		"offer":
+			if t_step < 4.0:                             # (the next order shows once the "paid" note has gone)
+				goal.text = ""
+				return
+			if goal.text == "":
+				_gig_goal()
+			if _skip and t_step > 4.5:                 # (testing: take two more orders, then go home)
+				if _gig_done < 2:
+					e_hit = true
+				else:
+					q_hit = true
+			if q_hit or late_night:
+				hud.warn(("Shift over: %d orders, ₹%d" if lang == "en" else "ஷிஃப்ட் முடிஞ்சது: %d ஆர்டர், ₹%d") % [_gig_done, _gig_earned], 6.0)
+				print("STORY gigs: %d orders, ₹%d" % [_gig_done, _gig_earned])
+				flags["gig_orders"] = _gig_done
+				_next()
+				return
+			if e_hit:
+				_gig["state"] = "pickup"
+				t_step = 0.0
+				_jumped = false
+				_gig_goal()
+		"pickup", "drop":
+			var key: String = _gig["pick"] if _gig["state"] == "pickup" else _gig["drop"]
+			var p := place_pos(key)
+			var g: float = city.streamer.height_at(p.x, p.z)
+			map.pin = Vector2(p.x, p.z)
+			_beam.visible = true
+			_beam.global_position = Vector3(p.x, (g if not is_nan(g) else car.global_position.y) + 35.0, p.z)
+			if _skip and t_step > 2.0 and not _jumped:  # (testing: jump there, spending the ride's minutes)
+				var mins := Vector2(car.global_position.x - p.x, car.global_position.z - p.z).length() * 1.3 / 1000.0 / float(cur.get("speed_kmh", 25.0)) * 60.0
+				if _place_at(p):
+					fines.sim.minute = fmod(fines.sim.minute + mins, 1440.0)
+					_jumped = true
+				return
+			var d := Vector2(car.global_position.x - p.x, car.global_position.z - p.z).length()
+			if d < 45.0 + (60.0 if _skip else 0.0) and absf(car.speed) < 1.5 and (_jumped or not _skip):
+				_jumped = false
+				t_step = 0.0
+				if _gig["state"] == "pickup":
+					hud.warn(("Picked up order #%d" if lang == "en" else "ஆர்டர் #%d எடுத்தாச்சு") % _gig["no"], 3.0)
+					_gig["state"] = "drop"
+					_gig_goal()
+				else:
+					var ontime := _since_noon(fines.sim.minute) <= _since_noon(float(_gig["by"]))
+					var tip: int = (10 + randi() % 4 * 10) if ontime else 0
+					var paid: int = int(_gig["pay"]) + tip
+					fines.sim.money += paid
+					_gig_done += 1
+					_gig_earned += paid
+					hud.warn((("Delivered  +₹%d" + ("  (₹%d tip)" % tip if tip else "  (late: no tip)")) if lang == "en" else
+						("டெலிவரி  +₹%d" + ("  (₹%d டிப்)" % tip if tip else "  (தாமதம்: டிப் இல்ல)"))) % paid, 5.0)
+					print("STORY gig #%d %s → %s paid %d %s" % [_gig["no"], _gig["pick"], _gig["drop"], paid, "ontime" if ontime else "late"])
+					_gig_offer()
+
+
+func _hhmm(s: String) -> float:
+	var hm: PackedStringArray = s.split(":")
+	return float(hm[0]) * 60.0 + float(hm[1])
+
+
 ## The dish on Karthik's leaf in the mess: the one ordered (room_mess Food_<kind>: tools/story_rooms.py food), or none.
 func _dish(kind: String) -> void:
 	if room == null:
@@ -1153,8 +1291,8 @@ func _refresh() -> void:
 	big.visible = kind in ["card", "jump"]
 	small.visible = kind in ["card", "jump"]
 	box.visible = false
-	goal.visible = kind in ["drive", "free", "meet", "home", "eat_out"]
-	clock.visible = kind in ["drive", "free", "talk", "comfort_verdict", "deliver_verdict", "task", "lapse", "meet", "home", "eat_out"]
+	goal.visible = kind in ["drive", "free", "meet", "home", "eat_out", "gigs"]
+	clock.visible = kind in ["drive", "free", "talk", "comfort_verdict", "deliver_verdict", "task", "lapse", "meet", "home", "eat_out", "gigs"]
 	if step < 0:
 		big.visible = false                          # (no title shown: the story's name would give it away)
 		small.visible = true

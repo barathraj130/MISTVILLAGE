@@ -96,6 +96,118 @@
    "z": -388.7,
    "en": "The Siruvani Grand, Avinashi Road",
    "ta": "தி சிறுவாணி கிராண்ட், அவிநாசி ரோடு"
+  },
+  "drop_rs_puram": {
+   "lat": 11.0089,
+   "lon": 76.953,
+   "x": -1625.0,
+   "z": 1050.2,
+   "en": "R.S. Puram, Coimbatore",
+   "ta": "ஆர்.எஸ். புரம்"
+  },
+  "drop_peelamedu": {
+   "lat": 11.0262,
+   "lon": 77.0105,
+   "x": 4646.1,
+   "z": -903.1,
+   "en": "Peelamedu, Coimbatore",
+   "ta": "பீளமேடு"
+  },
+  "drop_ramanathapuram": {
+   "lat": 10.9989,
+   "lon": 76.9973,
+   "x": 3208.7,
+   "z": 2128.4,
+   "en": "Ramanathapuram, Coimbatore",
+   "ta": "ராமநாதபுரம்"
+  },
+  "drop_saibaba_colony": {
+   "lat": 11.0247,
+   "lon": 76.9425,
+   "x": -2769.4,
+   "z": -676.9,
+   "en": "Saibaba Colony, Coimbatore",
+   "ta": "சாய்பாபா காலனி"
+  },
+  "drop_singanallur": {
+   "lat": 11.0007,
+   "lon": 77.0289,
+   "x": 6688.8,
+   "z": 1902.0,
+   "en": "Singanallur, Coimbatore",
+   "ta": "சிங்காநல்லூர்"
+  },
+  "drop_town_hall": {
+   "lat": 10.9947,
+   "lon": 76.9615,
+   "x": -664.9,
+   "z": 2640.2,
+   "en": "Town Hall, Coimbatore",
+   "ta": "டவுன் ஹால்"
+  },
+  "drop_vadavalli": {
+   "lat": 11.0237,
+   "lon": 76.9035,
+   "x": -7037.0,
+   "z": -551.7,
+   "en": "Vadavalli, Coimbatore",
+   "ta": "வடவள்ளி"
+  },
+  "drop_hope_college": {
+   "lat": 11.027,
+   "lon": 77.023,
+   "x": 6016.2,
+   "z": -1027.8,
+   "en": "Hope College, Coimbatore",
+   "ta": "ஹோப் காலேஜ்"
+  },
+  "drop_kuniyamuthur": {
+   "lat": 10.9645,
+   "lon": 76.9567,
+   "x": -1152.8,
+   "z": 5962.3,
+   "en": "Kuniyamuthur, Coimbatore",
+   "ta": "குனியமுத்தூர்"
+  },
+  "drop_kavundampalayam": {
+   "lat": 11.041,
+   "lon": 76.945,
+   "x": -2502.1,
+   "z": -2502.6,
+   "en": "Kavundampalayam, Coimbatore",
+   "ta": "கவுண்டம்பாளையம்"
+  },
+  "drop_ganapathy": {
+   "lat": 11.039,
+   "lon": 76.975,
+   "x": 766.6,
+   "z": -2294.4,
+   "en": "Ganapathy, Coimbatore",
+   "ta": "கணபதி"
+  },
+  "drop_thudiyalur": {
+   "lat": 11.08,
+   "lon": 76.94,
+   "x": -3139.4,
+   "z": -6890.6,
+   "en": "Thudiyalur, Coimbatore",
+   "ta": "துடியலூர்"
+  },
+  "drop_race_course": {
+   "lat": 11.0003,
+   "lon": 76.9762,
+   "x": 962.2,
+   "z": 1987.5,
+   "en": "Race Course, Coimbatore",
+   "ta": "ரேஸ் கோர்ஸ்"
+  },
+  "drop_sitra": {
+   "lat": 11.035,
+   "lon": 77.0395,
+   "x": 7805.5,
+   "z": -1897.9,
+   "en": "Sitra, Coimbatore",
+   "ta": "சித்ரா"
   }
  },
  "people": {
@@ -1733,9 +1845,45 @@
    }
   },
   {
+   "do": "gigs",
+   "vehicle": "karthik_scooter",
+   "realtime": true,
+   "until": "00:30",
+   "speed_kmh": 25,
+   "app": {
+    "en": "QuickBite Rider",
+    "ta": "குவிக்பைட் ரைடர்"
+   },
+   "pickups": [
+    "hotel",
+    "lunch_murugan",
+    "lunch_gowri",
+    "lunch_kovai",
+    "grand_hotel"
+   ],
+   "drops": [
+    "drop_ganapathy",
+    "drop_hope_college",
+    "drop_kavundampalayam",
+    "drop_kuniyamuthur",
+    "drop_peelamedu",
+    "drop_race_course",
+    "drop_ramanathapuram",
+    "drop_rs_puram",
+    "drop_saibaba_colony",
+    "drop_singanallur",
+    "drop_sitra",
+    "drop_thudiyalur",
+    "drop_town_hall",
+    "drop_vadavalli",
+    "ashwin"
+   ]
+  },
+  {
    "do": "jump",
    "to": "home",
-   "clock": "23:30"
+   "clock": "23:30",
+   "clock_forward": true
   },
   {
    "do": "scene",
