@@ -206,6 +206,14 @@ func _lamp() -> ArrayMesh:
 	return am
 
 
+## Leaving the tree (the game quitting, the scene changing): the tiles still being built on worker threads are
+## finished first, so none of them reads this streamer (its meshes, landmarks, mutex) after it is gone.
+func _exit_tree() -> void:
+	for k in pending.keys():
+		WorkerThreadPool.wait_for_task_completion(pending[k])
+	pending.clear()
+
+
 func _process(_dt: float) -> void:
 	var _p0 := Time.get_ticks_usec()
 	_process_timed(_dt)
