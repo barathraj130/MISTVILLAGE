@@ -880,10 +880,15 @@ func _eat_out() -> void:
 		_load_room("mess", near_k)                      # inside: Karthik on the bench, the owner at his counter
 		_cast({"karthik": {"mark": "karthik_eat", "anim": "Sit"}, "cook": {"mark": "cook", "anim": "Idle"}})
 		_dish("")                                       # an empty leaf till he orders
+		for n in (room.find_children("Sign_*", "", true, false) if room else []):   # the board over the hatch: its name
+			(n as Node3D).visible = str(n.name) == "Sign_" + near_k
 		_cams_on()
-		_room_cam("eat")
+		_room_cam("wide")                               # walking in: the hall, the place's name over the hatch
 		_shot()
-		get_tree().create_timer(0.5 if _skip else 1.8).timeout.connect(func():   # a look round, then the menu
+		get_tree().create_timer(0.6 if _skip else 2.0).timeout.connect(func():   # then at his table
+			_room_cam("eat")
+			_shot())
+		get_tree().create_timer(1.2 if _skip else 3.6).timeout.connect(func():   # a look round, then the menu
 			Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 			tasks.start("meal", spec, lang, _skip)
 			_shot())                                    # (testing: the menu)

@@ -1525,7 +1525,18 @@ def mess_detail(T):
     yellow = mat("letters_yellow", (1.0, 0.85, 0.2), 0.4)
     chalk = mat("chalk", (0.95, 0.95, 0.92), 0.8)
     steel = mat("steel", (0.74, 0.75, 0.77), 0.32, 0.55)
-    sign("HOTEL ANNA MESS", (0.0, D / 2 - 0.04, 2.55), 3.0, 0.5, red, yellow, "-y", 0.26)
+    # the name board over the hatch: one for each place Karthik can eat (slice.json eat_out "eateries"); the parts
+    # are named Sign_<place> so the export keeps each its own object and the game shows the one he walked into
+    for key, name, board, ink in (("hotel", "HOTEL ANNA MESS", red, yellow),
+                                  ("lunch_murugan", "SRI MURUGAN MESS", mat("sign_saffron", (0.85, 0.4, 0.05), 0.4),
+                                   mat("letters_white", (0.97, 0.97, 0.97), 0.4)),
+                                  ("lunch_gowri", "GOWRI MEALS HALL", mat("sign_green", (0.05, 0.35, 0.15), 0.4), yellow),
+                                  ("lunch_kovai", "KOVAI TIFFIN CENTRE", mat("sign_blue", (0.06, 0.18, 0.5), 0.4),
+                                   mat("letters_white", (0.97, 0.97, 0.97), 0.4))):
+        before = set(bpy.data.objects)
+        sign(name, (0.0, D / 2 - 0.04, 2.55), 3.0, 0.5, board, ink, "-y", min(0.26, 2.6 / (len(name) * 0.62)))
+        for o in set(bpy.data.objects) - before:
+            o.name = "Sign_%s_part" % key
     menu = ["MENU", "Idli (2) ..... 20", "Dosa ......... 40", "Parotta ...... 15", "Meals ........ 90",
             "Pongal ....... 35", "Tea / Coffee . 12"]
     for k, line in enumerate(menu):
@@ -1633,11 +1644,12 @@ def reset():
 
 
 def export(name):
-    """The room as one mesh ("Room"), but each dish (Food_<kind> parts) one object of its own the game can show."""
+    """The room as one mesh ("Room"), but each dish (Food_<kind> parts) and name board (Sign_<place>) one object of
+    its own the game can show or hide."""
     groups = {}
     for o in bpy.data.objects:
         if o.type == 'MESH':
-            groups.setdefault(o.name.split("_part")[0] if o.name.startswith("Food_") else "Room", []).append(o)
+            groups.setdefault(o.name.split("_part")[0] if o.name.startswith(("Food_", "Sign_")) else "Room", []).append(o)
     for gname, obs in groups.items():
         bpy.ops.object.select_all(action='DESELECT')
         for o in obs:
