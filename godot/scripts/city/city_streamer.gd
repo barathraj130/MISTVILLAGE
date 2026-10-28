@@ -46,7 +46,8 @@ var wall_mat: Material
 var lamp_mesh: ArrayMesh
 var prop_meshes := {}                      # prop type → Mesh (1 traffic signal, 2 bus shelter, 3 speed breaker)
 var kit
-var landmarks: Array = []                  # {glb, x, y, z, yaw, lot: [x, z]}: each in place of the block on its lot
+var landmarks: Array = []                  # {glb, x, y, z, yaw, lots: [[x, z]...], labels}: each in place of the blocks
+										   # on its lots, its Tamil / Hindi lettering drawn here (labels)
 var kit_meshes: Array = []                 # variant index → Mesh (or null)
 var kit_near := KIT_NEAR                   # (--kitnear=N overrides, for comparing near and far versions)
 var kit_far_meshes: Array = []             # variant index → its far version (tools/kit_far.py) or null
@@ -356,6 +357,7 @@ func _ground(k: Vector2i, n: int, h: PackedFloat32Array, out: Dictionary) -> voi
 	var step: float = float(index["hstep"])
 	var x0 := k.x * tile
 	var z0 := k.y * tile
+	h = _level(x0, z0, n, step, h)
 	var v := PackedVector3Array()
 	var nm := PackedVector3Array()
 	var idx := PackedInt32Array()
@@ -2095,9 +2097,46 @@ func _instance(k: Vector2i, d: Dictionary) -> void:
 ## Is a footprint centred here the lot of a landmark (whose own design replaces it)?
 func _landmark_lot(c: Vector2) -> bool:
 	for lm in landmarks:
-		if c.distance_to(Vector2(lm["lot"][0], lm["lot"][1])) < 3.0:
-			return true
+		for lot in lm.get("lots", []):
+			if c.distance_to(Vector2(lot[0], lot[1])) < 3.0:
+				return true
+		if lm.has("clear"):                          # (an outline whose blocks all go: a bus stand's yard)
+			var poly := PackedVector2Array()
+			for q in lm["clear"]:
+				poly.append(Vector2(q[0], q[1]))
+			if Geometry2D.is_point_in_polygon(c, poly):
+				return true
 	return false
+
+
+## The ground under a landmark levelled to its floor ("pad": [x0, x1, y0, y1] of the design, Blender metres), easing
+## back to the land around over LEVEL_EASE metres: real buildings stand on levelled lots, not on the DEM's slopes.
+const LEVEL_EASE := 6.0
+func _level(x0: float, z0: float, n: int, step: float, h: PackedFloat32Array) -> PackedFloat32Array:
+	var out := h
+	for lm in landmarks:
+		if not lm.has("pad"):
+			continue
+		var pad: Array = lm["pad"]
+		var c := cos(float(lm["yaw"]))
+		var sn := sin(float(lm["yaw"]))
+		var reach: float = Vector2(pad[1] - pad[0], pad[3] - pad[2]).length() * 0.5 + LEVEL_EASE + 60.0
+		if absf(float(lm["x"]) - (x0 + tile * 0.5)) > tile * 0.5 + reach or absf(float(lm["z"]) - (z0 + tile * 0.5)) > tile * 0.5 + reach:
+			continue
+		for i in n:
+			for j in n:
+				var dx := x0 + j * step - float(lm["x"])
+				var dz := z0 + i * step - float(lm["z"])
+				var bx := dx * c - dz * sn                  # into the design's frame (Blender x, y)
+				var by := -(dx * sn + dz * c)
+				var ox := maxf(maxf(float(pad[0]) - bx, bx - float(pad[1])), 0.0)
+				var oy := maxf(maxf(float(pad[2]) - by, by - float(pad[3])), 0.0)
+				var d := Vector2(ox, oy).length()
+				if d >= LEVEL_EASE:
+					continue
+				var t := smoothstep(0.0, 1.0, d / LEVEL_EASE)
+				out[i * n + j] = lerpf(float(lm["y"]) - 0.05, out[i * n + j], t)
+	return out
 
 
 ## The landmarks standing in tile k (godot/assets/landmarks/landmarks.json), solid like the rest of the city.
@@ -2114,6 +2153,17 @@ func _landmarks(k: Vector2i, node: Node3D) -> void:
 			cs.shape = (mi as MeshInstance3D).mesh.create_trimesh_shape()
 			cs.transform = (mi as MeshInstance3D).global_transform
 			_shape(node, cs)
+		for lb in lm.get("labels", []):                  # at [x, y, z] of the design (Blender: z up, front -y)
+			var l := Label3D.new()
+			l.text = lb["text"]
+			l.font_size = 96
+			l.outline_size = 0
+			l.pixel_size = float(lb["h"]) / 96.0
+			l.modulate = Color.html(lb.get("color", "#000000"))
+			l.position = Vector3(lb["at"][0], lb["at"][2], -float(lb["at"][1]))
+			l.shaded = true
+			l.double_sided = false
+			sc.add_child(l)
 
 
 ## Collision shapes live under one StaticBody3D, and are freed with their tile.
