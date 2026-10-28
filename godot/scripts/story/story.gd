@@ -25,8 +25,8 @@ extends Node
 ##   home      walk the house yourself (the room, "room"/"at"): "visits" in order, each a place in it ("to": its
 ##             mark) where E does that place's task (the bathroom: brush and bathe; the kitchen: a meal from the
 ##             month's groceries...); a marker shows where to go next
-##   eat_out   find somewhere to eat: "eateries" (places) on the map; on foot at any door, E: inside the mess (room_mess,
-##             Karthik at a table), its menu, paid from
+##   eat_out   find somewhere to eat: "eateries" (places) on the map; on foot at any door, E: inside (room_mess, or
+##             "rooms": place → room, e.g. the five-star's restaurant), Karthik at a table, its menu, paid from
 ##             the wallet
 ##   free      free drive with a goal line, the end of the chapter
 ## Any step may have "when": flag / "unless": flag (results of earlier tasks) and is skipped otherwise; any line
@@ -35,6 +35,7 @@ extends Node
 ## and in talk.
 ##   --storyskip     testing: each drive step jumps the car to its place after 3 s, and talk advances by itself
 ##   --storyshots=D  testing: a screenshot of every card, talk line and arrival into the folder D
+##   --eatat=P       testing: the lunch break is eaten at the place P (an eat_out "eateries" key)
 ##   --storyta       start in Tamil
 
 const Sim := preload("res://scripts/drive/sim.gd")
@@ -869,15 +870,20 @@ func _eat_out() -> void:
 	if (near_k != "" and city.walker != null and e and not _e_down) or (_skip and t_step > 1.0):
 		if near_k == "":
 			near_k = str(cur["eateries"][0])
+			for a in OS.get_cmdline_user_args():      # (testing: --eatat=<place> eats there)
+				if a.begins_with("--eatat="):
+					near_k = a.get_slice("=", 1)
 		_in_task = true
 		_beam.visible = false
 		map.pin = null
 		var spec: Dictionary = cur.duplicate()
 		spec["title"] = data["places"][near_k]
 		spec["menu"] = cur["menus"].get(near_k, cur["menus"].values()[0])
+		spec.merge(cur.get("tips", {}).get(near_k, {}), true)   # (a place's own tip: the five-star's host)
 		if fines:
 			spec["wallet"] = fines.sim.money
-		_load_room("mess", near_k)                      # inside: Karthik on the bench, the owner at his counter
+		_load_room(str(cur.get("rooms", {}).get(near_k, "mess")), near_k)   # inside (a mess, or the five-star's
+		# restaurant): Karthik at his table, the owner (or the host) at the counter
 		_cast({"karthik": {"mark": "karthik_eat", "anim": "Sit"}, "cook": {"mark": "cook", "anim": "Idle"}})
 		_dish("")                                       # an empty leaf till he orders
 		for n in (room.find_children("Sign_*", "", true, false) if room else []):   # the board over the hatch: its name

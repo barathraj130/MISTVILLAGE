@@ -88,6 +88,14 @@
    "lon": 76.96567,
    "en": "Kovai Tiffin Centre, Gandhipuram",
    "ta": "கோவை டிஃபன் சென்டர், காந்திபுரம்"
+  },
+  "grand_hotel": {
+   "lat": 11.02186,
+   "lon": 76.99471,
+   "x": 2933.0,
+   "z": -394.0,
+   "en": "The Siruvani Grand, Avinashi Road",
+   "ta": "தி சிறுவாணி கிராண்ட், அவிநாசி ரோடு"
   }
  },
  "people": {
@@ -1035,14 +1043,15 @@
   {
    "do": "eat_out",
    "goal": {
-    "en": "Lunch break: find a place to eat nearby (get out and walk in)",
-    "ta": "மதிய சாப்பாடு: பக்கத்துல ஒரு இடம் தேடுங்க (இறங்கி உள்ளே போங்க)"
+    "en": "Lunch break: find a place to eat nearby (get out and walk in), or treat yourself at The Siruvani Grand on Avinashi Road",
+    "ta": "மதிய சாப்பாடு: பக்கத்துல ஒரு இடம் தேடுங்க (இறங்கி உள்ளே போங்க), இல்லன்னா அவிநாசி ரோடு சிறுவாணி கிராண்ட்ல ஜாலியா சாப்பிடுங்க"
    },
    "eateries": [
     "lunch_murugan",
     "lunch_gowri",
     "lunch_kovai",
-    "hotel"
+    "hotel",
+    "grand_hotel"
    ],
    "minutes": 25,
    "tip_who": {
@@ -1157,7 +1166,56 @@
       "price": 70,
       "food": "dosa"
      }
+    ],
+    "grand_hotel": [
+     {
+      "name": {
+       "en": "South Indian thali",
+       "ta": "தென்னிந்திய தாலி"
+      },
+      "price": 1150,
+      "food": "meals"
+     },
+     {
+      "name": {
+       "en": "Malabar parotta & chicken curry",
+       "ta": "மலபார் பரோட்டா & சிக்கன் கறி"
+      },
+      "price": 950,
+      "food": "parotta"
+     },
+     {
+      "name": {
+       "en": "Masala dosa & filter coffee",
+       "ta": "மசாலா தோசை & ஃபில்டர் காபி"
+      },
+      "price": 650,
+      "food": "dosa"
+     },
+     {
+      "name": {
+       "en": "Curd rice & pickle",
+       "ta": "தயிர் சாதம் & ஊறுகாய்"
+      },
+      "price": 550,
+      "food": "curd_rice"
+     }
     ]
+   },
+   "rooms": {
+    "grand_hotel": "fine_dining"
+   },
+   "tips": {
+    "grand_hotel": {
+     "tip_who": {
+      "en": "A tip from the host",
+      "ta": "ஹோஸ்ட் டிப்"
+     },
+     "tip": {
+      "en": "Take your time: the thali comes with payasam, and a filter coffee at the end.",
+      "ta": "பொறுமையா சாப்பிடுங்க: தாலியோட பாயசமும், கடைசில ஃபில்டர் காபியும் வரும்."
+     }
+    }
    }
   },
   {

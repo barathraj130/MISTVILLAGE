@@ -1520,6 +1520,144 @@ def bank_detail(T):
     switchboard(1.2, -D / 2 + 0.02, 1.3, "-y", 0.36)
 
 
+def dining_chair(x, y, yaw, fabric, wood):
+    """An upholstered dining chair (a five-star restaurant's): padded seat 0.46 m up, a padded back, turned legs;
+    yaw as the marks (0: the sitter faces +Y)."""
+    f = Vector((-math.sin(yaw), math.cos(yaw), 0.0))
+    side = Vector((f.y, -f.x, 0.0))
+    c = Vector((x, y, 0.0))
+    for a in (-1, 1):
+        for b in (-1, 1):
+            p = c + f * (0.19 * a) + side * (0.19 * b)
+            cyl((p.x, p.y, 0.21), 0.018, 0.42, wood, 10, r2=0.014)
+    box((x, y, 0.44), (0.48, 0.48, 0.07), fabric, 0.02, rot=(0, 0, yaw))
+    bk = c - f * 0.22
+    box((bk.x, bk.y, 0.76), (0.46, 0.06, 0.56), fabric, 0.025, rot=(0, 0, yaw))
+    for b in (-1, 1):
+        p = bk + side * (0.2 * b)
+        cyl((p.x, p.y, 0.62), 0.016, 0.36, wood, 10)
+
+
+def place_setting(x, y, toward, china, steel, glass, linen):
+    """A laid place: a white charger plate, fork left and knife right, a folded napkin, a water goblet; toward: the
+    unit vector from the place to the table's middle (the diner sits the other way)."""
+    t = Vector(toward)
+    side = Vector((t.y, -t.x, 0.0))
+    p = Vector((x, y, 0.0))
+    cyl((p.x, p.y, 0.779), 0.135, 0.012, china, 32, r2=0.12)
+    for sg, length in ((1, 0.19), (-1, 0.21)):
+        q = p + side * (0.17 * sg)
+        box((q.x, q.y, 0.776), (0.016, length, 0.004), steel, rot=(0, 0, math.atan2(-t.x, t.y)))
+    q = p + side * 0.27 + t * 0.02
+    box((q.x, q.y, 0.785), (0.1, 0.16, 0.025), linen, 0.006, rot=(0, 0, math.atan2(-t.x, t.y)))
+    q = p - side * 0.2 + t * 0.18
+    cyl((q.x, q.y, 0.79), 0.035, 0.02, glass, 16)
+    cyl((q.x, q.y, 0.84), 0.006, 0.08, glass, 8)
+    cyl((q.x, q.y, 0.915), 0.04, 0.09, glass, 20, r2=0.034)
+
+
+def fine_dining(T):
+    """The all-day dining restaurant of a five-star hotel on Avinashi Road (a hotel of the story's own: no real
+    brand): polished marble, walnut panelling and brass, white linen on every table, upholstered chairs, brass
+    pendant lights, a buffet along the back wall under the hotel's name, a glass wall onto a lawn. Karthik's table
+    is by the glass: a silver thali in front of him (the dish he orders shows on it, as in the mess)."""
+    W, D, h = 12.0, 9.0, 3.6
+    floor = mat("marble", (0.93, 0.9, 0.84), 0.08, tex=T["tile_cream"], scale=1.6)
+    wall = mat("wall_silk", (0.9, 0.85, 0.76), 0.85)
+    walnut = mat("walnut", (1, 1, 1), 0.35, tex=os.path.join(GTEX, "dark_timber_deck_base.jpg"), scale=1.2)
+    shell(W, D, h, floor, wall, mat("ceiling_white", (0.93, 0.93, 0.9), 0.95), walnut, 1.1, door_w=1.8, door_x=3.6,
+          windows=[("L", -0.3, 7.6, 0.0, 3.0)])
+    brass = mat("brass", (0.8, 0.6, 0.25), 0.3, 1.0)
+    linen = mat("linen_white", (0.96, 0.96, 0.94), 0.85)
+    china = mat("china_white", (0.97, 0.97, 0.96), 0.15)
+    silver = mat("silver", (0.86, 0.86, 0.88), 0.32, 1.0)
+    glass = mat("glass", (0.6, 0.72, 0.75), 0.05, alpha=0.12)
+    fabric = mat("velvet_maroon", (0.38, 0.06, 0.08), 0.8)
+    # the glass wall onto the hotel lawn: tall panes in bronze frames, a lawn, a hedge and the sky beyond
+    gx = -W / 2 - 0.06
+    for k in range(7):
+        yy = -4.1 + k * (7.6 / 6)
+        box((gx, yy, 1.5), (0.08, 0.08, 3.0), mat("bronze", (0.35, 0.25, 0.15), 0.35, 0.8))
+    box((gx, -0.3, 3.0), (0.1, 7.6, 0.1), mat("bronze", (0.35, 0.25, 0.15), 0.35, 0.8))
+    box((gx, -0.3, 1.5), (0.02, 7.6, 3.0), glass)
+    box((gx - 4.0, -0.3, 0.02), (8.0, 12.0, 0.04), mat("lawn", (0.25, 0.5, 0.15), 0.9, emit=(0.25, 0.45, 0.15), strength=0.6))
+    box((gx - 3.0, -0.3, 0.6), (0.6, 12.0, 1.2), mat("hedge", (0.12, 0.3, 0.1), 0.9, emit=(0.12, 0.28, 0.1), strength=0.5))
+    box((gx - 8.0, -0.3, 4.0), (0.1, 16.0, 8.0), mat("sky_day", (0.75, 0.85, 0.95), 0.9, emit=(0.75, 0.85, 0.97), strength=1.6))
+    for y0, y1 in ((-4.15, -3.5), (2.9, 3.55)):                  # sheer curtains drawn back at the ends
+        curtain(-W / 2 + 0.18, y0, y1, 0.05, 3.2, mat("sheer", (0.95, 0.93, 0.88), 0.9, alpha=0.75), folds=5)
+    # the buffet along the back wall: a walnut counter with a marble top, chafing dishes, under the name
+    box((0.5, D / 2 - 0.55, 0.45), (5.6, 0.75, 0.9), walnut, 0.01)
+    box((0.5, D / 2 - 0.55, 0.92), (5.7, 0.8, 0.04), mat("marble_dark", (0.12, 0.1, 0.09), 0.1, tex=T["granite_black"]))
+    for k in range(6):
+        cx = -1.7 + k * 0.88
+        box((cx, D / 2 - 0.55, 0.96), (0.62, 0.42, 0.04), silver, 0.01)
+        dome((cx, D / 2 - 0.55, 0.98), 0.27, 0.16, silver, sy=0.65)
+        cyl((cx, D / 2 - 0.55, 1.15), 0.02, 0.03, brass, 12)
+    box((0.5, D / 2 - 0.04, 2.45), (4.6, 0.04, 0.95), walnut, 0.01)            # the name on a walnut panel
+    text("THE SIRUVANI GRAND", (0.5, D / 2 - 0.07, 2.6), 0.3, brass, "-y")
+    text("KAVERI  \u00b7  ALL-DAY DINING", (0.5, D / 2 - 0.07, 2.18), 0.15, brass, "-y")
+    for k, x in enumerate((-2.6, 3.6)):                              # brass wall lamps either side
+        cyl((x, D / 2 - 0.12, 2.3), 0.08, 0.22, mat("lamp_glow", (1.0, 0.85, 0.6), 0.4, emit=(1.0, 0.8, 0.5), strength=4.0), 16)
+        light("lamp", (x, D / 2 - 0.35, 2.3), 10 + k)
+    # the tables: white linen to the floor, upholstered chairs, laid places; Karthik's by the glass
+    tables = [(-3.6, -2.4), (-3.6, 0.6), (-0.6, -2.4), (-0.6, 0.6), (2.4, -0.9), (4.2, 1.9), (2.4, 2.2)]
+    for tx, ty in tables:
+        box((tx, ty, 0.755), (0.92, 0.92, 0.03), linen, 0.01)
+        for sx, sy, sz in ((0.0, 0.46, (0.92, 0.012, 0.3)), (0.0, -0.46, (0.92, 0.012, 0.3)),   # the cloth's drop
+                           (0.46, 0.0, (0.012, 0.92, 0.3)), (-0.46, 0.0, (0.012, 0.92, 0.3))):
+            box((tx + sx, ty + sy, 0.6), sz, linen)
+        cyl((tx, ty, 0.37), 0.06, 0.72, walnut, 16)
+        for d in (1, -1):
+            dining_chair(tx, ty + d * 0.68, 0.0 if d < 0 else math.pi, fabric, walnut)
+        cyl((tx + 0.38, ty, 0.84), 0.02, 0.14, brass, 12)                             # a bud vase and a rose
+        dome((tx + 0.38, ty, 0.9), 0.025, 0.03, mat("rose", (0.75, 0.05, 0.1), 0.6))
+        if (tx, ty) != (-3.6, 0.6):
+            for d in (1, -1):
+                place_setting(tx, ty + d * 0.22, (0.0, -d, 0.0), china, steel_of(), glass, linen)
+    kx, ky = -3.6, 0.6                                               # Karthik's table: he sits on its +Y side, facing -Y
+    cyl((kx, ky + 0.2, 0.778), 0.21, 0.014, silver, 40)              # the silver thali
+    for kind in FOODS:
+        food(kind, kx, ky + 0.2, 0.786)
+    q = (kx - 0.24, ky + 0.38)
+    cyl((q[0], q[1], 0.79), 0.035, 0.02, glass, 16)
+    cyl((q[0], q[1], 0.84), 0.006, 0.08, glass, 8)
+    cyl((q[0], q[1], 0.915), 0.04, 0.09, glass, 20, r2=0.034)
+    place_setting(kx, ky - 0.22, (0.0, 1.0, 0.0), china, steel_of(), glass, linen)
+    # the host's stand by the door, potted palms, brass pendants over the tables
+    box((3.0, -D / 2 + 1.0, 0.55), (0.7, 0.45, 1.1), walnut, 0.01)
+    box((3.0, -D / 2 + 1.0, 1.11), (0.75, 0.5, 0.03), brass)
+    for x, y in ((-W / 2 + 0.6, D / 2 - 0.6), (W / 2 - 0.6, D / 2 - 0.6), (5.2, -D / 2 + 0.6)):
+        cyl((x, y, 0.3), 0.28, 0.6, mat("planter", (0.15, 0.12, 0.1), 0.4), 24, r2=0.22)
+        for k in range(7):
+            a = k * math.tau / 7
+            box((x + 0.25 * math.cos(a), y + 0.25 * math.sin(a), 1.1), (0.08, 0.6, 0.01),
+                mat("palm", (0.15, 0.4, 0.12), 0.7), rot=(0.9, 0.0, a + math.pi / 2))
+            cyl((x, y, 0.85), 0.03, 0.5, mat("palm_stem", (0.3, 0.25, 0.12), 0.8), 8)
+    glow = mat("pendant_glow", (1.0, 0.85, 0.6), 0.4, emit=(1.0, 0.82, 0.55), strength=6.0)
+    for k, (tx, ty) in enumerate(tables):
+        cyl((tx, ty, h - 0.45), 0.006, 0.9, brass, 6)
+        cyl((tx, ty, h - 0.95), 0.2, 0.18, brass, 24, r2=0.06)
+        cyl((tx, ty, h - 1.05), 0.17, 0.01, glow, 24)
+        light("lamp", (tx, ty, h - 1.2), k)
+    for k, (x, y) in enumerate(((-2.0, -1.0), (2.0, -1.0), (0.0, 2.5))):
+        light("tube", (x, y, h - 0.1), k)
+    for k, y in enumerate((-2.0, 1.5)):
+        light("window", (-W / 2 + 0.8, y, 1.8), k)
+    mark("karthik_eat", kx + 0.1, ky + 0.62, math.pi)                  # the thali at his right hand, as in the mess
+    mark("cook", 3.0, -D / 2 + 1.5, 0.0)                               # the host at his stand
+    mark("door", 3.6, -D / 2 + 0.3, 0.0)
+    shot("wide", (4.8, -3.9, 2.4), (-1.5, 2.0, 1.2))
+    shot("eat", (kx + 0.75, ky - 1.25, 1.45), (kx - 0.05, ky + 0.62, 0.95))
+
+
+def steel_of():
+    return mat("cutlery", (0.85, 0.85, 0.87), 0.2, 1.0)
+
+
+def fine_dining_detail(T):
+    pass
+
+
 MENUS = next((st["menus"] for st in json.load(open(os.path.join(ROOT, "godot", "story", "slice.json")))["steps"]
               if st.get("do") == "eat_out"), {})
 
@@ -1637,10 +1775,11 @@ def police_detail(T):
 
 
 DETAIL = {"home": home_detail, "dev_office": office_detail, "coopbank": bank_detail, "mess": mess_detail,
-          "police": police_detail}
+          "police": police_detail, "fine_dining": fine_dining_detail}
 
 
-ROOMS = {"home": home, "dev_office": dev_office, "coopbank": coopbank, "mess": mess, "police": police}
+ROOMS = {"home": home, "dev_office": dev_office, "coopbank": coopbank, "mess": mess, "police": police,
+         "fine_dining": fine_dining}
 
 
 def reset():
