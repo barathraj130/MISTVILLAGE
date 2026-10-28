@@ -152,7 +152,7 @@ func door_near(p: Vector3) -> Dictionary:
 							nrm = -nrm
 						bd = d
 						best = {"pos": Vector3(q.x, p.y, q.y), "out": Vector3(nrm.x, 0, nrm.y),
-							"room": "home" if centre.distance_to(_home) < 25.0 else _room_for(b, s),
+							"room": "home" if centre.distance_to(_home) < 10.0 else _room_for(b, s),
 							"key": "%d,%d" % [roundi(centre.x), roundi(centre.y)]}
 	return best
 
@@ -294,8 +294,19 @@ func _door_test(n: int) -> void:
 					w.global_position = p + Vector3(sn, 0, c) * 2.0
 					await tree.create_timer(8.0).timeout
 					d = door_near(w.global_position)
-		elif "--doorhome" in OS.get_cmdline_user_args():  # Karthik's house: its room, straight in
-			d = {"pos": Vector3(_home.x, w.global_position.y, _home.y), "out": Vector3(0, 0, 1), "room": "home", "key": "home"}
+		elif "--doorhome" in OS.get_cmdline_user_args():  # Karthik's house: set down in its street, in at its wall
+			w.global_position = Vector3(_home.x, w.global_position.y + 40.0, _home.y)
+			w.velocity = Vector3.ZERO
+			await tree.create_timer(1.0).timeout
+			while not (w as CharacterBody3D).is_on_floor():
+				await tree.create_timer(0.5).timeout
+			await tree.create_timer(3.0).timeout
+			d = _a_door(w.global_position, seen)
+			if not d.is_empty():
+				w.global_position = d["pos"] + d["out"] * 0.9 + Vector3(0, 0.6, 0)
+				await tree.create_timer(1.5).timeout
+				d = door_near(w.global_position)
+			print("DOORTEST home: %.0f m from the house's place" % Vector2(w.global_position.x, w.global_position.z).distance_to(_home))
 		else:
 			d = _a_door(w.global_position, seen)
 			if not d.is_empty():

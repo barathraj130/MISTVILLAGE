@@ -5,7 +5,7 @@ extends Node
 ##   tiredness  how long he's been on his feet. It climbs by the game hour, faster behind the wheel. Only sleep
 ##              clears it, and sleep is at least 5 game hours: his cot at home (Ganapathy), or a hotel room.
 ##              Over 80 he's warned; at 100 he can't go on: out of the car, he falls asleep where he is (5 hours,
-##              badly: stress goes up); behind the wheel the screen dims until he stops.
+##              badly: stress goes up); behind the wheel the screen dims until he stops, then he sleeps in his seat.
 ##   stress     traffic, every e-challan and fine, money going out (pay coming in eases it a little), hunger, bad
 ##              sleep. What brings it down is what people here do to get away for a while: a ticket for the match
 ##              at Nehru Stadium, a film at the mall's multiplex, a tea at a tea stall, a quiet sit in a pew.
@@ -74,6 +74,12 @@ func _ready() -> void:
 	stress = float(sd.get("stress", STRESS0))
 	energy = float(sd.get("energy", 70.0))
 	tiredness = float(sd.get("tiredness", 30.0))
+	for arg in OS.get_cmdline_user_args():            # (testing: --life=energy,tiredness,stress to start from)
+		if arg.begins_with("--life="):
+			var v := arg.get_slice("=", 1).split(",")
+			energy = float(v[0])
+			tiredness = float(v[1])
+			stress = float(v[2])
 	var layer := CanvasLayer.new()
 	layer.layer = 8
 	add_child(layer)
@@ -137,8 +143,17 @@ func _process(dt: float) -> void:
 	if tiredness >= 100.0:
 		if city.walker and not _story_busy():           # on his feet: he drops off where he is
 			collapse()
+		elif city.walker == null and absf(city.car.speed) < 0.5 and not _story_busy():   # pulled over: asleep at the wheel
+			_card.color.a = 0.0
+			_warn.erase("wheel")
+			_pass(SLEEP_MIN_HOURS * 60.0, "He pulls over, puts the seat back and is asleep at once.", null,
+				{"sleep": true, "stress": 6.0, "rough": true})
 		elif driving:
 			_card.color.a = 0.35 + 0.25 * sin(Time.get_ticks_msec() / 400.0)   # his eyes closing at the wheel
+			if not _warn.has("wheel"):
+				_warn["wheel"] = 0.0
+				city.hud.warn("He's falling asleep at the wheel. Pull over.", 5.0)
+				print("LIFE dozing at the wheel")
 	elif _card.color.a > 0.0:
 		_card.color.a = 0.0
 
