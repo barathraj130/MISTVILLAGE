@@ -20,7 +20,7 @@ const KIT_ROOM := {"apartment": "house_flat", "bungalow": "house", "city_house":
 	"commercial": "office", "shop_house": "shop", "hotel": "hotel", "mill_shed": "office"}
 const NAMES := {"home": "the house", "house_mid": "the house", "house_old": "the house", "house_flat": "the flat",
 	"station": "the station", "bus": "the bus stand", "airport": "the airport", "mall_avinashi": "the mall",
-	"mall_sathy": "the mall", "church": "the church", "kirana": "the kirana store", "tea": "the tea stall", "restaurant": "the restaurant",
+	"mall_sathy": "the mall", "church": "the church", "stadium": "the stadium", "kirana": "the kirana store", "tea": "the tea stall", "restaurant": "the restaurant",
 	"bank": "the bank", "office": "the offices", "hotel": "the hotel", "temple": "the temple", "hospital": "the hospital",
 	"fine_dining": "the restaurant", "mess": "the mess", "police": "the police station", "coopbank": "the bank",
 	"fuel": "the store"}

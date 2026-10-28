@@ -11,6 +11,8 @@ room of its own:
     mall_avinashi, mall_sathy
                  the malls' atrium: two floors of shopfronts (names of the story's own), the gallery and its glass
                  railing, the escalators up the middle, the skylight, a kiosk and planters
+    stadium      Nehru Stadium: the concourse under the stand (ticket window, turnstiles), the tunnels onto the
+                 stand's tiers, and the ground below (track, pitch, goals, the far stand, floodlights, the sky)
     church       Christ the King's nave: pews either side of the aisle, the columns, the stained-glass windows, the
                  sanctuary steps, the altar and the cross, candles, the fans on their long rods
     house_mid    a middle-class family's hall: a wooden sofa set, the showcase, the fridge in the hall, a dining
@@ -1102,9 +1104,150 @@ def house_old(T):
     shot("wide", (2.8, -3.6, 1.8), (-1.5, 2.0, 1.2))
 
 
+# ============================================================================ Nehru Stadium
+def stadium(T):
+    """In at the gate: the concourse under the stand (ticket window, turnstiles), through the tunnels onto the top
+    of the stand, its concrete tiers down to the railing, and the ground beyond: the red track, the football pitch,
+    the far stand and the floodlight masts under an open sky."""
+    W = 48.0
+    yf, yc = -28.0, -22.0                                                 # the gate's wall, the concourse's back
+    hc = 3.2
+    concrete = mat("stadium_concrete", (0.72, 0.7, 0.66), 0.85, tex=T["cement"], scale=3.0)
+    paint = mat("stadium_wall", (0.85, 0.82, 0.74), 0.85, tex=T["wall_rail"], scale=3.0)
+    maroon = mat("letters_maroon", (0.4, 0.05, 0.05), 0.5)
+    white = mat("letters_white", (0.97, 0.97, 0.97), 0.4)
+    steel = mat("rail_steel", (0.3, 0.32, 0.35), 0.4, 0.8)
+    sky = mat("sky_open", (1, 1, 1), 0.5, emit=(0.75, 0.85, 1.0), strength=2.5)
+    # the concourse: floor, ceiling (the stand above), the gate wall with its doorway, the back wall's three tunnels
+    box((0, (yf + yc) / 2, -0.05), (W, yc - yf, 0.1), concrete)
+    box((0, (yf + yc) / 2, hc + 0.1), (W, yc - yf, 0.2), concrete)
+    dw = 3.0
+    box((-(W / 2 + dw / 2) / 2, yf - 0.1, hc / 2), (W / 2 - dw / 2, 0.2, hc), paint)
+    box(((W / 2 + dw / 2) / 2, yf - 0.1, hc / 2), (W / 2 - dw / 2, 0.2, hc), paint)
+    box((0, yf - 0.1, (hc + 2.6) / 2), (dw, 0.2, hc - 2.6), paint)
+    box((0, yf - 0.9, 1.3), (dw + 0.4, 0.02, 2.8), mat("daylight", (1, 1, 1), 0.5, emit=(1.0, 0.98, 0.92), strength=2.2))
+    empty("Entry", (0, yf + 0.9, 0), 0.0)
+    empty("Exit", (0, yf + 0.35, 0), math.pi)
+    tunnels = (-12.0, 0.0, 12.0)
+    a = -W / 2
+    for x in tunnels:
+        box(((a + x - 1.6) / 2, yc + 0.1, hc / 2), (x - 1.6 - a, 0.2, hc), paint)
+        box((x, yc + 0.1, (hc + 2.6) / 2), (3.2, 0.2, hc - 2.6), paint)
+        a = x + 1.6
+        sign("STAND  %s" % "ABC"[tunnels.index(x)], (x, yc - 0.05, 2.9), 1.6, 0.3, maroon, white, "-y", 0.18)
+    box(((a + W / 2) / 2, yc + 0.1, hc / 2), (W / 2 - a, 0.2, hc), paint)
+    for sx in (-1, 1):
+        box((sx * (W / 2 + 0.1), (yf + yc) / 2, hc / 2), (0.2, yc - yf, hc), paint)
+    box((0, yf + 0.02, 0.6), (W, 0.02, 1.2), maroon)
+    # the ticket window, the turnstiles, the name board, a snack counter, the notices
+    box((-6.0, yf + 0.5, 0.55), (2.4, 0.8, 1.1), paint, 0.01)
+    for k in range(7):
+        box((-7.0 + k * 0.33, yf + 0.15, 1.8), (0.02, 0.02, 1.4), mat("window_bars", (0.1, 0.12, 0.1), 0.4, 0.6))
+    sign("TICKETS", (-6.0, yf + 0.15, 2.75), 2.0, 0.35, maroon, white, "+y", 0.22)
+    staff(-6.0, yf + 0.2, 0.0)
+    for k in range(3):                                                   # turnstiles before the middle tunnel
+        x = -2.0 + k * 2.0
+        cyl((x, yc - 2.0, 0.5), 0.12, 1.0, steel, 12)
+        for j in range(3):
+            ang = j * math.tau / 3
+            box((x + 0.3 * math.cos(ang), yc - 2.0 + 0.3 * math.sin(ang), 0.95), (0.6, 0.04, 0.04), steel, rot=(0, 0, ang))
+        if k < 2:
+            box((x + 1.0, yc - 2.0, 0.5), (0.1, 1.2, 1.0), steel)
+    sign("JAWAHARLAL NEHRU STADIUM  -  SDAT", (0, yf + 0.15, 2.6), 9.0, 0.45, maroon, white, "+y", 0.28)
+    box((9.0, yf + 0.5, 0.5), (3.0, 0.7, 1.0), mat("kiosk_blue", (0.2, 0.4, 0.7), 0.5), 0.01)
+    text("TEA  -  SNACKS  -  WATER", (9.0, yf + 0.86, 0.75), 0.13, white, "+y")
+    for k in range(4):
+        cyl((8.0 + k * 0.6, yf + 0.5, 1.12), 0.1, 0.24, mat("jar_glass", (0.8, 0.85, 0.85), 0.05, alpha=0.4), 16)
+    box((W / 2 - 0.03, -25.0, 1.6), (0.02, 1.2, 0.9), mat("notice", (1, 1, 1), 0.8, tex=T["notice"]))
+    for x in (-18.0, -10.0, -2.0, 6.0, 14.0, 20.0):
+        tube(x, -25.0, hc - 0.05)
+    # the stand: twelve tiers down from the tunnels to the front railing, a stair aisle down from each tunnel
+    tiers, td, tz = 12, 1.0, 0.4
+    for t in range(tiers):
+        y = yc + 0.2 + t * td
+        z = -t * tz
+        box((0, y + td / 2, z - 3.0), (W, td, 6.0), concrete)
+        box((0, y + 0.02, z - 0.02), (W, 0.04, 0.04), mat("tier_edge", (0.6, 0.58, 0.54), 0.8))
+        if 3 <= t <= 9:                                                  # coloured seats in the middle block
+            for k in range(int(20 / 0.5)):
+                x = -10.0 + k * 0.5
+                if min(abs(x - tx) for tx in tunnels) < 1.0:
+                    continue
+                c = ((0.85, 0.15, 0.1), (0.95, 0.75, 0.1))[(t + (k // 8)) % 2]
+                box((x, y + 0.65, z + 0.2), (0.42, 0.42, 0.06), mat("seat_%d" % ((t + (k // 8)) % 2), c, 0.4), 0.01)
+                box((x, y + 0.85, z + 0.42), (0.42, 0.05, 0.38), mat("seat_%d" % ((t + (k // 8)) % 2), c, 0.4), 0.01)
+    for x in tunnels:                                                    # stairs: two steps a tier
+        for t in range(tiers * 2):
+            y = yc + 0.2 + t * td / 2
+            box((x, y + td / 4, -t * tz / 2 + 0.01), (1.4, td / 2, 0.02), mat("stair_yellow", (0.8, 0.65, 0.15), 0.7))
+            box((x, y + td / 4, -t * tz / 2 - 0.1), (1.4, td / 2, 0.2), concrete)
+        for sx in (-1, 1):
+            for t in range(0, tiers * 2, 4):
+                cyl((x + sx * 0.75, yc + 0.2 + t * td / 2, -t * tz / 2 + 0.5), 0.025, 1.0, steel, 8)
+    yr = yc + 0.2 + tiers * td
+    zr = -tiers * tz
+    box((0, yr + 0.3, zr - 0.2), (W, 0.6, 0.4), concrete)
+    box((0, yr + 0.5, zr + 0.6), (W, 0.05, 0.05), steel)
+    box((0, yr + 0.5, zr + 1.1), (W, 0.06, 0.06), steel)
+    for k in range(int(W / 2) + 1):
+        cyl((-W / 2 + k * 2.0, yr + 0.5, zr + 0.55), 0.025, 1.1, steel, 8)
+    for sx in (-1, 1):                                                   # the stand's side walls
+        box((sx * (W / 2 + 0.1), yc + 6.0, -1.0), (0.2, 12.4, 8.0), concrete)
+    # the ground below: the red track round the green pitch, its lines and goals, sunlit (a little emission)
+    zg = zr - 1.6
+    yg0, yg1 = yr + 0.6, yr + 60.0
+    box((0, yr + 0.6 + 0.05, (zg + zr) / 2), (W, 0.1, zr - zg), concrete)
+    box((0, (yg0 + yg1) / 2, zg - 0.05), (W + 20, yg1 - yg0, 0.1),
+        mat("stadium_track", (0.6, 0.22, 0.15), 0.85, emit=(0.6, 0.22, 0.15), strength=0.35))
+    px0, px1, py0, py1 = -17.0, 17.0, yg0 + 8.0, yg1 - 8.0
+    box((0, (py0 + py1) / 2, zg + 0.005), (px1 - px0, py1 - py0, 0.01),
+        mat("stadium_grass", (0.2, 0.5, 0.17), 0.9, emit=(0.18, 0.45, 0.15), strength=0.4))
+    for k in range(6):                                                   # mowing stripes
+        box((0, py0 + (k * 2 + 0.5) * (py1 - py0) / 12, zg + 0.008), (px1 - px0, (py1 - py0) / 12, 0.01),
+            mat("stadium_grass_dark", (0.16, 0.42, 0.14), 0.9, emit=(0.15, 0.38, 0.12), strength=0.4))
+    line = mat("line_white", (0.95, 0.95, 0.95), 0.5, emit=(0.9, 0.9, 0.9), strength=0.4)
+    for y in (py0 + 1, py1 - 1, (py0 + py1) / 2):
+        box((0, y, zg + 0.012), (px1 - px0 - 2, 0.12, 0.01), line)
+    for x in (px0 + 1, px1 - 1):
+        box((x, (py0 + py1) / 2, zg + 0.012), (0.12, py1 - py0 - 2, 0.01), line)
+    for k in range(48):
+        ang = k * math.tau / 48
+        box((5.0 * math.cos(ang), (py0 + py1) / 2 + 5.0 * math.sin(ang), zg + 0.012), (0.12, 0.7, 0.01), line, rot=(0, 0, ang))
+    for k in range(6):                                                   # the track's lanes
+        for sx in (-1, 1):
+            box((sx * (px1 + 1.0 + k * 1.2), (py0 + py1) / 2, zg + 0.012), (0.06, py1 - py0 + 10, 0.01), line)
+    for y, sgn in ((py0 + 1, 1), (py1 - 1, -1)):                          # the goals
+        for sx in (-1, 1):
+            cyl((sx * 3.66, y, zg + 1.22), 0.06, 2.44, mat("goal_white", (1, 1, 1), 0.4), 10)
+        cyl((0, y, zg + 2.44), 0.06, 7.32, mat("goal_white", (1, 1, 1), 0.4), 10, rot=(0, math.pi / 2, 0))
+        box((0, y - sgn * 0.9, zg + 1.2), (7.3, 0.02, 2.4), mat("goal_net", (0.9, 0.9, 0.9), 0.8, alpha=0.3))
+    # the far stand, the floodlight masts, the sky over it all
+    for t in range(12):
+        box((0, yg1 + 1.0 + t * 1.0, zg + 0.3 + t * 0.55), (W + 20, 1.0, 0.6 + t * 1.1),
+            mat("far_stand", (0.7, 0.68, 0.64), 0.85, emit=(0.5, 0.48, 0.45), strength=0.4))
+    box((0, yg1 + 8.0, zg + 13.0), (40.0, 14.0, 0.3), mat("stand_roof", (0.85, 0.85, 0.87), 0.4, 0.5,
+                                                         emit=(0.6, 0.6, 0.62), strength=0.4), rot=(0.15, 0, 0))
+    for sx in (-1, 1):
+        for y in (yg0 + 2.0, yg1 + 2.0):
+            x = sx * (W / 2 + 6.0)
+            cyl((x, y, zg + 17.0), 0.45, 34.0, steel, 12, r2=0.25)
+            box((x, y, zg + 34.5), (4.0, 0.6, 3.0), mat("floodlight", (0.95, 0.95, 0.9), 0.3, emit=(1, 1, 0.95), strength=1.5))
+    ys0, ys1 = yc, yg1 + 16.0
+    box((0, ys1, zg + 25.0), (W + 60, 0.2, 60.0), sky)
+    for sx in (-1, 1):
+        box((sx * (W / 2 + 15.0), (ys0 + ys1) / 2, zg + 25.0), (0.2, ys1 - ys0, 60.0), sky)
+    box((0, (ys0 + ys1) / 2, zg + 50.0), (W + 60, ys1 - ys0, 0.2), sky)
+    box((0, yc + 0.3, hc + 10.0), (W + 30, 0.2, 14.0), sky)               # (the sky behind the stand's top)
+    for x in (-16.0, -6.0, 6.0, 16.0):
+        for y in (yc + 2.0, yc + 7.0, yc + 11.5):
+            lamp((x, y, -(y - yc) * tz + 3.0), "window")
+    shot("wide", (4.0, yc + 1.5, 1.6), (0.0, (py0 + py1) / 2, zg))
+    shot("concourse", (12.0, yf + 1.0, 1.7), (-6.0, yc - 1.0, 1.2))
+
+
 ROOMS = {"station": station, "bus": bus_stand, "airport": airport, "mall_avinashi": mall_avinashi,
          "mall_sathy": mall_sathy, "church": church, "house_mid": house_mid, "house_flat": house_flat,
-         "house_old": house_old}
+         "house_old": house_old, "stadium": stadium}
 
 
 def main():
