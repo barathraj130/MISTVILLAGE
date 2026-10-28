@@ -15,6 +15,7 @@ extends Control
 
 signal finished(result: Dictionary)
 signal stage_changed                            # (getting ready: the next chore is up)
+signal dish_chosen(food: String)                # (a meal out: the dish picked from the menu, to put on his leaf)
 
 const PAPER := Color(0.97, 0.94, 0.86)
 const INK := Color(0.08, 0.15, 0.55)
@@ -804,6 +805,7 @@ func _meal_input(e: InputEvent) -> void:
 					_say(L("Not enough money for that.", "அதுக்கு பணம் போதாது."), BAD)
 					return
 				_meal_pick = i
+				dish_chosen.emit(_meal_food())
 				_say(L("Paid ₹%d. Here's your plate." % price, "₹%d கொடுத்தாச்சு. இதோ சாப்பாடு." % price), GOOD)
 		if r["leave"].has_point(e.position):
 			_done({"paid": 0, "ate": false})

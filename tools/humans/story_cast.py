@@ -3,7 +3,8 @@ The story's main cast as game characters (docs/STORY_BIBLE.md): MakeHuman bodies
 street_people.py builds them (skins, eyes, brows, lashes, hair, clothes) with a face of their own
 (quality.face_shape), but KEEPING the skeleton (MPFB's 53-bone game rig) so they can move in the game, with
 hand-keyed clips named like the street people's (tools/people.py): Idle (breathing, weight shifting), Talk (a
-gesture, a nod), Walk (a 1 s cycle), Run (two strides in 16 frames), Sit (hands on the thighs), Ride (the scooter). Exported as godot/assets/people/story_<key>.glb for scripts/story/actor.gd.
+gesture, a nod), Walk (a 1 s cycle), Run (two strides in 16 frames), Sit (hands on the thighs, breathing, a look about), SitEat (eating
+by hand at a table), Ride (the scooter). Exported as godot/assets/people/story_<key>.glb for scripts/story/actor.gd.
 
     Blender -b --python tools/humans/story_cast.py -- [--only karthik,amma] [--preview out.jpg]
 
@@ -514,6 +515,46 @@ def sit(a):
             aim(a, "hand_" + side, lambda: head_of(a, mid), knee + Vector((sg * 0.03, 0.0, 0.06)))
 
 
+def sit_idle(a, k, look):
+    """Sitting at rest, alive: breathing (the chest lifts, the shoulders with it), the body settling a little to one
+    side then the other, a slow look about (look: degrees the head turns), one hand easing along its thigh."""
+    sit(a)
+    turn(a, "spine_02", 'X', -1.6 * k)                     # breathing in (k = 1) lifts the chest
+    turn(a, "spine_03", 'X', -0.8 * k)
+    turn(a, "spine_01", 'Y', 1.2 * k)                      # settling onto one hip
+    turn(a, "neck_01", 'X', 1.0 * k)
+    turn(a, "head", 'Z', look)
+    turn(a, "head", 'X', 2.0 - 1.5 * k)
+    turn(a, "hand_l", 'X', 4.0 * k)
+
+
+def sit_eat(a, t):
+    """Eating with the right hand at a table, t in [0, 1): the hand goes down to the leaf in front, gathers the food
+    (fingers bunched), comes up to the mouth as the head bends to meet it, then goes back down. The left hand rests
+    on the table's edge; the body leans over the leaf. (The leaf is 0.42 m ahead, 0.1 m to the right, 0.79 m up:
+    tools/story_rooms.py mess, Mark_karthik_eat.)"""
+    sit(a)
+    up = 0.5 - 0.5 * math.cos(2.0 * math.pi * min(max((t - 0.35) / 0.5, 0.0), 1.0))   # 0 at the leaf, 1 at the mouth
+    turn(a, "spine_01", 'X', 9.0 - 3.0 * up)               # leaning over the leaf
+    turn(a, "spine_02", 'X', 4.0)
+    turn(a, "head", 'X', 14.0 - 6.0 * up)                  # looking down at the food, the head meets the hand
+    leaf = Vector((-0.1 + 0.03 * math.sin(2.0 * math.pi * t), -0.42, 0.80))
+    mouth = head_of(a, "head") + Vector((-0.01, -0.13, 0.02))
+    for side, sg, wrist in (("r", -1.0, leaf.lerp(mouth + Vector((0.0, 0.0, -0.06)), up)),
+                            ("l", 1.0, Vector((0.18, -0.28, 0.80)))):
+        sh = head_of(a, "upperarm_" + side)
+        el0, wr0 = head_of(a, "lowerarm_" + side), head_of(a, "hand_" + side)
+        elbow = two_bone(sh, wrist, (el0 - sh).length, (wr0 - el0).length, Vector((sg * 0.7, 0.1, -0.7)))
+        aim(a, "upperarm_" + side, lambda: head_of(a, "lowerarm_" + side), elbow)
+        aim(a, "lowerarm_" + side, lambda: head_of(a, "hand_" + side), wrist)
+        mid = "middle_01_" + side
+        if mid in a.pose.bones:                            # the right hand's fingers towards the mouth on the way up
+            fwd = Vector((0.0, -1.0, -0.6)) if side == "l" else Vector((0.15, -1.0, -1.0 + 1.9 * up))
+            aim(a, "hand_" + side, lambda: head_of(a, mid), head_of(a, "hand_" + side) + fwd.normalized() * 0.09)
+    curl_fingers(a, "r", 38.0, 30.0)                       # bunched round a mouthful
+    curl_fingers(a, "l", 12.0, 8.0)
+
+
 # ---- riding Karthik's scooter (tools/bikes_real.py FIT["scooter"]: X forward, Y left, Z up) ----
 RIDE = dict(hip=Vector((-0.17, 0.0, 0.945)), grip=Vector((0.335, 0.345, 1.05)), foot=Vector((0.14, 0.13, 0.338)), lean=6.0)
 CURL = 68.0
@@ -660,7 +701,9 @@ def animate(arm):
                        (37, lambda a: talk(a, 1)), (49, lambda a: talk(a, -1))])
     clip(arm, "Walk", [(1 + 2 * k, (lambda kk: (lambda a: walk_phase(a, (kk % 12) / 12.0)))(k)) for k in range(13)])
     clip(arm, "Run", [(1 + 2 * k, (lambda kk: (lambda a: run_phase(a, (kk % 8) / 8.0)))(k)) for k in range(9)])
-    clip(arm, "Sit", [(1, sit), (25, sit)])
+    clip(arm, "Sit", [(f, (lambda kk, lk: (lambda a: sit_idle(a, kk, lk)))(k, lk))      # 4 s: two breaths, a look
+                      for f, k, lk in ((1, -1, 0), (25, 1, 6), (49, -1, 8), (73, 1, -4), (97, -1, 0))])
+    clip(arm, "SitEat", [(1 + 4 * k, (lambda kk: (lambda a: sit_eat(a, (kk % 16) / 16.0)))(k)) for k in range(17)])
     clip(arm, "SitTalk", [(f, (lambda kk: (lambda a: (sit(a), talk(a, kk))))(k))
                           for f, k in ((1, -1), (13, 1), (25, -0.4), (37, 1), (49, -1))])   # talking from a chair
     clip(arm, "Ride", [(1, ride), (25, ride)])
@@ -670,7 +713,33 @@ def animate(arm):
     arms_down(arm)
 
 
+SOLID = (".body", ".ears", ".fingernails", ".lips", ".low-poly", "toenails", "teeth", "tongue", "eye", "shoes")
+SOLID_NOT = ("eyebrow", "eyelash")
+
+
+def solid_skin(objs):
+    """Skin, lips, ears, nails, eyes and shoes opaque: their textures carry an alpha channel the exporter would make
+    an alpha-BLEND material of, and a blended body draws its own insides (the mouth, the far side of the head, the
+    palms) over its face and hands. Hair, brows, lashes and clothes keep their cut-outs."""
+    for o in objs:
+        if o.type != 'MESH':
+            continue
+        for m in o.data.materials:
+            n = (m.name.lower() if m else "")
+            if m is None or not m.node_tree or not any(k in n for k in SOLID) or any(k in n for k in SOLID_NOT):
+                continue
+            for n in m.node_tree.nodes:
+                if n.type == 'BSDF_PRINCIPLED':
+                    for l in list(n.inputs["Alpha"].links):
+                        m.node_tree.links.remove(l)
+                    n.inputs["Alpha"].default_value = 1.0
+            m.blend_method = 'OPAQUE'
+            if hasattr(m, "surface_render_method"):
+                m.surface_render_method = 'DITHERED'
+
+
 def export(arm, objs, path):
+    solid_skin(objs)
     bpy.ops.object.select_all(action='DESELECT')
     arm.select_set(True)
     for o in objs:

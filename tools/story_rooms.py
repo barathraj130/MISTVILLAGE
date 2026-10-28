@@ -22,6 +22,7 @@ Blender -Y is the room's front (the door), so in Godot the door faces +Z.
     Blender -b --factory-startup --python tools/story_rooms.py -- [names...] [--preview previews/rooms] [--no-export]
 """
 import math
+import random
 import os
 import sys
 
@@ -374,6 +375,83 @@ def cyl(c, r, h, m, verts=24, rot=(0, 0, 0), r2=None):
         p.use_smooth = True
     me.materials.append(m)
     return _link(bpy.data.objects.new("Cyl", me))
+
+
+def dome(c, r, h, m, sx=1.0, sy=1.0, segs=16):
+    """A mound: the top half of a sphere r across (stretched by sx, sy), h high, its base at c (rice, an idli)."""
+    bm = bmesh.new()
+    bmesh.ops.create_uvsphere(bm, u_segments=segs, v_segments=8, radius=1.0)
+    bmesh.ops.delete(bm, geom=[v for v in bm.verts if v.co.z < -1e-4], context='VERTS')
+    bmesh.ops.transform(bm, matrix=Matrix.Translation(c) @ Matrix.Diagonal((r * sx, r * sy, h, 1.0)), verts=bm.verts)
+    _uv_box(bm, 1.0)
+    me = bpy.data.meshes.new("Dome")
+    bm.to_mesh(me)
+    bm.free()
+    for p in me.polygons:
+        p.use_smooth = True
+    me.materials.append(m)
+    return _link(bpy.data.objects.new("Dome", me))
+
+
+FOODS = ("idli", "meals", "parotta", "dosa", "curd_rice")
+
+
+def food(kind, x, y, z, toward=-1.0):
+    """One dish on a banana leaf whose middle is x, y and top z, the eater on the far side from `toward` (-1: he
+    faces -Y, the cups go along the leaf's far edge). Kinds as the game's menus name them (tasks.gd FOOD_ITEMS). Its
+    parts are named Food_<kind>: the export keeps each dish one object of its own, the game shows the one ordered."""
+    before = set(bpy.data.objects)
+    steel = mat("steel", (0.74, 0.75, 0.77), 0.32, 0.55)
+    f = toward
+
+    def cup(dx, dy, key, col):                                     # a steel katori with a curry in it
+        cyl((x + dx, y + dy * f, z + 0.018), 0.025, 0.036, steel, 20, r2=0.034)      # wider at the rim
+        cyl((x + dx, y + dy * f, z + 0.036), 0.031, 0.003, mat(key, col, 0.3), 20)    # filled to the brim
+    rice = mat("food_rice", (0.96, 0.95, 0.9), 0.75)
+    golden = mat("food_golden", (0.85, 0.6, 0.28), 0.6)
+    if kind == "idli":
+        for dx, dy in ((-0.07, -0.02), (0.0, -0.03), (0.07, -0.02), (-0.035, 0.05)):
+            dome((x + dx, y + dy * f, z), 0.036, 0.02, mat("food_idli", (0.95, 0.94, 0.88), 0.7))
+        cyl((x + 0.06, y + 0.05 * f, z + 0.008), 0.035, 0.016, mat("food_vada", (0.6, 0.35, 0.12), 0.55), 20)
+        cyl((x + 0.06, y + 0.05 * f, z + 0.009), 0.01, 0.018, mat("leaf_green", (0.2, 0.5, 0.18), 0.6), 12)   # its hole
+        cup(-0.13, 0.1, "food_sambar", (0.8, 0.42, 0.1))
+        cup(-0.05, 0.11, "food_chutney", (0.93, 0.92, 0.8))
+    elif kind == "meals":
+        dome((x, y, z), 0.07, 0.04, rice, sx=1.25)                 # the rice in the middle
+        for k, (key, col) in enumerate((("food_sambar", (0.8, 0.42, 0.1)), ("food_rasam", (0.6, 0.2, 0.08)),
+                                        ("food_kootu", (0.85, 0.72, 0.3)), ("food_curd", (0.97, 0.97, 0.95)))):
+            cup(-0.14 + k * 0.08, 0.11, key, col)
+        dome((x + 0.13, y - 0.02 * f, z), 0.035, 0.012, mat("food_poriyal", (0.42, 0.62, 0.22), 0.7), sx=1.3)
+        cyl((x - 0.14, y - 0.03 * f, z + 0.003), 0.05, 0.003, mat("food_appalam", (0.95, 0.85, 0.55), 0.6), 24)
+        dome((x + 0.15, y + 0.06 * f, z), 0.015, 0.01, mat("food_pickle", (0.7, 0.18, 0.08), 0.5))
+    elif kind == "parotta":
+        for k, (dx, dy) in enumerate(((-0.04, 0.0), (0.03, -0.02))):    # two, one leaning on the other
+            cyl((x + dx, y + dy * f, z + 0.008 + k * 0.012), 0.085, 0.014, golden, 32, rot=(0.0, 0.12 * k, 0.0))
+        cyl((x + 0.12, y + 0.08 * f, z + 0.025), 0.038, 0.05, steel, 24, r2=0.05)         # the salna bowl
+        cyl((x + 0.12, y + 0.08 * f, z + 0.05), 0.047, 0.003, mat("food_salna", (0.55, 0.25, 0.08), 0.3), 24)
+        dome((x + 0.13, y - 0.05 * f, z), 0.025, 0.018, mat("food_egg", (0.97, 0.95, 0.88), 0.5), sx=1.3)
+        cyl((x + 0.13, y - 0.05 * f, z + 0.017), 0.013, 0.003, mat("food_yolk", (0.98, 0.7, 0.1), 0.4), 16)
+    elif kind == "dosa":
+        cyl((x, y, z + 0.028), 0.03, 0.38, golden, 24, rot=(0.0, math.pi / 2, 0.0), r2=0.012)    # the rolled dosa
+        dome((x - 0.2, y, z), 0.028, 0.026, mat("food_masala", (0.9, 0.7, 0.2), 0.7))   # the potato at its open end
+        cup(-0.08, 0.1, "food_chutney", (0.93, 0.92, 0.8))
+        cup(0.0, 0.1, "food_sambar", (0.8, 0.42, 0.1))
+        cup(0.08, 0.1, "food_red_chutney", (0.78, 0.25, 0.12))
+    elif kind == "curd_rice":
+        dome((x, y, z), 0.075, 0.045, mat("food_curd_rice", (0.97, 0.97, 0.94), 0.6), sx=1.2)
+        rng = random.Random(7)                                     # mustard seeds and curry leaves on the mound
+        for k in range(16):
+            a, d = rng.uniform(0, math.tau), 0.065 * math.sqrt(rng.random())
+            dx, dy = d * math.cos(a) * 1.2, d * math.sin(a)
+            top = z + 0.045 * math.sqrt(max(1.0 - (dx / 0.09) ** 2 - (dy / 0.075) ** 2, 0.0)) - 0.001
+            if k < 4:
+                dome((x + dx, y + dy, top), 0.011, 0.002, mat("food_curry_leaf", (0.12, 0.35, 0.1), 0.5), sx=0.45)
+            else:
+                dome((x + dx, y + dy, top), 0.0035, 0.003, mat("food_seed", (0.1, 0.07, 0.05), 0.5))
+        dome((x + 0.12, y + 0.06 * f, z), 0.018, 0.01, mat("food_pickle", (0.7, 0.18, 0.08), 0.5))
+        cyl((x - 0.13, y - 0.02 * f, z + 0.003), 0.05, 0.003, mat("food_appalam", (0.95, 0.85, 0.55), 0.6), 24)
+    for o in set(bpy.data.objects) - before:
+        o.name = "Food_%s_part" % kind
 
 
 def empty(name, loc, yaw=0.0):
@@ -1062,7 +1140,9 @@ def mess(T):
         ceiling_fan(x, -0.5, h)
     mark("cook", 3.3, -2.0, math.pi)
     mark("karthik", 3.3, -3.25, 0.0)
+    mark("karthik_eat", -0.1, -1.03, math.pi)                             # eating out: on the bench, the leaf at his right hand
     mark("door", 0.0, -3.0, 0.0)
+    shot("eat", (0.55, -2.75, 1.45), (-0.15, -1.0, 0.95))                 # (the kitchen hatch and menu board behind him)
     shot("counter", (1.8, -3.2, 1.6), (3.3, -2.0, 1.45))
     shot("wide", (-4.0, -3.0, 2.3), (1.0, 1.0, 1.0))
     shot("table", (0.9, -2.7, 1.5), (0.0, -1.6, 0.75))
@@ -1472,7 +1552,12 @@ def mess_detail(T):
     for x in (-2.6, 0.0, 2.6):
         for yy in (-1.6, 0.6):
             cyl((x + 0.6, yy, 0.86), 0.06, 0.18, steel, 16, r2=0.05)
-            if (x, yy) in ((0.0, -1.6), (-2.6, 0.6)):
+            if (x, yy) == (0.0, -1.6):                     # Karthik's place: a big leaf, whichever dish he orders
+                box((x - 0.2, yy + 0.15, 0.772), (0.52, 0.34, 0.004), mat("banana_leaf", (0.2, 0.5, 0.18), 0.6))
+                for kind in FOODS:
+                    food(kind, x - 0.2, yy + 0.15, 0.774)
+                sketchfab("tea_glass__chai_glass_indian_style", (x + 0.35, yy + 0.15, 0.77), 0.1, drop=("Object_11",))
+            elif (x, yy) == (-2.6, 0.6):
                 sketchfab("idli_south_indian_food", (x - 0.2, yy - 0.15, 0.77), 0.46, drop=("Material.026",), by="width")
                 sketchfab("tea_glass__chai_glass_indian_style", (x + 0.35, yy - 0.15, 0.77), 0.1, drop=("Object_11",))
             else:
@@ -1548,13 +1633,19 @@ def reset():
 
 
 def export(name):
-    meshes = [o for o in bpy.data.objects if o.type == 'MESH']
-    bpy.ops.object.select_all(action='DESELECT')
-    for o in meshes:
-        o.select_set(True)
-    bpy.context.view_layer.objects.active = meshes[0]
-    bpy.ops.object.join()
-    bpy.context.view_layer.objects.active.name = "Room"
+    """The room as one mesh ("Room"), but each dish (Food_<kind> parts) one object of its own the game can show."""
+    groups = {}
+    for o in bpy.data.objects:
+        if o.type == 'MESH':
+            groups.setdefault(o.name.split("_part")[0] if o.name.startswith("Food_") else "Room", []).append(o)
+    for gname, obs in groups.items():
+        bpy.ops.object.select_all(action='DESELECT')
+        for o in obs:
+            o.select_set(True)
+        bpy.context.view_layer.objects.active = obs[0]
+        if len(obs) > 1:
+            bpy.ops.object.join()
+        bpy.context.view_layer.objects.active.name = gname
     bpy.ops.object.select_all(action='SELECT')
     path = os.path.join(OUT, "room_%s.glb" % name)
     bpy.ops.export_scene.gltf(filepath=path, export_format='GLB', use_selection=True, export_apply=True,

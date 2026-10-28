@@ -25,7 +25,8 @@ extends Node
 ##   home      walk the house yourself (the room, "room"/"at"): "visits" in order, each a place in it ("to": its
 ##             mark) where E does that place's task (the bathroom: brush and bathe; the kitchen: a meal from the
 ##             month's groceries...); a marker shows where to go next
-##   eat_out   find somewhere to eat: "eateries" (places) on the map; on foot at any door, E: its menu, paid from
+##   eat_out   find somewhere to eat: "eateries" (places) on the map; on foot at any door, E: inside the mess (room_mess,
+##             Karthik at a table), its menu, paid from
 ##             the wallet
 ##   free      free drive with a goal line, the end of the chapter
 ## Any step may have "when": flag / "unless": flag (results of earlier tasks) and is skipped otherwise; any line
@@ -734,6 +735,19 @@ func _task_done(result: Dictionary) -> void:
 			_walk_out()
 			_next()
 		return
+	if str(cur.get("do", "")) == "eat_out" and room != null:     # eating out: a moment of him eating, then on
+		_in_task = true
+		if result.get("ate", false) and cast.has("karthik"):
+			_dish(str(result.get("meal", "meals")))
+			cast["karthik"].play("SitEat")
+		get_tree().create_timer(0.5 if _skip else 1.5).timeout.connect(_shot)
+		get_tree().create_timer(1.2 if _skip else 3.5).timeout.connect(func():
+			for k in ["karthik", "cook"]:
+				if cast.has(k):
+					cast[k].visible = false
+			_in_task = false
+			_next())
+		return
 	_next()
 
 
@@ -863,15 +877,30 @@ func _eat_out() -> void:
 		spec["menu"] = cur["menus"].get(near_k, cur["menus"].values()[0])
 		if fines:
 			spec["wallet"] = fines.sim.money
-		Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
-		tasks.start("meal", spec, lang, _skip)
-		_shot()                                         # (testing: the menu)
+		_load_room("mess", near_k)                      # inside: Karthik on the bench, the owner at his counter
+		_cast({"karthik": {"mark": "karthik_eat", "anim": "Sit"}, "cook": {"mark": "cook", "anim": "Idle"}})
+		_dish("")                                       # an empty leaf till he orders
+		_cams_on()
+		_room_cam("eat")
+		_shot()
+		get_tree().create_timer(0.5 if _skip else 1.8).timeout.connect(func():   # a look round, then the menu
+			Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
+			tasks.start("meal", spec, lang, _skip)
+			_shot())                                    # (testing: the menu)
 	_e_down = e
 	var hint := ""
 	if near_k != "":
 		hint = ("F: get out of the car" if lang == "en" else "F: காரை விட்டு இறங்குங்க") if city.walker == null else \
 			(("E: go in and eat at " if lang == "en" else "E: சாப்பிட உள்ளே போங்க: ") + tr_(data["places"][near_k]))
 	goal.text = tr_(cur["goal"]) + ("\n" + hint if hint != "" else "")
+
+
+## The dish on Karthik's leaf in the mess: the one ordered (room_mess Food_<kind>: tools/story_rooms.py food), or none.
+func _dish(kind: String) -> void:
+	if room == null:
+		return
+	for n in room.find_children("Food_*", "", true, false):
+		(n as Node3D).visible = str(n.name) == "Food_" + kind
 
 
 func _advance_line() -> void:
@@ -1058,6 +1087,7 @@ func _build_ui() -> void:
 	tasks.visible = false
 	tasks.finished.connect(_task_done)
 	tasks.stage_changed.connect(_shot)
+	tasks.dish_chosen.connect(_dish)
 	ui.add_child(tasks)
 	clock = _label(18, Color(0.9, 0.9, 0.9))
 	clock.offset_left = 24

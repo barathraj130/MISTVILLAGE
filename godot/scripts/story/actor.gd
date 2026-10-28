@@ -34,9 +34,8 @@ func setup(person: String, key: String, height_fn: Callable, hair := Color(0, 0,
 	var aps := model.find_children("*", "AnimationPlayer", true, false)
 	if not aps.is_empty():
 		anim = aps[0] as AnimationPlayer
-		for a in anim.get_animation_list():
-			if a != "Sit":                       # (SitTalk's gestures loop like Talk's)
-				anim.get_animation(a).loop_mode = Animation.LOOP_LINEAR
+		for a in anim.get_animation_list():             # (every clip loops: Sit breathes, SitEat goes on eating)
+			anim.get_animation(a).loop_mode = Animation.LOOP_LINEAR
 	play("Idle")
 
 
