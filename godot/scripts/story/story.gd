@@ -906,6 +906,20 @@ func _eat_out() -> void:
 	goal.text = tr_(cur["goal"]) + ("\n" + hint if hint != "" else "")
 
 
+## Does the story use E where you stand (a room of its own, an eatery's door)? The city's doors (city_doors.gd)
+## stay out of its way there.
+func claims_e(p: Vector3) -> bool:
+	match str(cur.get("do", "")):
+		"home":
+			return true
+		"eat_out":
+			for k in cur["eateries"]:
+				var q := place_pos(str(k))
+				if Vector2(p.x - q.x, p.z - q.z).length() < 10.0:
+					return true
+	return false
+
+
 ## The dish on Karthik's leaf in the mess: the one ordered (room_mess Food_<kind>: tools/story_rooms.py food), or none.
 func _dish(kind: String) -> void:
 	if room == null:

@@ -17,6 +17,7 @@ const CityWater := preload("res://scripts/city/city_water.gd")
 const DriveHud := preload("res://scripts/city/drive_hud.gd")
 const Fines := preload("res://scripts/city/fines.gd")
 const CityPolice := preload("res://scripts/city/city_police.gd")
+const CityDoors := preload("res://scripts/city/city_doors.gd")
 const Story := preload("res://scripts/story/story.gd")
 const Walker := preload("res://scripts/player.gd")
 
@@ -41,6 +42,7 @@ var env: Environment
 var sun: DirectionalLight3D
 var _auto_lights := false                   # the headlights went on by themselves at dusk (story mode)
 var walker: Walker                          # you on foot (F)
+var doors                                   # the doors of every building (city_doors.gd)
 var indoors := false                        # a story scene in a room under the street: no sun, room light
 var driving := false
 var placed := false                         # the car waits, frozen, until the road under it has loaded
@@ -71,6 +73,10 @@ func _ready() -> void:
 	streamer = Streamer.new()
 	streamer.name = "City"
 	add_child(streamer)
+	doors = CityDoors.new()                            # every building can be walked into (city_doors.gd)
+	doors.name = "Doors"
+	doors.city = self
+	add_child(doors)
 	water = CityWater.new()
 	water.name = "Water"
 	water.streamer = streamer

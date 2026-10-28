@@ -750,6 +750,7 @@ func _buildings(blds: Array, out: Dictionary) -> void:
 	var far := [PackedVector3Array(), PackedVector3Array(), PackedColorArray(), PackedVector2Array(), PackedVector2Array(), PackedInt32Array()]
 	var faces := PackedVector3Array()
 	var kits := {}
+	var info: Array = []                             # [outline, centre, floors, shop, base, variant]: for doors (CityDoors)
 	for b in blds:
 		var floors: int = b[0]
 		var shop := 1.0 if (int(b[1]) & 1) else 0.0
@@ -788,6 +789,7 @@ func _buildings(blds: Array, out: Dictionary) -> void:
 			centre = (poly[0] + poly[2]) * 0.5
 			top = kd[1] + bx.end.y * 0.92
 			roof_y = top
+		info.append([poly, centre, floors, shop > 0.5, base, variant])
 		var along := 0.0
 		for i in n:
 			var p0 := poly[i]
@@ -817,6 +819,7 @@ func _buildings(blds: Array, out: Dictionary) -> void:
 			if not kits.has(gk):
 				kits[gk] = []
 			kits[gk].append(xf)
+	out["bldinfo"] = info
 	for pair in [["near_mesh", near], ["far_mesh", far]]:
 		var t: Array = pair[1]
 		if (t[0] as PackedVector3Array).is_empty():
@@ -2086,6 +2089,7 @@ func _instance(k: Vector2i, d: Dictionary) -> void:
 		_shape(node, bcs)
 	node.set_meta("roads", d["roads_raw"])
 	node.set_meta("signals", d.get("signals", []))
+	node.set_meta("bldinfo", d.get("bldinfo", []))
 	_landmarks(k, node)
 	loaded[k] = node
 	stats["built"] += 1
