@@ -494,10 +494,10 @@ def bus_stand(T):
 
 
 # ============================================================================ the airport
-FLIGHTS = (("6E 512", "CHENNAI", "14:40", "A1-A4", "CHECK-IN"), ("AI 671", "MUMBAI", "15:05", "B1-B3", "CHECK-IN"),
-           ("SG 302", "BENGALURU", "15:30", "A5-A8", "CHECK-IN"), ("UK 853", "DELHI", "16:20", "B4-B6", "ON TIME"),
-           ("G9 482", "SHARJAH", "17:15", "C1-C4", "ON TIME"), ("6E 713", "HYDERABAD", "17:50", "A1-A4", "ON TIME"),
-           ("IX 384", "SINGAPORE", "23:55", "C5-C8", "ON TIME"))
+FLIGHTS = (("NILA 512", "CHENNAI", "14:40", "A1-A4", "CHECK-IN"), ("VAIGAI 671", "MUMBAI", "15:05", "B1-B3", "CHECK-IN"),
+           ("KURINJI 302", "BENGALURU", "15:30", "A5-A8", "CHECK-IN"), ("NILA 853", "DELHI", "16:20", "B4-B6", "ON TIME"),
+           ("PONNI 482", "SHARJAH", "17:15", "C1-C4", "ON TIME"), ("VAIGAI 713", "HYDERABAD", "17:50", "A1-A4", "ON TIME"),
+           ("PONNI 384", "SINGAPORE", "23:55", "C5-C8", "ON TIME"))     # (airlines of the story's own)
 
 
 def airport(T):
@@ -562,7 +562,7 @@ def airport(T):
         text("DEPARTURES", (x0, -2.09, 6.35), 0.22, yellow, "-y")
         for r, (fl, to, t, ci, st) in enumerate(FLIGHTS):
             z = 6.0 - r * 0.3
-            for dx, s in ((-2.3, fl), (-1.3, to), (0.1, t), (0.85, ci), (1.65, st)):
+            for dx, s in ((-2.35, fl), (-1.15, to), (0.1, t), (0.85, ci), (1.65, st)):
                 ltext(s, (x0 + dx, -2.09, z), 0.15, lit_white if dx != 1.65 else yellow, "-y")
     # the way on: security at the back right
     sign("SECURITY CHECK  >  DEPARTURE GATES", (10.0, D / 2 - 0.15, 4.5), 7.5, 0.6, mat("sign_yellow", (1.0, 0.8, 0.1), 0.4), mat("ink_black", (0.05, 0.05, 0.05), 0.4), "-y", 0.32)
@@ -587,11 +587,11 @@ def airport(T):
 # ============================================================================ the malls' atrium
 MALL_SHOPS = {
     "mall_avinashi": ("THE NOYYAL GALLERIA", (0.62, 0.08, 0.1),
-                      ("NOYYAL SILKS", "STEPWELL SHOES", "MERIDIAN WATCHES", "BOOKNOOK", "PEPPERCORN CAFE", "TOYTOWN",
-                       "URBAN LOOM", "KOVAI OPTICALS", "GADGET BAY", "SPICE ROUTE", "LITTLE FEET", "SILVERLINE")),
+                      ("NOYYAL SILKS", "STEPWELL SHOES", "MERIDIAN WATCHES", "BOOKNOOK", "MULLAI CAFE", "KURINJI TOYS",
+                       "PERUR LOOM", "KOVAI OPTICALS", "GADGET BAY", "MARUDHAM KITCHEN", "LITTLE FEET", "NOYYAL SILVER")),
     "mall_sathy": ("KONGU MALL", (0.05, 0.38, 0.42),
-                   ("KONGU HANDLOOM", "SPORTS ARENA", "PIXEL MOBILES", "THE BAKE HOUSE", "TRENDLINE", "FRESH MART",
-                    "SUNRISE JEWELS", "MOVIE MASTI", "HOME NEST", "FUNZONE", "BLUE DENIM", "COFFEE KATTE")),
+                   ("KONGU HANDLOOM", "KONGU SPORTS", "PIXEL MOBILES", "THE BAKE HOUSE", "SIRUVANI STYLE", "THENNAI FRESH",
+                    "SUNRISE JEWELS", "KOVAI GAMES", "HOME NEST", "VELLIANGIRI PLAY", "KOVAI DENIM", "KAAPI KADAI")),
 }
 
 
