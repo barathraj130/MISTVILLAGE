@@ -1,0 +1,14 @@
+[
+ {
+  "name": "hotel_grand",
+  "glb": "res://assets/landmarks/hotel_grand.glb",
+  "x": 2927.85,
+  "y": 406.86,
+  "z": -408.95,
+  "yaw": 0.2625,
+  "lot": [
+   2927.85,
+   -408.95
+  ]
+ }
+]

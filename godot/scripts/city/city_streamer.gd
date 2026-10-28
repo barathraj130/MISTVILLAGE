@@ -22,6 +22,7 @@ const KIT_RANGE := 900.0                   # far versions out to here; beyond, p
 const KERB := 0.2
 const EDGE_W := {4: 1.25, 5: 1.05, 6: 1.6, 7: 1.2}     # street-edge strips' widths by street type (_street_edge)
 const LAMP_STEP := 32.0
+const LANDMARKS := "res://assets/landmarks/landmarks.json"   # designed buildings of their own (tools/hotel_grand.py...)
 const MARK := {"motorway": 3, "trunk": 3, "primary": 2, "secondary": 2, "tertiary": 1, "unclassified": 1, "residential": 1}
 
 @export var radius := 3                    # tiles each way to keep loaded (3 → 7 × 7 tiles ≈ 1.8 km square)
@@ -45,6 +46,7 @@ var wall_mat: Material
 var lamp_mesh: ArrayMesh
 var prop_meshes := {}                      # prop type → Mesh (1 traffic signal, 2 bus shelter, 3 speed breaker)
 var kit
+var landmarks: Array = []                  # {glb, x, y, z, yaw, lot: [x, z]}: each in place of the block on its lot
 var kit_meshes: Array = []                 # variant index → Mesh (or null)
 var kit_near := KIT_NEAR                   # (--kitnear=N overrides, for comparing near and far versions)
 var kit_far_meshes: Array = []             # variant index → its far version (tools/kit_far.py) or null
@@ -85,6 +87,8 @@ func _ready() -> void:
 	for a in OS.get_cmdline_user_args():
 		if a.begins_with("--kitnear="):
 			kit_near = float(a.get_slice("=", 1))
+	if FileAccess.file_exists(LANDMARKS):
+		landmarks = JSON.parse_string(FileAccess.get_file_as_string(LANDMARKS))
 	lamp_mesh = _lamp()
 	signal_shader = _signal_shader()
 	# Coimbatore street trees: natural neem, rain tree and gulmohar (tools/vegetation.py) and coconut palms
@@ -760,6 +764,8 @@ func _buildings(blds: Array, out: Dictionary) -> void:
 			poly.append(Vector2(xz[i * 2], xz[i * 2 + 1]))
 			centre += poly[i]
 		centre /= n
+		if _landmark_lot(centre):
+			continue                                     # a landmark of its own stands here (_landmarks)
 		var designed := variant >= 0 and variant < kit_meshes.size() and kit_meshes[variant] != null
 		var t: Array = far if designed else near
 		var roof_y := base + 0.3 + floors * FLOOR
@@ -2078,11 +2084,36 @@ func _instance(k: Vector2i, d: Dictionary) -> void:
 		_shape(node, bcs)
 	node.set_meta("roads", d["roads_raw"])
 	node.set_meta("signals", d.get("signals", []))
+	_landmarks(k, node)
 	loaded[k] = node
 	stats["built"] += 1
 	stats["loaded"] = loaded.size()
 	stats["buildings"] += int(d.get("n_blds", 0))
 	stats["designed"] += int(d.get("n_kit", 0))
+
+
+## Is a footprint centred here the lot of a landmark (whose own design replaces it)?
+func _landmark_lot(c: Vector2) -> bool:
+	for lm in landmarks:
+		if c.distance_to(Vector2(lm["lot"][0], lm["lot"][1])) < 3.0:
+			return true
+	return false
+
+
+## The landmarks standing in tile k (godot/assets/landmarks/landmarks.json), solid like the rest of the city.
+func _landmarks(k: Vector2i, node: Node3D) -> void:
+	for lm in landmarks:
+		if floori(float(lm["x"]) / tile) != k.x or floori(float(lm["z"]) / tile) != k.y or not ResourceLoader.exists(lm["glb"]):
+			continue
+		var sc := (load(lm["glb"]) as PackedScene).instantiate() as Node3D
+		node.add_child(sc)
+		sc.global_position = Vector3(lm["x"], lm["y"], lm["z"])
+		sc.rotation.y = float(lm["yaw"])
+		for mi in sc.find_children("*", "MeshInstance3D", true, false):
+			var cs := CollisionShape3D.new()
+			cs.shape = (mi as MeshInstance3D).mesh.create_trimesh_shape()
+			cs.transform = (mi as MeshInstance3D).global_transform
+			_shape(node, cs)
 
 
 ## Collision shapes live under one StaticBody3D, and are freed with their tile.
