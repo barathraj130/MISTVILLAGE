@@ -21,6 +21,7 @@ Blender -Y is the room's front (the door), so in Godot the door faces +Z.
 
     Blender -b --factory-startup --python tools/story_rooms.py -- [names...] [--preview previews/rooms] [--no-export]
 """
+import json
 import math
 import random
 import os
@@ -1519,6 +1520,10 @@ def bank_detail(T):
     switchboard(1.2, -D / 2 + 0.02, 1.3, "-y", 0.36)
 
 
+MENUS = next((st["menus"] for st in json.load(open(os.path.join(ROOT, "godot", "story", "slice.json")))["steps"]
+              if st.get("do") == "eat_out"), {})
+
+
 def mess_detail(T):
     W, D, h = 9.0, 7.0, 3.2
     red = mat("sign_red", (0.7, 0.08, 0.06), 0.4)
@@ -1535,12 +1540,13 @@ def mess_detail(T):
                                    mat("letters_white", (0.97, 0.97, 0.97), 0.4))):
         before = set(bpy.data.objects)
         sign(name, (0.0, D / 2 - 0.04, 2.55), 3.0, 0.5, board, ink, "-y", min(0.26, 2.6 / (len(name) * 0.62)))
+        # its chalk menu on the blackboard: the dishes and prices of its menu card in the game (slice.json "menus")
+        menu = ["MENU"] + ["%s %s %d" % (d["name"]["en"], "." * max(2, 15 - len(d["name"]["en"])), d["price"])
+                           for d in MENUS.get(key, [])]
+        for k, line in enumerate(menu):
+            text(line, (-2.8, D / 2 - 0.05, 2.36 - k * 0.15), 0.15 if k else 0.19, chalk, "-y", FONT_COND)
         for o in set(bpy.data.objects) - before:
             o.name = "Sign_%s_part" % key
-    menu = ["MENU", "Idli (2) ..... 20", "Dosa ......... 40", "Parotta ...... 15", "Meals ........ 90",
-            "Pongal ....... 35", "Tea / Coffee . 12"]
-    for k, line in enumerate(menu):
-        text(line, (-2.8, D / 2 - 0.05, 2.36 - k * 0.13), 0.15 if k else 0.19, chalk, "-y", FONT_COND)
     # the god's photo over the cash counter, garlanded, with serial lights
     box((W / 2 - 0.03, -2.6, 2.1), (0.03, 0.56, 0.66), mat("frame_wood", (0.25, 0.14, 0.07), 0.45), 0.005)
     box((W / 2 - 0.05, -2.6, 2.1), (0.005, 0.5, 0.6), mat("photo_god", (1, 1, 1), 0.5, tex=T["photo_god"]))
