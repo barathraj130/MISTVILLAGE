@@ -3,10 +3,10 @@ The story's main cast as game characters (docs/STORY_BIBLE.md): MakeHuman bodies
 street_people.py builds them (skins, eyes, brows, lashes, hair, clothes) with a face of their own
 (quality.face_shape), but KEEPING the skeleton (MPFB's 53-bone game rig) so they can move in the game, with
 hand-keyed clips named like the street people's (tools/people.py): Idle (breathing, weight shifting), Talk (a
-gesture, a nod), Walk (a 1 s cycle), Run (two strides in 16 frames), Sit (hands on the thighs, breathing, a look about), SitEat (eating
+gesture, a nod), Walk (a 1 s cycle on clinical gait curves), Run (two strides in 16 frames), Sit (hands on the thighs, breathing, a look about), SitEat (eating
 by hand at a table), Ride (the scooter). Exported as godot/assets/people/story_<key>.glb for scripts/story/actor.gd.
 
-    Blender -b --python tools/humans/story_cast.py -- [--only karthik,amma] [--preview out.jpg]
+    Blender -b --python tools/humans/story_cast.py -- [--only karthik,amma] [--preview out.jpg] [--walkstrip DIR]
 
 Reads street_people.py and quality.py (the face work) without changing them.
 """
@@ -446,29 +446,58 @@ def talk(a, k):                     # the right hand comes up and moves with the
     turn(a, "spine_02", 'X', -1.0 * k)
 
 
+# A walk as people walk (sagittal joint angles over the gait cycle, after the clinical gait curves: Perry & Burnfield,
+# Gait Analysis), in degrees, at % of the cycle from this leg's heel strike: the hip flexes ~25° to meet the ground
+# and extends only ~10° behind; the knee gives ~15° as the weight lands, straightens through mid-stance, then folds
+# to ~60° just after toe-off and swings straight again for the next heel strike; the ankle drops the forefoot after
+# heel strike, rolls over the foot, pushes off ~15° pointed, and lifts the toes clear through the swing.
+GAIT_HIP = [(0.0, 24.0), (0.1, 21.0), (0.3, 6.0), (0.5, -9.0), (0.6, -5.0), (0.75, 14.0), (0.87, 25.0)]
+GAIT_KNEE = [(0.0, 4.0), (0.12, 16.0), (0.25, 10.0), (0.4, 4.0), (0.55, 28.0), (0.7, 58.0), (0.8, 42.0), (0.9, 14.0),
+             (0.97, 4.0)]
+GAIT_ANKLE = [(0.0, 0.0), (0.07, -6.0), (0.3, 5.0), (0.45, 9.0), (0.55, 0.0), (0.62, -15.0), (0.72, -4.0),
+              (0.85, 2.0)]
+
+
+def gait(curve, g):
+    """A periodic curve (keys over [0, 1)) at g, smooth through its keys (Catmull-Rom)."""
+    g %= 1.0
+    n = len(curve)
+    i = max(k for k in range(n) if curve[k][0] <= g)
+    p = [curve[(i + d) % n] for d in (-1, 0, 1, 2)]
+    t0, t1 = p[1][0], p[2][0] + (1.0 if i + 1 >= n else 0.0)
+    u = (g - t0) / (t1 - t0)
+    v0, v1, v2, v3 = (q[1] for q in p)
+    return 0.5 * ((2 * v1) + (-v0 + v2) * u + (2 * v0 - 5 * v1 + 4 * v2 - v3) * u * u + (-v0 + 3 * v1 - 3 * v2 + v3) * u ** 3)
+
+
 def walk_phase(a, t):
-    """One moment of the walk cycle, t in [0, 1): the left leg is furthest forward at t = 0.25 (heel strike),
-    the right at 0.75. Thighs swing ±25°; the swinging leg's knee folds up to ~60° as it passes under the body,
-    the standing knee keeps a slight give; the foot rolls heel to toe; the pelvis turns and drops a little with
-    each step and the body bobs; the chest counter-turns, the arms swing against the legs with soft elbows, the
-    head stays level."""
+    """One moment of the walk cycle, t in [0, 1): the left heel strikes at t = 0.25, the right at 0.75 (a 1 s cycle,
+    ~1.5 m/s). The legs follow the gait curves; the pelvis is lowest as both feet are down and rides up over the
+    standing leg, shifts a little over it, turns with the leg that swings forward and dips on the swinging side; the
+    chest turns against the pelvis, the body leans a touch forward; the arms swing against the legs (a little behind
+    them, further forward than back, the elbow bending as the arm comes forward); the head stays level and steady."""
     w = 2.0 * math.pi * t
-    sw = math.sin(w)
-    turn(a, "thigh_l", 'X', -25.0 * sw)
-    turn(a, "thigh_r", 'X', 25.0 * sw)
-    turn(a, "calf_l", 'X', 6.0 + 58.0 * max(0.0, math.cos(w)) ** 1.6)
-    turn(a, "calf_r", 'X', 6.0 + 58.0 * max(0.0, math.cos(w - math.pi)) ** 1.6)
-    turn(a, "foot_l", 'X', 14.0 * sw - 6.0 * max(0.0, math.cos(w)))
-    turn(a, "foot_r", 'X', -14.0 * sw - 6.0 * max(0.0, math.cos(w - math.pi)))
-    lower(a, "pelvis", -0.028 * abs(sw))                   # down on the double support, up as a leg passes
-    turn(a, "pelvis", 'Z', 5.0 * sw)
-    turn(a, "pelvis", 'Y', 2.5 * math.sin(2.0 * w))
-    turn(a, "spine_03", 'Z', -6.0 * sw)
-    turn(a, "upperarm_l", 'X', 18.0 * sw)
-    turn(a, "upperarm_r", 'X', -18.0 * sw)
-    turn(a, "lowerarm_l", 'X', -(14.0 + 12.0 * max(0.0, -sw)))
-    turn(a, "lowerarm_r", 'X', -(14.0 + 12.0 * max(0.0, sw)))
-    turn(a, "neck_01", 'Z', 3.0 * sw)
+    for side, g in (("l", t - 0.25), ("r", t - 0.75)):
+        turn(a, "thigh_" + side, 'X', -gait(GAIT_HIP, g))
+        turn(a, "calf_" + side, 'X', gait(GAIT_KNEE, g))
+        turn(a, "foot_" + side, 'X', gait(GAIT_ANKLE, g))
+    pb = a.pose.bones.get("pelvis")
+    if pb is not None:                                     # over the standing foot: left (+X) at t = 0.5
+        m = a.matrix_world @ pb.matrix
+        m.translation.x += 0.014 * math.sin(2.0 * math.pi * (t - 0.25))
+        pb.matrix = a.matrix_world.inverted() @ m
+        bpy.context.view_layer.update()
+    lower(a, "pelvis", -0.011 * (1.0 + math.cos(4.0 * math.pi * (t - 0.25))))
+    turn(a, "pelvis", 'Z', 4.0 * math.sin(w))
+    turn(a, "pelvis", 'Y', 2.5 * math.sin(2.0 * math.pi * (t - 0.25)))
+    turn(a, "spine_01", 'X', 2.5)
+    turn(a, "spine_03", 'Z', -5.0 * math.sin(w))
+    for side, sg in (("l", 1.0), ("r", -1.0)):
+        s = sg * math.sin(2.0 * math.pi * (t - 0.05))     # +1: this arm furthest back
+        turn(a, "upperarm_" + side, 'X', 11.0 * s - 1.5)
+        turn(a, "lowerarm_" + side, 'X', -(8.0 + 10.0 * max(0.0, -s)))
+    turn(a, "neck_01", 'Z', 2.0 * math.sin(w))
+    turn(a, "neck_01", 'X', -2.0)
 
 
 def run_phase(a, t):
@@ -699,7 +728,7 @@ def animate(arm):
     clip(arm, "Idle", [(1, lambda a: idle(a, -1)), (37, lambda a: idle(a, 1)), (73, lambda a: idle(a, -1))])
     clip(arm, "Talk", [(1, lambda a: talk(a, -1)), (13, lambda a: talk(a, 1)), (25, lambda a: talk(a, -0.4)),
                        (37, lambda a: talk(a, 1)), (49, lambda a: talk(a, -1))])
-    clip(arm, "Walk", [(1 + 2 * k, (lambda kk: (lambda a: walk_phase(a, (kk % 12) / 12.0)))(k)) for k in range(13)])
+    clip(arm, "Walk", [(1 + k, (lambda kk: (lambda a: walk_phase(a, (kk % 24) / 24.0)))(k)) for k in range(25)])
     clip(arm, "Run", [(1 + 2 * k, (lambda kk: (lambda a: run_phase(a, (kk % 8) / 8.0)))(k)) for k in range(9)])
     clip(arm, "Sit", [(f, (lambda kk, lk: (lambda a: sit_idle(a, kk, lk)))(k, lk))      # 4 s: two breaths, a look
                       for f, k, lk in ((1, -1, 0), (25, 1, 6), (49, -1, 8), (73, 1, -4), (97, -1, 0))])
@@ -778,6 +807,37 @@ def preview(arm, objs, out):
     print("PREVIEW", out, flush=True)
 
 
+def walk_strip(arm, objs, out_dir):
+    """The walk seen from the side at eight moments of the cycle (Eevee), to judge it by: walk_<key>_<n>.jpg."""
+    sc = bpy.context.scene
+    for tr in (arm.animation_data.nla_tracks if arm.animation_data else []):
+        tr.mute = True
+    sc.render.engine = 'BLENDER_EEVEE_NEXT' if 'BLENDER_EEVEE_NEXT' in [e.identifier for e in sc.render.bl_rna.properties["engine"].enum_items] else 'BLENDER_EEVEE'
+    sc.render.resolution_x, sc.render.resolution_y = 500, 900
+    sc.render.image_settings.file_format = 'JPEG'
+    cam = bpy.data.objects.new("Cam", bpy.data.cameras.new("Cam"))
+    sc.collection.objects.link(cam)
+    cam.data.lens = 50
+    cam.location = (4.2, 0.0, 1.0)
+    cam.rotation_euler = (Vector((0, 0, 0.9)) - cam.location).to_track_quat('-Z', 'Y').to_euler()
+    sc.camera = cam
+    sun = bpy.data.objects.new("Sun", bpy.data.lights.new("Sun", 'SUN'))
+    sun.data.energy = 3.0
+    sun.rotation_euler = (math.radians(50), 0, math.radians(60))
+    sc.collection.objects.link(sun)
+    floor = bpy.data.objects.new("Floor", bpy.data.meshes.new("Floor"))
+    floor.data.from_pydata([(-3, -3, 0), (3, -3, 0), (3, 3, 0), (-3, 3, 0)], [], [(0, 1, 2, 3)])
+    sc.collection.objects.link(floor)
+    os.makedirs(out_dir, exist_ok=True)
+    for k in range(8):
+        rest(arm)
+        arms_down(arm)
+        walk_phase(arm, k / 8.0)
+        sc.render.filepath = os.path.join(out_dir, "walk_%d.jpg" % k)
+        bpy.ops.render.render(write_still=True)
+    print("WALKSTRIP", out_dir, flush=True)
+
+
 def main():
     args = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else []
     only = args[args.index("--only") + 1].split(",") if "--only" in args else [c[0] for c in CAST]
@@ -787,6 +847,9 @@ def main():
             continue
         clear()
         arm, objs = build(c)
+        if "--walkstrip" in args:                          # (look at the walk first, export nothing)
+            walk_strip(arm, objs, os.path.abspath(args[args.index("--walkstrip") + 1]))
+            continue
         animate(arm)
         export(arm, objs, os.path.abspath(os.path.join(OUT, "story_%s.glb" % c[0])))
         if "--preview" in args:

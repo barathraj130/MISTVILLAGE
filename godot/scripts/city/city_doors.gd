@@ -45,6 +45,8 @@ func _ready() -> void:
 		if h is Dictionary and h.has("x"):
 			_home = Vector2(float(h["x"]), float(h["z"]))
 	for a in OS.get_cmdline_user_args():                # (testing: --doortest=N walks into N buildings near the start,
+		if a == "--walktest":                           # (testing: Karthik walking and running, filmed from the side)
+			_walk_test.call_deferred()
 		if a.begins_with("--doortest="):                #  --doorat=<landmark> into that landmark; screenshots in --shots)
 			_door_test.call_deferred(int(a.get_slice("=", 1)))
 	var layer := CanvasLayer.new()
@@ -366,3 +368,43 @@ func _shot(dir: String, name: String) -> void:
 		return
 	await RenderingServer.frame_post_draw
 	get_viewport().get_texture().get_image().save_jpg("%s/%s.jpg" % [dir, name], 0.85)
+
+
+## (testing) --walktest --shots=DIR: out of the car, Karthik walks ahead, turns, runs and stops, filmed from the
+## side by a camera that keeps pace: frames in DIR (walk_NNN.jpg) to judge the gait by.
+func _walk_test() -> void:
+	var tree := get_tree()
+	if city.fines:
+		city.fines.persist = false
+	await tree.create_timer(12.0).timeout
+	city.toggle_on_foot()
+	await tree.create_timer(2.0).timeout
+	var w: Node3D = city.walker
+	var cam := Camera3D.new()
+	cam.fov = 40.0
+	add_child(cam)
+	var plan := [["move_forward", "", 3.0], ["move_forward", "", 1.0, 0.8], ["move_forward", "run", 2.5], ["", "", 1.5]]
+	var n := 0
+	for p in plan:
+		var t := 0.0
+		if p[0] != "":
+			Input.action_press(p[0])
+		if p[1] != "":
+			Input.action_press(p[1])
+		while t < p[2]:
+			if p.size() > 3:                               # turning while walking
+				w.rotation.y += p[3] * get_process_delta_time()
+			var side: Vector3 = w.global_basis.x
+			cam.global_position = w.global_position + side * 3.2 + Vector3(0, 1.0, 0)
+			cam.look_at(w.global_position + Vector3(0, 0.9, 0))
+			cam.make_current()
+			await RenderingServer.frame_post_draw
+			if city.shots_dir != "" and n % 3 == 0:
+				get_viewport().get_texture().get_image().save_jpg("%s/walk_%03d.jpg" % [city.shots_dir, n / 3], 0.8)
+			n += 1
+			t += get_process_delta_time()
+		for act in [p[0], p[1]]:
+			if act != "":
+				Input.action_release(act)
+	print("WALKTEST frames %d" % (n / 3))
+	tree.quit()
