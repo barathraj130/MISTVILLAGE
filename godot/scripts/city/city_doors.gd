@@ -1,8 +1,9 @@
 extends Node3D
 ## Every building in the city can be walked into. On foot, step up to any wall of a building and the door is
 ## there: "E: go in". You come into a room that suits the building, loaded well below the street while you're
-## inside (the rooms of tools/building_interiors.py and tools/story_rooms.py):
-##   houses, flats, bungalows, cottages     → a home
+## inside (the rooms of tools/building_interiors.py, tools/story_rooms.py and tools/city_rooms.py):
+##   houses, bungalows, cottages            → one of the houses (a family's hall, an old courtyard house, a modern flat)
+##   apartment blocks                       → the modern flat
 ##   shops (a shop on the ground floor)     → a kirana, a tea stall or a restaurant (the same one every time)
 ##   commercial blocks and tall buildings  → an office
 ##   hotels                                 → a hotel lobby
@@ -14,9 +15,12 @@ const STAFF := "res://assets/people/person_%s.glb"
 const DEPTH := 300.0                 # rooms sit this far below the street
 const REACH := 1.6                   # how near a wall you must be for its door
 const SHOPS := ["kirana", "kirana", "tea", "restaurant", "kirana", "tea", "restaurant", "bank"]
-const KIT_ROOM := {"apartment": "home", "bungalow": "home", "city_house": "home", "tn_house": "home", "hill_cottage": "home",
+const HOMES := ["house_mid", "house_old", "house_flat", "house_mid", "house_flat"]   # (Karthik's own "home" is the story's)
+const KIT_ROOM := {"apartment": "house_flat", "bungalow": "house", "city_house": "house", "tn_house": "house", "hill_cottage": "house",
 	"commercial": "office", "shop_house": "shop", "hotel": "hotel", "mill_shed": "office"}
-const NAMES := {"home": "the house", "kirana": "the kirana store", "tea": "the tea stall", "restaurant": "the restaurant",
+const NAMES := {"home": "the house", "house_mid": "the house", "house_old": "the house", "house_flat": "the flat",
+	"station": "the station", "bus": "the bus stand", "airport": "the airport", "mall_avinashi": "the mall",
+	"mall_sathy": "the mall", "church": "the church", "kirana": "the kirana store", "tea": "the tea stall", "restaurant": "the restaurant",
 	"bank": "the bank", "office": "the offices", "hotel": "the hotel", "temple": "the temple", "hospital": "the hospital",
 	"fine_dining": "the restaurant", "mess": "the mess", "police": "the police station", "coopbank": "the bank",
 	"fuel": "the store"}
@@ -145,12 +149,14 @@ func _room_for(b: Array, s) -> String:
 		for pre in KIT_ROOM:
 			if str(vnames[variant]).begins_with(pre):
 				var r: String = KIT_ROOM[pre]
-				return SHOPS[h % SHOPS.size()] if r == "shop" else r
+				if r == "shop":
+					return SHOPS[h % SHOPS.size()]
+				return HOMES[h % HOMES.size()] if r == "house" else r
 	if shop:
 		return SHOPS[h % SHOPS.size()]
 	if floors >= 5:
 		return "office"
-	return "home"
+	return HOMES[h % HOMES.size()]
 
 
 func enter(d: Dictionary, walker: Node3D) -> void:
