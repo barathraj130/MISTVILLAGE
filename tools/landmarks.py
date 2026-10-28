@@ -207,7 +207,64 @@ def bus_town():
         bus(12.0 - 28 + k * 14.0, 19.3 + 7.5, math.radians(-70))
 
 
-LANDMARKS = {"station": station, "bus_central": bus_central, "bus_town": bus_town}
+# ---- the malls (names of the story's own) ------------------------------------------------------------------------
+def mall(W, D, H, name, panel, accent, forecourt):
+    """A modern Coimbatore mall: a big box in aluminium-composite panels of two tones with glazed bands, a full-height
+    glass atrium at the middle of the front under a steel canopy with the name lit above it, a multiplex block on
+    the roof, side entrances, palms and bollards on the forecourt (`forecourt` metres deep, in front of -D/2)."""
+    glass = R.mat("mall_glass", (0.2, 0.32, 0.4), 0.05, 0.8)
+    lit = R.mat("mall_lit", (1.0, 0.95, 0.85), 0.3, emit=(1.0, 0.92, 0.75), strength=2.5)
+    steel = R.mat("mall_steel", (0.75, 0.76, 0.78), 0.3, 0.9)
+    paving = R.mat("mall_paving", (0.62, 0.58, 0.52), 0.7)
+    y0 = -D / 2
+    R.box((0, 0, H / 2), (W, D, H), panel, 0.05)
+    for z in (H * 0.33, H * 0.66):                                       # glazed bands round the box
+        R.box((0, y0 - 0.05, z), (W - 0.5, 0.1, 1.6), glass)
+        for sx in (-1, 1):
+            R.box((sx * (W / 2 + 0.05), 0, z), (0.1, D - 0.5, 1.6), glass)
+    for k in range(int(W / 6)):                                          # panel joints in the accent tone
+        x = -W / 2 + 3 + k * 6.0
+        R.box((x, y0 - 0.06, H / 2), (0.3, 0.12, H), accent)
+    aw = min(40.0, W * 0.4)                                              # the atrium
+    R.box((0, y0 - 1.5, (H + 6) / 2), (aw, 3.0, H + 6), glass)
+    for k in range(9):
+        R.box((-aw / 2 + k * aw / 8, y0 - 3.05, (H + 6) / 2), (0.25, 0.25, H + 6), steel)
+    for z in range(5, int(H + 6), 5):
+        R.box((0, y0 - 3.05, z), (aw, 0.2, 0.2), steel)
+    R.box((0, y0 - 7.0, 5.2), (aw + 6, 8.0, 0.5), steel, 0.02)          # the canopy
+    for sx in (-1, 1):
+        R.cyl((sx * (aw / 2 + 2), y0 - 10.5, 2.6), 0.25, 5.2, steel, 16)
+    R.box((0, y0 - 3.4, H + 3.5), (aw - 2, 0.3, 4.0), accent)            # the name over the atrium
+    R.text(name, (0, y0 - 3.6, H + 3.0), min(2.6, (aw - 3) / (len(name) * 0.62)), lit, "-y")
+    mw, md = W * 0.38, D * 0.35                                          # the multiplex on the roof
+    R.box((W / 2 - mw / 2 - 2, D / 2 - md / 2 - 2, H + 5), (mw, md, 10), accent, 0.05)
+    R.text("MULTIPLEX", (W / 2 - mw / 2 - 2, D / 2 - md - 2.1, H + 6), 1.6, lit, "-y")
+    for sx in (-1, 1):                                                   # side entrances
+        R.box((sx * (W / 2 + 0.1), -D / 6, 3.0), (0.2, 10.0, 6.0), glass)
+        R.box((sx * (W / 2 + 2.5), -D / 6, 6.2), (5.0, 12.0, 0.4), steel)
+    R.box((0, y0 - forecourt / 2, 0.06), (W + 10, forecourt, 0.12), paving)
+    for k in range(-3, 4):
+        if k:
+            palm(k * W / 8, y0 - forecourt + 3.0, 6.0)
+    for k in range(14):
+        R.cyl((-W / 2 + 4 + k * (W - 8) / 13, y0 - forecourt + 0.6, 0.45), 0.12, 0.9, steel, 10)
+    R.text("FOOD COURT", (-W / 4, y0 - 0.1, H * 0.66 + 1.6), 1.0, lit, "-y")
+
+
+def mall_avinashi():
+    """The Noyyal Galleria on Avinashi Road (where Fun Republic stands): 62 m along the road, 104 m deep."""
+    mall(62.0, 104.0, 18.0, "THE NOYYAL GALLERIA", R.mat("acp_silver", (0.72, 0.73, 0.75), 0.35, 0.6),
+         R.mat("acp_red", (0.62, 0.08, 0.1), 0.4, 0.3), 10.0)
+
+
+def mall_sathy():
+    """Kongu Mall on Sathy Road, Saravanampatti (where Prozone stands): 170 m along the road, 100 m deep."""
+    mall(170.0, 100.0, 22.0, "KONGU MALL", R.mat("acp_sand", (0.78, 0.7, 0.58), 0.4, 0.4),
+         R.mat("acp_teal", (0.05, 0.38, 0.42), 0.4, 0.4), 15.0)
+
+
+LANDMARKS = {"station": station, "bus_central": bus_central, "bus_town": bus_town, "mall_avinashi": mall_avinashi,
+             "mall_sathy": mall_sathy}
 
 
 def export(name):
