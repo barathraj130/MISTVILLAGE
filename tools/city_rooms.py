@@ -708,6 +708,18 @@ def mall(T, key):
         cyl((-7.0 + s * 1.2, -5.0, 1.75), 0.03, 1.3, steel, 8)
     text("CHAI & CORN", (-7.0, -5.72, 2.42), 0.16, mat("letters_white", (0.97, 0.97, 0.97), 0.4), "-y")
     staff(-7.0, -4.2, math.pi)
+    bx, by_ = -W / 2 + 0.6, -8.5                                         # the multiplex box office, left of the door
+    box((bx, by_, 0.55), (0.9, 3.0, 1.1), acc, 0.02)
+    box((bx + 0.05, by_, 1.12), (1.0, 3.1, 0.04), mat("granite_black", (1, 1, 1), 0.15, tex=T["granite_black"]))
+    box((bx - 0.2, by_, 2.2), (0.02, 3.0, 2.1), glass)
+    lit = mat("letters_lit", (1, 1, 1), 0.3, emit=(1, 1, 1), strength=3)
+    for k, (film, times) in enumerate((("KOVAI EXPRESS", "12:30  16:00  19:30"), ("MAZHAI KAALAM", "13:15  18:45"),
+                                       ("THE LAST GHAT", "15:00  21:30"))):  # (films of the story's own)
+        y3 = by_ + 1.0 - k * 1.0
+        box((bx - 0.25, y3, 3.0), (0.05, 0.9, 0.55), mat("screen", (0.05, 0.1, 0.15), 0.1, emit=(0.25, 0.45, 0.7), strength=1.5))
+        text(film, (bx - 0.22, y3, 3.1), 0.08, lit, "+x")
+        text(times, (bx - 0.22, y3, 2.92), 0.065, mat("fids_yellow", (1, 0.85, 0.2), 0.3, emit=(1.0, 0.85, 0.2), strength=4), "+x")
+    R.mark("ticket", bx + 1.4, by_, -math.pi / 2)
     for x2, y2 in ((6.5, -6.0), (-4.0, 2.0), (4.0, 2.0)):
         box((x2, y2, 0.3), (1.6, 1.6, 0.6), mat("planter", (0.4, 0.38, 0.36), 0.5), 0.03)
         R.plant(x2, y2, 1.6)
@@ -727,6 +739,7 @@ def mall(T, key):
         cyl((x2, -9.5, z1 - 0.42), 0.12, 0.02, mat("downlight", (1, 1, 1), 0.3, emit=(1, 0.95, 0.85), strength=6), 16)
     shot("wide", (-10.0, -D / 2 + 1.0, 2.0), (2.0, 4.0, 4.5))
     shot("up", (0.0, -8.0, 1.6), (0.0, 6.0, 6.0))
+    shot("boxoffice", (-8.0, -8.5, 1.7), (-W / 2, -8.5, 2.4))
 
 
 def mall_avinashi(T):
@@ -828,6 +841,7 @@ def church(T):
             box((s * 4.25, y, 4.0), (0.07, 1.22, 0.07), mat("tube_fitting", (0.9, 0.9, 0.88), 0.4))
             box((s * 4.21, y, 4.0), (0.03, 1.18, 0.04), mat("tube_glow", (1, 1, 1), 0.3, emit=(0.95, 0.97, 1.0), strength=5.0))
             lamp((s * 3.6, y, 3.8))
+    R.mark("pray", -1.2, -11.5 + 6 * 1.6 - 0.05, math.pi)                # a pew halfway up, by the aisle
     shot("wide", (1.2, -D / 2 + 1.2, 1.8), (0.0, D / 2, 3.2))
     shot("altar", (0.0, 3.0, 1.7), (0.0, D / 2, 3.5))
 
@@ -1145,6 +1159,7 @@ def stadium(T):
         box((-7.0 + k * 0.33, yf + 0.15, 1.8), (0.02, 0.02, 1.4), mat("window_bars", (0.1, 0.12, 0.1), 0.4, 0.6))
     sign("TICKETS", (-6.0, yf + 0.15, 2.75), 2.0, 0.35, maroon, white, "+y", 0.22)
     staff(-6.0, yf + 0.2, 0.0)
+    R.mark("ticket", -6.0, yf + 1.3, math.pi)
     for k in range(3):                                                   # turnstiles before the middle tunnel
         x = -2.0 + k * 2.0
         cyl((x, yc - 2.0, 0.5), 0.12, 1.0, steel, 12)
@@ -1241,6 +1256,8 @@ def stadium(T):
     for x in (-16.0, -6.0, 6.0, 16.0):
         for y in (yc + 2.0, yc + 7.0, yc + 11.5):
             lamp((x, y, -(y - yc) * tz + 3.0), "window")
+    t6 = 6                                                               # the seat: tier 7 of the middle block
+    empty("Mark_seat", (-4.0, yc + 0.2 + t6 * td + 0.55, -t6 * tz + 0.25), math.pi)
     shot("wide", (4.0, yc + 1.5, 1.6), (0.0, (py0 + py1) / 2, zg))
     shot("concourse", (12.0, yf + 1.0, 1.7), (-6.0, yc - 1.0, 1.2))
 

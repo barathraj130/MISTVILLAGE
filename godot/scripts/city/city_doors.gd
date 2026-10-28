@@ -8,6 +8,8 @@ extends Node3D
 ##   commercial blocks and tall buildings  → an office
 ##   hotels                                 → a hotel lobby
 ##   landmarks                              → their own room (landmarks.json "room", door at "door")
+##   Karthik's own house in Ganapathy       → his home (slice.json places.home): his cot, Amma's kitchen
+## Inside, E at a room's own spot does what there is to do there (life.gd: eat, sleep, a match, a film...).
 ## E by the doorway inside (or walking out through it) brings you back out where you went in.
 
 const ROOMS := "res://assets/interiors/room_%s.glb"
@@ -18,7 +20,7 @@ const SHOPS := ["kirana", "kirana", "tea", "restaurant", "kirana", "tea", "resta
 const HOMES := ["house_mid", "house_old", "house_flat", "house_mid", "house_flat"]   # (Karthik's own "home" is the story's)
 const KIT_ROOM := {"apartment": "house_flat", "bungalow": "house", "city_house": "house", "tn_house": "house", "hill_cottage": "house",
 	"commercial": "office", "shop_house": "shop", "hotel": "hotel", "mill_shed": "office"}
-const NAMES := {"home": "the house", "house_mid": "the house", "house_old": "the house", "house_flat": "the flat",
+const NAMES := {"home": "Karthik's house", "house_mid": "the house", "house_old": "the house", "house_flat": "the flat",
 	"station": "the station", "bus": "the bus stand", "airport": "the airport", "mall_avinashi": "the mall",
 	"mall_sathy": "the mall", "church": "the church", "stadium": "the stadium", "kirana": "the kirana store", "tea": "the tea stall", "restaurant": "the restaurant",
 	"bank": "the bank", "office": "the offices", "hotel": "the hotel", "temple": "the temple", "hospital": "the hospital",
@@ -33,9 +35,15 @@ var _near := {}                      # the door you're standing at, if any
 var _t := 0.0
 var _e_down := false
 var _label: Label
+var _home := Vector2(INF, INF)       # where Karthik's house stands (the story's "home" place)
 
 
 func _ready() -> void:
+	var f := FileAccess.open("res://story/slice.json", FileAccess.READ)
+	if f:
+		var h = (JSON.parse_string(f.get_as_text()) as Dictionary).get("places", {}).get("home", {})
+		if h is Dictionary and h.has("x"):
+			_home = Vector2(float(h["x"]), float(h["z"]))
 	for a in OS.get_cmdline_user_args():                # (testing: --doortest=N walks into N buildings near the start,
 		if a.begins_with("--doortest="):                #  --doorat=<landmark> into that landmark; screenshots in --shots)
 			_door_test.call_deferred(int(a.get_slice("=", 1)))
@@ -70,10 +78,18 @@ func _process(dt: float) -> void:
 			_drop_room()
 		return
 	if not inside.is_empty():
+		var life = city.life if "life" in city else null
+		if life and life.busy:
+			_label.text = ""
+			return
 		var at_door := w.global_position.distance_to(_exit) < 1.8
-		_label.text = ("Inside %s · E: go out" % NAMES.get(inside["room"], "the building")) if at_door else ""
+		var todo: Dictionary = life.offer(inside["room"], _room, w.global_position) if life and not at_door else {}
+		_label.text = ("Inside %s · E: go out" % NAMES.get(inside["room"], "the building")) if at_door else \
+			("E: %s" % todo["offer"] if not todo.is_empty() else "")
 		if at_door and pressed:
 			leave(w)
+		elif pressed and not todo.is_empty():
+			life.go(todo, _room)
 		return
 	if _story_busy():
 		_label.text = ""
@@ -133,7 +149,8 @@ func door_near(p: Vector3) -> Dictionary:
 						if nrm.dot(q - centre) < 0.0:
 							nrm = -nrm
 						bd = d
-						best = {"pos": Vector3(q.x, p.y, q.y), "out": Vector3(nrm.x, 0, nrm.y), "room": _room_for(b, s),
+						best = {"pos": Vector3(q.x, p.y, q.y), "out": Vector3(nrm.x, 0, nrm.y),
+							"room": "home" if centre.distance_to(_home) < 25.0 else _room_for(b, s),
 							"key": "%d,%d" % [roundi(centre.x), roundi(centre.y)]}
 	return best
 
@@ -239,9 +256,12 @@ func _drop_room() -> void:
 
 
 ## (testing) Out of the car, then up to the wall of building after building (or the landmark of --doorat), in through
-## its door, a look round, and out again: a screenshot outside and inside each time.
+## its door, a look round, and out again: a screenshot outside and inside each time. --doordo: the outing there too
+## (life.gd: the match, the film...), with screenshots of the offer, while it lasts and after.
 func _door_test(n: int) -> void:
 	var tree := get_tree()
+	if city.fines:
+		city.fines.persist = false                      # (a test doesn't touch the saved game)
 	await tree.create_timer(12.0).timeout
 	city.toggle_on_foot()
 	await tree.create_timer(2.0).timeout
@@ -251,6 +271,13 @@ func _door_test(n: int) -> void:
 		if a.begins_with("--doorat="):
 			at = a.get_slice("=", 1)
 	var seen := {}
+	var life = city.life if "life" in city else null
+	for a in OS.get_cmdline_user_args():
+		if a.begins_with("--doorlife=") and life:         # energy,tiredness,stress to start from
+			var v := a.get_slice("=", 1).split(",")
+			life.energy = float(v[0])
+			life.tiredness = float(v[1])
+			life.stress = float(v[2])
 	for k in n:
 		var w: Node3D = city.walker
 		var d := {}
@@ -265,6 +292,8 @@ func _door_test(n: int) -> void:
 					w.global_position = p + Vector3(sn, 0, c) * 2.0
 					await tree.create_timer(8.0).timeout
 					d = door_near(w.global_position)
+		elif "--doorhome" in OS.get_cmdline_user_args():  # Karthik's house: its room, straight in
+			d = {"pos": Vector3(_home.x, w.global_position.y, _home.y), "out": Vector3(0, 0, 1), "room": "home", "key": "home"}
 		else:
 			d = _a_door(w.global_position, seen)
 			if not d.is_empty():
@@ -284,6 +313,26 @@ func _door_test(n: int) -> void:
 		if shots != "":
 			await RenderingServer.frame_post_draw
 			get_viewport().get_texture().get_image().save_jpg("%s/door_%02d_in_%s.jpg" % [shots, k, d["room"]], 0.85)
+		if "--doordo" in OS.get_cmdline_user_args() and life and life.DOINGS.has(d["room"]):   # (and what's done there)
+			for j in life.DOINGS[d["room"]].size():
+				var m := _room.find_child(life.DOINGS[d["room"]][j]["mark"], true, false) as Node3D
+				if m == null:
+					print("DOORTEST no mark %s" % life.DOINGS[d["room"]][j]["mark"])
+					continue
+				w.global_position = m.global_position + Vector3(0, 0.1, 0)
+				await tree.create_timer(1.0).timeout
+				var todo: Dictionary = life.offer(d["room"], _room, w.global_position)
+				print("DOORTEST offer %s: %s" % [d["room"], todo.get("offer", "none")])
+				if todo.is_empty():
+					continue
+				_shot(shots, "door_%02d_%d_offer" % [k, j])
+				await RenderingServer.frame_post_draw
+				life.go(todo, _room)
+				await tree.create_timer(3.5).timeout
+				await _shot(shots, "door_%02d_%d_during" % [k, j])
+				await tree.create_timer(5.0).timeout
+				await _shot(shots, "door_%02d_%d_after" % [k, j])
+				await tree.create_timer(4.0).timeout
 		leave(w)
 		await tree.create_timer(1.0).timeout
 		print("DOORTEST %d %s %s ok" % [k, d["key"], d["room"]])
@@ -310,3 +359,10 @@ func _a_door(p: Vector3, seen: Dictionary) -> Dictionary:
 			bd = centre.distance_to(here)
 			best = {"pos": Vector3(q.x, p.y, q.y), "out": Vector3(nrm.x, 0, nrm.y), "room": _room_for(b, s), "key": key}
 	return best
+
+
+func _shot(dir: String, name: String) -> void:
+	if dir == "":
+		return
+	await RenderingServer.frame_post_draw
+	get_viewport().get_texture().get_image().save_jpg("%s/%s.jpg" % [dir, name], 0.85)

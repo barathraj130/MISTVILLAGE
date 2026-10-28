@@ -4,6 +4,7 @@ extends Control
 
 var car
 var fines                          # wallet and challans (fines.gd), when playing
+var life                           # Karthik's stress (life.gd)
 var message := ""                  # a short warning shown for a few seconds (e.g. a red light jumped)
 var message_time := 0.0
 
@@ -35,6 +36,20 @@ func _draw() -> void:
 		draw_string(f1, Vector2(vs1.x - 240, 42), "Wallet  " + fines.rupees(fines.sim.money), HORIZONTAL_ALIGNMENT_LEFT, -1, 18, Color(1, 1, 1, 0.92))
 		if fines.challans.size() > 0:
 			draw_string(f1, Vector2(vs1.x - 240, 64), "Challans due  " + fines.rupees(fines.owed()), HORIZONTAL_ALIGNMENT_LEFT, -1, 16, Color(1.0, 0.45, 0.35, 0.95))
+		if life:                                     # Karthik: energy, tiredness, stress (green good .. red bad)
+			var y0 := 18.0 + (56.0 if fines.challans.size() > 0 else 34.0) + 6.0
+			draw_rect(Rect2(vs1.x - 250, y0, 232, 76), Color(0, 0, 0, 0.4))
+			var rows := [["Energy", 1.0 - life.energy / 100.0, life.energy / 100.0], ["Tired", life.tiredness / 100.0, life.tiredness / 100.0],
+				["Stress", life.stress / 100.0, life.stress / 100.0]]
+			for i in rows.size():
+				var bad: float = rows[i][1]
+				var y := y0 + 8.0 + i * 22.0
+				draw_string(f1, Vector2(vs1.x - 240, y + 13), rows[i][0], HORIZONTAL_ALIGNMENT_LEFT, -1, 15, Color(1, 1, 1, 0.9))
+				draw_rect(Rect2(vs1.x - 175, y + 4, 145, 9), Color(1, 1, 1, 0.15))
+				var col := Color(0.35, 0.8, 0.4).lerp(Color(0.95, 0.75, 0.2), clampf(bad * 2.0, 0.0, 1.0))
+				if bad > 0.5:
+					col = Color(0.95, 0.75, 0.2).lerp(Color(0.95, 0.25, 0.2), (bad - 0.5) * 2.0)
+				draw_rect(Rect2(vs1.x - 175, y + 4, 145.0 * float(rows[i][2]), 9), col)
 	if car == null or car.cockpit:
 		return
 	var vs := get_viewport_rect().size

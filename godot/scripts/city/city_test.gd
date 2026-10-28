@@ -18,6 +18,7 @@ const DriveHud := preload("res://scripts/city/drive_hud.gd")
 const Fines := preload("res://scripts/city/fines.gd")
 const CityPolice := preload("res://scripts/city/city_police.gd")
 const CityDoors := preload("res://scripts/city/city_doors.gd")
+const Life := preload("res://scripts/city/life.gd")
 const Story := preload("res://scripts/story/story.gd")
 const Walker := preload("res://scripts/player.gd")
 
@@ -55,6 +56,7 @@ var _orbit_idle := 0.0
 var _shake := 0.0
 var hud: Control
 var fines                                   # wallet and e-challans (fines.gd)
+var life                                    # Karthik's stress and his outings (life.gd)
 var _prof_frames := 0
 var _r_down := false
 var _jolt := 0.0
@@ -169,6 +171,11 @@ func _ready() -> void:
 		hud = DriveHud.new()
 		hud.car = car
 		hud.fines = fines
+		life = Life.new()
+		life.name = "Life"
+		life.city = self
+		add_child(life)
+		hud.life = life
 		var police := CityPolice.new()
 		police.name = "Police"
 		police.car = car
@@ -449,9 +456,13 @@ func toggle_on_foot() -> bool:
 		if absf(car.speed) > 1.0:
 			hud.warn("Stop the car first.", 3.0)
 			return false
+		Walker.avatar = "res://assets/people/story_karthik.glb"     # you on foot are Karthik, the story's own man
 		walker = Walker.new()
 		walker.name = "OnFoot"
+		walker.walk_speed = 1.6                                # (the cast's Walk and Run: no sliding feet)
+		walker.run_speed = 4.2
 		add_child(walker)
+		Walker.avatar = ""
 		var door: Vector3 = car.global_position - car.global_basis.x * 1.6
 		walker.spawn_at(door + Vector3(0, 0.4, 0), car.global_position + car.forward() * 12.0)
 		walker.activate()
