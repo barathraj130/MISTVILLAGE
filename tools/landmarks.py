@@ -267,6 +267,204 @@ LANDMARKS = {"station": station, "bus_central": bus_central, "bus_town": bus_tow
              "mall_sathy": mall_sathy}
 
 
+# ---- civic and heritage ------------------------------------------------------------------------------------------
+def gable(cx, cy, w, d, z, rise, m):
+    """A pitched roof over a w (x) by d (y) block whose eaves are at z, ridge along y."""
+    ang = math.atan2(rise, w / 2)
+    ln = math.hypot(rise, w / 2)
+    for s in (-1, 1):
+        R.box((cx + s * w / 4, cy, z + rise / 2), (ln + 0.3, d + 0.6, 0.25), m, rot=(0, s * ang, 0))
+
+
+def pointed_window(x, y, z, w, h, glass, frame, facing_y=True):
+    """A tall window with a pointed (gothic) head, on a face looking -y (facing_y) or -x."""
+    if facing_y:
+        R.box((x, y, z), (w, 0.06, h), glass)
+        R.box((x, y, z + h / 2), (w * 0.72, 0.06, w * 0.72), glass, rot=(0, math.radians(45), 0))
+        R.box((x, y + 0.02, z - h / 2 - 0.1), (w + 0.3, 0.1, 0.12), frame)
+    else:
+        R.box((x, y, z), (0.06, w, h), glass)
+        R.box((x, y, z + h / 2), (0.06, w * 0.72, w * 0.72), glass, rot=(math.radians(45), 0, 0))
+
+
+def india_flag(x, y, top):
+    from hotel_grand import flag
+    flag(x, y, top, [(1.0, 0.318, 0.033), (0.95, 0.95, 0.93), (0.0065, 0.246, 0.0024)], chakra=True)
+
+
+def collectorate():
+    """The District Collectorate: a four-floor government building in red brick with white trim, arcaded verandahs
+    on every floor along its 92 m front, a central entrance block rising to a tower with a small dome, the
+    national flag in front, its name in English (and Tamil, by the game)."""
+    W, D, H = 92.0, 40.0, 16.0
+    brick = R.mat("collectorate_brick", (0.55, 0.2, 0.13), 0.8)
+    white = R.mat("trim_white", (0.93, 0.92, 0.88), 0.6)
+    glass = R.mat("rail_glass", (0.18, 0.22, 0.24), 0.2, 0.3)
+    R.box((0, 0, H / 2), (W, D, H), brick, 0.03)
+    for f in range(4):
+        z0 = f * 4.0
+        if f == 0:                                                   # the ground floor's arcade
+            arcade(-W / 2 + 1, W / 2 - 1, -D / 2 - 1.4, z0 + 3.2, 4.2, 0.6, white, brick)
+        R.box((0, -D / 2 - 0.1, z0 + 4.0), (W, 0.3, 0.3), white)
+        windows_row(-W / 2 + 2, W / 2 - 2, -D / 2 - 0.02, z0 + 2.2, 1.2, 2.0, 22, glass, white, arched=True)
+    R.box((0, 0, H + 0.4), (W + 0.6, D + 0.6, 0.8), white, 0.02)
+    tw = 14.0                                                        # the entrance block and its tower
+    R.box((0, -D / 2 - 3.0, 9.0), (tw, 6.0, 18.0), brick, 0.03)
+    R.box((0, -D / 2 - 3.0, 18.3), (tw + 0.6, 6.6, 0.6), white)
+    R.box((0, -D / 2 - 3.0, 22.0), (7.0, 6.0, 7.0), brick, 0.02)
+    R.box((0, -D / 2 - 3.0, 25.7), (7.6, 6.6, 0.5), white)
+    R.dome((0, -D / 2 - 3.0, 25.9), 2.8, 3.2, white, segs=24)
+    R.cyl((0, -D / 2 - 3.0, 30.0), 0.12, 1.6, R.mat("brass", (0.8, 0.6, 0.25), 0.3, 1.0), 8)
+    R.cyl((0, -D / 2 - 6.02, 2.6), 2.2, 0.1, glass, 24, rot=(math.pi / 2, 0, 0))
+    R.box((0, -D / 2 - 6.02, 1.3), (4.4, 0.1, 2.6), glass)
+    R.box((0, -D / 2 - 6.1, 14.6), (12.0, 0.12, 1.8), white)
+    R.text("DISTRICT COLLECTORATE", (0, -D / 2 - 6.2, 14.85), 0.62, R.mat("letters_maroon", (0.4, 0.05, 0.05), 0.5), "-y")
+    india_flag(-10.0, -D / 2 - 8.0, 12.0)
+    R.box((0, -D / 2 - 5.0, 0.06), (W, 10.0, 0.12), R.mat("forecourt", (0.5, 0.49, 0.47), 0.8))
+    for x in (-30, -15, 15, 30):
+        palm(x, -D / 2 - 7.0, 6.0)
+
+
+def clock_tower():
+    """The Town Hall clock tower: a stepped base, a cream shaft banded in maroon, the clock stage with a face on
+    each side, a cornice, an open cupola and its finial (about 20 m)."""
+    cream = R.mat("tower_cream", (0.9, 0.84, 0.68), 0.7)
+    maroon = R.mat("tower_maroon", (0.45, 0.1, 0.08), 0.6)
+    face = R.mat("clock_face", (0.97, 0.96, 0.9), 0.4)
+    hand = R.mat("clock_hand", (0.05, 0.05, 0.05), 0.4)
+    R.box((0, 0, 0.5), (6.5, 6.5, 1.0), maroon, 0.02)
+    R.box((0, 0, 1.4), (5.5, 5.5, 0.8), cream, 0.02)
+    R.box((0, 0, 7.15), (4.2, 4.2, 10.8), cream, 0.03)
+    for z in (4.0, 8.0, 12.0):
+        R.box((0, 0, z), (4.5, 4.5, 0.35), maroon)
+    R.box((0, 0, 14.3), (4.8, 4.8, 3.6), cream, 0.03)
+    for a in range(4):
+        ang = a * math.pi / 2
+        dx, dy = -math.sin(ang), -math.cos(ang)
+        fx, fy = dx * 2.42, dy * 2.42
+        R.cyl((fx, fy, 14.3), 1.35, 0.1, face, 32, rot=(math.pi / 2, 0, ang))
+        R.cyl((fx, fy, 14.3), 1.5, 0.06, maroon, 32, rot=(math.pi / 2, 0, ang))
+        for h_ang, ln in ((math.radians(-60), 0.8), (math.radians(60), 1.1)):
+            R.box((fx + dx * 0.08 + math.cos(ang) * math.sin(h_ang) * ln / 2, fy + dy * 0.08 - math.sin(ang) * math.sin(h_ang) * ln / 2,
+                   14.3 + math.cos(h_ang) * ln / 2), (0.08, 0.08, ln), hand, rot=(0, h_ang, -ang))
+    R.box((0, 0, 16.3), (5.4, 5.4, 0.5), maroon, 0.02)
+    for sx in (-1, 1):
+        for sy in (-1, 1):
+            R.cyl((sx * 1.7, sy * 1.7, 17.6), 0.22, 2.2, cream, 12)
+    R.box((0, 0, 18.8), (4.4, 4.4, 0.35), maroon)
+    R.dome((0, 0, 18.95), 2.0, 2.2, cream, segs=24)
+    R.cyl((0, 0, 21.6), 0.1, 1.4, R.mat("brass", (0.8, 0.6, 0.25), 0.3, 1.0), 8)
+
+
+def church():
+    """Christ the King church: a white nave under a pitched roof with pointed windows, side aisles, a tall bell
+    tower over the entrance with a spire and cross, a rose window, steps up to the doors, a cross on the gable."""
+    white = R.mat("church_white", (0.94, 0.93, 0.9), 0.6)
+    blue = R.mat("church_blue", (0.35, 0.55, 0.75), 0.5)
+    roof = R.mat("church_roof", (0.55, 0.22, 0.15), 0.7)
+    glass = R.mat("church_glass", (0.25, 0.35, 0.55), 0.1, 0.3)
+    L, W, H = 52.0, 18.0, 13.0
+    R.box((0, 6, H / 2), (W, L, H), white, 0.03)
+    gable(0, 6, W, L, H, 6.5, roof)
+    for s in (-1, 1):                                                     # side aisles
+        R.box((s * (W / 2 + 3), 8, 3.5), (6.0, L - 6, 7.0), white, 0.02)
+        gable(s * (W / 2 + 3), 8, 6.0, L - 6, 7.0, 1.5, roof)
+        for k in range(8):
+            pointed_window(s * (W / 2 + 0.05), -12 + k * 6.0, 10.0, 1.6, 3.6, glass, blue, facing_y=False)
+            pointed_window(s * (W / 2 + 6.05), -10 + k * 6.0, 3.4, 1.2, 3.0, glass, blue, facing_y=False)
+    y0 = 6 - L / 2                                                        # the front and the bell tower
+    R.box((0, y0 - 1.0, 11.0), (W + 1.0, 2.0, 22.0), white, 0.03)
+    ty = y0 + 2.5                                                         # the tower stands on the front wall
+    R.box((0, ty, 23.0), (7.0, 7.0, 10.0), white, 0.03)
+    R.box((0, ty, 28.2), (7.6, 7.6, 0.5), blue)
+    R.cyl((0, ty, 33.5), 3.8, 10.0, white, 4, rot=(0, 0, math.pi / 4), r2=0.2)
+    gold = R.mat("cross_gold", (0.85, 0.65, 0.2), 0.3, 1.0)
+    R.box((0, ty, 40.0), (0.25, 0.25, 3.2), gold)
+    R.box((0, ty, 40.7), (1.6, 0.25, 0.25), gold)
+    for a in range(4):                                                    # its belfry openings
+        ang = a * math.pi / 2
+        R.box((-math.sin(ang) * 3.52, ty - math.cos(ang) * 3.52, 24.5), (2.0 if a % 2 == 0 else 0.06, 0.06 if a % 2 == 0 else 2.0, 3.6),
+              R.mat("passage_dark", (0.1, 0.1, 0.1), 0.9))
+    R.cyl((0, y0 - 2.05, 15.0), 2.4, 0.1, glass, 32, rot=(math.pi / 2, 0, 0))             # the rose window
+    R.cyl((0, y0 - 2.0, 15.0), 2.7, 0.12, blue, 32, rot=(math.pi / 2, 0, 0))
+    pointed_window(0, y0 - 2.06, 3.2, 3.2, 5.0, R.mat("church_door", (0.35, 0.2, 0.1), 0.6), blue)
+    for s in (-1, 1):
+        pointed_window(s * 5.5, y0 - 2.06, 9.0, 1.6, 4.0, glass, blue)
+        R.box((s * (W / 2 + 0.3), y0 - 1.0, 11.0), (1.2, 2.4, 22.0), blue, 0.02)
+    for k in range(4):
+        R.box((0, y0 - 3.0 - k * 0.5, 0.15 + k * 0.15), (10.0 - k * 0.6, 0.6, 0.3), white)
+    R.box((0, y0 - 14.0, 0.06), (40.0, 22.0, 0.12), R.mat("forecourt", (0.5, 0.49, 0.47), 0.8))
+
+
+def hospital():
+    """Coimbatore Medical College Hospital (the Government Hospital): the long three-floor main block with a corridor
+    verandah on every floor behind its parapets, cream with red-oxide bands, the entrance porch for ambulances, the
+    name over it in English (and Tamil, by the game), the wings behind."""
+    W, D, H = 62.0, 15.0, 12.0
+    cream = R.mat("gh_cream", (0.9, 0.86, 0.74), 0.8)
+    oxide = R.mat("gh_oxide", (0.55, 0.22, 0.14), 0.7)
+    shade = R.mat("verandah_shade", (0.3, 0.28, 0.26), 0.9)
+    R.box((0, 0, H / 2), (W, D, H), cream, 0.03)
+    for f in range(3):                                                    # corridor verandahs: shade, parapet, piers
+        z0 = f * 4.0
+        R.box((0, -D / 2 - 0.02, z0 + 2.4), (W - 1, 0.05, 2.4), shade)
+        R.box((0, -D / 2 - 0.15, z0 + 0.6), (W, 0.3, 1.0), cream if f else oxide)
+        R.box((0, -D / 2 - 0.15, z0 + 3.85), (W, 0.3, 0.3), oxide)
+        for k in range(21):
+            R.box((-W / 2 + 0.5 + k * (W - 1) / 20, -D / 2 - 0.15, z0 + 2.4), (0.4, 0.3, 2.4), cream)
+    for s in (-1, 1):                                                     # the wings behind
+        R.box((s * (W / 2 - 15), D / 2 + 12, H / 2), (12.0, 24.0, H), cream, 0.03)
+    R.box((0, -D / 2 - 5.0, 4.2), (16.0, 10.0, 0.4), cream, 0.02)        # the porch
+    for sx in (-1, 1):
+        for yy in (-D / 2 - 9.4, -D / 2 - 1.0):
+            R.box((sx * 7.4, yy, 2.0), (0.5, 0.5, 4.0), oxide)
+    R.box((0, -D / 2 - 10.05, 4.5), (15.0, 0.1, 1.2), R.mat("gh_board_blue", (0.08, 0.2, 0.5), 0.5))
+    R.text("COIMBATORE MEDICAL COLLEGE HOSPITAL", (0, -D / 2 - 10.12, 4.3), 0.42, R.mat("letters_white", (0.97, 0.97, 0.97), 0.4), "-y")
+    R.box((0, 0, H + 0.4), (W + 0.4, D + 0.4, 0.8), oxide)
+
+
+def stadium():
+    """Jawaharlal Nehru Stadium: the football ground inside the red running track, concrete stands down both long
+    sides (the west one under a canopy), floodlight masts at the corners, a perimeter wall round the oval and
+    the gate at the north end with its name."""
+    Wd, Ld = 150.0, 228.0
+    grass = R.mat("stadium_grass", (0.18, 0.45, 0.15), 0.9)
+    track = R.mat("stadium_track", (0.6, 0.22, 0.15), 0.85)
+    concrete = R.mat("stadium_concrete", (0.72, 0.7, 0.66), 0.85)
+    steel = R.mat("rail_steel", (0.3, 0.32, 0.35), 0.4, 0.8)
+    for rx, ry, z, m in ((Wd * 0.36, Ld * 0.42, 0.05, track), (Wd * 0.28, Ld * 0.36, 0.08, grass)):   # track, ground
+        R.cyl((0, 0, z), 1.0, 0.06, m, 64).scale = (rx, ry, 1.0)
+    for k in range(4):                                                    # the pitch's lines
+        R.box((0, (k - 1.5) * Ld * 0.24, 0.12), (Wd * 0.5, 0.15, 0.02), R.mat("line_white", (0.95, 0.95, 0.95), 0.5))
+    for s in (-1, 1):                                                     # the stands: twelve tiers
+        for t in range(12):
+            R.box((s * (Wd * 0.38 + t * 0.9), 0, (t + 1) * 0.55 / 2), (0.9, Ld * 0.62, (t + 1) * 0.55), concrete)
+        R.box((s * (Wd * 0.38 + 11.5), 0, 4.0), (1.0, Ld * 0.62, 8.0), concrete)
+    R.box((-(Wd * 0.38 + 6.0), 0, 10.5), (13.0, Ld * 0.5, 0.3), R.mat("stand_roof", (0.85, 0.85, 0.87), 0.4, 0.5),
+          rot=(0, math.radians(-8), 0))
+    for k in range(9):
+        R.cyl((-(Wd * 0.38 + 11.8), -Ld * 0.25 + k * Ld * 0.5 / 8, 6.0), 0.2, 12.0, steel, 10)
+    for sx in (-1, 1):                                                    # floodlights
+        for sy in (-1, 1):
+            x, y = sx * Wd * 0.42, sy * Ld * 0.4
+            R.cyl((x, y, 17.5), 0.45, 35.0, steel, 12, r2=0.25)
+            R.box((x, y, 35.5), (4.0, 0.6, 3.0), R.mat("floodlight", (0.95, 0.95, 0.9), 0.3, emit=(1, 1, 0.95), strength=1.5),
+                  rot=(math.radians(-30) * sy, 0, math.atan2(-y, -x) + math.pi / 2))
+    for k in range(48):                                                   # the perimeter wall
+        a, b = k * math.tau / 48, (k + 1) * math.tau / 48
+        p = Vector((math.cos(a) * Wd / 2, math.sin(a) * Ld / 2, 0))
+        q = Vector((math.cos(b) * Wd / 2, math.sin(b) * Ld / 2, 0))
+        m = (p + q) / 2
+        R.box((m.x, m.y, 1.5), ((q - p).length + 0.3, 0.4, 3.0), concrete, rot=(0, 0, math.atan2(q.y - p.y, q.x - p.x)))
+    R.box((0, -Ld / 2, 4.5), (18.0, 2.0, 9.0), concrete, 0.02)            # the gate
+    R.box((0, -Ld / 2 - 1.05, 2.5), (8.0, 0.1, 5.0), R.mat("passage_dark", (0.1, 0.1, 0.1), 0.9))
+    R.text("JAWAHARLAL NEHRU STADIUM", (0, -Ld / 2 - 1.1, 7.2), 0.9, R.mat("letters_maroon", (0.4, 0.05, 0.05), 0.5), "-y")
+
+
+LANDMARKS.update({"collectorate": collectorate, "clock_tower": clock_tower, "church": church, "hospital": hospital,
+                  "stadium": stadium})
+
+
 def export(name):
     meshes = [o for o in bpy.data.objects if o.type == 'MESH']
     bpy.ops.object.select_all(action='DESELECT')
