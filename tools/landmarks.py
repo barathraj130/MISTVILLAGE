@@ -465,6 +465,187 @@ LANDMARKS.update({"collectorate": collectorate, "clock_tower": clock_tower, "chu
                   "stadium": stadium})
 
 
+# ---- temple, campus, airport -------------------------------------------------------------------------------------
+def gopuram(cx, cy, w, d, tiers, base_h, tier_h, colours, kalasam_m, stone):
+    """A Dravidian gateway tower: a granite base with the gateway through it, then tapering stucco tiers (each
+    with a cornice and a row of niches), the barrel-vaulted (shala) crown and its row of gilded kalasams."""
+    R.box((cx, cy, base_h / 2), (w, d, base_h), stone, 0.02)
+    R.box((cx, cy - d / 2 - 0.02, base_h * 0.4), (w * 0.22, 0.06, base_h * 0.8), R.mat("passage_dark", (0.1, 0.1, 0.1), 0.9))
+    z = base_h
+    for t in range(tiers):
+        k = 1.0 - (t + 1) / (tiers + 2.2)
+        tw, td = w * k, d * (0.55 + 0.45 * k)
+        col = colours[t % len(colours)]
+        R.box((cx, cy, z + tier_h / 2), (tw, td, tier_h), col, 0.02)
+        R.box((cx, cy, z + tier_h - 0.15), (tw + 0.5, td + 0.5, 0.3), colours[(t + 1) % len(colours)])     # cornice
+        for j in range(max(3, int(tw / 2.2))):                            # niches with their small shrines
+            nx = cx - tw / 2 + 1.1 + j * (tw - 2.2) / max(1, max(3, int(tw / 2.2)) - 1)
+            R.box((nx, cy - td / 2 - 0.12, z + tier_h * 0.45), (0.7, 0.25, tier_h * 0.55), colours[(t + 2) % len(colours)])
+            R.dome((nx, cy - td / 2 - 0.12, z + tier_h * 0.73), 0.38, 0.4, colours[(t + 2) % len(colours)], segs=10)
+        z += tier_h
+    cw = w * (1.0 - (tiers + 1) / (tiers + 2.2)) + 1.0                    # the shala crown
+    R.cyl((cx, cy, z + 1.2), 1.4, cw, colours[0], 20, rot=(0, math.pi / 2, 0))
+    R.box((cx, cy, z + 0.5), (cw, 2.6, 1.2), colours[0])
+    for j in range(7):
+        kx = cx - cw / 2 + 0.6 + j * (cw - 1.2) / 6
+        R.dome((kx, cy, z + 2.5), 0.32, 0.6, kalasam_m, segs=12)
+        R.cyl((kx, cy, z + 3.25), 0.06, 0.5, kalasam_m, 8)
+    return z + 3.5
+
+
+def temple():
+    """Perur Pateeswarar temple: the compound wall (madil) in the temple's red-and-white stripes, the five-tier
+    rajagopuram over the gateway facing the road, the pillared mandapam inside, the vimana over the sanctum
+    behind it and the gilded flagstaff (dhvajastambham) on its pedestal before the mandapam."""
+    W, D = 33.8, 51.6
+    stone = R.mat("temple_granite", (0.55, 0.52, 0.48), 0.8)
+    red = R.mat("temple_kaavi", (0.62, 0.18, 0.1), 0.8)
+    white = R.mat("temple_lime", (0.94, 0.92, 0.86), 0.8)
+    gold = R.mat("kalasam_gold", (0.85, 0.62, 0.18), 0.3, 1.0)
+    pastels = [R.mat("stucco_%d" % k, c, 0.75) for k, c in enumerate(((0.95, 0.88, 0.62), (0.55, 0.75, 0.82), (0.9, 0.62, 0.55),
+                                                                        (0.7, 0.85, 0.6), (0.92, 0.92, 0.85)))]
+    for (x0, y0, x1, y1) in ((-W / 2, -D / 2, W / 2, -D / 2), (W / 2, -D / 2, W / 2, D / 2), (W / 2, D / 2, -W / 2, D / 2),
+                             (-W / 2, D / 2, -W / 2, -D / 2)):     # the madil, striped
+        L = math.hypot(x1 - x0, y1 - y0)
+        n = int(L / 0.9)
+        for k in range(n):
+            t = (k + 0.5) / n
+            R.box((x0 + (x1 - x0) * t, y0 + (y1 - y0) * t, 2.0), ((x1 - x0) / n + 0.02 if x1 != x0 else 0.6,
+                  (y1 - y0) / n + 0.02 if y1 != y0 else 0.6, 4.0), red if k % 2 else white)
+    gopuram(0, -D / 2, 13.0, 9.0, 5, 7.0, 3.6, pastels, gold, stone)
+    R.box((0, 2, 2.8), (12.0, 16.0, 0.5), stone, 0.02)                    # the mandapam: a flat roof on pillars
+    for sx in range(-2, 3):
+        for sy in range(-3, 4):
+            R.box((sx * 2.8, 2 + sy * 2.4, 1.3), (0.5, 0.5, 2.6), stone)
+    R.box((0, 16, 3.5), (8.0, 8.0, 7.0), stone, 0.02)                     # the sanctum and its vimana
+    vz = 7.0
+    for t in range(3):
+        sz = 7.0 - t * 1.8
+        R.box((0, 16, vz + 1.2), (sz, sz, 2.4), pastels[t], 0.02)
+        vz += 2.4
+    R.dome((0, 16, vz), 1.8, 2.2, pastels[0], segs=16)
+    R.dome((0, 16, vz + 2.1), 0.3, 0.6, gold, segs=10)
+    R.box((0, -8, 0.6), (2.0, 2.0, 1.2), stone)                            # the flagstaff
+    R.cyl((0, -8, 7.5), 0.18, 13.0, gold, 12)
+    R.box((0, -D / 2 - 6, 0.06), (W + 6, 12.0, 0.12), stone)
+
+
+def codissia():
+    """CODISSIA Trade Fair Complex: the main exhibition hall, 190 m long under a barrel-vaulted steel roof, glazed
+    ends, a grand entrance on the road end with the complex's name over it, flagpoles and a paved forecourt."""
+    W, D, H = 66.0, 190.0, 12.0
+    clad = R.mat("hall_cladding", (0.82, 0.84, 0.86), 0.4, 0.5)
+    roof = R.mat("hall_roof", (0.6, 0.64, 0.68), 0.35, 0.7)
+    glass = R.mat("mall_glass", (0.2, 0.32, 0.4), 0.05, 0.8)
+    blue = R.mat("codissia_blue", (0.05, 0.25, 0.55), 0.5)
+    R.box((0, 0, H / 2), (W, D, H), clad, 0.04)
+    rise = 9.0
+    n = 16
+    for k in range(n):                                                    # the barrel vault, in strips
+        a0, a1 = math.pi * k / n, math.pi * (k + 1) / n
+        x0, z0 = -math.cos(a0) * W / 2, H + math.sin(a0) * rise
+        x1, z1 = -math.cos(a1) * W / 2, H + math.sin(a1) * rise
+        R.box(((x0 + x1) / 2, 0, (z0 + z1) / 2), (math.hypot(x1 - x0, z1 - z0) + 0.2, D + 1.0, 0.3), roof,
+              rot=(0, -math.atan2(z1 - z0, x1 - x0), 0))
+    for k in range(n):                                                    # the glazed end walls under the vault
+        a = math.pi * (k + 0.5) / n
+        x, h = -math.cos(a) * W / 2, math.sin(a) * rise
+        for sy in (-1, 1):
+            R.box((x, sy * (D / 2 + 0.05), H + h / 2), (W / n + 0.05, 0.1, h), glass)
+    R.box((0, -D / 2 - 0.1, 5.0), (30.0, 0.15, 10.0), glass)              # the entrance
+    R.box((0, -D / 2 - 6.0, 10.5), (36.0, 12.0, 0.6), roof, 0.02)
+    for sx in (-1, 1):
+        R.cyl((sx * 16.0, -D / 2 - 11.0, 5.2), 0.5, 10.4, blue, 16)
+    R.box((0, -D / 2 - 12.05, 11.6), (34.0, 0.2, 1.8), blue)
+    R.text("CODISSIA TRADE FAIR COMPLEX", (0, -D / 2 - 12.2, 11.35), 1.15, R.mat("letters_white", (0.97, 0.97, 0.97), 0.4), "-y")
+    india_flag(-24.0, -D / 2 - 20.0, 10.0)
+    R.box((0, -D / 2 - 14.0, 0.06), (W + 20, 28.0, 0.12), R.mat("mall_paving", (0.62, 0.58, 0.52), 0.7))
+
+
+def psg_tech():
+    """PSG College of Technology: the main academic block on Avinashi Road, four floors in cream with red-brick
+    piers and deep sunshades, the central entrance with its portico and the college's name, lawns and trees."""
+    W, D, H = 85.0, 50.0, 16.0
+    cream = R.mat("psg_cream", (0.9, 0.86, 0.76), 0.8)
+    brick = R.mat("psg_brick", (0.6, 0.24, 0.15), 0.8)
+    glass = R.mat("rail_glass", (0.18, 0.22, 0.24), 0.2, 0.3)
+    R.box((0, 0, H / 2), (W, D, H), cream, 0.03)
+    for k in range(18):
+        R.box((-W / 2 + 1 + k * (W - 2) / 17, -D / 2 - 0.3, H / 2), (0.8, 0.6, H), brick)
+    for f in range(4):
+        R.box((0, -D / 2 - 0.5, f * 4.0 + 3.6), (W, 1.0, 0.18), cream)       # the sunshades
+        R.box((0, -D / 2 - 0.05, f * 4.0 + 2.0), (W - 1, 0.06, 2.0), glass)
+    R.box((0, -D / 2 - 5.0, 8.2), (20.0, 10.0, 0.5), cream, 0.02)          # the portico
+    for sx in (-1, 1):
+        for yy in (-D / 2 - 9.4, -D / 2 - 1.0):
+            R.cyl((sx * 9.0, yy, 4.0), 0.45, 8.0, cream, 16)
+    R.box((0, -D / 2 - 10.05, 9.3), (19.0, 0.12, 1.6), brick)
+    R.text("PSG COLLEGE OF TECHNOLOGY", (0, -D / 2 - 10.15, 9.5), 0.8, R.mat("letters_white", (0.97, 0.97, 0.97), 0.4), "-y")
+    R.box((0, -D / 2 - 18.0, 0.04), (W + 10, 16.0, 0.08), R.mat("lawn_grass", (0.22, 0.48, 0.18), 0.9))
+    for x in (-34, -20, 20, 34):
+        palm(x, -D / 2 - 14.0, 7.0)
+
+
+def hospital_private():
+    """Kongu Multispeciality Hospital (a hospital of the story's own, where KMCH stands): a ten-floor white tower
+    with blue glazing on a two-floor podium, the emergency entrance under its canopy, the name on the crown."""
+    W, D = 60.0, 26.0
+    white = R.mat("kmh_white", (0.93, 0.94, 0.95), 0.5)
+    glass = R.mat("kmh_glass", (0.18, 0.35, 0.55), 0.06, 0.8)
+    red = R.mat("emergency_red", (0.75, 0.08, 0.08), 0.5)
+    R.box((0, 0, 4.5), (W + 10, D + 10, 9.0), white, 0.03)
+    R.box((0, -D / 2 - 5.05, 4.0), (W + 6, 0.1, 6.0), glass)
+    tz0, th = 9.0, 34.0
+    R.box((0, 0, tz0 + th / 2), (W, D, th), glass)
+    for f in range(11):
+        R.box((0, 0, tz0 + f * 3.4), (W + 0.3, D + 0.3, 0.5), white)
+    for k in range(9):
+        R.box((-W / 2 + k * W / 8, -D / 2 - 0.2, tz0 + th / 2), (0.6, 0.5, th), white)
+    R.box((0, 0, tz0 + th + 1.5), (W + 0.6, D + 0.6, 3.0), white, 0.02)
+    R.text("KONGU MULTISPECIALITY HOSPITAL", (0, -D / 2 - 0.35, tz0 + th + 1.2), 1.3, R.mat("kmh_blue_text", (0.06, 0.2, 0.5), 0.4), "-y")
+    R.box((W / 2 - 6, -D / 2 - 12.0, 4.2), (14.0, 10.0, 0.4), white, 0.02)  # emergency
+    R.box((W / 2 - 6, -D / 2 - 17.05, 4.8), (12.0, 0.12, 1.2), red)
+    R.text("EMERGENCY", (W / 2 - 6, -D / 2 - 17.15, 4.6), 0.8, R.mat("letters_white", (0.97, 0.97, 0.97), 0.4), "-y")
+    for sx in (-1, 1):
+        R.cyl((W / 2 - 6 + sx * 6.5, -D / 2 - 16.5, 2.0), 0.25, 4.0, white, 12)
+
+
+def airport():
+    """Coimbatore International Airport's terminal: a 160 m glass front under a broad roof that sweeps out over the
+    departures kerb on slender columns, the airport's name on the roof's edge in English (Tamil and Hindi by the
+    game), the kerb with its drop-off lanes, and the control tower beside it."""
+    W, D, H = 160.0, 80.0, 14.0
+    glass = R.mat("terminal_glass", (0.25, 0.42, 0.5), 0.05, 0.8)
+    roof = R.mat("terminal_roof", (0.88, 0.89, 0.9), 0.3, 0.6)
+    steel = R.mat("mall_steel", (0.75, 0.76, 0.78), 0.3, 0.9)
+    concrete = R.mat("bus_concrete", (0.78, 0.76, 0.72), 0.85)
+    R.box((0, 0, H / 2), (W, D, H), concrete, 0.04)
+    R.box((0, -D / 2 - 0.05, H / 2), (W - 4, 0.1, H - 1), glass)
+    for k in range(33):
+        R.box((-W / 2 + 2 + k * (W - 4) / 32, -D / 2 - 0.12, H / 2), (0.25, 0.25, H - 1), steel)
+    n = 10
+    for k in range(n):                                                    # the roof, rising to the front in a sweep
+        y0, y1 = D / 2 - k * (D + 18) / n, D / 2 - (k + 1) * (D + 18) / n
+        z0, z1 = H + 1.0 + 2.5 * math.sin(math.pi * k / n), H + 1.0 + 2.5 * math.sin(math.pi * (k + 1) / n)
+        R.box((0, (y0 + y1) / 2, (z0 + z1) / 2), (W + 12, abs(y1 - y0) + 0.2, 0.6), roof,
+              rot=(math.atan2(z1 - z0, abs(y1 - y0)) * -1, 0, 0))
+    for k in range(9):
+        R.cyl((-W / 2 + 6 + k * (W - 12) / 8, -D / 2 - 14.0, (H + 1.5) / 2), 0.35, H + 1.5, steel, 12)
+    R.box((0, -D / 2 - 18.3, H + 2.4), (W * 0.62, 0.3, 2.2), R.mat("airport_board", (0.05, 0.2, 0.4), 0.5))
+    R.text("COIMBATORE INTERNATIONAL AIRPORT", (0, -D / 2 - 18.5, H + 2.6), 1.5, R.mat("letters_white", (0.97, 0.97, 0.97), 0.4), "-y")
+    for k in range(3):                                                    # the kerb lanes
+        R.box((0, -D / 2 - 10.0 - k * 7.0, 0.05), (W, 0.25, 0.02), R.mat("line_white", (0.95, 0.95, 0.95), 0.5))
+    R.box((0, -D / 2 - 4.0, 0.12), (W, 8.0, 0.24), R.mat("mall_paving", (0.62, 0.58, 0.52), 0.7))
+    tx, ty = W / 2 + 25, D / 2 - 10                                       # the control tower
+    R.cyl((tx, ty, 16.0), 2.5, 32.0, concrete, 24)
+    R.cyl((tx, ty, 34.0), 5.0, 4.0, glass, 24, r2=5.6)
+    R.cyl((tx, ty, 36.4), 5.8, 0.8, roof, 24)
+
+
+LANDMARKS.update({"temple": temple, "codissia": codissia, "psg_tech": psg_tech, "hospital_private": hospital_private,
+                  "airport": airport})
+
+
 def export(name):
     meshes = [o for o in bpy.data.objects if o.type == 'MESH']
     bpy.ops.object.select_all(action='DESELECT')

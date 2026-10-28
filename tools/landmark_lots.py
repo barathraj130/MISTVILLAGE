@@ -4,6 +4,7 @@ the city tiles (the plain blocks a designed landmark replaces), the ground heigh
 their direction (which way its front should face).
 
     .venv/bin/python tools/landmark_lots.py LAT LON [RADIUS]
+    .venv/bin/python tools/landmark_lots.py --xz X Z [RADIUS]     (game metres)
 """
 import json
 import math
@@ -32,9 +33,9 @@ def area(xz):
 
 
 def main():
-    lat, lon = float(sys.argv[1]), float(sys.argv[2])
-    r = float(sys.argv[3]) if len(sys.argv) > 3 else 120.0
-    x0, z0 = to_xz(lat, lon)
+    args = [a for a in sys.argv[1:] if a != "--xz"]
+    r = float(args[2]) if len(args) > 2 else 120.0
+    x0, z0 = (float(args[0]), float(args[1])) if "--xz" in sys.argv else to_xz(float(args[0]), float(args[1]))
     out = path("godot", "assets", "city")
     classes = json.load(open(os.path.join(out, "index.json")))["classes"]
     print("AT x %.1f z %.1f" % (x0, z0))
