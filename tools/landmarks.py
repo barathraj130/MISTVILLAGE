@@ -1,7 +1,7 @@
 """
 Coimbatore's well-known buildings as the city sees them from the street, each designed on its own real footprint
 (OpenStreetMap, the same outlines the city tiles hold: tools/landmark_lots.py finds them). Public places carry their
-real names; private businesses a name of the story's own. Lettering in Tamil and Hindi is not made here (Blender
+real names; privately owned ones (businesses, trusts, associations) a name of the story's own. Lettering in Tamil and Hindi is not made here (Blender
 cannot shape those scripts): it is listed with the landmark in godot/assets/landmarks/landmarks.json "labels" and
 drawn by the game (Label3D).
 
@@ -531,7 +531,7 @@ def temple():
 
 
 def codissia():
-    """CODISSIA Trade Fair Complex: the main exhibition hall, 190 m long under a barrel-vaulted steel roof, glazed
+    """Kovai Trade Fair Complex (a name of the story's own, where CODISSIA's stands): the main exhibition hall, 190 m long under a barrel-vaulted steel roof, glazed
     ends, a grand entrance on the road end with the complex's name over it, flagpoles and a paved forecourt."""
     W, D, H = 66.0, 190.0, 12.0
     clad = R.mat("hall_cladding", (0.82, 0.84, 0.86), 0.4, 0.5)
@@ -557,13 +557,13 @@ def codissia():
     for sx in (-1, 1):
         R.cyl((sx * 16.0, -D / 2 - 11.0, 5.2), 0.5, 10.4, blue, 16)
     R.box((0, -D / 2 - 12.05, 11.6), (34.0, 0.2, 1.8), blue)
-    R.text("CODISSIA TRADE FAIR COMPLEX", (0, -D / 2 - 12.2, 11.35), 1.15, R.mat("letters_white", (0.97, 0.97, 0.97), 0.4), "-y")
+    R.text("KOVAI TRADE FAIR COMPLEX", (0, -D / 2 - 12.2, 11.35), 1.15, R.mat("letters_white", (0.97, 0.97, 0.97), 0.4), "-y")
     india_flag(-24.0, -D / 2 - 20.0, 10.0)
     R.box((0, -D / 2 - 14.0, 0.06), (W + 20, 28.0, 0.12), R.mat("mall_paving", (0.62, 0.58, 0.52), 0.7))
 
 
 def psg_tech():
-    """PSG College of Technology: the main academic block on Avinashi Road, four floors in cream with red-brick
+    """Velliangiri College of Technology (a college of the story's own, where PSG Tech stands): the main block on Avinashi Road, four floors in cream with red-brick
     piers and deep sunshades, the central entrance with its portico and the college's name, lawns and trees."""
     W, D, H = 85.0, 50.0, 16.0
     cream = R.mat("psg_cream", (0.9, 0.86, 0.76), 0.8)
@@ -580,7 +580,7 @@ def psg_tech():
         for yy in (-D / 2 - 9.4, -D / 2 - 1.0):
             R.cyl((sx * 9.0, yy, 4.0), 0.45, 8.0, cream, 16)
     R.box((0, -D / 2 - 10.05, 9.3), (19.0, 0.12, 1.6), brick)
-    R.text("PSG COLLEGE OF TECHNOLOGY", (0, -D / 2 - 10.15, 9.5), 0.8, R.mat("letters_white", (0.97, 0.97, 0.97), 0.4), "-y")
+    R.text("VELLIANGIRI COLLEGE OF TECHNOLOGY", (0, -D / 2 - 10.15, 9.5), 0.8, R.mat("letters_white", (0.97, 0.97, 0.97), 0.4), "-y")
     R.box((0, -D / 2 - 18.0, 0.04), (W + 10, 16.0, 0.08), R.mat("lawn_grass", (0.22, 0.48, 0.18), 0.9))
     for x in (-34, -20, 20, 34):
         palm(x, -D / 2 - 14.0, 7.0)
