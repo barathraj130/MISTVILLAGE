@@ -470,6 +470,10 @@ def gait(curve, g):
     return 0.5 * ((2 * v1) + (-v0 + v2) * u + (2 * v0 - 5 * v1 + 4 * v2 - v3) * u * u + (-v0 + 3 * v1 - 3 * v2 + v3) * u ** 3)
 
 
+STRIDE = {"saree": 0.72, "veshti": 0.85}              # in a saree or a veshti the steps are shorter
+stride = 1.0                                           # (this character's: set from its outfit before its clips)
+
+
 def walk_phase(a, t):
     """One moment of the walk cycle, t in [0, 1): the left heel strikes at t = 0.25, the right at 0.75 (a 1 s cycle,
     ~1.5 m/s). The legs follow the gait curves; the pelvis is lowest as both feet are down and rides up over the
@@ -478,8 +482,8 @@ def walk_phase(a, t):
     them, further forward than back, the elbow bending as the arm comes forward); the head stays level and steady."""
     w = 2.0 * math.pi * t
     for side, g in (("l", t - 0.25), ("r", t - 0.75)):
-        turn(a, "thigh_" + side, 'X', -gait(GAIT_HIP, g))
-        turn(a, "calf_" + side, 'X', gait(GAIT_KNEE, g))
+        turn(a, "thigh_" + side, 'X', -gait(GAIT_HIP, g) * stride)
+        turn(a, "calf_" + side, 'X', gait(GAIT_KNEE, g) * (0.4 + 0.6 * stride))
         turn(a, "foot_" + side, 'X', gait(GAIT_ANKLE, g))
     pb = a.pose.bones.get("pelvis")
     if pb is not None:                                     # over the standing foot: left (+X) at t = 0.5
@@ -839,6 +843,7 @@ def walk_strip(arm, objs, out_dir):
 
 
 def main():
+    global stride
     args = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else []
     only = args[args.index("--only") + 1].split(",") if "--only" in args else [c[0] for c in CAST]
     os.makedirs(OUT, exist_ok=True)
@@ -846,6 +851,7 @@ def main():
         if c[0] not in only:
             continue
         clear()
+        stride = STRIDE.get(c[9], 1.0)
         arm, objs = build(c)
         if "--walkstrip" in args:                          # (look at the walk first, export nothing)
             walk_strip(arm, objs, os.path.abspath(args[args.index("--walkstrip") + 1]))

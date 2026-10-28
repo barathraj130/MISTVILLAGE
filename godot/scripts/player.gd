@@ -145,7 +145,11 @@ func _physics_process(delta: float) -> void:
 	else:
 		velocity.x = 0.0
 		velocity.z = 0.0
+	var y0 := global_position.y
 	move_and_slide()
+	var rise := global_position.y - y0
+	if rise > 0.08 and rise < 0.5 and is_on_floor():   # up a step: the body catches up with the capsule
+		_step_drop = minf(_step_drop + rise, 0.4)
 	if global_position.y < -400.0:         # fell off the world
 		_respawn()
 	_animate(delta)
@@ -198,4 +202,3 @@ func _try_step_up(delta: float) -> void:
 	if test_move(global_transform.translated(up), h):
 		return
 	global_position += up
-	_step_drop = minf(_step_drop + STEP_HEIGHT, 0.5)        # the body catches up with the capsule

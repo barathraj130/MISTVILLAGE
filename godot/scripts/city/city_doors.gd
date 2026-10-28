@@ -306,6 +306,10 @@ func _door_test(n: int) -> void:
 		if d.is_empty():
 			print("DOORTEST %d no door" % k)
 			continue
+		for a2 in OS.get_cmdline_user_args():          # --doorroom=a,b,c: building k opens into room k of these
+			if a2.begins_with("--doorroom="):
+				var rs := a2.get_slice("=", 1).split(",")
+				d["room"] = rs[k % rs.size()]
 		seen[d["key"]] = true
 		if shots != "":
 			await RenderingServer.frame_post_draw
@@ -380,6 +384,8 @@ func _walk_test() -> void:
 	city.toggle_on_foot()
 	await tree.create_timer(2.0).timeout
 	var w: Node3D = city.walker
+	if "--walktired" in OS.get_cmdline_user_args() and "life" in city and city.life:   # (and he drops off mid-walk)
+		city.life.tiredness = 99.8
 	var cam := Camera3D.new()
 	cam.fov = 40.0
 	add_child(cam)
@@ -406,5 +412,7 @@ func _walk_test() -> void:
 		for act in [p[0], p[1]]:
 			if act != "":
 				Input.action_release(act)
+	while "life" in city and city.life and city.life.busy:   # (asleep on his feet: until he's up again)
+		await tree.create_timer(1.0).timeout
 	print("WALKTEST frames %d" % (n / 3))
 	tree.quit()

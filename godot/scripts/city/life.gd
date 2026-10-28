@@ -12,6 +12,7 @@ extends Node
 ## Each of these is at its own spot in a room (city_doors.gd offers it: "E: ..."): it costs what it costs, passes
 ## its hours on the clock and shows him there (the stand, the cot) before he's back on his feet.
 
+const Sim := preload("res://scripts/drive/sim.gd")
 const STRESS0 := 55.0                # where the story finds him: a lot on his mind
 const ENERGY_PER_HOUR := 7.0         # a full stomach lasts about 14 game hours
 const TIRED_PER_HOUR := 5.5          # about 18 game hours awake to the end of him
@@ -109,6 +110,8 @@ func _process(dt: float) -> void:
 	if busy:
 		return
 	var hours := clampf((_clock_now() - _clock) / 60.0, 0.0, 24.0)   # game hours since last frame (story jumps too)
+	if city.story == null:                            # (free roam has no running clock: his day goes on at its pace)
+		hours = dt * Sim.MINUTES_PER_SECOND / 60.0
 	_clock = _clock_now()
 	var driving: bool = city.walker == null and absf(city.car.speed) > 2.0
 	energy = clampf(energy - ENERGY_PER_HOUR * hours, 0.0, 100.0)
