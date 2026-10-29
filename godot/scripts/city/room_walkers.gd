@@ -1,7 +1,8 @@
 extends Node3D
 ## People walking through a public room: along the room's routes (tools/city_rooms.py Walk_<name>[o]_<n>: points on
 ## clear aisles, walked to and fro, or round and round when the name ends in "o"), two or three on each, at a
-## person's pace (the Walk clip played to it: a cycle covers 1.25 m, as the street crowd's), slowing round the
+## person's pace (the Walk clip played to it: a cycle covers 1.25 m, as the street crowd's), keeping to the left
+## of the way (so those coming the other way pass by) and behind anyone going their way just ahead, slowing round the
 ## corners, now and then stopping a few seconds (a look at a shop, at the board) and at the ends of a way before
 ## turning back. One who has Karthik right in front of them waits for him to pass (or, if he stays, turns back).
 
@@ -78,6 +79,15 @@ func _step(w: Dictionary, dt: float) -> void:
 				w["blocked"] = 0.0
 			return
 	w["blocked"] = 0.0
+	for o in _walkers:                                     # someone just ahead going this way: keep behind them
+		if o == w:
+			continue
+		var rel: Vector3 = (o["node"] as Node3D).global_position - node.global_position
+		rel.y = 0.0
+		var fwd := rel.dot(ahead)
+		if fwd > 0.0 and fwd < 1.1 and (rel - ahead * fwd).length() < 0.5:
+			_play(w, "Idle", 1.0)
+			return
 	var seg_len := maxf(a.distance_to(b), 0.01)
 	w["t"] += w["dir"] * w["speed"] * dt / seg_len
 	if w["t"] > 1.0 or w["t"] < 0.0:                       # the end of this stretch: the next, or turn back
@@ -105,8 +115,10 @@ func _place(w: Dictionary, dt: float) -> void:
 	var a := pts[w["seg"]]
 	var b := pts[w["seg"] + 1]
 	var node: Node3D = w["node"]
-	node.global_position = a.lerp(b, clampf(w["t"], 0.0, 1.0))
 	var d: Vector3 = (b - a) * float(w["dir"])
+	var left := Vector3.UP.cross(d.normalized()) * 0.45    # keeping to the left, as people here do: those coming
+	w["side"] = left if dt == 0.0 else (w.get("side", left) as Vector3).lerp(left, 1.0 - exp(-dt * 2.0))   # pass by
+	node.global_position = a.lerp(b, clampf(w["t"], 0.0, 1.0)) + (w["side"] as Vector3)
 	var want := atan2(d.x, d.z)                            # the model faces +Z
 	w["yaw"] = want if dt == 0.0 else lerp_angle(w["yaw"], want, 1.0 - exp(-dt * 6.0))
 	node.global_rotation = Vector3(0, w["yaw"], 0)
