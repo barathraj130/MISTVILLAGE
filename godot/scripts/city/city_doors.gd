@@ -223,6 +223,12 @@ func enter(d: Dictionary, walker: Node3D) -> void:
 		entry = _room.find_child("Mark_door", true, false) as Node3D
 		ex = entry
 	_exit = ex.global_position if ex else _room.global_position
+	var veil := CollisionShape3D.new()                   # just outside the doorway, unseen: the camera stays in
+	var vb := BoxShape3D.new()                             # (it would look out at the city 300 m above)
+	vb.size = Vector3(6.0, 6.0, 0.1)
+	veil.shape = vb
+	body.add_child(veil)
+	veil.global_transform = Transform3D(_room.global_basis, _exit + _room.global_basis.z * 0.75 + Vector3(0, 2.5, 0))
 	var staff := _room.find_child("Staff", true, false) as Node3D
 	if staff:
 		var who: String = ["man_shirt", "woman_kurta", "man_lungi", "woman_saree"][absi(hash(d["key"])) % 4]
