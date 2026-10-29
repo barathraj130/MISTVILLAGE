@@ -13,6 +13,10 @@ room of its own:
                  railing, the escalators up the middle, the skylight, a kiosk and planters
     stadium      Nehru Stadium: the concourse under the stand (ticket window, turnstiles), the tunnels onto the
                  stand's tiers, and the ground below (track, pitch, goals, the far stand, floodlights, the sky)
+    collectorate the District Collectorate's public hall: petition counters behind a teak screen, the token display,
+                 rows of chairs, files, notices, the stair
+    college      Velliangiri College of Technology (where PSG Tech stands): the lobby and a classroom
+    trade_fair   a hall of the Kovai Trade Fair Complex (where CODISSIA's stands) during an industrial expo
     church       Christ the King's nave: pews either side of the aisle, the columns, the stained-glass windows, the
                  sanctuary steps, the altar and the cross, candles, the fans on their long rods
     house_mid    a middle-class family's hall: a wooden sofa set, the showcase, the fridge in the hall, a dining
@@ -1343,9 +1347,246 @@ def stadium(T):
     shot("concourse", (12.0, yf + 1.0, 1.7), (-6.0, yc - 1.0, 1.2))
 
 
+# ============================================================================ the Collectorate
+def collectorate(T):
+    """The District Collectorate's public hall (the 19th-century building): high ceiling on timber beams, arched
+    windows, red-oxide floor; the petition counters behind a teak screen with their numbers, a token display, rows
+    of steel chairs for the people waiting with their papers, the clerks' tables piled with files behind, notice
+    boards, the wide stair up to the offices."""
+    W, D, h = 20.0, 13.0, 6.0
+    floor = mat("red_oxide", (1, 1, 1), 0.2, tex=T["red_oxide"], scale=2.0)
+    wall = mat("wall_lime", (1, 1, 1), 0.9, tex=T["wall_lime"], normal=os.path.join(DTEX, "plaster_normal.jpg"), scale=3.0)
+    ceil = mat("ceiling_white", (0.93, 0.93, 0.9), 0.95)
+    teak = mat("door_teak", (1, 1, 1), 0.5, tex=os.path.join(GTEX, "dark_timber_deck_base.jpg"), scale=1.0)
+    maroon = mat("collectorate_maroon", (0.45, 0.1, 0.08), 0.6)
+    white = mat("letters_white", (0.97, 0.97, 0.97), 0.4)
+    steel = mat("steel", (0.74, 0.75, 0.77), 0.32, 0.55)
+    hall(W, D, h, floor, wall, ceil, door_w=2.4, door_h=3.6, door_x=0.0, frame=teak)
+    for s3 in (-1, 1):                                                   # a maroon dado, arched windows both sides
+        box((s3 * (W / 2 - 0.01), 0, 0.6), (0.02, D, 1.2), maroon)
+        for k in range(3):
+            y = -3.5 + k * 3.5
+            sky_window(s3 * (W / 2 - 0.02), y, 2.9, 1.2, 2.6, "+x" if s3 < 0 else "-x", teak)
+            cyl((s3 * (W / 2 - 0.06), y, 4.2), 0.66, 0.05, teak, 16, rot=(0, math.pi / 2, 0))     # the fanlight
+            cyl((s3 * (W / 2 - 0.09), y, 4.2), 0.58, 0.02, mat("daylight", (1, 1, 1), 0.5, emit=(1.0, 0.98, 0.92), strength=2.2),
+                16, rot=(0, math.pi / 2, 0))
+    box((0, D / 2 - 0.01, 0.6), (W, 0.02, 1.2), maroon)
+    for k in range(7):                                                   # timber beams
+        box((-W / 2 + 1.5 + k * 2.83, 0, h - 0.2), (0.3, D, 0.4), teak)
+    # the counters: a teak screen with windows, numbers and their work, a token display
+    cy = 2.0
+    box((0, cy, 0.55), (14.0, 0.6, 1.1), teak, 0.01)
+    box((0, cy - 0.05, 1.12), (14.2, 0.7, 0.04), mat("granite_black", (1, 1, 1), 0.15, tex=T["granite_black"]))
+    for k, lab in enumerate(("1  PETITIONS", "2  CERTIFICATES", "3  PATTA / LAND", "4  e-SEVAI", "5  ENQUIRY")):
+        x = -5.6 + k * 2.8
+        box((x - 1.4, cy, 2.0), (0.12, 0.12, 1.8), teak)
+        for j in range(8):
+            box((x - 0.9 + j * 0.26, cy, 1.85), (0.02, 0.02, 1.4), mat("window_bars", (0.1, 0.12, 0.1), 0.4, 0.6))
+        sign(lab, (x, cy - 0.08, 2.9), 2.4, 0.35, maroon, white, "-y", 0.17)
+        R.monitor(x + 0.4, cy + 0.6, 0.76, math.pi)
+        R.office_chair(x, cy + 1.1, math.pi)
+        R.bundles(x - 0.6, cy + 0.65, 0.76, 2 + k % 3, mat("paper", (0.97, 0.97, 0.95), 0.8), mat("tie_red", (0.7, 0.08, 0.06), 0.8))
+    box((7.0, cy, 2.0), (0.12, 0.12, 1.8), teak)
+    box((0, cy, 2.95), (14.2, 0.15, 0.15), teak)
+    for x in (-5.6, 0.0, 5.6):
+        R.table(x, cy + 0.65, 1.6, 0.8, 0.75, teak, teak)
+    staff(-5.6, cy + 1.1, math.pi)
+    box((0, D / 2 - 0.12, 3.9), (3.0, 0.2, 0.7), mat("led_board", (0.02, 0.02, 0.02), 0.5), 0.02)    # tokens
+    red = mat("led_red", (1, 0.15, 0.1), 0.4, emit=(1.0, 0.12, 0.06), strength=5)
+    text("TOKEN  047   COUNTER  2", (0, D / 2 - 0.23, 3.9), 0.22, red, "-y", COND)
+    R.box_files(-9.2, -6.0, D / 2 - 0.25, 0.05, 4, -1)
+    R.box_files(6.0, 9.2, D / 2 - 0.25, 0.05, 4, -1)
+    # the waiting: rows of steel chairs, notice boards, the stair, a water can, a clock
+    seat = mat("chair_seat_green", (0.15, 0.4, 0.3), 0.5)
+    for r in range(3):
+        for k in range(10):
+            x = -6.75 + k * 1.5 if k < 5 else -6.75 + k * 1.5 + 1.5
+            R.steel_chair(x, -1.4 - r * 1.4, 0.0, seat)
+            crowd("sit", x, -1.4 - r * 1.4 + 0.02, 0.0)
+    for k, lab in enumerate(("GRIEVANCE DAY - MONDAYS 10 AM", "FORMS FREE OF COST", "BEWARE OF TOUTS")):
+        y = -4.5 + k * 3.0
+        box((-W / 2 + 0.03, y, 1.9), (0.02, 1.6, 1.0), mat("notice", (1, 1, 1), 0.8, tex=T["notice"]))
+        text(lab, (-W / 2 + 0.05, y, 2.5), 0.07, mat("ink_black", (0.05, 0.05, 0.05), 0.4), "+x")
+    for k in range(12):                                                  # the stair, up the right wall
+        box((W / 2 - 1.0, -4.5 + k * 0.3, 0.09 + k * 0.18), (1.8, 0.3, 0.18), mat("granite_grey", (1, 1, 1), 0.4, tex=T["granite_grey"]), 0.005)
+    box((W / 2 - 1.95, -2.85, 1.6), (0.06, 3.6, 0.06), teak, rot=(0.54, 0, 0))
+    R.wall_clock(-3.0, D / 2 - 0.02, 4.3)
+    cyl((-W / 2 + 0.4, 4.6, 0.55), 0.14, 0.5, mat("water_can", (0.3, 0.5, 0.85), 0.2, alpha=0.7), 20)
+    box((-W / 2 + 0.4, 4.6, 0.15), (0.35, 0.35, 0.3), steel)
+    for k in range(5):                                                   # people at the counters
+        for j in range(1 + k % 2):
+            crowd("stand", -5.6 + k * 2.8, cy - 0.7 - j * 0.7, 0.0)
+    crowd("talk", 6.0, -5.0, math.pi / 2)
+    crowd("talk", 5.2, -5.0, -math.pi / 2)
+    route("in", [(1.6, -5.6), (1.6, 0.6), (-7.5, 0.6)])
+    route("across", [(-8.5, -5.6), (-8.5, 0.6), (7.5, 0.6), (7.5, -3.0)])
+    for x in (-6.0, 0.0, 6.0):
+        for y in (-4.0, 0.8, 4.4):
+            tube(x, y, h - 0.45, light_z=4.0)
+        fan_on_rod(x, -2.0, 4.0, h - 0.4)
+    shot("wide", (6.5, -D / 2 + 1.0, 2.2), (-3.0, 3.0, 1.6))
+
+
+# ============================================================================ Velliangiri College of Technology
+def college(T):
+    """The college's main block: the entrance lobby (granite floor, the reception, notice boards of fests and
+    placements, the trophy case, a bench) and, through a wide doorway on the left, a classroom (rows of benches
+    and desks, the green board, the teacher's table, ceiling fans, tall windows)."""
+    W, D, h = 22.0, 12.0, 3.6
+    floor = mat("granite_grey", (1, 1, 1), 0.2, tex=T["granite_grey"], scale=1.2)
+    wall = mat("wall_offwhite", (1, 1, 1), 0.9, tex=T["wall_offwhite"], normal=os.path.join(DTEX, "plaster_normal.jpg"), scale=2.5)
+    ceil = mat("ceiling_white", (0.93, 0.93, 0.9), 0.95)
+    navy = mat("board_navy", (0.08, 0.12, 0.3), 0.4)
+    gold = mat("letters_gold", (0.95, 0.78, 0.35), 0.3, 0.8)
+    white = mat("letters_white", (0.97, 0.97, 0.97), 0.4)
+    teak = mat("door_teak", (1, 1, 1), 0.5, tex=os.path.join(GTEX, "dark_timber_deck_base.jpg"), scale=1.0)
+    wood = mat("timber", (1, 1, 1), 0.55, tex=os.path.join(GTEX, "warm_natural_timber_base.jpg"), scale=1.2)
+    hall(W, D, h, floor, wall, ceil, door_w=2.4, door_h=2.6, door_x=4.0, frame=teak)
+    # the partition between the lobby (right) and the classroom (left), a wide doorway in it
+    px = -2.0
+    box((px, -3.5, h / 2), (0.15, 5.0, h), wall)
+    box((px, 4.2, h / 2), (0.15, 3.6, h), wall)
+    box((px, 0.25, h - 0.4), (0.15, 2.5, 0.8), wall)
+    # the lobby: the college's name, reception, notice boards, trophies, a bench, plants
+    sign("VELLIANGIRI COLLEGE OF TECHNOLOGY", (5.0, D / 2 - 0.05, 2.9), 8.5, 0.55, navy, gold, "-y", 0.3)
+    text("Estd. 1951  -  Affiliated to Anna University", (5.0, D / 2 - 0.08, 2.45), 0.12, mat("ink_black", (0.05, 0.05, 0.05), 0.4), "-y")
+    box((7.5, 1.5, 0.55), (2.6, 0.7, 1.1), wood, 0.02)
+    box((7.5, 1.45, 1.12), (2.7, 0.8, 0.04), mat("granite_black", (1, 1, 1), 0.15, tex=T["granite_black"]))
+    R.monitor(7.9, 1.75, 1.14, math.pi)
+    sign("ENQUIRY", (7.5, 1.1, 1.8), 1.4, 0.3, navy, white, "-y", 0.16)
+    staff(7.5, 2.3, math.pi)
+    for k, (lab, c) in enumerate((("TECH FEST  -  KURINJI '26", (0.85, 0.35, 0.1)), ("PLACEMENTS  2026", (0.1, 0.45, 0.3)),
+                                   ("NSS BLOOD DONATION CAMP", (0.7, 0.1, 0.12)))):
+        y = -3.5 + k * 2.6
+        box((W / 2 - 0.03, y, 1.7), (0.02, 1.8, 1.2), mat("notice", (1, 1, 1), 0.8, tex=T["notice"]))
+        box((W / 2 - 0.05, y, 2.15), (0.02, 1.6, 0.25), mat("poster_%d" % k, c, 0.6))
+        text(lab, (W / 2 - 0.07, y, 2.15), 0.08, white, "-x")
+    glass = mat("showcase_glass", (0.7, 0.8, 0.82), 0.02, alpha=0.06)
+    box((1.5, D / 2 - 0.3, 1.0), (2.2, 0.45, 2.0), teak, 0.01)            # the trophy case
+    box((1.5, D / 2 - 0.53, 1.25), (2.0, 0.01, 1.4), glass)
+    for r in range(3):
+        for j in range(4):
+            cyl((0.8 + j * 0.45, D / 2 - 0.3, 0.7 + r * 0.45), 0.05, 0.25 + 0.05 * (j % 2), mat("trophy", (0.85, 0.7, 0.3), 0.25, 1.0), 12)
+    box((4.5, -3.0, 0.23), (2.2, 0.5, 0.46), wood, 0.03)
+    R.plant(W / 2 - 0.6, -D / 2 + 0.7, 1.2)
+    R.plant(-1.2, D / 2 - 0.7, 1.2)
+    for x in (0.5, 4.0, 8.0):
+        R.ceiling_fan(x, 0.0, h)
+        tube(x, -3.0, h - 0.05)
+        tube(x, 3.0, h - 0.05)
+    # the classroom: benches and desks in rows, the green board, the teacher's table, windows down the side
+    board = mat("chalkboard", (0.08, 0.25, 0.15), 0.8)
+    box((-6.5, D / 2 - 0.05, 1.7), (5.0, 0.06, 1.3), board)
+    chalk = mat("chalk", (0.92, 0.92, 0.88), 0.9)
+    text("Unit 3 - Thermodynamics", (-7.5, D / 2 - 0.09, 2.15), 0.13, chalk, "-y")
+    text("dU = dQ - dW", (-7.5, D / 2 - 0.09, 1.8), 0.13, chalk, "-y")
+    box((-6.5, D / 2 - 0.9, 0.12), (6.0, 1.4, 0.24), wood)               # the dais
+    R.table(-5.0, D / 2 - 1.0, 1.2, 0.6, 0.99, teak, teak)
+    for r in range(4):
+        for c in range(3):
+            x = -9.0 + c * 2.5
+            y = 2.6 - r * 1.6
+            box((x, y + 0.35, 0.75), (2.0, 0.45, 0.04), wood, 0.005)    # the desk
+            box((x, y + 0.45, 0.38), (2.0, 0.04, 0.75), wood)
+            box((x, y - 0.15, 0.44), (2.0, 0.32, 0.04), wood, 0.005)    # the bench
+            for e in (-0.95, 0.95):
+                box((x + e, y + 0.1, 0.38), (0.05, 0.9, 0.76), mat("rack_grey", (0.5, 0.52, 0.5), 0.4, 0.5))
+            for j in range(3):
+                crowd("sit", x - 0.65 + 0.65 * j, y - 0.18, 0.0)
+    for k in range(3):
+        sky_window(-W / 2 + 0.02, -3.0 + k * 3.0, 1.9, 1.4, 1.6, "+x", teak)
+    for x in (-8.0, -4.5):
+        R.ceiling_fan(x, 0.5, h)
+        tube(x, -2.5, h - 0.05)
+        tube(x, 3.0, h - 0.05)
+    for x3, y3 in ((3.0, -1.0), (6.0, -4.0)):                            # students in the lobby
+        crowd("talk", x3 - 0.4, y3, -math.pi / 2)
+        crowd("talk", x3 + 0.4, y3, math.pi / 2)
+    for y3 in (-3.0, 0.0):
+        crowd("stand", W / 2 - 1.0, y3 - 0.5, -math.pi / 2)              # reading the notices
+    route("in", [(5.6, -5.4), (5.6, -1.5), (2.0, 0.2), (-0.8, 0.2)])
+    route("lobby", [(9.0, -4.8), (9.0, 3.6), (2.5, 3.6)])
+    shot("wide", (9.5, -D / 2 + 1.0, 1.9), (-5.0, 2.0, 1.2))
+    shot("class", (-3.0, -5.0, 1.8), (-7.0, D / 2, 1.2))
+
+
+# ============================================================================ Kovai Trade Fair Complex
+FAIR_STALLS = ("SIRUVANI PUMPS", "NOYYAL MOTORS", "KONGU FOUNDRY", "PERUR TEXTILE MACHINES", "VELLIANGIRI CNC",
+               "KOVAI WET GRINDERS", "MARUDHAM SOLAR", "THENNAI AGRO TOOLS", "KURINJI CASTINGS", "PALLADAM SPINNERS")
+
+
+def trade_fair(T):
+    """A hall of the trade fair complex during an industrial expo: a big steel shed lit from the roof, carpeted
+    aisles between rows of stalls (shell-scheme panels, each firm's name on its fascia, its machines out front: a
+    pump on a stand, a wet grinder, a lathe, a panel), the expo banner, people going round."""
+    W, D, h = 36.0, 24.0, 10.0
+    floor = mat("cement", (1, 1, 1), 0.7, tex=T["cement"], scale=3.0)
+    wall = mat("acp_grey", (0.62, 0.64, 0.66), 0.5, 0.3)
+    ceil = mat("shed_roof", (0.45, 0.47, 0.5), 0.5, 0.4)
+    steel = mat("rail_steel", (0.3, 0.32, 0.35), 0.4, 0.8)
+    hall(W, D, h, floor, wall, ceil, door_w=4.0, door_h=4.0, door_x=0.0, frame=steel)
+    for k in range(7):                                                   # the roof trusses, skylights between
+        x = -W / 2 + 3.0 + k * 5.0
+        box((x, 0, h - 0.6), (0.3, D, 0.8), steel)
+        if k < 6:
+            box((x + 2.5, 0, h - 0.02), (2.0, D - 2.0, 0.04), glow_tex("skylight", T["skylight"], 3.0))
+    carpet = mat("carpet_red", (1, 1, 1), 0.9, tex=T["carpet_red"], scale=1.0)
+    box((0, 0, 0.005), (3.0, D - 1.0, 0.01), carpet)                     # the main aisle and the cross aisles
+    for y in (-4.0, 4.5):
+        box((0, y, 0.006), (W - 2.0, 2.4, 0.01), carpet)
+    sign("COIMBATORE INDUSTRIAL EXPO 2026", (0, D / 2 - 0.15, 7.0), 16.0, 1.2, mat("expo_blue", (0.05, 0.2, 0.5), 0.4),
+         mat("letters_lit", (1, 1, 1), 0.3, emit=(1, 1, 1), strength=3), "-y", 0.7)
+    panel = mat("shell_white", (0.95, 0.95, 0.94), 0.4)
+    fascia = mat("fascia_blue", (0.08, 0.15, 0.35), 0.4)
+    lit = mat("letters_lit", (1, 1, 1), 0.3, emit=(1, 1, 1), strength=3)
+    machines = ("pump", "grinder", "lathe", "panel")
+    k = 0
+    for row_y, facing in ((-8.0, 1), (0.25, -1), (0.25, 1), (8.8, -1)):  # four rows of stalls facing the aisles
+        for c in range(6):
+            sx = (-15.0 + c * 3.2) if c < 3 else (5.4 + (c - 3) * 3.2)
+            back = row_y - facing * 1.4
+            box((sx, back, 1.25), (3.0, 0.05, 2.5), panel)
+            for e in (-1.5, 1.5):
+                box((sx + e, row_y - facing * 0.7, 1.25), (0.05, 1.4, 2.5), panel)
+            box((sx, row_y, 2.6), (3.0, 0.05, 0.35), fascia)
+            name = FAIR_STALLS[k % len(FAIR_STALLS)]
+            text(name, (sx, row_y + facing * 0.04, 2.6), min(0.2, 2.8 / (len(name) * 0.62)), lit, "-y" if facing < 0 else "+y")
+            m = machines[k % 4]
+            mx, my = sx, row_y - facing * 0.6
+            accent = mat("machine_%d" % (k % 3), ((0.1, 0.35, 0.65), (0.75, 0.15, 0.1), (0.2, 0.5, 0.25))[k % 3], 0.4, 0.4)
+            if m == "pump":
+                box((mx, my, 0.3), (0.9, 0.6, 0.6), steel)
+                cyl((mx, my, 0.85), 0.25, 0.5, accent, 20, rot=(0, math.pi / 2, 0))
+            elif m == "grinder":
+                cyl((mx, my, 0.45), 0.3, 0.9, mat("grinder_steel", (0.8, 0.8, 0.82), 0.25, 0.8), 24)
+                cyl((mx, my, 0.95), 0.33, 0.1, accent, 24)
+            elif m == "lathe":
+                box((mx, my, 0.45), (1.8, 0.5, 0.9), accent, 0.02)
+                box((mx - 0.6, my, 1.1), (0.5, 0.45, 0.4), steel, 0.02)
+                cyl((mx + 0.1, my, 1.05), 0.05, 1.0, steel, 12, rot=(0, math.pi / 2, 0))
+            else:
+                box((mx, my, 1.0), (1.2, 0.3, 2.0), mat("panel_grey", (0.7, 0.72, 0.7), 0.4, 0.3), 0.02)
+                for j in range(6):
+                    cyl((mx - 0.4 + (j % 3) * 0.4, my + facing * 0.16, 1.4 - (j // 3) * 0.4), 0.05, 0.03, accent, 12, rot=(math.pi / 2, 0, 0))
+            box((sx + 1.0, row_y - facing * 0.25, 0.45), (0.8, 0.5, 0.9), panel, 0.01)    # the stall's counter
+            crowd("stand", sx + 1.0, row_y - facing * 0.95, 0.0 if facing > 0 else math.pi)   # the man at the stall
+            crowd("stand", sx - 0.3, row_y + facing * 0.9, math.pi if facing > 0 else 0.0)   # a visitor
+            k += 1
+            lamp((sx, row_y - facing * 0.6, 2.4), "lamp")
+    for x in (-12.0, -4.0, 4.0, 12.0):
+        for y in (-6.0, 4.5):
+            lamp((x, y, 4.5))
+    route("main", [(1.0, -10.6), (1.0, 10.0)])
+    route("cross", [(-16.0, -4.0), (16.0, -4.0)])
+    route("cross2", [(16.0, 4.5), (-16.0, 4.5)])
+    route("round", [(-1.0, -4.6), (-1.0, 3.9), (-16.0, 3.9), (-16.0, -4.6)], loop=True)
+    shot("wide", (-6.0, -D / 2 + 1.0, 2.6), (6.0, 6.0, 1.4))
+
+
 ROOMS = {"station": station, "bus": bus_stand, "airport": airport, "mall_avinashi": mall_avinashi,
          "mall_sathy": mall_sathy, "church": church, "house_mid": house_mid, "house_flat": house_flat,
-         "house_old": house_old, "stadium": stadium}
+         "house_old": house_old, "stadium": stadium, "collectorate": collectorate, "college": college,
+         "trade_fair": trade_fair}
 
 
 def main():

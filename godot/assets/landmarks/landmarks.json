@@ -338,7 +338,7 @@
     "color": "#661010"
    }
   ],
-  "room": "office",
+  "room": "collectorate",
   "door": [
    0,
    -26.4
@@ -614,7 +614,7 @@
    -123,
    96
   ],
-  "room": "office",
+  "room": "trade_fair",
   "door": [
    0,
    -95.3
@@ -651,7 +651,7 @@
     "color": "#ffffff"
    }
   ],
-  "room": "office",
+  "room": "college",
   "door": [
    0,
    -25.5
