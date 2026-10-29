@@ -27,7 +27,8 @@ const KIT_ROOM := {"apartment": "house_flat", "bungalow": "house", "city_house":
 const NAMES := {"home": "Karthik's house", "house_mid": "the house", "house_old": "the house", "house_flat": "the flat",
 	"station": "the station", "bus": "the bus stand", "airport": "the airport", "mall_avinashi": "the mall",
 	"mall_sathy": "the mall", "church": "the church", "stadium": "the stadium",
-	"collectorate": "the Collectorate", "college": "the college", "trade_fair": "the expo hall", "kirana": "the kirana store", "tea": "the tea stall", "restaurant": "the restaurant",
+	"collectorate": "the Collectorate", "college": "the college", "trade_fair": "the expo hall",
+	"hospital_gov": "the hospital", "hospital_pvt": "the hospital", "temple_hall": "the temple", "kirana": "the kirana store", "tea": "the tea stall", "restaurant": "the restaurant",
 	"bank": "the bank", "office": "the offices", "hotel": "the hotel", "temple": "the temple", "hospital": "the hospital",
 	"fine_dining": "the restaurant", "mess": "the mess", "police": "the police station", "coopbank": "the bank",
 	"fuel": "the store"}
@@ -210,6 +211,8 @@ func enter(d: Dictionary, walker: Node3D) -> void:
 		var l := OmniLight3D.new()
 		l.omni_range = 6.5
 		l.light_energy = 1.2
+		if String(e.name).begins_with("Light_lamp"):     # an oil lamp, a bulb: warm
+			l.light_color = Color(1.0, 0.72, 0.42)
 		(e as Node3D).add_child(l)
 	if lights.is_empty():
 		var light := OmniLight3D.new()

@@ -410,7 +410,7 @@
     "color": "#ffffff"
    }
   ],
-  "room": "hospital",
+  "room": "hospital_gov",
   "door": [
    0,
    -17.8
@@ -589,7 +589,7 @@
     "color": "#661010"
    }
   ],
-  "room": "temple",
+  "room": "temple_hall",
   "door": [
    0,
    -30.5
@@ -688,7 +688,7 @@
     "color": "#ffffff"
    }
   ],
-  "room": "hospital",
+  "room": "hospital_pvt",
   "door": [
    0,
    -18.2

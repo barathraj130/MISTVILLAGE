@@ -17,6 +17,10 @@ room of its own:
                  rows of chairs, files, notices, the stair
     college      Velliangiri College of Technology (where PSG Tech stands): the lobby and a classroom
     trade_fair   a hall of the Kovai Trade Fair Complex (where CODISSIA's stands) during an industrial expo
+    hospital_gov the Government Hospital's out-patient hall: OP ticket counters and queues, rows of chairs, the wards
+    hospital_pvt Kongu Multispeciality Hospital's lobby: reception, lounge, pharmacy, billing, café, lifts
+    temple_hall  Perur Pateeswarar temple's mandapam: granite pillars, the flagstaff, lamps, the sanctum's lit
+                 doorway (nothing within it shown)
     church       Christ the King's nave: pews either side of the aisle, the columns, the stained-glass windows, the
                  sanctuary steps, the altar and the cross, candles, the fans on their long rods
     house_mid    a middle-class family's hall: a wooden sofa set, the showcase, the fridge in the hall, a dining
@@ -107,6 +111,11 @@ def textures():
     T["wall_lime"] = R._save("wall_lime", R._tint((0.93, 0.92, 0.87), n, 0.08, 57, 5))
     T["wall_teal"] = R._save("wall_teal", R._tint((0.2, 0.42, 0.44), 512, 0.05, 58, 4))
     T["wall_rail"] = R._save("wall_rail", R._tint((0.88, 0.82, 0.66), n, 0.06, 59, 4))
+    # temple granite: warm dark grey-brown, speckled, worn
+    tg = R._tint((0.36, 0.32, 0.27), n, 0.14, 63, 5)
+    ys, xs = rng.integers(0, n, 14000), rng.integers(0, n, 14000)
+    tg[ys, xs] = (0.55, 0.5, 0.42)
+    T["temple_stone"] = R._save("temple_stone", tg)
     T["wall_church"] = R._save("wall_church", R._tint((0.95, 0.95, 0.93), n, 0.03, 60, 4))
     # a red carpet runner, a handloom-grey rug
     T["carpet_red"] = R._save("carpet_red", R._tint((0.5, 0.06, 0.07), 512, 0.12, 61, 7))
@@ -976,7 +985,7 @@ def house_mid(T):
             mat("magnet_%d" % (j % 3), ((0.9, 0.8, 0.2), (0.2, 0.6, 0.9), (0.9, 0.3, 0.3))[j % 3], 0.4))
     box((-3.05, D / 2 - 0.45, 1.75), (0.5, 0.4, 0.04), mat("fridge_cover", (0.8, 0.75, 0.6), 0.9))
     R.table(-0.9, -1.9, 1.2, 0.8, 0.75, mat("table_sunmica", (0.75, 0.62, 0.45), 0.4), steel)
-    for dx, dy, yaw in ((-0.4, -0.55, 0.0), (0.4, -0.55, 0.0), (-0.4, 0.55, math.pi), (0.4, 0.55, math.pi)):
+    for dx, dy, yaw in ((-0.4, -0.55, math.pi), (0.4, -0.55, math.pi), (-0.4, 0.55, 0.0), (0.4, 0.55, 0.0)):   # facing the table
         R.steel_chair(-0.9 + dx, -1.9 + dy, yaw, mat("chair_seat_green", (0.15, 0.4, 0.3), 0.5))
     cyl((-0.9, -1.9, 0.86), 0.1, 0.22, steel, 20)                        # a water jug, a hot box
     cyl((-0.6, -1.85, 0.82), 0.12, 0.14, mat("hotbox_red", (0.7, 0.12, 0.1), 0.4), 20)
@@ -1401,7 +1410,7 @@ def collectorate(T):
     for r in range(3):
         for k in range(10):
             x = -6.75 + k * 1.5 if k < 5 else -6.75 + k * 1.5 + 1.5
-            R.steel_chair(x, -1.4 - r * 1.4, 0.0, seat)
+            R.steel_chair(x, -1.4 - r * 1.4, math.pi, seat)              # facing the counters
             crowd("sit", x, -1.4 - r * 1.4 + 0.02, 0.0)
     for k, lab in enumerate(("GRIEVANCE DAY - MONDAYS 10 AM", "FORMS FREE OF COST", "BEWARE OF TOUTS")):
         y = -4.5 + k * 3.0
@@ -1583,10 +1592,222 @@ def trade_fair(T):
     shot("wide", (-6.0, -D / 2 + 1.0, 2.6), (6.0, 6.0, 1.4))
 
 
+# ============================================================================ hospitals
+def hospital_gov(T):
+    """The Government Hospital's out-patient hall: the OP ticket counters with their queues, the token board, long
+    rows of steel chairs, a wheelchair and a stretcher trolley by the wall, the nurses' table, the signs to the
+    wards and the pharmacy, health posters, the green dado, fans."""
+    W, D, h = 22.0, 14.0, 4.2
+    floor = mat("terrazzo", (1, 1, 1), 0.25, tex=T["terrazzo"], scale=1.2)
+    wall = mat("wall_offwhite", (1, 1, 1), 0.9, tex=T["wall_offwhite"], normal=os.path.join(DTEX, "plaster_normal.jpg"), scale=2.5)
+    ceil = mat("ceiling_white", (0.93, 0.93, 0.9), 0.95)
+    green = mat("dado_green", (0.15, 0.4, 0.25), 0.4)
+    hgreen = mat("hosp_green", (0.05, 0.35, 0.25), 0.5)
+    white = mat("letters_white", (0.97, 0.97, 0.97), 0.4)
+    steel = mat("steel", (0.74, 0.75, 0.77), 0.32, 0.55)
+    hall(W, D, h, floor, wall, ceil, door_w=3.0, door_h=3.0, door_x=0.0, frame=hgreen)
+    for s3 in (-1, 1):
+        box((s3 * (W / 2 - 0.01), 0, 0.6), (0.02, D, 1.2), green)
+        for k in range(3):
+            sky_window(s3 * (W / 2 - 0.02), -4.0 + k * 4.0, 1.9, 1.4, 1.5, "+x" if s3 < 0 else "-x", hgreen)
+    box((0, D / 2 - 0.01, 0.6), (W, 0.02, 1.2), green)
+    # the OP ticket counters on the back wall
+    cy = D / 2 - 1.0
+    box((-3.0, cy, 0.55), (10.0, 0.7, 1.1), hgreen, 0.01)
+    box((-3.0, cy - 0.05, 1.12), (10.2, 0.8, 0.04), mat("granite_black", (1, 1, 1), 0.15, tex=T["granite_black"]))
+    for k, lab in enumerate(("OP TICKET - MEN", "OP TICKET - WOMEN", "SENIOR CITIZENS", "CMCHIS INSURANCE")):
+        x = -6.75 + k * 2.5
+        for j in range(8):
+            box((x - 0.9 + j * 0.26, cy - 0.3, 1.85), (0.02, 0.02, 1.4), mat("window_bars", (0.1, 0.12, 0.1), 0.4, 0.6))
+        sign(lab, (x, cy - 0.35, 2.85), 2.3, 0.35, hgreen, white, "-y", 0.15)
+        R.monitor(x + 0.3, cy + 0.2, 1.14, math.pi)
+        for j in range(3 + k % 2):                                       # the queue
+            crowd("stand", x, cy - 1.0 - j * 0.65, 0.0)
+    staff(-6.75, cy + 0.5, math.pi)
+    box((5.0, D / 2 - 0.12, 2.9), (3.0, 0.2, 0.7), mat("led_board", (0.02, 0.02, 0.02), 0.5), 0.02)
+    text("TOKEN  112  -  ROOM 4", (5.0, D / 2 - 0.23, 2.9), 0.2, mat("led_red", (1, 0.15, 0.1), 0.4, emit=(1.0, 0.12, 0.06), strength=5), "-y", COND)
+    # waiting: rows of steel chairs, patients sitting
+    seat = mat("chair_seat_blue", (0.2, 0.35, 0.6), 0.5)
+    for r in range(4):
+        for k in range(8):
+            x = -8.0 + k * 1.0 + (2.0 if k >= 4 else 0.0)
+            y = 1.2 - r * 1.3
+            R.steel_chair(x, y, math.pi, seat)                          # facing the counters
+            crowd("sit", x, y + 0.02, 0.0)
+    # the nurses' table, a wheelchair, a stretcher trolley, the way to the wards and the pharmacy, posters
+    R.table(W / 2 - 1.6, -2.0, 1.4, 0.7, 0.75, mat("desk_top", (0.75, 0.68, 0.55), 0.5), steel)
+    R.steel_chair(W / 2 - 0.9, -2.0, math.pi / 2, seat)
+    crowd("stand", W / 2 - 2.6, -2.0, -math.pi / 2)
+    blue = mat("wheelchair_blue", (0.15, 0.25, 0.5), 0.5)
+    for k in range(2):
+        x = -W / 2 + 0.8 + k * 0.9
+        for s3 in (-1, 1):
+            cyl((x + s3 * 0.3, D / 2 - 0.6, 0.3), 0.3, 0.04, steel, 20, rot=(0, math.pi / 2, 0))
+        box((x, D / 2 - 0.5, 0.5), (0.5, 0.45, 0.05), blue)
+        box((x, D / 2 - 0.3, 0.8), (0.5, 0.05, 0.5), blue)
+    box((W / 2 - 0.6, 4.0, 0.8), (0.65, 2.0, 0.08), mat("stretcher", (0.85, 0.85, 0.85), 0.4), 0.02)
+    for dx in (-0.25, 0.25):
+        for dy in (-0.9, 0.9):
+            cyl((W / 2 - 0.6 + dx, 4.0 + dy, 0.4), 0.02, 0.8, steel, 8)
+    sign("WARDS  >", (W / 2 - 0.05, 0.6, 2.9), 2.0, 0.4, hgreen, white, "-x", 0.22)
+    sign("<  PHARMACY", (-W / 2 + 0.05, -1.0, 2.9), 2.4, 0.4, hgreen, white, "+x", 0.22)
+    for k, (lab, c) in enumerate((("WASH YOUR HANDS", (0.2, 0.5, 0.8)), ("DENGUE: NO STANDING WATER", (0.85, 0.5, 0.1)))):
+        box((-W / 2 + 0.03, 3.0 + k * 1.6, 1.8), (0.02, 1.0, 1.3), mat("hposter_%d" % k, c, 0.6))
+        text(lab, (-W / 2 + 0.05, 3.0 + k * 1.6, 2.2), 0.06, white, "+x")
+    route("in", [(1.6, -6.0), (1.6, 3.6), (-4.0, 3.9)])
+    route("wards", [(8.0, -5.5), (8.0, 0.6), (W / 2 - 1.0, 0.6)])
+    route("pharmacy", [(-9.8, 3.6), (-9.8, -5.0)])
+    for x in (-6.0, 0.0, 6.0):
+        for y in (-3.5, 2.5):
+            tube(x, y, h - 0.05)
+            R.ceiling_fan(x, y + 1.0, h)
+    shot("wide", (7.0, -D / 2 + 1.0, 2.0), (-4.0, 4.0, 1.2))
+
+
+def hospital_pvt(T):
+    """Kongu Multispeciality Hospital's lobby (a private hospital of the story's own): polished marble, a curved
+    reception under the hospital's name, the token screen, a lounge of upholstered seats, the pharmacy counter,
+    a coffee corner, the billing desk, the lifts, plants and soft cove light."""
+    W, D, h = 22.0, 14.0, 4.5
+    floor = mat("marble_white", (1, 1, 1), 0.08, tex=T["marble_white"], scale=1.5)
+    wall = mat("wall_offwhite", (1, 1, 1), 0.85, tex=T["wall_offwhite"], scale=2.5)
+    ceil = mat("ceiling_white", (0.96, 0.96, 0.95), 0.95)
+    teal = mat("kongu_teal", (0.0, 0.42, 0.45), 0.35)
+    wood = mat("timber", (1, 1, 1), 0.45, tex=os.path.join(GTEX, "warm_natural_timber_base.jpg"), scale=1.2)
+    lit = mat("letters_lit", (1, 1, 1), 0.3, emit=(1, 1, 1), strength=3)
+    glass = mat("glass", (0.6, 0.72, 0.75), 0.05, alpha=0.15)
+    hall(W, D, h, floor, wall, ceil, door_w=3.0, door_h=3.0, door_x=0.0, frame=mat("mullion", (0.3, 0.32, 0.35), 0.3, 0.8))
+    sky = mat("daylight", (1, 1, 1), 0.5, emit=(1.0, 0.98, 0.92), strength=2.2)
+    for s3 in (-1, 1):                                                   # glass front either side of the door
+        box((s3 * 5.5, -D / 2 + 0.02, 1.9), (7.0, 0.02, 3.6), sky)
+    sign("KONGU MULTISPECIALITY HOSPITAL", (0, D / 2 - 0.05, 3.6), 10.0, 0.6, teal, lit, "-y", 0.34)
+    box((0, D / 2 - 0.02, 1.6), (10.0, 0.04, 2.6), mat("wall_teal", (1, 1, 1), 0.8, tex=T["wall_teal"]))
+    for k in range(9):                                                   # the curved reception
+        a = math.pi * (k + 0.5) / 9
+        x, y = -3.0 * math.cos(a), D / 2 - 3.2 + 1.2 * math.sin(a)
+        box((x, y, 0.55), (0.75, 0.6, 1.1), wood, 0.02, rot=(0, 0, -a + math.pi / 2))
+        box((x, y, 1.12), (0.8, 0.7, 0.04), mat("granite_black", (1, 1, 1), 0.15, tex=T["granite_black"]), rot=(0, 0, -a + math.pi / 2))
+    for x in (-1.5, 1.5):
+        R.monitor(x, D / 2 - 2.0, 1.14, math.pi)
+    staff(0.0, D / 2 - 1.7, math.pi)
+    box((-6.5, D / 2 - 0.12, 2.6), (2.6, 0.15, 1.1), mat("fids", (0.02, 0.05, 0.15), 0.2, emit=(0.02, 0.05, 0.2), strength=1.0), 0.02)
+    for r, line in enumerate(("CARDIOLOGY      T-18", "ORTHO           T-07", "PAEDIATRICS     T-23")):
+        text(line, (-6.5, D / 2 - 0.2, 2.9 - r * 0.28), 0.14, lit, "-y", COND)
+    fabric = mat("sofa_grey", (0.42, 0.43, 0.45), 0.9)                    # the lounge
+    for r in range(3):
+        for c in range(2):
+            x, y = -6.5 + c * 4.0, -0.5 - r * 1.8
+            box((x, y, 0.22), (3.0, 0.6, 0.44), fabric, 0.05)
+            box((x, y - 0.32, 0.62), (3.0, 0.15, 0.5), fabric, 0.05)
+            for j in range(4):
+                crowd("sit", x - 1.1 + 0.73 * j, y + 0.05, 0.0)
+    box((W / 2 - 1.0, 2.5, 0.55), (0.8, 4.0, 1.1), teal, 0.02)           # the pharmacy
+    box((W / 2 - 0.1, 2.5, 1.8), (0.15, 4.0, 2.4), mat("shelf_white", (0.95, 0.95, 0.94), 0.4))
+    for j in range(24):
+        box((W / 2 - 0.25, 0.8 + (j % 8) * 0.45, 1.0 + (j // 8) * 0.55), (0.12, 0.35, 0.3),
+            mat("medicine_%d" % (j % 4), ((0.9, 0.9, 0.95), (0.85, 0.3, 0.3), (0.3, 0.6, 0.85), (0.95, 0.8, 0.3))[j % 4], 0.5))
+    sign("PHARMACY  24 x 7", (W / 2 - 0.1, 2.5, 3.4), 3.0, 0.4, teal, lit, "-x", 0.2)
+    for j in range(2):
+        crowd("stand", W / 2 - 1.9, 1.5 + j * 1.2, -math.pi / 2)
+    box((W / 2 - 1.0, -4.5, 0.55), (0.8, 2.4, 1.1), wood, 0.02)          # the billing desk
+    sign("BILLING  &  INSURANCE", (W / 2 - 0.05, -4.5, 2.5), 3.0, 0.4, teal, lit, "-x", 0.17)
+    crowd("stand", W / 2 - 1.9, -4.5, -math.pi / 2)
+    box((-W / 2 + 0.8, 4.5, 0.5), (1.0, 2.0, 1.0), wood, 0.02)          # the coffee corner
+    cyl((-W / 2 + 0.8, 4.0, 1.15), 0.12, 0.3, mat("steel_brushed", (0.7, 0.71, 0.72), 0.3, 0.8), 20)
+    text("CAFE", (-W / 2 + 0.05, 4.5, 2.4), 0.25, mat("ink_black", (0.05, 0.05, 0.05), 0.4), "+x")
+    for x in (3.5, 5.5):                                                 # the lifts
+        box((x, D / 2 - 0.04, 1.2), (1.2, 0.04, 2.3), mat("steel_brushed", (0.7, 0.71, 0.72), 0.3, 0.8))
+        box((x, D / 2 - 0.06, 1.2), (0.01, 0.02, 2.3), mat("ink_black", (0.05, 0.05, 0.05), 0.4))
+    crowd("stand", 4.5, D / 2 - 1.2, 0.0)
+    for x in (-9.5, 9.5, -3.0, 3.0):
+        R.plant(x, -D / 2 + 1.0, 1.3)
+    for s3 in (-1, 1):                                                   # cove light
+        box((0, s3 * (D / 2 - 0.9), h - 0.06), (W - 1.8, 0.04, 0.03), mat("cove_lit", (1, 0.95, 0.85), 0.3, emit=(1.0, 0.9, 0.75), strength=3))
+    for x in (-7.0, -2.0, 3.0, 8.0):
+        for y in (-3.5, 2.5):
+            cyl((x, y, h - 0.01), 0.1, 0.02, mat("downlight", (1, 1, 1), 0.3, emit=(1, 0.95, 0.85), strength=6), 16)
+            lamp((x, y, 3.6))
+    route("in", [(1.6, -6.0), (1.6, 2.4), (-1.0, 2.6)])
+    route("lifts", [(-1.6, -6.0), (-1.6, -3.0), (4.5, 3.0), (4.5, 5.6)])
+    route("pharmacy", [(8.5, -6.0), (8.5, 4.6)])
+    shot("wide", (8.0, -D / 2 + 1.0, 2.0), (-3.0, 3.5, 1.4))
+
+
+# ============================================================================ Perur Pateeswarar temple
+def temple_hall(T):
+    """The great mandapam of Perur Pateeswarar temple: rows of carved granite pillars under a stone roof, the
+    flagstaff (kodimaram) sheathed in brass with the bali peetam before it, the sanctum's doorway at the far end
+    glowing with lamps, brass lamp stands, a kolam on the floor, a priest by the doorway, devotees standing and
+    sitting along the pillars. (Nothing of the sanctum is shown: only its lit doorway.)"""
+    W, D, h = 16.0, 26.0, 6.0
+    stone = mat("temple_granite", (1, 1, 1), 0.75, tex=T["temple_stone"], scale=1.5)
+    floor = mat("temple_floor", (1, 1, 1), 0.5, tex=T["temple_stone"], scale=1.0)
+    ceil = mat("temple_ceiling", (0.4, 0.38, 0.35), 0.8)
+    brass = mat("brass", (0.8, 0.6, 0.25), 0.3, 1.0)
+    flame = mat("flame", (1, 0.6, 0.2), 0.5, emit=(1, 0.55, 0.15), strength=10)
+    hall(W, D, h, floor, stone, ceil, door_w=3.0, door_h=4.0, door_x=0.0, frame=stone)
+    for s3 in (-1, 1):                                                   # two rows of pillars, carved bands
+        for k in range(8):
+            x, y = s3 * 3.2, -9.0 + k * 2.6
+            box((x, y, h / 2), (0.7, 0.7, h), stone, 0.02)
+            for z in (0.8, 2.6, 4.4):
+                box((x, y, z), (0.82, 0.82, 0.3), mat("temple_band", (0.48, 0.45, 0.4), 0.7), 0.01)
+            box((x, y, h - 0.3), (1.0, 1.0, 0.6), stone, 0.02)          # the bracket
+            if k % 2 == 0:                                              # standing by the pillars, facing in
+                crowd("stand", x - s3 * 0.75, y + 0.6, s3 * math.pi / 2)
+        box((s3 * 3.2, 0, h - 0.1), (1.0, D, 0.2), stone)               # beams along the rows
+    for k in range(10):
+        box((0, -11.5 + k * 2.6, h - 0.15), (W, 0.25, 0.3), stone)
+    # the flagstaff and the bali peetam, the kolam, the lamps
+    fy = -6.0
+    box((0, fy, 0.3), (1.4, 1.4, 0.6), stone, 0.02)
+    cyl((0, fy, 0.6 + 2.6), 0.18, 5.2, brass, 16, r2=0.12)
+    for k in range(6):
+        cyl((0, fy, 1.0 + k * 0.8), 0.22, 0.08, brass, 16)
+    cyl((0, fy + 1.5, 0.35), 0.5, 0.7, stone, 20, r2=0.35)              # the bali peetam
+    R.dome((0, fy + 1.5, 0.7), 0.3, 0.25, stone)
+    kolam = mat("kolam_white", (0.97, 0.97, 0.95), 0.9)
+    for k in range(24):
+        a = k * math.tau / 24
+        cyl((0.9 * math.cos(a), fy - 2.5 + 0.9 * math.sin(a), 0.006), 0.035, 0.004, kolam, 8)
+        cyl((0.5 * math.cos(a + 0.13), fy - 2.5 + 0.5 * math.sin(a + 0.13), 0.006), 0.03, 0.004, kolam, 8)
+    for y in (-8.0, 0.0, 6.0):                                           # brass lamp stands down the middle
+        for s3 in (-1, 1):
+            x = s3 * 1.6
+            cyl((x, y, 0.04), 0.2, 0.08, brass, 20)
+            cyl((x, y, 0.7), 0.035, 1.3, brass, 12)
+            cyl((x, y, 1.38), 0.16, 0.06, brass, 20)
+            for j in range(5):
+                a = j * math.tau / 5
+                cyl((x + 0.12 * math.cos(a), y + 0.12 * math.sin(a), 1.45), 0.008, 0.03, flame, 6)
+            lamp((x, y, 1.8), "lamp")
+    # the sanctum's doorway at the far end: a carved stone frame, lamplight within (nothing more is shown)
+    sy = D / 2 - 0.1
+    box((0, sy, 1.6), (2.0, 0.1, 3.2), mat("sanctum_glow", (1, 0.7, 0.35), 0.5, emit=(1.0, 0.62, 0.25), strength=2.5))
+    for s3 in (-1, 1):
+        box((s3 * 1.2, sy - 0.1, 1.8), (0.4, 0.3, 3.6), stone, 0.02)
+    box((0, sy - 0.1, 3.8), (2.8, 0.3, 0.5), stone, 0.02)
+    for j in range(7):                                                   # the lamps hung before it
+        cyl((-0.9 + j * 0.3, sy - 0.5, 2.6), 0.05, 0.03, brass, 12)
+        cyl((-0.9 + j * 0.3, sy - 0.5, 2.62), 0.006, 0.02, flame, 6)
+    lamp((0, sy - 1.5, 2.0), "lamp")
+    for k in range(3):
+        box((0, sy - 1.2 - k * 0.35, 0.08 + k * 0.08), (3.0 - k * 0.3, 0.35, 0.16 + k * 0.16), stone, 0.01)
+    crowd("stand", 1.6, sy - 1.6, math.pi)                               # the priest by the doorway
+    for k in range(6):                                                   # devotees before the sanctum
+        crowd("stand", -1.6 + (k % 3) * 1.6, sy - 3.2 - (k // 3) * 1.0, 0.0)
+    route("in", [(1.6, -11.6), (1.0, 8.0)])
+    route("round", [(-5.2, -11.0), (-5.2, 10.0), (5.2, 10.0), (5.2, -11.0)], loop=True)   # round the hall, as one goes
+    for y in (-10.0, -2.0, 6.0):
+        for s3 in (-1, 1):
+            lamp((s3 * 5.5, y, 3.0), "lamp")
+    shot("wide", (2.0, -D / 2 + 1.5, 1.8), (0.0, D / 2, 1.8))
+
+
 ROOMS = {"station": station, "bus": bus_stand, "airport": airport, "mall_avinashi": mall_avinashi,
          "mall_sathy": mall_sathy, "church": church, "house_mid": house_mid, "house_flat": house_flat,
          "house_old": house_old, "stadium": stadium, "collectorate": collectorate, "college": college,
-         "trade_fair": trade_fair}
+         "trade_fair": trade_fair, "hospital_gov": hospital_gov, "hospital_pvt": hospital_pvt, "temple_hall": temple_hall}
 
 
 def main():
