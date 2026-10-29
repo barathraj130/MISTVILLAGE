@@ -459,7 +459,7 @@ func toggle_on_foot() -> bool:
 		Walker.avatar = "res://assets/people/story_karthik.glb"     # you on foot are Karthik, the story's own man
 		walker = Walker.new()
 		walker.name = "OnFoot"
-		walker.walk_speed = 1.6                                # (the cast's Walk and Run: no sliding feet)
+		walker.walk_speed = 1.4                                # (a person's walking pace; the clips play to it)
 		walker.run_speed = 4.2
 		add_child(walker)
 		Walker.avatar = ""

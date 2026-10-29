@@ -5,7 +5,7 @@ extends Node3D
 ## you walk up to and talk to (E).
 
 const PEOPLE := "res://assets/people/%s.glb"
-const WALK_STRIDE := {"story_amma": 1.1, "story_raghavan": 1.3}   # m a Walk cycle: shorter steps in a saree, a veshti
+const WALK_STRIDE := {"story_amma": 0.85, "story_raghavan": 1.0}  # m a Walk cycle: shorter steps in a saree, a veshti
 
 var model: Node3D
 var anim: AnimationPlayer
@@ -13,7 +13,7 @@ var ground: Callable                   # (x, z) -> ground height (the city strea
 var who := ""                          # the person's key in the chapter (raghavan, amma, ...)
 var _target := Vector3.INF
 var _speed := 1.4
-var _stride := 1.5                     # metres the Walk clip covers in a cycle at speed 1
+var _stride := 1.18                    # metres the Walk clip covers in a cycle at speed 1 (story_cast.py --walkstrip)
 var _after := "Idle"
 var floor_y := NAN                     # standing in a room: its floor height (the city's ground isn't there)
 var seated := false                    # on a chair (Sit, SitTalk): keeps facing the way the chair does
@@ -25,7 +25,7 @@ const HAIR_MARKS := ["short0", "braid", "bob0", "long0", "ponytail", "afro", "ha
 func setup(person: String, key: String, height_fn: Callable, hair := Color(0, 0, 0, 0)) -> void:
 	who = key
 	ground = height_fn
-	_stride = WALK_STRIDE.get(person, 1.5)
+	_stride = WALK_STRIDE.get(person, 1.18 if person.begins_with("story_") else 1.5)
 	var path := PEOPLE % person
 	if not ResourceLoader.exists(path):
 		push_warning("actor: no model " + path)
@@ -63,7 +63,7 @@ func play(name: String) -> void:
 	if anim and anim.has_animation(name) and anim.current_animation != name:
 		anim.play(name, 0.3)
 	if anim:
-		# each cycle covers a stride (Walk ~1.5 m a second, less for Amma and Raghavan; Run ~3.9 at speed 1): no sliding feet
+		# each cycle covers a stride (Walk 1.18 m a second, less for Amma and Raghavan; Run 3.9 at speed 1): no sliding feet
 		anim.speed_scale = (_speed / _stride) if name == "Walk" else ((_speed / 3.9) if name == "Run" else 1.0)
 
 

@@ -183,8 +183,9 @@ func _animate(delta: float) -> void:
 		a = "Walk"
 	if anim.current_animation != a:
 		anim.play(a, 0.35 if a == "Idle" or anim.current_animation == "Idle" else 0.25)
-	# each cycle covers a stride: the cast's Walk ~1.5 m/s, its Run ~3.9 m/s at speed 1 (the resort figure's run 5.5)
-	var stride := 1.5 if a == "Walk" else (3.9 if avatar_run_stride else 5.5)
+	# each cycle covers a stride: the cast's Walk 1.18 m/s, its Run 3.9 m/s at speed 1 (measured on the clips:
+	# story_cast.py --walkstrip); the resort figure's walk 1.5, run 5.5
+	var stride := (1.18 if avatar_run_stride else 1.5) if a == "Walk" else (3.9 if avatar_run_stride else 5.5)
 	anim.speed_scale = clampf(sp / stride, 0.45, 1.8) if a != "Idle" else 1.0
 
 

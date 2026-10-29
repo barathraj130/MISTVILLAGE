@@ -3,7 +3,7 @@ The story's main cast as game characters (docs/STORY_BIBLE.md): MakeHuman bodies
 street_people.py builds them (skins, eyes, brows, lashes, hair, clothes) with a face of their own
 (quality.face_shape), but KEEPING the skeleton (MPFB's 53-bone game rig) so they can move in the game, with
 hand-keyed clips named like the street people's (tools/people.py): Idle (breathing, weight shifting), Talk (a
-gesture, a nod), Walk (a 1 s cycle on clinical gait curves), Run (two strides in 16 frames), Sit (hands on the thighs, breathing, a look about), SitEat (eating
+gesture, a nod), Walk (a 1 s cycle on clinical gait curves), Run (two strides in 16 frames, on clinical running curves), Sit (hands on the thighs, breathing, a look about), SitEat (eating
 by hand at a table), Ride (the scooter). Exported as godot/assets/people/story_<key>.glb for scripts/story/actor.gd.
 
     Blender -b --python tools/humans/story_cast.py -- [--only karthik,amma] [--preview out.jpg] [--walkstrip DIR]
@@ -451,7 +451,7 @@ def talk(a, k):                     # the right hand comes up and moves with the
 # and extends only ~10° behind; the knee gives ~15° as the weight lands, straightens through mid-stance, then folds
 # to ~60° just after toe-off and swings straight again for the next heel strike; the ankle drops the forefoot after
 # heel strike, rolls over the foot, pushes off ~15° pointed, and lifts the toes clear through the swing.
-GAIT_HIP = [(0.0, 24.0), (0.1, 21.0), (0.3, 6.0), (0.5, -9.0), (0.6, -5.0), (0.75, 14.0), (0.87, 25.0)]
+GAIT_HIP = [(0.0, 27.0), (0.1, 23.0), (0.3, 4.0), (0.5, -18.0), (0.6, -12.0), (0.75, 12.0), (0.87, 28.0)]
 GAIT_KNEE = [(0.0, 4.0), (0.12, 16.0), (0.25, 10.0), (0.4, 4.0), (0.55, 28.0), (0.7, 58.0), (0.8, 42.0), (0.9, 14.0),
              (0.97, 4.0)]
 GAIT_ANKLE = [(0.0, 0.0), (0.07, -6.0), (0.3, 5.0), (0.45, 9.0), (0.55, 0.0), (0.62, -15.0), (0.72, -4.0),
@@ -504,29 +504,39 @@ def walk_phase(a, t):
     turn(a, "neck_01", 'X', -2.0)
 
 
+# A run (a jog, ~3.9 m/s) on the clinical running curves (Novacheck, The biomechanics of running), at % of the
+# cycle from this leg's foot strike: the foot is down only ~38% of it, then both feet are off the ground. The hip
+# meets the ground flexed ~30°, extends ~10° behind at toe-off and swings through to ~45°; the knee gives ~40° as the
+# weight lands, straightens to push off and folds to ~100° as the leg swings through; the ankle flexes over the foot
+# and pushes off ~20° pointed.
+RUN_HIP = [(0.0, 32.0), (0.2, 6.0), (0.38, -26.0), (0.5, -12.0), (0.65, 28.0), (0.82, 48.0), (0.95, 40.0)]
+RUN_KNEE = [(0.0, 18.0), (0.17, 40.0), (0.38, 16.0), (0.55, 75.0), (0.7, 100.0), (0.85, 55.0), (0.96, 20.0)]
+RUN_ANKLE = [(0.0, 4.0), (0.2, 18.0), (0.4, -20.0), (0.55, -8.0), (0.7, 5.0), (0.9, 6.0)]
+
+
 def run_phase(a, t):
-    """One moment of the run cycle, t in [0, 1) (two strides in 16 frames, ~3.9 m/s): the thighs swing further than
-    walking (+35° forward, -30° back), the trailing knee folds right up (~105°) as it comes through, the standing
-    leg gives on landing; the body leans into it and lifts off between steps; the arms bent near 90° pump against
-    the legs, the chest turns with them a little, the head stays steady."""
+    """One moment of the run cycle, t in [0, 1) (two strides in 16 frames, ~3.9 m/s): the left foot strikes at
+    t = 0.25, the right at 0.75. The legs follow the running curves; the body leans into it from the ankles, the
+    pelvis drops as each foot takes the weight and lifts off between steps, turns with the leg swinging through;
+    the chest counter-turns; the arms bent near 90° pump against the legs, driving back from the elbow (the hands
+    come forward only to the ribs, the forward one bent more), hands loosely closed;
+    the head stays steady, looking ahead."""
     w = 2.0 * math.pi * t
-    sw = math.sin(w)
-    turn(a, "spine_01", 'X', 9.0)                          # leaning into the run
-    turn(a, "neck_01", 'X', -7.0)
-    turn(a, "thigh_l", 'X', -(2.5 + 32.5 * sw))
-    turn(a, "thigh_r", 'X', -(2.5 - 32.5 * sw))
-    turn(a, "calf_l", 'X', 18.0 + 87.0 * max(0.0, math.cos(w + 0.6)) ** 1.3)
-    turn(a, "calf_r", 'X', 18.0 + 87.0 * max(0.0, math.cos(w + 0.6 - math.pi)) ** 1.3)
-    turn(a, "foot_l", 'X', 12.0 * sw - 8.0)
-    turn(a, "foot_r", 'X', -12.0 * sw - 8.0)
-    lower(a, "pelvis", -0.07 + 0.05 * abs(math.sin(w + 0.4)))     # down on landing, up off the toes
-    turn(a, "pelvis", 'Z', 7.0 * sw)
-    turn(a, "spine_03", 'Z', -10.0 * sw)
-    turn(a, "upperarm_l", 'X', 48.0 * sw + 10.0)           # the hands pump from the chest back past the hips
-    turn(a, "upperarm_r", 'X', -48.0 * sw + 10.0)
-    turn(a, "lowerarm_l", 'X', -(70.0 - 12.0 * sw))
-    turn(a, "lowerarm_r", 'X', -(70.0 + 12.0 * sw))
-    turn(a, "neck_01", 'Z', 3.0 * sw)
+    for side, g in (("l", t - 0.25), ("r", t - 0.75)):
+        turn(a, "thigh_" + side, 'X', -gait(RUN_HIP, g) * stride)
+        turn(a, "calf_" + side, 'X', gait(RUN_KNEE, g))
+        turn(a, "foot_" + side, 'X', gait(RUN_ANKLE, g))
+    lower(a, "pelvis", -0.03 - 0.03 * math.cos(4.0 * math.pi * (t - 0.42)))   # low at mid-stance, up in the air
+    turn(a, "spine_01", 'X', 8.0)                                         # leaning into the run
+    turn(a, "neck_01", 'X', -6.0)
+    turn(a, "pelvis", 'Z', 6.0 * math.sin(w))
+    turn(a, "spine_03", 'Z', -9.0 * math.sin(w))
+    for side, sg in (("l", 1.0), ("r", -1.0)):
+        s = sg * math.sin(2.0 * math.pi * (t - 0.04))     # +1: this arm furthest back
+        turn(a, "upperarm_" + side, 'X', 22.0 * s + 12.0)        # mostly behind: the elbow drives back
+        turn(a, "lowerarm_" + side, 'X', -(84.0 - 10.0 * s))
+        curl_fingers(a, side, 55.0, 45.0)                         # hands loosely closed
+    turn(a, "neck_01", 'Z', 2.5 * math.sin(w))
 
 
 def sit(a):
@@ -733,7 +743,7 @@ def animate(arm):
     clip(arm, "Talk", [(1, lambda a: talk(a, -1)), (13, lambda a: talk(a, 1)), (25, lambda a: talk(a, -0.4)),
                        (37, lambda a: talk(a, 1)), (49, lambda a: talk(a, -1))])
     clip(arm, "Walk", [(1 + k, (lambda kk: (lambda a: walk_phase(a, (kk % 24) / 24.0)))(k)) for k in range(25)])
-    clip(arm, "Run", [(1 + 2 * k, (lambda kk: (lambda a: run_phase(a, (kk % 8) / 8.0)))(k)) for k in range(9)])
+    clip(arm, "Run", [(1 + k, (lambda kk: (lambda a: run_phase(a, (kk % 16) / 16.0)))(k)) for k in range(17)])
     clip(arm, "Sit", [(f, (lambda kk, lk: (lambda a: sit_idle(a, kk, lk)))(k, lk))      # 4 s: two breaths, a look
                       for f, k, lk in ((1, -1, 0), (25, 1, 6), (49, -1, 8), (73, 1, -4), (97, -1, 0))])
     clip(arm, "SitEat", [(1 + 4 * k, (lambda kk: (lambda a: sit_eat(a, (kk % 16) / 16.0)))(k)) for k in range(17)])
@@ -812,7 +822,8 @@ def preview(arm, objs, out):
 
 
 def walk_strip(arm, objs, out_dir):
-    """The walk seen from the side at eight moments of the cycle (Eevee), to judge it by: walk_<key>_<n>.jpg."""
+    """The walk and the run seen from the side at eight moments of each cycle (Eevee), to judge them by:
+    walk_<n>.jpg, run_<n>.jpg."""
     sc = bpy.context.scene
     for tr in (arm.animation_data.nla_tracks if arm.animation_data else []):
         tr.mute = True
@@ -833,12 +844,27 @@ def walk_strip(arm, objs, out_dir):
     floor.data.from_pydata([(-3, -3, 0), (3, -3, 0), (3, 3, 0), (-3, 3, 0)], [], [(0, 1, 2, 3)])
     sc.collection.objects.link(floor)
     os.makedirs(out_dir, exist_ok=True)
-    for k in range(8):
-        rest(arm)
-        arms_down(arm)
-        walk_phase(arm, k / 8.0)
-        sc.render.filepath = os.path.join(out_dir, "walk_%d.jpg" % k)
-        bpy.ops.render.render(write_still=True)
+    for name, phase in (("walk", walk_phase), ("run", run_phase)):
+        for k in range(8):
+            rest(arm)
+            arms_down(arm)
+            phase(arm, k / 8.0)
+            sc.render.filepath = os.path.join(out_dir, "%s_%d.jpg" % (name, k))
+            bpy.ops.render.render(write_still=True)
+    for name, phase, secs in (("walk", walk_phase, 1.0), ("run", run_phase, 16 / 24.0)):   # ground covered
+        ys, zs = [], []
+        for k in range(48):                               # the left foot over the cycle, against the body
+            rest(arm)
+            arms_down(arm)
+            phase(arm, k / 48.0)
+            f = arm.matrix_world @ arm.pose.bones["foot_l"].head
+            ys.append(f.y)
+            zs.append(f.z)
+        planted = [k for k in range(48) if zs[k] < min(zs) + 0.04]     # the foot on the ground: as it moves back
+        vs = [(ys[(k + 1) % 48] - ys[k - 1]) / (2.0 * secs / 48.0) for k in planted]   # under the body (+Y: back)
+        speed = sorted(vs)[len(vs) // 2]
+        print("STRIDE %s: foot down %.0f%% of the cycle, moving back under him at %.2f m/s at speed 1 (%.2f m a cycle)"
+              % (name, 100.0 * len(planted) / 48.0, speed, speed * secs), flush=True)
     print("WALKSTRIP", out_dir, flush=True)
 
 
