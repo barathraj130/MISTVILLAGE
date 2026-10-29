@@ -263,6 +263,16 @@ def staff(x, y, yaw=math.pi):
     empty("Staff", (x, y, 0), yaw)
 
 
+_CROWD = [0]
+
+
+def crowd(pose, x, y, yaw, z=0.0):
+    """A spot for one of the people in the place (city_doors.gd fills most of them): pose "sit" (on the seat at
+    this spot), "stand" or "talk"; facing +Y turned by yaw (0: towards the back wall, pi: towards the door)."""
+    _CROWD[0] += 1
+    empty("Crowd_%s_%d" % (pose, _CROWD[0]), (x, y, z), yaw)
+
+
 # ============================================================================ Coimbatore Junction
 TRAINS = (("12676", "KOVAI EXP", "MGR CHENNAI CTL", "15:15", "1"),
           ("12244", "SHATABDI EXP", "MGR CHENNAI CTL", "15:05", "1"),
@@ -329,6 +339,14 @@ def station(T):
         for col, s, m in ((-5.5, no, amber), (-4.0, name, amber), (-0.6, to, amber), (3.6, t, green), (4.9, pf, amber)):
             ltext(s, (bx0 + col, yt, z), 0.22, m)
     lamp((bx0, D / 2 - 2.0, 4.0), "lamp")
+    for x3, y3 in ((-2.0, 5.6), (0.8, 6.2), (3.2, 5.4), (5.0, 6.6)):     # reading the board
+        crowd("stand", x3, y3, 0.0)
+    for k in range(7):                                                   # queueing at the windows
+        for j in range(1 + (k * 5) % 3):
+            crowd("stand", -W / 2 + 1.9 + j * 0.7, -4.7 + k * 1.7 + 0.25, math.pi / 2)
+    crowd("stand", W / 2 - 1.7, -3.2, -math.pi / 2)                      # at the enquiry
+    crowd("talk", 6.0, -1.5, math.pi / 2)
+    crowd("talk", 5.2, -1.5, -math.pi / 2)
     # the way to the platforms: an opening in the back wall at the right, the platform's light beyond
     px = 9.0
     box((px, D / 2 - 0.02, 1.6), (3.6, 0.06, 3.2), mat("daylight", (1, 1, 1), 0.5, emit=(1.0, 0.98, 0.92), strength=2.2))
@@ -358,6 +376,8 @@ def station(T):
     for k in range(3):
         for s in (-1, 1):
             rail_bench(-0.5 + s * 0.25 - 0.0, -3.0 + k * 3.2 + s * 0.26, math.pi if s < 0 else 0.0, 4)
+            for i in range(4):                                      # sitting on it, facing away from its back
+                crowd("sit", -0.25 + s * 0.25 - 1.1 + 0.275 + 0.55 * i, -3.0 + k * 3.2 + s * 0.26 + s * 0.05, 0.0 if s < 0 else math.pi)
     box((4.5, D / 2 - 0.5, 0.7), (0.8, 0.5, 1.4), steel, 0.02)
     text("DRINKING WATER", (4.5, D / 2 - 0.77, 1.2), 0.08, black, "-y")
     for x2 in (-2.0, 6.0):
@@ -474,11 +494,22 @@ def bus_stand(T):
                 mat("banana", (0.85, 0.75, 0.15), 0.6), 8, rot=(0.3 * math.sin(k * 2), 0.4, 0))
     cyl((kx + 1.1, ky + 0.6, 1.25), 0.15, 0.4, mat("steel", (0.74, 0.75, 0.77), 0.32, 0.55), 20)   # the tea boiler
     staff(kx, ky - 0.15, 0.0)
+    for x3 in (kx - 0.8, kx + 0.5):                                      # buying tea
+        crowd("stand", x3, ky + 1.35, math.pi)
+    for y3 in (-2.5, 1.5):                                               # at the counters
+        for j in range(2):
+            crowd("stand", -W / 2 + 1.6 + j * 0.7, y3, math.pi / 2)
+    for x3 in (-8.5, -6.0, 2.0, 4.5, 8.0):                               # waiting by the bays
+        crowd("stand", x3, D / 2 - 1.0, 0.0)
+    crowd("talk", 3.0, 3.5, math.pi / 2)
+    crowd("talk", 3.8, 3.5, -math.pi / 2)
     text("TEA  -  COFFEE  -  SNACKS", (kx, ky + 1.17, 2.8), 0.16, white, "+y")
     # granite benches in rows; a water tap, dustbins, posters, fans and tubes
     for k in range(3):
         for x in (-5.5, 0.5):
             stone_bench(x, -2.6 + k * 2.0, 4.2, T)
+            for i in range(5):
+                crowd("sit", x - 1.6 + 0.8 * i, -2.6 + k * 2.0 + (0.08 if i % 2 else -0.08), 0.0 if i % 2 else math.pi)
     box((W / 2 - 0.4, 4.5, 0.6), (0.5, 0.9, 1.2), steel, 0.01)
     text("DRINKING WATER", (W / 2 - 0.66, 4.5, 1.05), 0.08, black, "-x")
     for x in (-9.0, 4.0):
@@ -554,6 +585,11 @@ def airport(T):
         R.stanchion_row(x - 3.0, x + 3.0, y - 1.0)
         R.stanchion_row(x - 3.0, x + 3.0, y - 2.4)
     staff(-10.0 - 2.6, 4.5 + 1.15, math.pi)
+    for x, zone in ((-10.0, "A"), (0.0, "B"), (10.0, "C")):              # at the desks and in the lines
+        for k in range(4):
+            crowd("stand", x - 2.6 + k * 1.75, 4.5 + 0.0, 0.0)
+        for j in range(6):
+            crowd("stand", x - 2.5 + j * 1.0, 4.5 - 1.7, -math.pi / 2)
     # the flight information screens hanging over the hall
     fids = mat("fids", (0.02, 0.05, 0.15), 0.2, emit=(0.02, 0.05, 0.2), strength=1.0)
     yellow = mat("fids_yellow", (1, 0.85, 0.2), 0.3, emit=(1.0, 0.85, 0.2), strength=4)
@@ -574,6 +610,8 @@ def airport(T):
     for k in range(3):
         for s in (-1, 1):
             chrome_seats(s * 7.0, -6.5 + k * 1.6, 0.0, 5)
+            for i in range(5):
+                crowd("sit", s * 7.0 - 1.55 + 0.31 + 0.62 * i, -6.5 + k * 1.6 - 0.05, math.pi)
     tro = mat("trolley_steel", (0.6, 0.62, 0.64), 0.3, 0.7)
     for k in range(6):
         x = -14.5 + k * 0.35
@@ -725,6 +763,19 @@ def mall(T, key):
         R.plant(x2, y2, 1.6)
     for x2 in (-4.0, 4.0):
         box((x2, -3.0, 0.23), (2.2, 0.55, 0.46), mat("seat_black", (0.07, 0.07, 0.08), 0.5), 0.05)
+        for i in range(3):
+            crowd("sit", x2 - 0.7 + 0.7 * i, -3.1, math.pi)
+    for x3 in (-10.0, -7.5, -1.0, 8.0, 10.5):                            # looking in at the shops
+        crowd("stand", x3, D / 2 - 2.2, 0.0)
+    for s3 in (-1, 1):
+        for y3 in (-4.0, 4.5):
+            crowd("stand", s3 * (W / 2 - 2.2), y3, -s3 * math.pi / 2)
+    crowd("stand", -7.0, -5.9, 0.0)                                      # at the kiosk
+    for j in range(3):                                                   # the box office line
+        crowd("stand", -W / 2 + 2.2 + j * 0.7, -8.5, math.pi / 2)
+    for x3, y3 in ((2.5, -6.5), (-3.0, 5.0), (5.5, 3.0)):               # friends talking
+        crowd("talk", x3 - 0.4, y3, -math.pi / 2)
+        crowd("talk", x3 + 0.4, y3, math.pi / 2)
     box((5.0, -9.5, 1.0), (1.0, 0.15, 2.0), acc, 0.02)
     box((5.0, -9.59, 1.15), (0.85, 0.01, 1.4), mat("screen", (0.05, 0.1, 0.15), 0.1, emit=(0.25, 0.45, 0.7), strength=1.5))
     for x2 in (-9.0, 0.0, 9.0):
@@ -786,8 +837,10 @@ def church(T):
         for s in (-1, 1):
             cx = s * 2.4
             box((cx, y, 0.44), (2.9, 0.42, 0.05), teak, 0.01)
-            box((cx, y + 0.24, 0.8), (2.9, 0.05, 0.6), teak, 0.01)
-            box((cx, y - 0.45, 0.15), (2.8, 0.18, 0.06), mat("kneeler", (0.45, 0.1, 0.1), 0.8), 0.01)
+            box((cx, y - 0.24, 0.8), (2.9, 0.05, 0.6), teak, 0.01)        # (facing the altar)
+            box((cx, y + 0.45, 0.15), (2.8, 0.18, 0.06), mat("kneeler", (0.45, 0.1, 0.1), 0.8), 0.01)
+            for i in range(4):
+                crowd("sit", cx - 1.05 + 0.7 * i, y + 0.05, 0.0)
             for e in (-1.45, 1.45):
                 box((cx + e, y, 0.5), (0.06, 0.6, 1.0), teak, 0.01)
     # the sanctuary: steps, the marble floor, the altar, the cross on the blue apse wall, candles, flowers
@@ -1258,6 +1311,12 @@ def stadium(T):
             lamp((x, y, -(y - yc) * tz + 3.0), "window")
     t6 = 6                                                               # the seat: tier 7 of the middle block
     empty("Mark_seat", (-4.0, yc + 0.2 + t6 * td + 0.55, -t6 * tz + 0.25), math.pi)
+    for t in range(3, 10):                                               # the crowd, in the coloured seats
+        for k in range(int(20 / 0.5)):
+            x = -10.0 + k * 0.5
+            if min(abs(x - tx) for tx in tunnels) < 1.0 or (t == t6 and abs(x + 4.0) < 1.2) or (k + t) % 2:
+                continue
+            crowd("sit", x, yc + 0.2 + t * td + 0.62, 0.0, z=-t * tz - 0.22)
     shot("wide", (4.0, yc + 1.5, 1.6), (0.0, (py0 + py1) / 2, zg))
     shot("concourse", (12.0, yf + 1.0, 1.7), (-6.0, yc - 1.0, 1.2))
 

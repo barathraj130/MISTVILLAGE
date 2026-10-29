@@ -9,10 +9,12 @@ extends Node3D
 ##   hotels                                 → a hotel lobby
 ##   landmarks                              → their own room (landmarks.json "room", door at "door")
 ##   Karthik's own house in Ganapathy       → his home (slice.json places.home): his cot, Amma's kitchen
-## Inside, E at a room's own spot does what there is to do there (life.gd: eat, sleep, a match, a film...).
+## Inside, E at a room's own spot does what there is to do there (life.gd: eat, sleep, a match, a film...). Public
+## rooms have people in them (crowd.gd: on the benches, in the queues, in the pews and the stand).
 ## E by the doorway inside (or walking out through it) brings you back out where you went in.
 
 const ROOMS := "res://assets/interiors/room_%s.glb"
+const Crowd := preload("res://scripts/city/crowd.gd")
 const STAFF := "res://assets/people/person_%s.glb"
 const DEPTH := 300.0                 # rooms sit this far below the street
 const REACH := 1.6                   # how near a wall you must be for its door
@@ -195,6 +197,7 @@ func enter(d: Dictionary, walker: Node3D) -> void:
 		cs.shape = (mi as MeshInstance3D).mesh.create_trimesh_shape()
 		cs.transform = _room.global_transform.affine_inverse() * (mi as MeshInstance3D).global_transform
 		body.add_child(cs)
+	var people := Crowd.fill(_room, body, d["key"])        # the station's travellers, the mall's shoppers...
 	var lights := _room.find_children("Light_*", "", true, false)
 	for e in lights:                                    # the room's own lights (story rooms), else a ceiling light
 		var l := OmniLight3D.new()
@@ -235,7 +238,7 @@ func enter(d: Dictionary, walker: Node3D) -> void:
 	walker.velocity = Vector3.ZERO
 	walker.rotation.y = atan2(-into.x, -into.z)
 	city.indoors = true
-	print("DOOR in %s (%s)" % [d["room"], d["key"]])
+	print("DOOR in %s (%s)%s" % [d["room"], d["key"], (" · %d people" % people) if people > 0 else ""])
 
 
 func leave(walker: Node3D) -> void:

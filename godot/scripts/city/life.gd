@@ -27,7 +27,8 @@ const SLEEP_MIN_HOURS := 5.0
 ## food: energy gained; sleep: a night's sleep (hours from how tired he is, never under 5); groceries: eats one of the
 ## month's meals at home; seat: where we see him while it lasts.
 const DOINGS := {
-	"stadium": [{"mark": "Mark_ticket", "cost": 60, "hours": 2.0, "stress": -35.0, "seat": "Mark_seat",
+	"stadium": [{"mark": "Mark_ticket", "cost": 60, "hours": 2.0, "stress": -35.0, "seat": "Mark_seat", "pose": "Sit",
+		"drop": 0.47,
 		"offer": "Buy a ticket (₹60) and watch the match",
 		"caption": "Coimbatore vs Madurai at Nehru Stadium. The crowd on its feet for the second goal."}],
 	"mall_avinashi": [{"mark": "Mark_ticket", "cost": 190, "hours": 2.75, "stress": -40.0, "food": 10.0,
@@ -232,8 +233,10 @@ func _pass(mins: float, caption: String, seat: Node3D, d: Dictionary) -> void:
 		w.set_physics_process(false)
 	await _fade(1.0, 0.8)
 	if seat and w:                                     # (the stand, the cot: there he is)
-		w.global_position = seat.global_position
+		w.global_position = seat.global_position - Vector3(0, float(d.get("drop", 0.0)), 0)
 		w.rotation.y = seat.global_rotation.y + PI
+		if d.has("pose") and w.anim and w.anim.has_animation(d["pose"]):   # sitting in his seat with everyone
+			w.anim.play(d["pose"], 0.3)
 	_text.text = caption
 	_text.modulate.a = 1.0
 	if seat:
