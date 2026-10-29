@@ -385,7 +385,7 @@ func _shot(dir: String, name: String) -> void:
 	get_viewport().get_texture().get_image().save_jpg("%s/%s.jpg" % [dir, name], 0.85)
 
 
-## (testing) --walktest --shots=DIR: out of the car, Karthik walks ahead, turns, runs and stops, filmed from the
+## (testing) --walktest --shots=DIR: out of the car, Karthik runs along the road, stops, walks, turns, filmed from the
 ## side by a camera that keeps pace: frames in DIR (walk_NNN.jpg) to judge the gait by.
 func _walk_test() -> void:
 	var tree := get_tree()
@@ -400,7 +400,8 @@ func _walk_test() -> void:
 	var cam := Camera3D.new()
 	cam.fov = 40.0
 	add_child(cam)
-	var plan := [["move_forward", "", 3.0], ["move_forward", "", 1.0, 0.8], ["move_forward", "run", 2.5], ["", "", 1.5]]
+	var plan := [["move_forward", "run", 3.0], ["", "", 1.2], ["move_forward", "", 3.0], ["move_forward", "", 1.0, 0.8],
+		["", "", 1.5]]                                     # run along the road, stop, walk, turn, stop
 	var n := 0
 	for p in plan:
 		var t := 0.0
