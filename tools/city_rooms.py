@@ -266,6 +266,13 @@ def staff(x, y, yaw=math.pi):
 _CROWD = [0]
 
 
+def route(name, pts, loop=False):
+    """A way people walk through the place (city_doors.gd sends a few along it): points on the floor, along clear
+    aisles; walked to and fro, or round and round when loop. Walk_<name>[o]_<n> (o: a loop)."""
+    for k, p in enumerate(pts):
+        empty("Walk_%s%s_%02d" % (name, "o" if loop else "", k), (p[0], p[1], p[2] if len(p) > 2 else 0.0))
+
+
 def crowd(pose, x, y, yaw, z=0.0):
     """A spot for one of the people in the place (city_doors.gd fills most of them): pose "sit" (on the seat at
     this spot), "stand" or "talk"; facing +Y turned by yaw (0: towards the back wall, pi: towards the door)."""
@@ -347,6 +354,9 @@ def station(T):
     crowd("stand", W / 2 - 1.7, -3.2, -math.pi / 2)                      # at the enquiry
     crowd("talk", 6.0, -1.5, math.pi / 2)
     crowd("talk", 5.2, -1.5, -math.pi / 2)
+    route("platform", [(1.6, -6.6), (3.0, -5.5), (3.0, 5.5), (6.5, 6.5), (9.0, 7.3)])          # in, to the trains
+    route("counters", [(-1.6, -6.6), (-3.0, -5.8), (-7.5, -5.8), (-7.5, 5.0)])                # in, to the windows
+    route("round", [(-3.4, -5.8), (2.4, -5.8), (2.4, 4.6), (-3.4, 4.6)], loop=True)          # round the benches
     # the way to the platforms: an opening in the back wall at the right, the platform's light beyond
     px = 9.0
     box((px, D / 2 - 0.02, 1.6), (3.6, 0.06, 3.2), mat("daylight", (1, 1, 1), 0.5, emit=(1.0, 0.98, 0.92), strength=2.2))
@@ -503,6 +513,9 @@ def bus_stand(T):
         crowd("stand", x3, D / 2 - 1.0, 0.0)
     crowd("talk", 3.0, 3.5, math.pi / 2)
     crowd("talk", 3.8, 3.5, -math.pi / 2)
+    route("bays", [(-2.4, -5.4), (-2.5, -4.0), (-2.5, 4.5), (-7.0, 5.4)])                     # in, out to a bus
+    route("bays2", [(4.0, -4.6), (4.0, 2.8), (6.8, 5.0)])
+    route("counters", [(-8.5, -4.3), (4.5, -4.3)])
     text("TEA  -  COFFEE  -  SNACKS", (kx, ky + 1.17, 2.8), 0.16, white, "+y")
     # granite benches in rows; a water tap, dustbins, posters, fans and tubes
     for k in range(3):
@@ -590,6 +603,9 @@ def airport(T):
             crowd("stand", x - 2.6 + k * 1.75, 4.5 + 0.0, 0.0)
         for j in range(6):
             crowd("stand", x - 2.5 + j * 1.0, 4.5 - 1.7, -math.pi / 2)
+    route("checkin", [(1.6, -8.6), (1.5, -5.0), (1.5, 1.5)])                                  # in, to check-in
+    route("across", [(-12.0, -8.0), (-12.0, 1.5), (-4.0, 1.5), (4.0, 1.5), (12.0, 1.5), (12.0, -8.0)])
+    route("front", [(-13.0, -7.9), (13.0, -7.9)])
     # the flight information screens hanging over the hall
     fids = mat("fids", (0.02, 0.05, 0.15), 0.2, emit=(0.02, 0.05, 0.2), strength=1.0)
     yellow = mat("fids_yellow", (1, 0.85, 0.2), 0.3, emit=(1.0, 0.85, 0.2), strength=4)
@@ -776,6 +792,8 @@ def mall(T, key):
     for x3, y3 in ((2.5, -6.5), (-3.0, 5.0), (5.5, 3.0)):               # friends talking
         crowd("talk", x3 - 0.4, y3, -math.pi / 2)
         crowd("talk", x3 + 0.4, y3, math.pi / 2)
+    route("round", [(-9.5, -9.5), (9.0, -9.5), (9.5, 8.9), (-9.5, 8.9)], loop=True)          # round the atrium
+    route("in", [(1.6, -10.6), (0.0, -4.0), (-6.0, -1.5), (-6.0, 6.5), (-2.5, 8.6)])
     box((5.0, -9.5, 1.0), (1.0, 0.15, 2.0), acc, 0.02)
     box((5.0, -9.59, 1.15), (0.85, 0.01, 1.4), mat("screen", (0.05, 0.1, 0.15), 0.1, emit=(0.25, 0.45, 0.7), strength=1.5))
     for x2 in (-9.0, 0.0, 9.0):
@@ -895,6 +913,8 @@ def church(T):
             box((s * 4.21, y, 4.0), (0.03, 1.18, 0.04), mat("tube_glow", (1, 1, 1), 0.3, emit=(0.95, 0.97, 1.0), strength=5.0))
             lamp((s * 3.6, y, 3.8))
     R.mark("pray", -1.2, -11.5 + 6 * 1.6 - 0.05, math.pi)                # a pew halfway up, by the aisle
+    route("aisle", [(0.0, -12.6), (0.0, 9.0)])                                                 # up the aisle
+    route("back", [(-4.5, -13.8), (5.5, -13.8)])
     shot("wide", (1.2, -D / 2 + 1.2, 1.8), (0.0, D / 2, 3.2))
     shot("altar", (0.0, 3.0, 1.7), (0.0, D / 2, 3.5))
 
@@ -1309,6 +1329,8 @@ def stadium(T):
     for x in (-16.0, -6.0, 6.0, 16.0):
         for y in (yc + 2.0, yc + 7.0, yc + 11.5):
             lamp((x, y, -(y - yc) * tz + 3.0), "window")
+    route("concourse", [(-20.0, -25.3), (20.0, -25.3)])                                       # along the concourse
+    route("stand", [(16.0, -26.0), (12.0, -25.0), (12.0, -21.4), (18.0, -21.4)])              # out onto the stand
     t6 = 6                                                               # the seat: tier 7 of the middle block
     empty("Mark_seat", (-4.0, yc + 0.2 + t6 * td + 0.55, -t6 * tz + 0.25), math.pi)
     for t in range(3, 10):                                               # the crowd, in the coloured seats

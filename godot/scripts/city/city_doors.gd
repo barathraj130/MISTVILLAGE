@@ -10,11 +10,13 @@ extends Node3D
 ##   landmarks                              → their own room (landmarks.json "room", door at "door")
 ##   Karthik's own house in Ganapathy       → his home (slice.json places.home): his cot, Amma's kitchen
 ## Inside, E at a room's own spot does what there is to do there (life.gd: eat, sleep, a match, a film...). Public
-## rooms have people in them (crowd.gd: on the benches, in the queues, in the pews and the stand).
+## rooms have people in them (crowd.gd: on the benches, in the queues, in the pews and the stand; room_walkers.gd:
+## walking through).
 ## E by the doorway inside (or walking out through it) brings you back out where you went in.
 
 const ROOMS := "res://assets/interiors/room_%s.glb"
 const Crowd := preload("res://scripts/city/crowd.gd")
+const RoomWalkers := preload("res://scripts/city/room_walkers.gd")
 const STAFF := "res://assets/people/person_%s.glb"
 const DEPTH := 300.0                 # rooms sit this far below the street
 const REACH := 1.6                   # how near a wall you must be for its door
@@ -198,6 +200,10 @@ func enter(d: Dictionary, walker: Node3D) -> void:
 		cs.transform = _room.global_transform.affine_inverse() * (mi as MeshInstance3D).global_transform
 		body.add_child(cs)
 	var people := Crowd.fill(_room, body, d["key"])        # the station's travellers, the mall's shoppers...
+	var walking := RoomWalkers.new()                       # and some walking through
+	walking.name = "Walkers"
+	_room.add_child(walking)
+	people += walking.setup(_room, d["key"], walker)
 	var lights := _room.find_children("Light_*", "", true, false)
 	for e in lights:                                    # the room's own lights (story rooms), else a ceiling light
 		var l := OmniLight3D.new()
@@ -333,6 +339,10 @@ func _door_test(n: int) -> void:
 		if shots != "":
 			await RenderingServer.frame_post_draw
 			get_viewport().get_texture().get_image().save_jpg("%s/door_%02d_in_%s.jpg" % [shots, k, d["room"]], 0.85)
+		if "--doorwatch" in OS.get_cmdline_user_args():   # (and a few seconds of the people in it)
+			for j in 4:
+				await tree.create_timer(1.5).timeout
+				await _shot(shots, "door_%02d_watch_%d" % [k, j])
 		if "--doordo" in OS.get_cmdline_user_args() and life and life.DOINGS.has(d["room"]):   # (and what's done there)
 			for j in life.DOINGS[d["room"]].size():
 				var m := _room.find_child(life.DOINGS[d["room"]][j]["mark"], true, false) as Node3D

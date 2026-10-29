@@ -24,25 +24,18 @@ static func fill(room: Node3D, body: StaticBody3D, key: String, fill := 0.7) -> 
 	var rng := RandomNumberGenerator.new()
 	rng.seed = hash(key)
 	var share := fill if marks.size() < 80 else fill * 0.65
-	var cache := {}
 	var n := 0
 	for m in marks:
 		if rng.randf() > share:
 			continue
 		var pose: String = String(m.name).get_slice("_", 1)
-		var who: String = WHO[rng.randi() % WHO.size()]
-		if not cache.has(who):
-			cache[who] = load(DIR % who) if ResourceLoader.exists(DIR % who) else null
-		if cache[who] == null:
+		var npc := person(room, rng)
+		if npc == null:
 			continue
-		var npc := (cache[who] as PackedScene).instantiate() as Node3D
-		room.add_child(npc)
 		var mk := m as Node3D
 		npc.global_position = mk.global_position
 		var f := -mk.global_basis.z                        # the mark faces +Y in Blender: -Z here
 		npc.global_rotation = Vector3(0, atan2(f.x, f.z) + rng.randf_range(-0.15, 0.15), 0)
-		npc.scale = Vector3.ONE * rng.randf_range(0.94, 1.06)
-		_dress(npc, who, rng)
 		var aps := npc.find_children("*", "AnimationPlayer", true, false)
 		if not aps.is_empty():
 			var ap := aps[0] as AnimationPlayer
@@ -62,6 +55,18 @@ static func fill(room: Node3D, body: StaticBody3D, key: String, fill := 0.7) -> 
 			cs.global_position = mk.global_position + Vector3(0, 0.8, 0)
 		n += 1
 	return n
+
+
+## One of our people, chosen and dressed by rng, added under parent (null if the model isn't there).
+static func person(parent: Node, rng: RandomNumberGenerator) -> Node3D:
+	var who: String = WHO[rng.randi() % WHO.size()]
+	if not ResourceLoader.exists(DIR % who):
+		return null
+	var npc := (load(DIR % who) as PackedScene).instantiate() as Node3D
+	parent.add_child(npc)
+	npc.scale = Vector3.ONE * rng.randf_range(0.94, 1.06)
+	_dress(npc, who, rng)
+	return npc
 
 
 ## Skin, hair and clothes of their own (the elder's white veshti and the school uniform stay as made).
