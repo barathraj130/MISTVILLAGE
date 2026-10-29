@@ -1793,6 +1793,7 @@ def temple_hall(T):
     lamp((0, sy - 1.5, 2.0), "lamp")
     for k in range(3):
         box((0, sy - 1.2 - k * 0.35, 0.08 + k * 0.08), (3.0 - k * 0.3, 0.35, 0.16 + k * 0.16), stone, 0.01)
+    R.mark("pray", -0.6, sy - 2.4, 0.0)                                  # (life.gd: where Karthik prays)
     crowd("stand", 1.6, sy - 1.6, math.pi)                               # the priest by the doorway
     for k in range(6):                                                   # devotees before the sanctum
         crowd("stand", -1.6 + (k % 3) * 1.6, sy - 3.2 - (k // 3) * 1.0, 0.0)

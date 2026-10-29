@@ -39,6 +39,8 @@ const DOINGS := {
 		"caption": "Mazhai Kaalam at the multiplex. He laughs out loud at the interval scene."}],
 	"church": [{"mark": "Mark_pray", "cost": 0, "hours": 0.5, "stress": -12.0,
 		"offer": "Sit a while in the quiet", "caption": "The fans turning slowly. The noise of the road far away."}],
+	"temple_hall": [{"mark": "Mark_pray", "cost": 0, "hours": 0.75, "stress": -18.0,
+		"offer": "Pray at the sanctum", "caption": "The bell, the camphor flame, the priest's chant. His mind goes quiet."}],
 	"tea": [{"mark": "Staff", "cost": 20, "hours": 0.25, "stress": -6.0, "food": 12.0,
 		"offer": "A tea and a vada (₹20)", "caption": "Strong tea in a glass, a hot vada, the street going by."}],
 	"kirana": [{"mark": "Staff", "cost": 30, "hours": 0.1, "food": 15.0,

@@ -86,6 +86,16 @@ def cyl(loc, r, h, m, verts=16, rot=(0, 0, 0)):
     return o
 
 
+_CROWD = [0]
+
+
+def crowd(pose, x, y, yaw):
+    """A spot for a customer (city_doors.gd fills most: crowd.gd): "sit" on the seat here, "stand" or "talk";
+    facing +Y turned by yaw (0: towards the back wall, pi: towards the door)."""
+    _CROWD[0] += 1
+    empty("Crowd_%s_%d" % (pose, _CROWD[0]), (x, y, 0), yaw)
+
+
 def empty(name, loc, yaw=0.0):
     e = bpy.data.objects.new(name, None)
     e.location = loc
@@ -180,6 +190,9 @@ def kirana(M):
         cyl((0.4 + k * 0.45, -0.6, 1.17), 0.1, 0.26, M["jar"], 12)
         cyl((0.4 + k * 0.45, -0.6, 1.32), 0.08, 0.04, M[["pk_r", "pk_y", "pk_g"][k % 3]], 12)
     box((2.8, -0.6, 1.1), (0.3, 0.25, 0.1), M["steel"], bev=0.01)                # scale
+    for x in (0.8, 2.2):                                                        # customers at the counter
+        crowd("stand", x, -1.45, 0.0)
+    crowd("stand", -2.5, D / 2 - 1.0, 0.0)                                      # one at the shelves
     for k in range(5):                                                          # sacks of rice and dal
         cyl((-3.8 + k * 0.6, -2.4, 0.35), 0.24, 0.7, M["sack"], 12)
     box((4.2, -2.8, 0.9), (0.8, 0.7, 1.8), M["cooler"], bev=0.02)                # drinks cooler
@@ -198,6 +211,8 @@ def restaurant(M):
             for side in (-1, 1):
                 chair(M, x - 0.35, y + side * 0.6, 0 if side > 0 else math.pi)
                 chair(M, x + 0.35, y + side * 0.6, 0 if side > 0 else math.pi)
+                for dx in (-0.35, 0.35):                                        # diners, facing the table
+                    crowd("sit", x + dx, y + side * 0.62, math.pi if side > 0 else 0.0)
     box((3.0, D / 2 - 0.7, 0.55), (3.2, 0.7, 1.1), M["steel"], bev=0.01)         # kitchen pass
     box((3.0, D / 2 - 0.1, 1.9), (3.2, 0.1, 1.2), M["kitchen"], bev=0)           # kitchen hatch
     for k in range(5):
@@ -226,6 +241,10 @@ def tea(M):
         box((2.2, y, 0.4), (3.0, 0.4, 0.06), M["wood"], bev=0.005)
         for x in (-3.3, -0.7, 0.9, 3.5):
             box((x, y, 0.2), (0.06, 0.35, 0.4), M["wood"], bev=0)
+        for x in (-3.0, -1.5, 1.2, 2.8):                                        # on the benches with a glass
+            crowd("sit", x, y, math.pi if (x > 0) == (y > -1.0) else 0.0)
+    for x in (-1.0, 0.6, 1.8):                                                  # at the counter
+        crowd("stand", x, D / 2 - 2.15, 0.0)
     shelves(M, -4.6, -2.8, D / 2 - 0.25, levels=3)
     fan(M, 0, -1)
     tube_lights(M, ((0, 0),))
@@ -247,6 +266,10 @@ def hotel(M):
         else:
             box((x + (0.38 if x > 2.0 else -0.38), y, 0.65), (0.15, 0.85, 0.4), M["sofa"], bev=0.05)
     box((2.0, 0.4, 0.22), (1.2, 0.6, 0.44), M["glass_top"], bev=0.01)             # coffee table
+    for x in (1.4, 2.6):                                                          # guests on the sofas
+        crowd("sit", x, -0.95, 0.0)
+    crowd("sit", 3.75, 0.4, math.pi / 2)
+    crowd("stand", -2.8, D / 2 - 2.3, 0.0)                                        # checking in
     for x in (-4.5, 4.5):
         cyl((x, -3.4, 0.25), 0.25, 0.5, M["pot"], 14)
         bpy.ops.mesh.primitive_ico_sphere_add(radius=0.5, location=(x, -3.4, 1.0))
@@ -305,7 +328,10 @@ def bank(M):
         box((-3.0 + k * 2.0 + 1.0, D / 2 - 1.7, 1.13), (0.4, 0.3, 0.03), M["paper"], bev=0)
     box((0, D / 2 - 2.0, 2.6), (1.4, 0.06, 0.35), M["token"], bev=0)               # token display
     for k in range(6):
-        chair(M, -3.0 + k * 0.6, -2.5, 0, "plastic_blue")
+        chair(M, -3.0 + k * 0.6, -2.5, math.pi, "plastic_blue")                  # facing the counters
+        crowd("sit", -3.0 + k * 0.6, -2.48, 0.0)
+    for k in range(3):                                                            # at the counters
+        crowd("stand", -2.0 + k * 2.0, D / 2 - 2.9, 0.0)
     box((4.4, -2.8, 0.9), (0.7, 0.6, 1.8), M["atm"], bev=0.02)                     # cash machine
     box((4.4, -3.11, 1.25), (0.4, 0.02, 0.3), M["screen"], bev=0)
     tube_lights(M, ((-2, -1), (2, -1), (0, 2)))
@@ -321,6 +347,7 @@ def fuel(M):
     box((-1.5, 0.5, 0.5), (3.0, 0.7, 1.0), M["white"], bev=0.02)
     box((-1.5, 0.5, 1.02), (3.1, 0.75, 0.04), M["green"], bev=0)
     box((-0.6, 0.5, 1.15), (0.35, 0.3, 0.2), M["screen"], bev=0.01)               # billing machine
+    crowd("stand", -1.8, -0.35, 0.0)
     shelves(M, -4.6, 4.6, D / 2 - 0.25, levels=4)
     shelves(M, 1.5, 4.6, 0.0, levels=3, face=-1)
     box((4.3, -2.6, 0.9), (0.8, 0.7, 1.8), M["cooler"], bev=0.02)
@@ -333,8 +360,11 @@ def office(M):
     for k in range(3):
         x = -3.0 + k * 3.0
         table(M, x, 0.8, 1.4, 0.8, "wood")
-        chair(M, x, 1.4, math.pi, "wood")
-        chair(M, x, 0.0, 0, "plastic_blue")
+        chair(M, x, 1.4, 0, "wood")                                               # the clerk, facing the table
+        chair(M, x, 0.0, math.pi, "plastic_blue")                                 # a visitor across it
+        if k > 0:
+            crowd("sit", x, 1.42, math.pi)
+        crowd("sit", x, 0.02, 0.0)
         for j in range(4):
             box((x - 0.4 + j * 0.06, 0.9, 0.88), (0.05, 0.3, 0.2), M[["file_r", "file_b"][j % 2]], bev=0)
     for x in (-4.4, -3.4, 4.4):
