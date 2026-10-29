@@ -2,7 +2,8 @@ extends Node3D
 ## People walking through a public room: along the room's routes (tools/city_rooms.py Walk_<name>[o]_<n>: points on
 ## clear aisles, walked to and fro, or round and round when the name ends in "o"), two or three on each, at a
 ## person's pace (the Walk clip played to it: a cycle covers 1.25 m, as the street crowd's), keeping to the left
-## of the way (so those coming the other way pass by) and behind anyone going their way just ahead, slowing round the
+## of the way (so those coming the other way pass by) and behind anyone just ahead (going their way, or crossing:
+## at a crossing the first goes; no one waits more than 3 s), slowing round the
 ## corners, now and then stopping a few seconds (a look at a shop, at the board) and at the ends of a way before
 ## turning back. One who has Karthik right in front of them waits for him to pass (or, if he stays, turns back).
 
@@ -79,15 +80,31 @@ func _step(w: Dictionary, dt: float) -> void:
 				w["blocked"] = 0.0
 			return
 	w["blocked"] = 0.0
-	for o in _walkers:                                     # someone just ahead going this way: keep behind them
-		if o == w:
-			continue
-		var rel: Vector3 = (o["node"] as Node3D).global_position - node.global_position
-		rel.y = 0.0
-		var fwd := rel.dot(ahead)
-		if fwd > 0.0 and fwd < 1.1 and (rel - ahead * fwd).length() < 0.5:
-			_play(w, "Idle", 1.0)
-			return
+	w["held"] = float(w.get("held", 0.0))                  # seconds held up (below 0: going on regardless, 2 s)
+	if w["held"] < 0.0:
+		w["held"] = minf(w["held"] + dt, 0.0)
+	var by = null
+	if float(w["held"]) >= 0.0:                            # (held too long: going on for a moment regardless)
+		for o in _walkers:                                 # someone just ahead (this way, or crossing it): wait
+			if o == w:
+				continue
+			var rel: Vector3 = (o["node"] as Node3D).global_position - node.global_position
+			rel.y = 0.0
+			var fwd := rel.dot(ahead)
+			if fwd > 0.0 and fwd < 1.1 and (rel - ahead * fwd).length() < 0.5:
+				if o.get("waiting_for") == w and _walkers.find(w) < _walkers.find(o):
+					continue                               # each waiting for the other at a crossing: the first goes
+				by = o
+				break
+	w["waiting_for"] = by
+	if by != null:
+		w["held"] = float(w["held"]) + dt
+		if w["held"] > 3.0:
+			w["held"] = -2.0
+		_play(w, "Idle", 1.0)
+		return
+	if float(w["held"]) > 0.0:
+		w["held"] = 0.0
 	var seg_len := maxf(a.distance_to(b), 0.01)
 	w["t"] += w["dir"] * w["speed"] * dt / seg_len
 	if w["t"] > 1.0 or w["t"] < 0.0:                       # the end of this stretch: the next, or turn back
