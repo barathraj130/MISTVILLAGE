@@ -54,7 +54,7 @@ Three meters, shown under the wallet, kept in the save file (`scripts/city/life.
 | **Tiredness** | Up about 5.5 a game hour, faster driving; only sleep clears it, at least 5 game hours: home, a hotel room (₹1,800) | Over 80: warned. At 100: asleep where he stands (5 hours, badly), or dozing at the wheel until he pulls over |
 | **Stress** | Up with traffic, challans, fines, money going out, hunger; down with pay coming in and time off: a match at Nehru Stadium (₹60), a film at a mall (₹190), tea, a pew at Christ the King, prayer at Perur temple | Over 75: warned. Over 90: can't run |
 
-**How the meters meet the story (proposal):**
+**How the meters meet the story (decided 2026-10-30):**
 - **Stress at the station.** A stressed Karthik gets the inspector's sharper questions and fewer calm answers to
   choose from (Act 2 and every signing). Time off before a hard conversation is a real tactic.
 - **Tiredness on the road.** Over 80, steering is slower and the comfort rating harder to keep; night jobs cost
@@ -68,25 +68,25 @@ Three meters, shown under the wallet, kept in the save file (`scripts/city/life.
 Every building opens: landmarks into their own rooms, ordinary buildings by kind (houses vary, shops are a kirana,
 tea stall, restaurant or bank). Public rooms have people sitting, queueing and walking through, and their own sound.
 
-| Place | In play now | In the story (proposal where new) |
+| Place | In play now | In the story (decided 2026-10-30) |
 |---|---|---|
 | Home, Ganapathy | Wash, eat (groceries), sleep | Family scenes; the arrest at the door (Act 2) |
 | Raghavan Developers, Gandhipuram | Story office | The work phone; Muniyandi the watchman (E06), the DVR (E07) |
-| Kovai Nagar Co-op Bank | Story errand | The ₹4 lakh withdrawal; **(proposal)** the account statement Sundaram subpoenas |
+| Kovai Nagar Co-op Bank | Story errand | The ₹4 lakh withdrawal; the account statement Sundaram subpoenas |
 | Nagar Police Station | Story room | The interrogation (Act 2); the evening signing every day |
 | Messes, restaurants, tea stalls | Eat, lower stress | Sekar's tea shop on the road west (E08); gossip that hurts the family (Act 3) |
-| The Siruvani Grand (five-star) | Lunch | **(proposal)** where Suresh meets the land buyers; a doorman who remembers faces |
-| District Collectorate | People, counters | **(proposal)** the patta / land counter: the Green Valley land records that show Suresh's deal (motive, with E15) |
-| Coimbatore Junction, bus stands, airport | People, sound | **(proposal)** timetables and CCTV for the journey reconstruction; where Pandi tries to leave town (Act 6) |
-| Government Hospital, Kongu Multispeciality | People | **(proposal)** the post-mortem report (time of death); Amma's check-up when gossip wears her down |
-| Malls, Nehru Stadium | A film, a match | Time off; **(proposal)** taking Divya out |
-| Christ the King, Perur temple | A quiet sit, prayer | Time off; **(proposal)** Meenakshi at Perur after the funeral, where she first listens to him |
-| Velliangiri College | Lobby, classroom | **(proposal)** Divya's college: the bullying (Act 3), her friends who help read the DVR |
-| Kovai Trade Fair Complex | Expo hall | **(proposal)** Joseph the accountant at a stall; where Raghavan's firm showed Green Valley |
+| The Siruvani Grand (five-star) | Lunch | where Suresh meets the land buyers; a doorman who remembers faces |
+| District Collectorate | People, counters | the patta / land counter: the Green Valley land records that show Suresh's deal (motive, with E15) |
+| Coimbatore Junction, bus stands, airport | People, sound | timetables and CCTV for the journey reconstruction; where Pandi tries to leave town (Act 6) |
+| Government Hospital, Kongu Multispeciality | People | the post-mortem report (time of death); Amma's check-up when gossip wears her down |
+| Malls, Nehru Stadium | A film, a match | Time off; taking Divya out |
+| Christ the King, Perur temple | A quiet sit, prayer | Time off; Meenakshi at Perur after the funeral, where she first listens to him |
+| Velliangiri College | Lobby, classroom | Divya's college: the bullying (Act 3), her friends who help read the DVR |
+| Kovai Trade Fair Complex | Expo hall | Joseph the accountant at a stall; where Raghavan's firm showed Green Valley |
 
 ## 5. The investigation (Part 1, Acts 3–6)
 As decided (STORY_BIBLE.md §5–6): evidence with source and reliability, the deduction board, relationships,
-journey reconstruction on real roads. **(proposal)** How it plays in the city:
+journey reconstruction on real roads. How it plays in the city:
 - **Leads are places and people.** A lead names someone and where they are at what hours ("the watchman, nights at
   the office building"); walking in and talking is the investigation.
 - **People keep hours and moods.** Witnesses are at their place at their times; a stressed or rude Karthik gets less
@@ -114,13 +114,12 @@ crowd people built in MakeHuman with real walks and runs; Karthik's energy, tire
 Alongside: voices, a native-speaker pass on the Tamil, performance on a mid-range PC, then mobile.
 
 ## 7. Open decisions for you
-1. **The meters in the story:** should stress and tiredness change the story's choices and driving (§3 proposal), or
-   stay a life layer beside it?
-2. **The places' story roles (§4):** keep, change or drop each proposal.
-3. **Act 1's length:** three game days, or the slice's single compressed day?
-4. **Platform first:** PC / Mac, or mobile (India)?
-5. **Voices:** who records Tamil and English.
-6. **The name:** "The Mist Village", or another.
+Decided 2026-10-30: the meters change the story's choices and the driving (§3), and the city's places hold the
+story's leads and evidence (§4).
+1. **Act 1's length:** three game days, or the slice's single compressed day?
+2. **Platform first:** PC / Mac, or mobile (India)?
+3. **Voices:** who records Tamil and English.
+4. **The name:** "The Mist Village", or another.
 
 ## Structure (updated 2026-10-11: the story is the spine)
 
