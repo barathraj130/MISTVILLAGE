@@ -11,12 +11,13 @@ extends Node3D
 ##   Karthik's own house in Ganapathy       → his home (slice.json places.home): his cot, Amma's kitchen
 ## Inside, E at a room's own spot does what there is to do there (life.gd: eat, sleep, a match, a film...). Public
 ## rooms have people in them (crowd.gd: on the benches, in the queues, in the pews and the stand; room_walkers.gd:
-## walking through).
+## walking through) and the sound of them (room_sound.gd).
 ## E by the doorway inside (or walking out through it) brings you back out where you went in.
 
 const ROOMS := "res://assets/interiors/room_%s.glb"
 const Crowd := preload("res://scripts/city/crowd.gd")
 const RoomWalkers := preload("res://scripts/city/room_walkers.gd")
+const RoomSound := preload("res://scripts/city/room_sound.gd")
 const STAFF := "res://assets/people/person_%s.glb"
 const DEPTH := 300.0                 # rooms sit this far below the street
 const REACH := 1.6                   # how near a wall you must be for its door
@@ -51,6 +52,8 @@ func _ready() -> void:
 		if h is Dictionary and h.has("x"):
 			_home = Vector2(float(h["x"]), float(h["z"]))
 	for a in OS.get_cmdline_user_args():                # (testing: --doortest=N walks into N buildings near the start,
+		if a.begins_with("--soundtest="):              # (testing: every room sound written as WAVs into the folder)
+			RoomSound.save_all(a.get_slice("=", 1))
 		if a == "--walktest":                           # (testing: Karthik walking and running, filmed from the side)
 			_walk_test.call_deferred()
 		if a.begins_with("--doortest="):                #  --doorat=<landmark> into that landmark; screenshots in --shots)
@@ -206,6 +209,13 @@ func enter(d: Dictionary, walker: Node3D) -> void:
 	walking.name = "Walkers"
 	_room.add_child(walking)
 	people += walking.setup(_room, d["key"], walker)
+	var sound := RoomSound.new()                           # and how it sounds
+	sound.name = "Sound"
+	_room.add_child(sound)
+	var t0 := Time.get_ticks_msec()
+	sound.setup(d["room"], people)
+	if Time.get_ticks_msec() - t0 > 50:
+		print("DOOR sound for %s made in %d ms" % [d["room"], Time.get_ticks_msec() - t0])
 	var lights := _room.find_children("Light_*", "", true, false)
 	for e in lights:                                    # the room's own lights (story rooms), else a ceiling light
 		var l := OmniLight3D.new()
