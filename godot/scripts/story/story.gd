@@ -30,6 +30,11 @@ extends Node
 ##             the wallet
 ##   gigs      a delivery shift on the rider app: orders one after another (a restaurant of "pickups", a neighbourhood
 ##             of "drops", pay by distance, a tip when on time); E takes the order, Q ends the shift (or "until")
+##   choose    a choice: "prompt" and "options" (1, 2, 3 on the keyboard), each one may "set" a flag (later steps
+##             follow it with "when" / "unless"), "pay" from the wallet and change Karthik's "stress"
+##   climb     on foot through a room ("room"/"at", from Mark_"start") up to Mark_landing, where the talk that
+##             follows takes place; walking past Mark_cut the power fails (as it does in Coimbatore): the lights die
+##             and the phone's torch comes on
 ##   free      free drive with a goal line, the end of the chapter
 ## Any step may have "when": flag / "unless": flag (results of earlier tasks) and is skipped otherwise; any line
 ## may "pay" an amount into the wallet when it's shown (a tip from the owner, a customer).
@@ -39,11 +44,14 @@ extends Node
 ##   --storyshots=D  testing: a screenshot of every card, talk line and arrival into the folder D
 ##   --eatat=P       testing: the lunch break is eaten at the place P (an eat_out "eateries" key)
 ##   --storyta       start in Tamil
+##   --storychoose=N testing: at every choice, option N (1, 2...)
+##   --storyfrom=N   testing: start the chapter at step N
 
 const Sim := preload("res://scripts/drive/sim.gd")
 const Tasks := preload("res://scripts/story/tasks.gd")
 const Actor := preload("res://scripts/story/actor.gd")
 const Walker := preload("res://scripts/player.gd")
+const RoomSound := preload("res://scripts/city/room_sound.gd")
 const CHAPTER := "res://story/slice.json"
 
 var city                            # city_test.gd: car placement, `placed`
@@ -94,6 +102,11 @@ var _e_down := false
 var _visit := 0                       # home: which visit of the house is next
 var _in_task := false                 # home / eat_out: a task is open
 var _ring: MeshInstance3D             # home: the marker on the floor where to go
+var _climb := 0                       # climb: 0 walking up, 1 the power's gone, 3 at the top
+var _climbing := false                # (on foot in a climb's room, until the story leaves it)
+var _torch: SpotLight3D
+var _sfx: AudioStreamPlayer
+var _num_down := {}
 var _note := ""                       # home: a line under the goal for a few seconds (the car's HUD is off indoors)
 var _note_t := 0.0
 var room: Node3D                    # the room a scene is playing in, under the street
@@ -205,6 +218,10 @@ func _process(dt: float) -> void:
 				_next()
 		"meet":
 			_meet()
+		"choose":
+			_choose()
+		"climb":
+			_climb_step(dt)
 		"gigs":
 			_gigs(dt)
 		"free":
@@ -237,6 +254,10 @@ func _keys() -> void:
 
 
 func _next() -> void:
+	if step < 0:
+		for a in OS.get_cmdline_user_args():          # (testing: --storyfrom=N starts the chapter at step N)
+			if a.begins_with("--storyfrom="):
+				step = int(a.get_slice("=", 1)) - 1
 	step += 1
 	t_step = 0.0
 	line_i = 0
@@ -256,9 +277,21 @@ func _next() -> void:
 		var to := float(hm[0]) * 60.0 + float(hm[1])
 		if not cur.get("clock_forward", false) or _since_noon(to) > _since_noon(fines.sim.minute):
 			fines.sim.minute = to                        # ("clock_forward": only ever later, e.g. after a long shift)
+	if cur.has("add_days") and fines:                   # days that pass off screen (bail, a week in jail)
+		fines.sim.day += int(cur["add_days"])
+	var life = city.life if "life" in city else null
+	if life and cur.has("life"):                        # where those days leave him (rested, fed, worn down)
+		for k in cur["life"]:
+			life.set(k, float(cur["life"][k]))
+	if life and (cur.has("clock") or cur.has("add_days")):   # a jump of the clock isn't hours awake
+		life._clock = life._clock_now()
+	if cur.has("set_flag"):                             # (a step that, when it plays, tells the later ones so)
+		flags[str(cur["set_flag"])] = true
 	if cur.has("add_minutes") and fines:                # time that passes off screen (a ride on the scooter)
 		fines.sim.minute += float(cur["add_minutes"])
 	_jumped = false
+	if _climbing and not str(cur["do"]) in ["talk", "choose"]:     # out of the dark building, back to the street
+		_end_climb()
 	if room != null and not str(cur["do"]) in ["room", "task", "talk", "comfort_verdict", "deliver_verdict", "card", "home"]:
 		_unload_room()
 		_cams_back()
@@ -319,6 +352,15 @@ func _next() -> void:
 			_visit = 0
 			_in_task = false
 			_walk_in(str(cur.get("start", "karthik_room")))
+		"climb":
+			_load_room(str(cur["room"]), str(cur.get("at", data["spawn"])))
+			_cast(cur.get("cast", {}))
+			for k in cur.get("cast", {}):
+				if cur["cast"][k].get("hidden", false):
+					cast[k].visible = false                  # (there, in the dark, unseen)
+			_climb = 0
+			_climbing = true
+			_walk_in(str(cur.get("start", "start")))
 		"gigs":
 			_gig = {}
 			_gig_done = 0
@@ -725,6 +767,111 @@ func _meet() -> void:
 	elif near:
 		hint = "E: talk" if lang == "en" else "E: பேசுங்க"
 	goal.text = tr_(cur["goal"]) + ("\n" + hint if hint != "" else "")
+
+
+## A choice: 1, 2, 3 on the keyboard. The option's flag is set for the steps after; its cost paid, its stress felt.
+func _choose() -> void:
+	var opts: Array = cur["options"]
+	var pick := -1
+	for i in opts.size():
+		var down := Input.is_key_pressed(KEY_1 + i) or Input.is_key_pressed(KEY_KP_1 + i)
+		if down and not _num_down.get(i, false):
+			pick = i
+		_num_down[i] = down
+	if _skip and t_step > 1.0:
+		pick = 0
+		for a in OS.get_cmdline_user_args():
+			if a.begins_with("--storychoose="):
+				pick = clampi(int(a.get_slice("=", 1)) - 1, 0, opts.size() - 1)
+	if pick < 0:
+		return
+	var o: Dictionary = opts[pick]
+	if o.has("set"):
+		flags[str(o["set"])] = true
+	if int(o.get("pay", 0)) > 0 and fines:
+		fines.sim.money -= int(o["pay"])
+		hud.warn(("Paid  −₹%d" if lang == "en" else "கொடுத்தது  −₹%d") % int(o["pay"]), 4.0)
+	var life = city.life if "life" in city else null
+	if life and o.has("stress"):
+		life.add_stress(float(o["stress"]))
+	print("STORY chose %d: %s" % [pick + 1, tr_(o["text"])])
+	_next()
+
+
+## On foot up the building's stair: the power fails at Mark_cut; at Mark_landing the talk begins.
+func _climb_step(dt: float) -> void:
+	var w: Node3D = city.walker
+	if w == null:
+		return
+	var cut := _mark("cut")
+	var top := _mark("landing")
+	if _skip and _climb == 0 and t_step > 1.0 and cut:           # (testing: up the stair in two hops)
+		w.global_position = cut.global_position + Vector3(0, 0.5, 0)
+	if _skip and _climb == 1 and t_step > 2.5 and top:
+		w.global_position = top.global_position + Vector3(0, 0.3, 0.4)
+	var flat := func(m: Node3D) -> float:
+		return Vector2(w.global_position.x - m.global_position.x, w.global_position.z - m.global_position.z).length()
+	if _climb == 0 and cut and flat.call(cut) < 1.2:
+		_climb = 1
+		_power_cut()
+	elif _climb == 1 and top and flat.call(top) < 1.4 and w.global_position.y > top.global_position.y - 0.6:
+		_climb = 3
+		for k in cast:                                            # whoever waits at the top turns to him
+			if (cast[k] as Node3D).visible:
+				cast[k].face(w.global_position)
+		_next()
+		return
+	var g: Dictionary = cur["goal"] if _climb == 0 else cur.get("goal_dark", cur["goal"])
+	goal.text = tr_(g)
+
+
+func _power_cut() -> void:
+	for l in room.find_children("*", "OmniLight3D", true, false):
+		(l as Light3D).visible = false
+	var dark := StandardMaterial3D.new()                         # the tubes go dark too
+	dark.albedo_color = Color(0.85, 0.85, 0.85)
+	for mi in room.find_children("*", "MeshInstance3D", true, false):
+		var m := mi as MeshInstance3D
+		for s in m.mesh.get_surface_count():
+			var mat := m.mesh.surface_get_material(s)
+			if mat and (mat.resource_name.begins_with("tube_glow") or mat.resource_name.begins_with("panel_light")):
+				m.set_surface_override_material(s, dark)
+	city.dark_room = true
+	if _torch == null:
+		_torch = SpotLight3D.new()
+		_torch.spot_range = 14.0
+		_torch.spot_angle = 24.0
+		_torch.light_energy = 3.5
+		_torch.light_color = Color(1.0, 0.97, 0.9)
+		_torch.shadow_enabled = true
+	if _torch.get_parent():
+		_torch.get_parent().remove_child(_torch)
+	city.walker.camera.add_child(_torch)
+	_torch.position = Vector3(0.15, -0.15, 0.0)
+	_play_sfx("powercut", 0.0)
+	hud.warn("Power cut. Phone torch on." if lang == "en" else "கரண்ட் போயிடுச்சு. போன் டார்ச்.", 3.0)
+	print("STORY power cut")
+
+
+func _play_sfx(kind: String, db: float) -> void:
+	if _sfx == null:
+		_sfx = AudioStreamPlayer.new()
+		add_child(_sfx)
+	var p := AudioStreamPlayer.new()                             # (one each: the shout and the stick overlap)
+	p.stream = RoomSound.sound(kind)
+	p.volume_db = db
+	add_child(p)
+	p.play()
+	p.finished.connect(p.queue_free)
+
+
+func _end_climb() -> void:
+	_climbing = false
+	city.dark_room = false
+	if _torch:
+		_torch.queue_free()
+		_torch = null
+	_walk_out()
 
 
 func _task_done(result: Dictionary) -> void:
@@ -1291,8 +1438,8 @@ func _refresh() -> void:
 	big.visible = kind in ["card", "jump"]
 	small.visible = kind in ["card", "jump"]
 	box.visible = false
-	goal.visible = kind in ["drive", "free", "meet", "home", "eat_out", "gigs"]
-	clock.visible = kind in ["drive", "free", "talk", "comfort_verdict", "deliver_verdict", "task", "lapse", "meet", "home", "eat_out", "gigs"]
+	goal.visible = kind in ["drive", "free", "meet", "home", "eat_out", "gigs", "climb"]
+	clock.visible = kind in ["drive", "free", "talk", "comfort_verdict", "deliver_verdict", "task", "lapse", "meet", "home", "eat_out", "gigs", "climb", "choose"]
 	if step < 0:
 		big.visible = false                          # (no title shown: the story's name would give it away)
 		small.visible = true
@@ -1316,6 +1463,14 @@ func _refresh() -> void:
 				_say(cur["ride_talk"]["lines"][_ride_i], false)
 		"free":
 			goal.text = tr_(cur["goal"])
+		"choose":
+			who.text = ""
+			var lines: Array = [tr_(cur["prompt"]), ""]
+			for i in cur["options"].size():
+				lines.append("%d   %s" % [i + 1, tr_(cur["options"][i]["text"])])
+			said.text = "\n".join(lines)
+			hint.text = ("Press 1 – %d" if lang == "en" else "1 – %d அழுத்துங்க") % cur["options"].size()
+			box.visible = true
 
 
 func _shot() -> void:

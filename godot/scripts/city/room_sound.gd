@@ -66,7 +66,7 @@ static func save_all(dir: String) -> void:
 	for k in ["murmur", "crowd", "fans", "ac"]:
 		var w: AudioStreamWAV = {"murmur": _murmur, "crowd": _crowd, "fans": _fans, "ac": _ac}[k].call()
 		w.save_to_wav("%s/%s.wav" % [dir, k])
-	for k in ["chime", "bell", "horn", "cheer", "clink"]:
+	for k in ["chime", "bell", "horn", "cheer", "clink", "powercut", "shout", "thud"]:
 		_oneshot(k).save_to_wav("%s/%s.wav" % [dir, k])
 
 
@@ -207,7 +207,37 @@ static func _oneshot(kind: String) -> AudioStreamWAV:
 			for i in out.size():
 				var t := i / RATE
 				out[i] = (sin(t * 2350.0 * TAU) + 0.6 * sin(t * 3710.0 * TAU) + 0.3 * sin(t * 5200.0 * TAU)) * exp(-t * 14.0) * 0.3
+		"powercut":                                         # the mains failing: a thunk, the fans' hum dying away
+			out.resize(int(RATE * 1.6))
+			for i in out.size():
+				var t := i / RATE
+				var thunk := rng.randf_range(-1.0, 1.0) * exp(-t * 60.0) + sin(t * 70.0 * TAU) * exp(-t * 18.0)
+				var hum := (sin(t * 100.0 * (1.0 - t * 0.3) * TAU) * 0.3) * exp(-t * 2.5)
+				out[i] = thunk * 0.8 + hum
+		"shout":                                            # a man's shout out of the dark ("Yaaru?!"): voiced, rising
+			out.resize(int(RATE * 0.75))
+			var f1 := _Biquad.bandpass(750.0, 4.0)
+			var f2 := _Biquad.bandpass(1250.0, 5.0)
+			var ph := 0.0
+			for i in out.size():
+				var t := i / RATE
+				var f0 := 150.0 + 90.0 * minf(t / 0.35, 1.0)                 # the pitch rises into the question
+				ph += f0 / RATE
+				var buzz := 2.0 * (ph - floorf(ph)) - 1.0 + rng.randf_range(-0.25, 0.25)
+				var env := minf(t * 40.0, 1.0) * (1.0 if t < 0.5 else exp(-(t - 0.5) * 12.0))
+				out[i] = (f1.step(buzz) + f2.step(buzz) * 0.7) * env
+		"thud":                                             # a stick struck on the steel railing
+			out.resize(int(RATE * 1.2))
+			for i in out.size():
+				var t := i / RATE
+				out[i] = (sin(t * 880.0 * TAU) + 0.7 * sin(t * 1410.0 * TAU) + 0.4 * sin(t * 2650.0 * TAU)) * exp(-t * 5.0) * 0.4 \
+					+ rng.randf_range(-1.0, 1.0) * exp(-t * 80.0) * 0.8
 	return _store(kind, out, false)
+
+
+## One of the one-shot sounds (made once, kept): "chime", "bell", "horn", "cheer", "clink", "powercut", "shout", "thud".
+static func sound(kind: String) -> AudioStreamWAV:
+	return _oneshot(kind)
 
 
 ## Normalise to a peak, make a loop's ends meet (a short crossfade), keep it.

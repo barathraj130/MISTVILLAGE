@@ -21,6 +21,7 @@ room of its own:
     hospital_pvt Kongu Multispeciality Hospital's lobby: reception, lounge, pharmacy, billing, café, lifts
     temple_hall  Perur Pateeswarar temple's mandapam: granite pillars, the flagstaff, lamps, the sanctum's lit
                  doorway (nothing within it shown)
+    office_stairs the ground floor and stair of Raghavan Developers' building at night (the watchman's lead)
     church       Christ the King's nave: pews either side of the aisle, the columns, the stained-glass windows, the
                  sanctuary steps, the altar and the cross, candles, the fans on their long rods
     house_mid    a middle-class family's hall: a wooden sofa set, the showcase, the fridge in the hall, a dining
@@ -1805,10 +1806,99 @@ def temple_hall(T):
     shot("wide", (2.0, -D / 2 + 1.5, 1.8), (0.0, D / 2, 1.8))
 
 
+# ============================================================================ Raghavan Developers' building, at night
+def office_stairs(T):
+    """The ground floor of the commercial building where Raghavan Developers has its office (Gandhipuram, 1st floor), at
+    night: the collapsible grill gate onto the street, the watchman's chair, table and register, the lift (out of
+    order), the board of the firms upstairs, mosaic floor; the stair up the left wall to the first-floor landing and
+    the office's glass door. For the first lead (STORY_BIBLE.md §6b): the power fails as Karthik climbs (Mark_cut),
+    and on the landing (Mark_landing) the watchman rises out of the dark (Mark_figure)."""
+    W, D, h1, h = 8.0, 10.0, 3.3, 6.6                                   # ground floor 3.3 m, the landing above it
+    floor = mat("mosaic", (1, 1, 1), 0.25, tex=T["mosaic"], scale=1.2)
+    wall = mat("wall_offwhite", (1, 1, 1), 0.9, tex=T["wall_offwhite"], normal=os.path.join(DTEX, "plaster_normal.jpg"), scale=2.5)
+    ceil = mat("ceiling_white", (0.9, 0.9, 0.87), 0.95)
+    steel = mat("rail_steel", (0.3, 0.32, 0.35), 0.4, 0.8)
+    stone = mat("granite_black", (1, 1, 1), 0.2, tex=T["granite_black"], scale=1.0)
+    green = mat("dado_green", (0.15, 0.4, 0.25), 0.4)
+    t = 0.15
+    box((0, 0, -0.05), (W, D, 0.1), floor)
+    box((0, 0, h + 0.05), (W, D, 0.1), ceil)
+    box((0, D / 2 + t / 2, h / 2), (W + 2 * t, t, h), wall)
+    for s3 in (-1, 1):
+        box((s3 * (W / 2 + t / 2), 0, h / 2), (t, D, h), wall)
+        box((s3 * (W / 2 - 0.01), 0, 0.6), (0.02, D, 1.2), green)
+    dw = 2.6                                                             # the front: the gateway onto the street
+    side = (W - dw) / 2
+    for s3 in (-1, 1):
+        box((s3 * (dw / 2 + side / 2), -D / 2 - t / 2, h / 2), (side, t, h), wall)
+    box((0, -D / 2 - t / 2, (h + 2.8) / 2), (dw, t, h - 2.8), wall)
+    night = mat("street_night", (0.1, 0.08, 0.06), 0.9, emit=(0.55, 0.32, 0.12), strength=0.5)   # sodium-lit street
+    box((0, -D / 2 - 0.9, 1.4), (dw + 0.6, 0.02, 2.9), night)
+    for k in range(12):                                                  # the collapsible grill, pushed open
+        x = -dw / 2 + 0.05 + k * 0.04
+        box((x, -D / 2 + 0.05, 1.4), (0.012, 0.03, 2.8), steel, rot=(0, 0, 0.6 if k % 2 else -0.6))
+    box((-dw / 2 + 0.28, -D / 2 + 0.05, 2.82), (0.5, 0.05, 0.04), steel)
+    empty("Entry", (0, -D / 2 + 0.9, 0), 0.0)
+    empty("Exit", (0, -D / 2 + 0.35, 0), math.pi)
+    # the first-floor landing: a slab over the back, its edge railing, the office's glass door
+    ly = 2.4                                                             # the landing runs from y=ly to the back wall
+    box((0, (ly + D / 2) / 2, h1 - 0.1), (W, D / 2 - ly, 0.2), mat("slab", (0.8, 0.8, 0.78), 0.8))
+    box((0, (ly + D / 2) / 2, h1 + 0.002), (W, D / 2 - ly, 0.01), floor)
+    box((0.9, ly, h1 + 0.5), (W - 3.6, 0.05, 0.05), steel)              # the landing's railing (not over the stair)
+    for k in range(10):
+        box((-1.0 + k * 0.45, ly, h1 + 0.25), (0.03, 0.03, 0.5), steel)
+    glass = mat("glass_door", (0.55, 0.62, 0.65), 0.05, alpha=0.35)
+    box((1.6, D / 2 - 0.02, h1 + 1.1), (1.8, 0.04, 2.2), glass)
+    box((1.6, D / 2 - 0.05, h1 + 2.35), (2.2, 0.06, 0.4), mat("board_navy", (0.08, 0.12, 0.3), 0.4))
+    text("RAGHAVAN DEVELOPERS", (1.6, D / 2 - 0.09, h1 + 2.35), 0.16, mat("letters_gold", (0.95, 0.78, 0.35), 0.3, 0.8), "-y")
+    box((3.4, D / 2 - 0.06, h1 + 1.5), (0.4, 0.1, 0.55), mat("fuse_grey", (0.55, 0.57, 0.55), 0.4, 0.5), 0.01)   # the fuse box
+    # the stair up the left wall: 20 steps of 16.5 cm, a mid-way turn is left out: one straight flight
+    sx, sw = -W / 2 + 0.75, 1.3
+    n, rise = 20, h1 / 20
+    run = (ly + 0.6 - (-3.2)) / n
+    for k in range(n):
+        y = -3.2 + (k + 0.5) * run
+        z = (k + 1) * rise
+        box((sx, y, z / 2), (sw, run + 0.01, z), stone)
+    for k in range(0, n, 2):                                             # its railing, on the open side
+        y = -3.2 + (k + 0.5) * run
+        box((sx + sw / 2 + 0.03, y, (k + 1) * rise + 0.45), (0.03, 0.03, 0.9), steel)
+    a = math.atan2(h1, n * run)
+    box((sx + sw / 2 + 0.03, -3.2 + n * run / 2, h1 / 2 + 0.92), (0.05, math.hypot(n * run, h1), 0.05), steel, rot=(a, 0, 0))
+    # the watchman's corner by the gate: a plastic chair, a small table, the register, a stick, a flask
+    R.chair_poly(2.6, -D / 2 + 1.6, -math.pi / 2, (0.15, 0.3, 0.6))
+    R.table(3.3, -D / 2 + 1.6, 0.8, 0.5, 0.72, mat("desk_top", (0.75, 0.68, 0.55), 0.5), steel)
+    box((3.3, -D / 2 + 1.55, 0.75), (0.32, 0.24, 0.03), mat("register_red", (0.55, 0.1, 0.08), 0.6), 0.004)
+    cyl((3.55, -D / 2 + 1.75, 0.83), 0.04, 0.2, mat("steel", (0.74, 0.75, 0.77), 0.32, 0.55), 12)
+    cyl((W / 2 - 0.15, -D / 2 + 2.3, 0.6), 0.02, 1.2, mat("stick_wood", (0.45, 0.3, 0.15), 0.6), 8, rot=(0.15, 0, 0))
+    # the lift, out of order; the board of the firms
+    box((W / 2 - 0.05, 0.6, 1.1), (0.06, 1.2, 2.2), mat("steel_brushed", (0.7, 0.71, 0.72), 0.3, 0.8))
+    box((W / 2 - 0.08, 0.6, 1.1), (0.02, 0.01, 2.2), mat("ink_black", (0.05, 0.05, 0.05), 0.4))
+    sign("LIFT NOT WORKING", (W / 2 - 0.1, 0.6, 1.5), 0.9, 0.2, mat("paper", (0.97, 0.97, 0.95), 0.8),
+         mat("ink_red", (0.7, 0.05, 0.05), 0.5), "-x", 0.07)
+    box((W / 2 - 0.03, -1.6, 1.7), (0.02, 1.2, 1.3), mat("board_black", (0.08, 0.08, 0.09), 0.4))
+    for k, firm in enumerate(("1  RAGHAVAN DEVELOPERS", "1  SRI LAKSHMI TRAVELS", "2  KOVAI TUTORIALS", "2  ADV. R. NATARAJAN",
+                              "3  MERIDIAN INSURANCE", "3  VACANT")):
+        text(firm, (W / 2 - 0.05, -1.6, 2.2 - k * 0.17), 0.07, mat("letters_white", (0.97, 0.97, 0.97), 0.4), "-x")
+    R.switchboard(-W / 2 + 0.02, -D / 2 + 1.0, 1.3, "+x")
+    # the lights (all on until the power fails); the marks
+    for (x, y, z) in ((1.5, -2.5, h1 - 0.05), (1.5, 1.0, h1 - 0.25), (-2.0, -1.0, h - 0.05), (1.5, 3.8, h - 0.05)):
+        tube(x, y, z, light_z=z - 0.4)
+    R.mark("start", 0.0, -D / 2 + 1.2, 0.0)
+    R.mark("watchman_gate", 1.2, -D / 2 + 1.2, math.pi)
+    empty("Mark_cut", (sx, -2.6, 0.0), 0.0)                              # a few steps up: the power fails
+    empty("Mark_landing", (sx, ly + 0.3, h1), 0.0)                       # the top of the stair
+    empty("Mark_figure", (sx + 1.7, ly + 1.0, h1), math.pi / 2 + 0.6)    # in the dark by the railing: the watchman
+    shot("wide", (2.8, -D / 2 + 0.8, 1.7), (-2.0, 2.0, 2.4))
+    shot("stairs", (0.6, -3.8, 1.6), (sx, 1.0, 2.6))
+    shot("landing", (2.6, ly + 0.4, h1 + 1.6), (sx, ly + 0.3, h1 + 1.0))
+
+
 ROOMS = {"station": station, "bus": bus_stand, "airport": airport, "mall_avinashi": mall_avinashi,
          "mall_sathy": mall_sathy, "church": church, "house_mid": house_mid, "house_flat": house_flat,
          "house_old": house_old, "stadium": stadium, "collectorate": collectorate, "college": college,
-         "trade_fair": trade_fair, "hospital_gov": hospital_gov, "hospital_pvt": hospital_pvt, "temple_hall": temple_hall}
+         "trade_fair": trade_fair, "hospital_gov": hospital_gov, "hospital_pvt": hospital_pvt, "temple_hall": temple_hall,
+         "office_stairs": office_stairs}
 
 
 def main():

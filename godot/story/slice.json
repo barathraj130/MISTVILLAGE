@@ -208,6 +208,14 @@
    "z": -1897.9,
    "en": "Sitra, Coimbatore",
    "ta": "சித்ரா"
+  },
+  "office_building": {
+   "lat": 11.0162,
+   "lon": 76.9626,
+   "x": -566.8,
+   "z": 236.1,
+   "en": "Raghavan Developers' building, Gandhipuram, at night",
+   "ta": "ராகவன் டெவலப்பர்ஸ் கட்டிடம், காந்திபுரம், ராத்திரி"
   }
  },
  "people": {
@@ -266,6 +274,12 @@
    "colour": "#a0e0ff",
    "model": "story_ashwin",
    "hair": "#0f0c0a"
+  },
+  "muniyandi": {
+   "en": "Muniyandi (watchman)",
+   "ta": "முனியாண்டி (வாட்ச்மேன்)",
+   "colour": "#e0c890",
+   "model": "crowd_m3"
   }
  },
  "spawn": "home",
@@ -1973,13 +1987,260 @@
   },
   {
    "do": "card",
+   "clock": "21:15",
+   "big": {
+    "en": "Four days later",
+    "ta": "நாலு நாள் கழிச்சு"
+   },
+   "small": {
+    "en": "Arrested at dawn for Raghavan sir's murder. Two nights in a cell. Out on bail: sign at the station every evening, and never leave the district.\nAt tonight's signing, Constable Selvi slid a note under his pen: \"Ask the night watchman.\"",
+    "ta": "ராகவன் சார் கொலைக்காக விடியற்காலையில கைது. ரெண்டு ராத்திரி லாக்கப்ல. ஜாமீன்ல வெளிய: தினமும் சாயங்காலம் ஸ்டேஷன்ல கையெழுத்து, மாவட்டத்த விட்டு போகக்கூடாது.\nஇன்னைக்கு கையெழுத்து போடும்போது, கான்ஸ்டபிள் செல்வி பேனாவுக்கு கீழ ஒரு சீட்டு வச்சாங்க: \"நைட் வாட்ச்மேன கேளு.\""
+   },
+   "add_days": 4,
+   "life": {
+    "energy": 65.0,
+    "tiredness": 30.0,
+    "stress": 72.0
+   }
+  },
+  {
+   "do": "jump",
+   "to": "office_building",
+   "clock": "21:30",
+   "vehicle": "karthik_scooter"
+  },
+  {
+   "do": "meet",
+   "who": "muniyandi",
+   "cast": {
+    "muniyandi": {
+     "pos": [
+      -3.2,
+      1.5
+     ],
+     "look": [
+      0,
+      0
+     ],
+     "anim": "Idle"
+    }
+   },
+   "goal": {
+    "en": "The night watchman, at the building's gate",
+    "ta": "கட்டிடத்து கேட்ல நைட் வாட்ச்மேன்"
+   }
+  },
+  {
+   "do": "talk",
+   "lines": [
+    {
+     "who": "muniyandi",
+     "en": "Stop there! ...Aiyo. It's you. The driver.",
+     "ta": "நில்லு அங்கயே! ...அய்யோ. நீயா. அந்த டிரைவர்."
+    },
+    {
+     "who": "karthik",
+     "en": "Anna, please. I only want to ask you one thing about that night.",
+     "ta": "அண்ணா, ப்ளீஸ். அன்னைக்கு ராத்திரி பத்தி ஒண்ணு மட்டும் கேக்கணும்."
+    },
+    {
+     "who": "muniyandi",
+     "en": "Police said nobody goes up. And you're the accused! Go, go, before somebody sees you here.",
+     "ta": "போலீஸ் யாரும் மேல போகக்கூடாதுன்னு சொல்லிருக்காங்க. நீ தான் குற்றவாளி! போ போ, யாராவது பாக்கறதுக்குள்ள."
+    },
+    {
+     "who": "karthik",
+     "en": "(He drags the grill gate half shut in my face.)",
+     "ta": "(கிரில் கேட்ட என் மூஞ்சிக்கு நேரா பாதி இழுத்து மூடறார்.)"
+    }
+   ]
+  },
+  {
+   "do": "choose",
+   "prompt": {
+    "en": "He won't let you in.",
+    "ta": "உள்ள விட மாட்டேங்கறார்."
+   },
+   "options": [
+    {
+     "text": {
+      "en": "Hold out ₹500: \"For your tea, anna.\"",
+      "ta": "₹500 நீட்டுங்க: \"டீக்கு வச்சுக்கோங்க அண்ணா.\""
+     },
+     "set": "bribed_watchman",
+     "pay": 500,
+     "stress": 0
+    },
+    {
+     "text": {
+      "en": "Walk to the tea stall, come back with tea and vadai, and sit with him",
+      "ta": "டீக்கடைக்கு போய், டீயும் வடையும் வாங்கிட்டு வந்து, அவர் கூட உக்காருங்க"
+     },
+     "set": "honest_watchman",
+     "pay": 40,
+     "stress": -3
+    }
+   ]
+  },
+  {
+   "do": "talk",
+   "when": "bribed_watchman",
+   "lines": [
+    {
+     "who": "muniyandi",
+     "en": "(He looks up and down the road. The note disappears into his shirt.) Five minutes. Lobby and stair only.",
+     "ta": "(ரோட்ட அங்கயும் இங்கயும் பாக்கறார். நோட்டு சட்டைக்குள்ள போயிடுது.) அஞ்சு நிமிஷம். லாபி, படி மட்டும்."
+    },
+    {
+     "who": "muniyandi",
+     "en": "The current has been going off all week. If it goes, stand still. I'll come with the torch.",
+     "ta": "இந்த வாரம் முழுக்க கரண்ட் போய் போய் வருது. போச்சுன்னா அப்படியே நில்லு. நான் டார்ச் எடுத்துட்டு வரேன்."
+    },
+    {
+     "who": "karthik",
+     "en": "(Five hundred. Divya's bus pass.)",
+     "ta": "(ஐநூறு. திவ்யாவோட பஸ் பாஸ்.)"
+    }
+   ]
+  },
+  {
+   "do": "talk",
+   "when": "honest_watchman",
+   "add_minutes": 25,
+   "lines": [
+    {
+     "who": "karthik",
+     "en": "Tea, anna. And vadai, still hot.",
+     "ta": "டீ அண்ணா. வடையும், இன்னும் சூடா."
+    },
+    {
+     "who": "muniyandi",
+     "en": "...Sit. Sit.",
+     "ta": "...உக்காரு. உக்காரு."
+    },
+    {
+     "who": "muniyandi",
+     "en": "My son also drives. A van, in Tiruppur. Now no work. Everybody says he's lazy. He's not lazy.",
+     "ta": "என் பையனும் டிரைவர் தான். திருப்பூர்ல வேன். இப்போ வேலை இல்ல. எல்லாரும் சோம்பேறின்னு சொல்றாங்க. அவன் சோம்பேறி இல்ல."
+    },
+    {
+     "who": "karthik",
+     "en": "They say I killed a man I loved like my father, anna.",
+     "ta": "என் அப்பா மாதிரி நெனச்ச ஒருத்தர நான் கொன்னேன்னு சொல்றாங்க அண்ணா."
+    },
+    {
+     "who": "muniyandi",
+     "en": "(A long breath.) ...Your sir gave me his newspaper every evening, after he read it. Go up. I'll look at the fuse box, the current keeps going.",
+     "ta": "(பெருமூச்சு.) ...உங்க சார் தினமும் சாயங்காலம், படிச்சுட்டு, அவரோட பேப்பர என் கிட்ட குடுப்பாரு. மேல போ. நான் ஃப்யூஸ் பாக்ஸ் பாக்கறேன், கரண்ட் போயிட்டே இருக்கு."
+    }
+   ]
+  },
+  {
+   "do": "climb",
+   "room": "office_stairs",
+   "at": "office_building",
+   "start": "start",
+   "cast": {
+    "muniyandi": {
+     "mark": "figure",
+     "anim": "Idle"
+    }
+   },
+   "goal": {
+    "en": "Go up the stair to the office",
+    "ta": "படி ஏறி ஆஃபீஸுக்கு போங்க"
+   },
+   "goal_dark": {
+    "en": "The power's gone again. Up the stair, by the torch; he's waiting at the top",
+    "ta": "திரும்ப கரண்ட் போச்சு. டார்ச் வெளிச்சத்துல மேல ஏறுங்க; அவர் மேல நிக்கறார்"
+   }
+  },
+  {
+   "do": "talk",
+   "lines": [
+    {
+     "who": "muniyandi",
+     "en": "Careful. The third step from the top is broken. The current has gone again, see.",
+     "ta": "பாத்து. மேல இருந்து மூணாவது படி உடைஞ்சிருக்கு. பாத்தியா, திரும்ப கரண்ட் போச்சு."
+    },
+    {
+     "who": "muniyandi",
+     "en": "This is where I was standing that night. Twenty to ten.",
+     "ta": "அன்னைக்கு ராத்திரி நான் இங்க தான் நின்னுட்டு இருந்தேன். பத்துக்கு இருபது நிமிஷம்."
+    },
+    {
+     "who": "muniyandi",
+     "en": "A man in a cap and a dark jacket, about your size. He had a card for the door. He went straight up.",
+     "ta": "தொப்பி போட்டு, கருப்பு ஜாக்கெட் போட்டு, உன் சைஸ்ல ஒருத்தன். கதவுக்கு கார்டு வச்சிருந்தான். நேரா மேல போனான்."
+    },
+    {
+     "who": "muniyandi",
+     "en": "Eighteen minutes later he came down, face to the wall all the way. I told the police. They wrote nothing.",
+     "ta": "பதினெட்டு நிமிஷம் கழிச்சு கீழ வந்தான், முகத்த சுவர் பக்கமாவே வச்சுக்கிட்டு. போலீஸ் கிட்ட சொன்னேன். ஒண்ணும் எழுதல."
+    },
+    {
+     "who": "karthik",
+     "en": "I never wear a cap, anna. Never.",
+     "ta": "நான் தொப்பியே போட மாட்டேன் அண்ணா. எப்பவுமே."
+    }
+   ]
+  },
+  {
+   "do": "talk",
+   "when": "honest_watchman",
+   "set_flag": "lead_nephew",
+   "lines": [
+    {
+     "who": "muniyandi",
+     "en": "Listen. The building's camera box... my nephew Kathir fixed it last month. He copies everything onto a drive, he's afraid of losing the job. Ask him. Saibaba Colony, behind the bakery.",
+     "ta": "கேளு. கட்டிடத்து கேமரா பெட்டி... என் அக்கா பையன் கதிர் போன மாசம் ரிப்பேர் பண்ணான். எல்லாத்தையும் ஒரு டிரைவ்ல காப்பி பண்ணிடுவான், வேலை போயிடுமோன்னு பயம். அவன கேளு. சாயிபாபா காலனி, பேக்கரிக்கு பின்னாடி."
+    }
+   ]
+  },
+  {
+   "do": "talk",
+   "when": "bribed_watchman",
+   "lines": [
+    {
+     "who": "muniyandi",
+     "en": "Now go. And you never came here, understand? Five hundred rupees doesn't buy you a witness.",
+     "ta": "இப்போ போ. நீ இங்க வரவே இல்ல, புரியுதா? ஐநூறு ரூபாய்க்கு சாட்சி கிடைக்காது."
+    }
+   ]
+  },
+  {
+   "do": "card",
+   "when": "honest_watchman",
+   "big": {
+    "en": "Evidence E06",
+    "ta": "சாட்சியம் E06"
+   },
+   "small": {
+    "en": "The watchman's word: a man in a cap went up at 9:40 PM with a key card, and came down at 9:58.\nUnverified until a second source backs it.  New lead: Kathir, the nephew, Saibaba Colony.",
+    "ta": "வாட்ச்மேனோட வாக்குமூலம்: தொப்பி போட்ட ஒருத்தன் ராத்திரி 9:40க்கு கீ கார்டோட மேல போனான், 9:58க்கு கீழ வந்தான்.\nஇன்னொரு ஆதாரம் வர வரைக்கும் உறுதி இல்ல.  புது தடயம்: கதிர், அக்கா பையன், சாயிபாபா காலனி."
+   }
+  },
+  {
+   "do": "card",
+   "when": "bribed_watchman",
+   "big": {
+    "en": "Evidence E06 (disputed)",
+    "ta": "சாட்சியம் E06 (சர்ச்சை)"
+   },
+   "small": {
+    "en": "The watchman's word: a man in a cap went up at 9:40 PM with a key card, and came down at 9:58.\nDisputed: you paid him. Suresh's lawyer will say you bought it. Find a second source.",
+    "ta": "வாட்ச்மேனோட வாக்குமூலம்: தொப்பி போட்ட ஒருத்தன் ராத்திரி 9:40க்கு கீ கார்டோட மேல போனான், 9:58க்கு கீழ வந்தான்.\nசர்ச்சை: நீங்க காசு குடுத்தீங்க. இத விலைக்கு வாங்கினதுன்னு சுரேஷோட வக்கீல் சொல்லுவாரு. இன்னொரு ஆதாரம் தேடுங்க."
+   }
+  },
+  {
+   "do": "card",
    "big": {
     "en": "To be continued",
     "ta": "தொடரும்"
    },
    "small": {
-    "en": "Next: the knock at the door.",
-    "ta": "அடுத்து: கதவு தட்டும் சத்தம்."
+    "en": "Next: the nephew's copy of the camera.",
+    "ta": "அடுத்து: அக்கா பையன் கிட்ட இருக்கற கேமரா காப்பி."
    }
   },
   {

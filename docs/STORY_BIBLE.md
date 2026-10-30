@@ -311,8 +311,8 @@ The days are game days, at 48 real minutes each (GAME_RULES.md §1).
 
 ---
 
-## 6b. Gatekeepers, bribes and frights (decided 2026-10-30)
-The investigation isn't only finding people: it's getting past the ones who won't let him in, and holding his nerve.
+## 6b. Gatekeepers and bribes (decided 2026-10-30)
+The investigation isn't only finding people: it's getting past the ones who won't let him in.
 
 ### Gatekeepers: the honest way and the quick way
 Every closed door has an honest way (slower, always there) and, where it's real life in this city, a bribe (fast).
@@ -331,24 +331,11 @@ anything but time. Karthik never bribes the police.
 | Pudhur Vayal | **Ponnusamy and the farmers** surround his scooter: they think he stole their money | Come back with Raghavan's note (E09) and show them; they become his witnesses | (none: they can't be bought, and offering makes them angrier) |
 | Bala's workshop, late night | **The shutter's down**; Bala doesn't answer his phone | Wait till morning | (none) |
 
-### Frights
-Short, grounded moments: no monsters, no gore. Each lands with a sudden sound and a jolt of the camera, and adds
-to Karthik's **stress** (GAME_DESIGN.md §3); a scared, stressed Karthik gets less from the next witness.
-
-| When | Where | What happens |
-|---|---|---|
-| Act 3, the night he first tries the office building | Raghavan Developers' stairwell | A power cut (as Coimbatore has): the lights die, the lift stops between floors. He climbs by his phone's torch. On the landing a figure rises with a stick and a shout of *"Yaaru?! Who's there!"*: it's Muniyandi |
-| Act 3, after a signing | An empty lane near the station | Headlights snap on behind him: the black sedan, parked nose-out, engine running. It follows three streets, then turns away |
-| Act 3, at home, 2 AM | Ganapathy | An unknown number calls. Silence, then breathing, then it cuts. (Pandi checking he's home; the call log becomes part of E13) |
-| Act 4, at Sekar's tea shop | Thondamuthur road | Across the road a man in a cap and a dark jacket watches over a newspaper. Karthik looks again and the bench is empty, the paper still turning in the wind |
-| Act 4, the mortuary corridor | Government Hospital | A flickering tube light, a trolley that rolls by itself out of a side door. The attendant behind it: *"Lost, sir?"* |
-| Act 4, the nephew's house | Saibaba Colony | The old TV playing the DVR jumps to full-volume static at 21:40 on the clock, and there's the cap |
-| Act 4, home after dark | Ganapathy | Amma, frightened: a man came asking when Karthik gets home. The gate latch rattles: it's only Bala, but the lane outside is dark and a motorbike pulls away |
-| Act 5, Bala's workshop | Ganapathy | Reaching for the job-card file, a car on the lift drops with a bang (a slipped jack) a hand's width from him. Bala's face, white |
-| Act 6, the trap | An empty mill shed on the Mettupalayam road | Suresh's "just us" meeting. The shed's lights go off; Pandi's step on the gravel behind. If Karthik called Sundaram and the police first, Selvi's torch comes through the door; if he came alone, he must run for the scooter |
-
-**Rule:** a fright never kills or injures Karthik and never ends the game. It costs stress and sometimes time, and
-it tells the player they're getting close.
+### No frights (decided 2026-10-30)
+The game has no jumpscares. Tension comes from the people who block him, the choices that cost later, the bail
+clock and the danger in the story (the black sedan following him, the trap in Act 6), never from sudden shocks.
+A power cut on the office stair at night is just that, as Coimbatore has them: the watchman waits at the top with
+his torch and tells him what he saw.
 
 ## 7. Relationships (shown through behaviour, not numbers)
 - **Amma:** trust stays, health worsens with gossip. Coming home for dinner, not missing signings and paying rent

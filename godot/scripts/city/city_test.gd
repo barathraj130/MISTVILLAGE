@@ -45,6 +45,7 @@ var _auto_lights := false                   # the headlights went on by themselv
 var walker: Walker                          # you on foot (F)
 var doors                                   # the doors of every building (city_doors.gd)
 var indoors := false                        # a story scene in a room under the street: no sun, room light
+var dark_room := false                      # a story room whose power has failed: only a torch and the street's glow
 var driving := false
 var placed := false                         # the car waits, frozen, until the road under it has loaded
 var cam_mode := 0                           # 0 chase, 1 cockpit, 2 bonnet
@@ -262,7 +263,7 @@ func _daylight() -> void:
 		sun.light_energy = 0.0
 		env.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
 		env.ambient_light_color = Color(0.86, 0.82, 0.75)    # light bounced off distemper walls is warm
-		env.ambient_light_energy = 0.32
+		env.ambient_light_energy = 0.03 if dark_room else 0.32
 		env.background_energy_multiplier = 0.0
 		env.fog_light_color = Color(0.05, 0.05, 0.05)
 		env.ssil_enabled = true                  # the walls and floor light each other (cheap bounce light)
