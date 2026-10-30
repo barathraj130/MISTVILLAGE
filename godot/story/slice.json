@@ -279,7 +279,25 @@
    "en": "Muniyandi (watchman)",
    "ta": "முனியாண்டி (வாட்ச்மேன்)",
    "colour": "#e0c890",
-   "model": "crowd_m3"
+   "model": "story_muniyandi"
+  },
+  "murugesan": {
+   "en": "Inspector Murugesan",
+   "ta": "இன்ஸ்பெக்டர் முருகேசன்",
+   "colour": "#d8b070",
+   "model": "story_murugesan"
+  },
+  "selvi": {
+   "en": "Constable Selvi",
+   "ta": "கான்ஸ்டபிள் செல்வி",
+   "colour": "#c8a868",
+   "model": "story_selvi"
+  },
+  "sundaram": {
+   "en": "Advocate Sundaram",
+   "ta": "வக்கீல் சுந்தரம்",
+   "colour": "#f0f0f0",
+   "model": "story_sundaram"
   }
  },
  "spawn": "home",
@@ -1987,16 +2005,370 @@
   },
   {
    "do": "card",
-   "clock": "21:15",
+   "clock": "08:10",
+   "add_days": 1,
+   "life": {
+    "tiredness": 22.0,
+    "energy": 55.0
+   },
    "big": {
-    "en": "Four days later",
-    "ta": "நாலு நாள் கழிச்சு"
+    "en": "The next morning",
+    "ta": "அடுத்த நாள் காலை"
    },
    "small": {
-    "en": "Arrested at dawn for Raghavan sir's murder. Two nights in a cell. Out on bail: sign at the station every evening, and never leave the district.\nAt tonight's signing, Constable Selvi slid a note under his pen: \"Ask the night watchman.\"",
-    "ta": "ராகவன் சார் கொலைக்காக விடியற்காலையில கைது. ரெண்டு ராத்திரி லாக்கப்ல. ஜாமீன்ல வெளிய: தினமும் சாயங்காலம் ஸ்டேஷன்ல கையெழுத்து, மாவட்டத்த விட்டு போகக்கூடாது.\nஇன்னைக்கு கையெழுத்து போடும்போது, கான்ஸ்டபிள் செல்வி பேனாவுக்கு கீழ ஒரு சீட்டு வச்சாங்க: \"நைட் வாட்ச்மேன கேளு.\""
+    "en": "Ganapathy. 8:15 AM.",
+    "ta": "கணபதி. காலை 8:15."
+   }
+  },
+  {
+   "do": "room",
+   "room": "home",
+   "at": "home",
+   "cast": {
+    "amma": {
+     "mark": "amma",
+     "anim": "Sit"
+    },
+    "divya": {
+     "mark": "divya"
+    },
+    "karthik": {
+     "mark": "karthik"
+    },
+    "murugesan": {
+     "mark": "door"
+    }
    },
-   "add_days": 4,
+   "shots": [
+    {
+     "cam": "wide",
+     "dur": 2.5
+    },
+    {
+     "line": {
+      "who": "murugesan",
+      "en": "Karthik? Raghavan sir was found dead this morning, at a site off the Thondamuthur road. You're coming with us.",
+      "ta": "கார்த்திக்? ராகவன் சார் இன்னைக்கு காலையில தொண்டாமுத்தூர் ரோடு பக்கம் ஒரு சைட்ல இறந்து கிடந்தாரு. நீ எங்களோட வரணும்."
+     },
+     "do": {
+      "murugesan": {
+       "anim": "Talk"
+      }
+     }
+    },
+    {
+     "line": {
+      "who": "karthik",
+      "en": "Sir... dead? I dropped him home last night. He was...",
+      "ta": "சார்... இறந்துட்டாரா? நேத்து ராத்திரி நான் தான் வீட்ல விட்டேன். அவர் நல்லா..."
+     },
+     "do": {
+      "murugesan": {
+       "anim": "Idle"
+      },
+      "karthik": {
+       "anim": "Talk"
+      }
+     }
+    },
+    {
+     "line": {
+      "who": "amma",
+      "en": "What are you saying? He was home all night!",
+      "ta": "என்ன சொல்றீங்க? அவன் ராத்திரி முழுக்க வீட்லதான் இருந்தான்!"
+     },
+     "do": {
+      "karthik": {
+       "anim": "Idle"
+      },
+      "amma": {
+       "anim": "SitTalk"
+      }
+     }
+    },
+    {
+     "line": {
+      "who": "karthik",
+      "en": "(She's wrong. I was out on a delivery till eleven. She was asleep.)",
+      "ta": "(அம்மா தப்பா சொல்றாங்க. நான் பதினொரு மணி வரைக்கும் டெலிவரியில இருந்தேன். அவங்க தூங்கிட்டாங்க.)"
+     },
+     "do": {
+      "amma": {
+       "anim": "Sit"
+      }
+     }
+    },
+    {
+     "line": {
+      "who": "divya",
+      "en": "Anna? Anna, what's happening?",
+      "ta": "அண்ணா? அண்ணா, என்ன நடக்குது?"
+     },
+     "do": {
+      "divya": {
+       "anim": "Talk"
+      }
+     }
+    },
+    {
+     "line": {
+      "who": "murugesan",
+      "en": "Everyone in the lane is watching, amma. Let him come quietly.",
+      "ta": "தெரு முழுக்க பாக்குது அம்மா. அமைதியா வரட்டும்."
+     },
+     "do": {
+      "divya": {
+       "anim": "Idle"
+      },
+      "murugesan": {
+       "anim": "Talk"
+      }
+     }
+    }
+   ]
+  },
+  {
+   "do": "card",
+   "clock": "11:00",
+   "big": {
+    "en": "Nagar Police Station",
+    "ta": "நகர் காவல் நிலையம்"
+   },
+   "small": {
+    "en": "Three hours on a bench. Then the inspector's table.",
+    "ta": "மூணு மணி நேரம் பெஞ்சுல. அப்புறம் இன்ஸ்பெக்டர் டேபிள்."
+   },
+   "life_add": {
+    "stress": 25.0
+   }
+  },
+  {
+   "do": "room",
+   "room": "police",
+   "at": "police",
+   "keep_room": true,
+   "cast": {
+    "murugesan": {
+     "mark": "inspector"
+    },
+    "selvi": {
+     "mark": "constable"
+    },
+    "karthik": {
+     "mark": "karthik"
+    }
+   },
+   "shots": [
+    {
+     "cam": "wide",
+     "dur": 2.5
+    },
+    {
+     "line": {
+      "who": "murugesan",
+      "en": "9:52 last night. A message to Raghavan sir from your phone: 'I'll come with the car.' Read it.",
+      "ta": "நேத்து ராத்திரி 9:52. உன் ஃபோன்லிருந்து ராகவன் சாருக்கு மெசேஜ்: 'கார்ல வரேன்.' படி."
+     },
+     "do": {
+      "murugesan": {
+       "anim": "Talk"
+      }
+     }
+    },
+    {
+     "line": {
+      "who": "murugesan",
+      "en": "10:12. His car on the Lawley Road camera, going west. You drive that car. Only you.",
+      "ta": "10:12. லாலி ரோடு கேமராவுல அவரோட கார், மேற்கு பக்கம் போகுது. அந்த கார நீ தான் ஓட்டுவ. நீ மட்டும் தான்."
+     },
+     "do": {
+      "murugesan": {
+       "anim": "Talk"
+      }
+     }
+    },
+    {
+     "line": {
+      "who": "murugesan",
+      "en": "And four lakh rupees, in your signature, from the bank that morning. Gone. Your sister's fees are due Friday, no?",
+      "ta": "அப்புறம் அன்னைக்கு காலையில பேங்க்ல உன் கையெழுத்துல நாலு லட்சம். காணோம். உன் தங்கச்சிக்கு வெள்ளிக்கிழமை ஃபீஸ் கட்டணும், இல்ல?"
+     },
+     "do": {
+      "murugesan": {
+       "anim": "Talk"
+      }
+     }
+    },
+    {
+     "line": {
+      "who": "murugesan",
+      "en": "So. Explain.",
+      "ta": "சரி. சொல்லு."
+     },
+     "do": {
+      "murugesan": {
+       "anim": "Idle"
+      }
+     }
+    }
+   ]
+  },
+  {
+   "do": "choose",
+   "prompt": {
+    "en": "The inspector waits. Selvi has stopped typing.",
+    "ta": "இன்ஸ்பெக்டர் காத்திருக்கார். செல்வி டைப் பண்றத நிறுத்திட்டாங்க."
+   },
+   "options": [
+    {
+     "text": {
+      "en": "Tell him everything: the phone was left at the office, and you were out on a delivery from 9:35",
+      "ta": "எல்லாத்தையும் சொல்லுங்க: ஃபோன் ஆஃபீஸ்ல இருந்துச்சு, நீங்க 9:35-லிருந்து டெலிவரியில இருந்தீங்க"
+     },
+     "set": "told_truth",
+     "max_stress": 85,
+     "stress": -5,
+     "shaken": {
+      "en": "(Tell him everything: your hands are shaking, the words won't come in order. Breathe first.)",
+      "ta": "(எல்லாத்தையும் சொல்லணும்: கை நடுங்குது, வார்த்தை வரிசையா வரல. முதல்ல மூச்சு விடுங்க.)"
+     }
+    },
+    {
+     "text": {
+      "en": "Say you were home all night, as Amma said",
+      "ta": "அம்மா சொன்ன மாதிரி, ராத்திரி முழுக்க வீட்லதான் இருந்தேன்னு சொல்லுங்க"
+     },
+     "set": "lied_home",
+     "stress": 5
+    },
+    {
+     "text": {
+      "en": "Say nothing until a lawyer comes",
+      "ta": "வக்கீல் வர வரைக்கும் ஒண்ணும் சொல்லாதீங்க"
+     },
+     "set": "kept_silent",
+     "stress": -8
+    }
+   ]
+  },
+  {
+   "do": "talk",
+   "when": "told_truth",
+   "lines": [
+    {
+     "who": "karthik",
+     "en": "My phone was at the office! Suresh sir told me to leave it there for the new app. At ten I was in Saravanampatti with a parcel. The app will show it.",
+     "ta": "என் ஃபோன் ஆஃபீஸ்லதான் இருந்துச்சு! புது ஆப்புக்காக சுரேஷ் சார்தான் அங்க வச்சுட்டு போகச் சொன்னாரு. பத்து மணிக்கு நான் சரவணம்பட்டியில ஒரு பார்சலோட இருந்தேன். ஆப்ல தெரியும்."
+    },
+    {
+     "who": "murugesan",
+     "en": "Apps. Phones. Anyone can carry a phone, thambi.",
+     "ta": "ஆப். ஃபோன். ஃபோன யார் வேணும்னாலும் தூக்கிட்டு போகலாம் தம்பி."
+    },
+    {
+     "who": "selvi",
+     "en": "(quietly) Sir, the app record has an OTP at 10:20. The customer typed it.",
+     "ta": "(மெதுவா) சார், ஆப் ரெக்கார்ட்ல 10:20-க்கு ஓடிபி இருக்கு. கஸ்டமர் தான் போட்டாரு."
+    },
+    {
+     "who": "murugesan",
+     "en": "Write it down, Selvi. Everything gets written down.",
+     "ta": "எழுதிக்கோ செல்வி. எல்லாம் எழுதணும்."
+    }
+   ]
+  },
+  {
+   "do": "talk",
+   "when": "lied_home",
+   "lines": [
+    {
+     "who": "karthik",
+     "en": "I was at home, sir. All night. Ask my mother.",
+     "ta": "நான் வீட்லதான் இருந்தேன் சார். ராத்திரி முழுக்க. அம்மாவ கேளுங்க."
+    },
+    {
+     "who": "murugesan",
+     "en": "(He turns a page in the file.) Your own delivery app. Gandhipuram at 9:50. Saravanampatti at 10:20.",
+     "ta": "(ஃபைல்ல ஒரு பக்கத்த திருப்பறார்.) உன்னோட டெலிவரி ஆப். 9:50-க்கு காந்திபுரம். 10:20-க்கு சரவணம்பட்டி."
+    },
+    {
+     "who": "murugesan",
+     "en": "Your mother lies for you. Now you lie for yourself. Why, if you have nothing to hide?",
+     "ta": "உன் அம்மா உனக்காக பொய் சொல்றாங்க. இப்போ நீ உனக்காக பொய் சொல்ற. ஒளிக்க ஒண்ணும் இல்லன்னா ஏன்?"
+    }
+   ]
+  },
+  {
+   "do": "talk",
+   "when": "kept_silent",
+   "lines": [
+    {
+     "who": "karthik",
+     "en": "Sir, I'll say nothing without a lawyer.",
+     "ta": "சார், வக்கீல் இல்லாம நான் ஒண்ணும் சொல்ல மாட்டேன்."
+    },
+    {
+     "who": "murugesan",
+     "en": "Hm. Then you can wait. Selvi, put him on the bench.",
+     "ta": "ம்ம். அப்போ காத்திரு. செல்வி, அவன பெஞ்சுல உக்கார வை."
+    }
+   ]
+  },
+  {
+   "do": "talk",
+   "lines": [
+    {
+     "who": "sundaram",
+     "en": "Muthu's son? Karthik. Not another word, thambi. I knew your father on the buses for twenty years.",
+     "ta": "முத்துவோட பையனா? கார்த்திக். இனிமே ஒரு வார்த்தையும் வேண்டாம் தம்பி. உங்க அப்பாவ பஸ்ல இருபது வருஷமா தெரியும்."
+    },
+    {
+     "who": "sundaram",
+     "en": "Inspector. A fact needs two legs. Right now this one is standing on one.",
+     "ta": "இன்ஸ்பெக்டர். ஒரு உண்மைக்கு ரெண்டு கால் வேணும். இது இப்போ ஒத்தக் கால்ல நிக்குது."
+    },
+    {
+     "who": "murugesan",
+     "en": "We'll see what the magistrate says, sir.",
+     "ta": "மாஜிஸ்திரேட் என்ன சொல்றாருன்னு பாப்போம் சார்."
+    }
+   ]
+  },
+  {
+   "do": "card",
+   "big": {
+    "en": "The case against him",
+    "ta": "அவருக்கு எதிரான வழக்கு"
+   },
+   "small": {
+    "en": "E01  The text from his work phone, 9:52 PM. Disputed: he says the phone was at the office.\nE02  The car on the Lawley Road camera, 10:12 PM. The driver wears a cap.\nE03  The ₹4,00,000 withdrawal, in his signature.\nE04  His delivery app: Gandhipuram 9:50, Saravanampatti 10:20. His alibi, weak on its own.",
+    "ta": "E01  வேலை ஃபோன்லிருந்து மெசேஜ், ராத்திரி 9:52. சர்ச்சை: ஃபோன் ஆஃபீஸ்ல இருந்துச்சுன்னு சொல்றார்.\nE02  லாலி ரோடு கேமராவுல கார், ராத்திரி 10:12. டிரைவர் தொப்பி போட்டிருக்கார்.\nE03  ₹4,00,000 எடுத்தது, அவர் கையெழுத்துல.\nE04  அவரோட டெலிவரி ஆப்: காந்திபுரம் 9:50, சரவணம்பட்டி 10:20. அவரோட அலிபை, தனியா பலவீனம்."
+   }
+  },
+  {
+   "do": "card",
+   "when": "lied_home",
+   "big": {
+    "en": "You lied",
+    "ta": "நீங்க பொய் சொன்னீங்க"
+   },
+   "small": {
+    "en": "The app caught it in a minute. The inspector will remember it at every signing.",
+    "ta": "ஒரு நிமிஷத்துல ஆப் பிடிச்சுடுச்சு. ஒவ்வொரு கையெழுத்துக்கும் இன்ஸ்பெக்டர் இத ஞாபகம் வச்சுப்பார்."
+   }
+  },
+  {
+   "do": "card",
+   "clock": "21:15",
+   "big": {
+    "en": "Three days later",
+    "ta": "மூணு நாள் கழிச்சு"
+   },
+   "small": {
+    "en": "Two nights in a cell, then bail: sign at the station every evening, and never leave the district.\nAt tonight's signing, Constable Selvi slid a note under his pen: \"Ask the night watchman.\"",
+    "ta": "ரெண்டு ராத்திரி லாக்கப்ல, அப்புறம் ஜாமீன்: தினமும் சாயங்காலம் ஸ்டேஷன்ல கையெழுத்து, மாவட்டத்த விட்டு போகக்கூடாது.\nஇன்னைக்கு கையெழுத்து போடும்போது, கான்ஸ்டபிள் செல்வி பேனாவுக்கு கீழ ஒரு சீட்டு வச்சாங்க: \"நைட் வாட்ச்மேன கேளு.\""
+   },
+   "add_days": 3,
    "life": {
     "energy": 65.0,
     "tiredness": 30.0,

@@ -31,7 +31,8 @@ extends Node
 ##   gigs      a delivery shift on the rider app: orders one after another (a restaurant of "pickups", a neighbourhood
 ##             of "drops", pay by distance, a tip when on time); E takes the order, Q ends the shift (or "until")
 ##   choose    a choice: "prompt" and "options" (1, 2, 3 on the keyboard), each one may "set" a flag (later steps
-##             follow it with "when" / "unless"), "pay" from the wallet and change Karthik's "stress"
+##             follow it with "when" / "unless"), "pay" from the wallet and change Karthik's "stress"; one with
+##             "max_stress" is out of reach for a Karthik more stressed than that (shown with its "shaken" line)
 ##   climb     on foot through a room ("room"/"at", from Mark_"start") up to Mark_landing, where the talk that
 ##             follows takes place; walking past Mark_cut the power fails (as it does in Coimbatore): the lights die
 ##             and the phone's torch comes on
@@ -107,6 +108,7 @@ var _climbing := false                # (on foot in a climb's room, until the st
 var _torch: SpotLight3D
 var _sfx: AudioStreamPlayer
 var _num_down := {}
+var _f2f: Node3D                      # face to face: the person Karthik is talking to, filling the view
 var _note := ""                       # home: a line under the goal for a few seconds (the car's HUD is off indoors)
 var _note_t := 0.0
 var room: Node3D                    # the room a scene is playing in, under the street
@@ -283,6 +285,9 @@ func _next() -> void:
 	if life and cur.has("life"):                        # where those days leave him (rested, fed, worn down)
 		for k in cur["life"]:
 			life.set(k, float(cur["life"][k]))
+	if life and cur.has("life_add"):                    # what this moment does to him (the arrest: stress)
+		for k in cur["life_add"]:
+			life.set(k, clampf(float(life.get(k)) + float(cur["life_add"][k]), 0.0, 100.0))
 	if life and (cur.has("clock") or cur.has("add_days")):   # a jump of the clock isn't hours awake
 		life._clock = life._clock_now()
 	if cur.has("set_flag"):                             # (a step that, when it plays, tells the later ones so)
@@ -290,9 +295,11 @@ func _next() -> void:
 	if cur.has("add_minutes") and fines:                # time that passes off screen (a ride on the scooter)
 		fines.sim.minute += float(cur["add_minutes"])
 	_jumped = false
+	if _f2f and not str(cur["do"]) in ["talk", "choose"]:          # the talk is over: his own eyes again
+		_f2f_off()
 	if _climbing and not str(cur["do"]) in ["talk", "choose"]:     # out of the dark building, back to the street
 		_end_climb()
-	if room != null and not str(cur["do"]) in ["room", "task", "talk", "comfort_verdict", "deliver_verdict", "card", "home"]:
+	if room != null and not str(cur["do"]) in ["room", "task", "talk", "comfort_verdict", "deliver_verdict", "card", "home", "choose"]:
 		_unload_room()
 		_cams_back()
 	if cur.has("vehicle") and car.vehicle != str(cur["vehicle"]):     # (the night delivery is on his scooter)
@@ -352,6 +359,9 @@ func _next() -> void:
 			_visit = 0
 			_in_task = false
 			_walk_in(str(cur.get("start", "karthik_room")))
+		"talk":
+			if city.walker and not cur.get("backdrop", false):
+				_face_to_face()
 		"climb":
 			_load_room(str(cur["room"]), str(cur.get("at", data["spawn"])))
 			_cast(cur.get("cast", {}))
@@ -571,7 +581,8 @@ func _load_room(name: String, at_key: String) -> void:
 	probe.interior = true
 	probe.enable_shadows = false
 	probe.update_mode = ReflectionProbe.UPDATE_ONCE
-	room.add_child(probe)
+	room.add_child(probe)                                # (Godot leaves its reflection atlas behind at quit:
+	                                                     #  "7 RIDs of type Texture were leaked", harmless)
 	if lights.is_empty():
 		for lp in [Vector3(-2.2, 2.85, 0.6), Vector3(2.2, 2.85, -0.6), Vector3(0.0, 2.85, -2.6)]:   # the tube lights' glow
 			var l := OmniLight3D.new()
@@ -769,6 +780,54 @@ func _meet() -> void:
 	goal.text = tr_(cur["goal"]) + ("\n" + hint if hint != "" else "")
 
 
+## Talking on foot: the view becomes Karthik's own eyes on the person he's talking to, close, their face and
+## shoulders filling it in a soft key light, as one sees a face across a counter or a gate.
+func _face_to_face() -> void:
+	var w: Node3D = city.walker
+	var who: Node3D = null
+	for ln in cur.get("lines", []):
+		var k := str(ln.get("who", ""))
+		if k != "karthik" and cast.has(k) and (cast[k] as Node3D).visible:
+			who = cast[k]
+			break
+	if who == null:
+		return
+	who.face(w.global_position)
+	var head: Vector3 = who.global_position + Vector3.UP * (1.05 if who.get("seated") else 1.5)
+	var d := Vector3(w.global_position.x - who.global_position.x, 0.0, w.global_position.z - who.global_position.z)
+	d = d.normalized() if d.length() > 0.05 else -who.global_basis.z
+	var at := _pull_in(head, head + d * 1.05 + Vector3.UP * 0.05)
+	if at == Vector3.INF:
+		at = head + d * 0.8
+	if scene_cam == null:
+		scene_cam = Camera3D.new()
+		scene_cam.far = 4000.0
+		add_child(scene_cam)
+	scene_cam.fov = 38.0
+	scene_cam.global_position = at
+	scene_cam.look_at(head - Vector3.UP * 0.06, Vector3.UP)
+	scene_cam.make_current()
+	_key_light(who, at)
+	if w.model:
+		w.model.visible = false                         # (it's his eyes: he isn't in the picture)
+	w.active = false
+	_f2f = who
+
+
+func _f2f_off() -> void:
+	_f2f = null
+	if face_light:
+		face_light.visible = false
+	if scene_cam:
+		scene_cam.fov = 50.0
+	var w: Node3D = city.walker
+	if w:
+		if w.model:
+			w.model.visible = w.third_person
+		w.active = true
+		w.camera.make_current()
+
+
 ## A choice: 1, 2, 3 on the keyboard. The option's flag is set for the steps after; its cost paid, its stress felt.
 func _choose() -> void:
 	var opts: Array = cur["options"]
@@ -783,7 +842,9 @@ func _choose() -> void:
 		for a in OS.get_cmdline_user_args():
 			if a.begins_with("--storychoose="):
 				pick = clampi(int(a.get_slice("=", 1)) - 1, 0, opts.size() - 1)
-	if pick < 0:
+		while pick < opts.size() - 1 and _shaken(opts[pick]):
+			pick += 1
+	if pick < 0 or _shaken(opts[pick]):
 		return
 	var o: Dictionary = opts[pick]
 	if o.has("set"):
@@ -796,6 +857,12 @@ func _choose() -> void:
 		life.add_stress(float(o["stress"]))
 	print("STORY chose %d: %s" % [pick + 1, tr_(o["text"])])
 	_next()
+
+
+## An option a stressed Karthik can't manage ("max_stress": above it, it's shown greyed with its "shaken" line).
+func _shaken(o: Dictionary) -> bool:
+	var life = city.life if "life" in city else null
+	return life != null and o.has("max_stress") and life.stress > float(o["max_stress"])
 
 
 ## On foot up the building's stair: the power fails at Mark_cut; at Mark_landing the talk begins.
@@ -1454,6 +1521,8 @@ func _refresh() -> void:
 			small.text = tr_(data["places"][cur["to"]])
 		"talk", "comfort_verdict", "deliver_verdict":
 			_say(cur["lines"][line_i])
+			if _f2f and kind == "talk":                  # face to face: he talks when it's his line, listens to Karthik's
+				_f2f.play("Talk" if str(cur["lines"][line_i]["who"]) == str(_f2f.get("who")) else "Idle")
 		"drive":
 			var to: Dictionary = data["places"][cur["to"]]
 			goal.text = tr_(cur["goal"]) + "\n" + tr_(to)
@@ -1467,7 +1536,11 @@ func _refresh() -> void:
 			who.text = ""
 			var lines: Array = [tr_(cur["prompt"]), ""]
 			for i in cur["options"].size():
-				lines.append("%d   %s" % [i + 1, tr_(cur["options"][i]["text"])])
+				var o: Dictionary = cur["options"][i]
+				if _shaken(o):                           # too stressed for this one: shown, but out of reach
+					lines.append("%d   %s" % [i + 1, tr_(o.get("shaken", {"en": "(you can't, now)", "ta": "(இப்போ முடியாது)"}))])
+				else:
+					lines.append("%d   %s" % [i + 1, tr_(o["text"])])
 			said.text = "\n".join(lines)
 			hint.text = ("Press 1 – %d" if lang == "en" else "1 – %d அழுத்துங்க") % cur["options"].size()
 			box.visible = true

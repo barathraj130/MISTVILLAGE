@@ -44,7 +44,16 @@ CAST = [
      (0.85, 0.55, 0.25), 812),
     ("ashwin", 1.0, 27, 0.5, 0.5, 0.6, "young_asian_male", "short02", "mindfront_eyebrows_03", "trousers",
      (0.15, 0.15, 0.17), 913),
+    ("muniyandi", 1.0, 63, 0.48, 0.42, 0.47, "old_african_male", "short01", "eyebrow004", "veshti",   # the watchman
+     (0.95, 0.95, 0.92), 1313),
+    ("murugesan", 1.0, 50, 0.68, 0.6, 0.55, "middleage_african_male", "short04", "eyebrow004", "trousers",   # the inspector
+     (0.55, 0.43, 0.25), 1414),
+    ("selvi", 0.0, 38, 0.58, 0.45, 0.45, "middleage_african_female", "braid01", "mindfront_eyebrows_08", "modern_f",
+     (0.55, 0.43, 0.25), 1515),                                                                               # the constable
+    ("sundaram", 1.0, 66, 0.55, 0.38, 0.5, "old_african_male", "short02", "eyebrow004", "trousers",          # the advocate
+     (0.95, 0.95, 0.93), 1616),
 ]
+UNIFORM = {"murugesan": (0.52, 0.41, 0.24), "selvi": (0.52, 0.41, 0.24)}   # police khaki, shirt and trousers alike
 FPS = 24
 
 
@@ -94,12 +103,12 @@ def build(c):
         shirt = {"trousers": colour, "veshti": (0.92, 0.92, 0.88),
                  "saree": (colour[0] * 0.6 + 0.25, colour[1] * 0.6 + 0.2, colour[2] * 0.6 + 0.15), "modern_f": colour}[outfit]
         SP.plain_clothes(cl, shirt, outfit)
-        if key == "divya":                                 # navy trousers: the waistband reads as jeans, not a grey band
+        if key == "divya" or key in UNIFORM:               # navy jeans; the police's khaki trousers
             for m in cl.data.materials:
                 if m and m.name.startswith("Pants") and m.node_tree:
                     bsdf = m.node_tree.nodes.get("Principled BSDF")
                     if bsdf:
-                        bsdf.inputs["Base Color"].default_value = (0.06, 0.08, 0.2, 1.0)
+                        bsdf.inputs["Base Color"].default_value = (*UNIFORM.get(key, (0.06, 0.08, 0.2)), 1.0)
         if outfit == "veshti":                           # no trouser legs under the draped cloth
             SP.cut_below(cl, 0.95)
         elif outfit == "saree":                          # the T-shirt becomes a fitted saree blouse
