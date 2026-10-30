@@ -42,7 +42,7 @@ city as a witness (roads, times, cameras, tea shops); the hills on the horizon a
 - She is the player's home base: meals, worry and the family photos (evidence E14).
 
 ### Divya, 19
-- Karthik's sister, second-year computer engineering at a college in **Saravanampatti**.
+- Karthik's sister, second-year computer engineering at **Velliangiri College of Technology** in Peelamedu (fictional).
 - Quick, funny and teases him. Her fees (₹42,000, due Friday) are why Karthik takes night delivery jobs, and why
   the police find a motive.
 - In Act 4 she helps with phones, apps and CCTV formats.
@@ -128,10 +128,17 @@ fictional.
 | Lawley Road junction | towards Thondamuthur road | Traffic camera: the SUV at 22:12 (E02) |
 | Hotel Anna Mess (fictional) | Gandhipuram | Pickup point for the night delivery |
 | Ashwin's flat | Saravanampatti | Delivery drop: the alibi (E04, E05) |
-| Divya's college | Saravanampatti | Family scenes |
 | Pudhur Vayal site (fictional village) | off the Thondamuthur road, west of the city | The crime scene (off-screen); Sekar's tea shop |
 | Court | Gandhipuram | Act 6 |
 | The ghat road and Kotagiri | outside the district | Closed until the end of Part 1 |
+| District Collectorate | Race Course end of the city, the old building | The patta / land counter: E16 |
+| Government Hospital | Trichy Road | The mortuary and the post-mortem: E17; Amma's check-up when the gossip wears her down |
+| The Siruvani Grand (fictional five-star) | Avinashi Road | Where Suresh meets land buyers: E18 |
+| Velliangiri College of Technology (fictional) | Peelamedu | Divya's college: the bullying (Act 3); her friends read the DVR format (E07) |
+| Perur Pateeswarar temple | Perur | Meenakshi prays here after the funeral; where she first listens to Karthik (Act 4) |
+| Gandhipuram bus stand | Gandhipuram | Where Pandi tries to leave town: E19 (Act 6) |
+| Coimbatore Junction | Station Road | Timetables and the stand's taxis: checking Pandi's other ways out (Act 6) |
+| Kovai Trade Fair Complex (fictional) | Avinashi Road | Joseph the accountant at a stall at the industrial expo, away from Suresh's eyes (Act 6) |
 
 ---
 
@@ -223,6 +230,10 @@ Advocate Sundaram), or **disputed** when a source contradicts it. Each item has 
 | E13 | Pandi's phone location at the site, 22:30–23:00 | court order | Pandi was there | Leads to his confession | Act 6 |
 | E14 | Family photos: Karthik never in a cap | Amma's albums, Divya's phone | He doesn't wear caps | Disputes E02 | Act 4 |
 | E15 | Suresh's debts to the money-lender | Joseph, the accountant | Suresh's motive | Motive | Act 6 |
+| E16 | Land records: Pudhur Vayal plots registered to "Kongu Green Estates", a firm of Suresh's wife, a week before the murder | District Collectorate, patta counter | Suresh already owned the deal Raghavan refused to sign | Motive (with E09, E15) | Act 4 |
+| E17 | Post-mortem: death between 22:40 and 23:10 | Government Hospital, through Priya | When he died | Karthik was home or on the road from Saravanampatti then (E05) | Act 4 |
+| E18 | The Siruvani Grand: Suresh lunching with two land buyers, Day 2; the doorman remembers his ring | the hotel's doorman, Ganesan | Suresh was selling Green Valley before it was signed | Motive, and a witness who saw Suresh's ring tell | Act 4 |
+| E19 | Gandhipuram bus stand CCTV: Pandi buying a ticket to Salem, Day 22 | the stand's office (via Selvi) | Pandi is running | Leads to his arrest and confession (E13) | Act 6 |
 
 **Journey reconstruction (a gameplay tool):** the player drives a route on the real roads at the right time of day.
 The game records the real-world travel time and attaches it to the board as evidence for or against a timeline. For
@@ -268,6 +279,9 @@ The days are game days, at 48 real minutes each (GAME_RULES.md §1).
   - **The road west:** Sekar's tea shop (E08) and the Pudhur Vayal farmers, angry at first.
   - **The family:** Priya. She finds the note (E09) with Revathi and starts to doubt. Meenakshi believes.
   - **The photos:** family albums (E14).
+  - **The land:** the Collectorate's land records (E16) and the Siruvani Grand's doorman (E18).
+  - **The time of death:** the post-mortem (E17), through Priya once she doubts.
+  - **Meenakshi:** at Perur temple after the funeral, she lets him speak for the first time.
 - **Gameplay:**
   - Evidence, the deduction board, relationships, journey reconstruction.
   - The bail signing shapes every day.
@@ -285,7 +299,8 @@ The days are game days, at 48 real minutes each (GAME_RULES.md §1).
 ### Act 6, The truth (Days 21–25)
 - **Story:**
   - The meeting with Suresh is a trap. The player must stay lawful: don't take the bait, and call Sundaram.
-  - Sundaram files for E10 and E13. Pandi, cornered, turns approver. Joseph opens the books (E15).
+  - Sundaram files for E10 and E13. Pandi tries to leave town from the Gandhipuram bus stand (E19) and is held; cornered,
+    he turns approver. Joseph opens the books (E15), meeting Karthik at the trade fair complex, away from Suresh.
   - The trial: Karthik's journey reconstruction is played in court, minute by minute on the map.
   - Murugesan, convinced at last, arrests Suresh.
 - **Ending:**
@@ -295,6 +310,45 @@ The days are game days, at 48 real minutes each (GAME_RULES.md §1).
     Mettupalayam, and the ghat checkpoint lifts its barrier. Part 2 begins.
 
 ---
+
+## 6b. Gatekeepers, bribes and frights (decided 2026-10-30)
+The investigation isn't only finding people: it's getting past the ones who won't let him in, and holding his nerve.
+
+### Gatekeepers: the honest way and the quick way
+Every closed door has an honest way (slower, always there) and, where it's real life in this city, a bribe (fast).
+**A bribe always works, and always costs later:** in court, Suresh's lawyer uses it to call that evidence bought
+(it starts **disputed** and needs a second leg), the inspector's suspicion rises if he hears of it, and Sundaram is
+disappointed ("A fact you paid for walks on one leg, thambi"). Refusing a bribe someone asks for never costs
+anything but time. Karthik never bribes the police.
+
+| Where | Who blocks him | The honest way | The quick way, and what it costs |
+|---|---|---|---|
+| Raghavan Developers' building, night | **Muniyandi** at the gate: *"Police said nobody goes up. And you're the accused!"* He shuts the gate in his face | Come back on a later night with hot tea and vadai, sit with him; ask about his son who's out of work. On the third night he talks (E06), and in Act 4 sends Karthik to his nephew (E07) | ₹500 "for tea": he lets him into the lobby and talks that night. In court E06 is disputed until E07 backs it |
+| The DVR copy, the nephew's house | **The nephew** wants ₹5,000 for "his" copy | Divya's college friends show it's the building's own footage, and Sundaram asks for it properly; the nephew hands it over | Pay: the copy comes at once, but its chain of custody is weak and the defence attacks it |
+| District Collectorate, patta counter | **A clerk**: *"Apply online. Fifteen working days."* A tout by the door offers *"Two thousand, today itself"* | Apply (the game's clock runs the 15 days while he works other leads), or Revathi's office copy of the file (Act 4) | Pay the tout: E16 the same day, but the tout is later caught and Karthik's name is in his book: suspicion rises |
+| Government Hospital, mortuary | **The attendant** hints that a report "can be seen" for money | Only through Priya, once she doubts (Act 4): she asks as the family | Refused in any case: the attendant has nothing real to sell (a fake copy, which Sundaram spots) |
+| The Siruvani Grand | **Security** at the lobby door: a man in a delivery uniform doesn't get past | Buy a good shirt at a mall and have lunch there (₹1,450): the doorman Ganesan talks to a guest (E18) | A tip to the doorman at the gate: he takes it and says nothing useful |
+| Pudhur Vayal | **Ponnusamy and the farmers** surround his scooter: they think he stole their money | Come back with Raghavan's note (E09) and show them; they become his witnesses | (none: they can't be bought, and offering makes them angrier) |
+| Bala's workshop, late night | **The shutter's down**; Bala doesn't answer his phone | Wait till morning | (none) |
+
+### Frights
+Short, grounded moments: no monsters, no gore. Each lands with a sudden sound and a jolt of the camera, and adds
+to Karthik's **stress** (GAME_DESIGN.md §3); a scared, stressed Karthik gets less from the next witness.
+
+| When | Where | What happens |
+|---|---|---|
+| Act 3, the night he first tries the office building | Raghavan Developers' stairwell | A power cut (as Coimbatore has): the lights die, the lift stops between floors. He climbs by his phone's torch. On the landing a figure rises with a stick and a shout of *"Yaaru?! Who's there!"*: it's Muniyandi |
+| Act 3, after a signing | An empty lane near the station | Headlights snap on behind him: the black sedan, parked nose-out, engine running. It follows three streets, then turns away |
+| Act 3, at home, 2 AM | Ganapathy | An unknown number calls. Silence, then breathing, then it cuts. (Pandi checking he's home; the call log becomes part of E13) |
+| Act 4, at Sekar's tea shop | Thondamuthur road | Across the road a man in a cap and a dark jacket watches over a newspaper. Karthik looks again and the bench is empty, the paper still turning in the wind |
+| Act 4, the mortuary corridor | Government Hospital | A flickering tube light, a trolley that rolls by itself out of a side door. The attendant behind it: *"Lost, sir?"* |
+| Act 4, the nephew's house | Saibaba Colony | The old TV playing the DVR jumps to full-volume static at 21:40 on the clock, and there's the cap |
+| Act 4, home after dark | Ganapathy | Amma, frightened: a man came asking when Karthik gets home. The gate latch rattles: it's only Bala, but the lane outside is dark and a motorbike pulls away |
+| Act 5, Bala's workshop | Ganapathy | Reaching for the job-card file, a car on the lift drops with a bang (a slipped jack) a hand's width from him. Bala's face, white |
+| Act 6, the trap | An empty mill shed on the Mettupalayam road | Suresh's "just us" meeting. The shed's lights go off; Pandi's step on the gravel behind. If Karthik called Sundaram and the police first, Selvi's torch comes through the door; if he came alone, he must run for the scooter |
+
+**Rule:** a fright never kills or injures Karthik and never ends the game. It costs stress and sometimes time, and
+it tells the player they're getting close.
 
 ## 7. Relationships (shown through behaviour, not numbers)
 - **Amma:** trust stays, health worsens with gossip. Coming home for dinner, not missing signings and paying rent
