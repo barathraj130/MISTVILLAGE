@@ -1,10 +1,14 @@
 extends RefCounted
 ## The people in a public room (the station, a bus stand, the airport, a mall, the church, the stadium): the room's
 ## Crowd_<pose>_<n> marks (tools/city_rooms.py: sitting on a bench, standing in a queue, two friends talking) filled
-## with our own people (tools/people.py), each dressed in colours of its own as the street crowd is
-## (pedestrians.gd), sitting, idling or talking, each at its own moment of the clip. Who is where is decided by
-## the building (the same crowd every visit); not every mark is taken. Standing people are solid.
+## with the crowd people (tools/humans/crowd_cast.py: made as the story's cast is, faces of their own, lighter),
+## sitting, idling or talking, each at its own moment of the clip. Who is where is decided by the building (the same
+## crowd every visit); not every mark is taken. Standing people are solid. (Without the crowd people, the older
+## figures of tools/people.py, dressed in colours of their own as the street crowd is.)
 
+const CROWD := "res://assets/people/crowd_%s.glb"
+const CROWD_WHO := ["m1", "m2", "m3", "m4", "m5", "m6", "w1", "w2", "w3", "w4", "w5", "w6"]
+const STRIDE := {"m3": 1.0, "w1": 0.85, "w2": 0.85, "w3": 0.85, "w6": 0.85}   # m a Walk cycle (saree, veshti: shorter)
 const DIR := "res://assets/people/person_%s.glb"
 const WHO := ["man_shirt", "man_shirt", "man_lungi", "woman_saree", "woman_saree", "woman_kurta", "woman_kurta",
 	"elder", "schoolkid"]
@@ -59,12 +63,20 @@ static func fill(room: Node3D, body: StaticBody3D, key: String, fill := 0.7) -> 
 
 ## One of our people, chosen and dressed by rng, added under parent (null if the model isn't there).
 static func person(parent: Node, rng: RandomNumberGenerator) -> Node3D:
+	var key: String = CROWD_WHO[rng.randi() % CROWD_WHO.size()]
+	if ResourceLoader.exists(CROWD % key):
+		var p := (load(CROWD % key) as PackedScene).instantiate() as Node3D
+		parent.add_child(p)
+		p.scale = Vector3.ONE * rng.randf_range(0.96, 1.04)
+		p.set_meta("stride", STRIDE.get(key, 1.18))    # (the cast's Walk: 1.18 m a cycle, measured on the clip)
+		return p
 	var who: String = WHO[rng.randi() % WHO.size()]
 	if not ResourceLoader.exists(DIR % who):
 		return null
 	var npc := (load(DIR % who) as PackedScene).instantiate() as Node3D
 	parent.add_child(npc)
 	npc.scale = Vector3.ONE * rng.randf_range(0.94, 1.06)
+	npc.set_meta("stride", 1.25)
 	_dress(npc, who, rng)
 	return npc
 

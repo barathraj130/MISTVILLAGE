@@ -124,7 +124,7 @@ func _step(w: Dictionary, dt: float) -> void:
 			if randf() < 0.25:
 				w["wait"] = randf_range(1.5, 4.0)
 	_place(w, dt)
-	_play(w, "Walk", w["speed"] / STRIDE)
+	_play(w, "Walk", w["speed"] / float((w["node"] as Node3D).get_meta("stride", STRIDE)))
 
 
 func _place(w: Dictionary, dt: float) -> void:

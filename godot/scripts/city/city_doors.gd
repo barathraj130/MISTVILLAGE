@@ -18,7 +18,6 @@ const ROOMS := "res://assets/interiors/room_%s.glb"
 const Crowd := preload("res://scripts/city/crowd.gd")
 const RoomWalkers := preload("res://scripts/city/room_walkers.gd")
 const RoomSound := preload("res://scripts/city/room_sound.gd")
-const STAFF := "res://assets/people/person_%s.glb"
 const DEPTH := 300.0                 # rooms sit this far below the street
 const REACH := 1.6                   # how near a wall you must be for its door
 const SHOPS := ["kirana", "kirana", "tea", "restaurant", "kirana", "tea", "restaurant", "bank"]
@@ -245,10 +244,10 @@ func enter(d: Dictionary, walker: Node3D) -> void:
 	veil.global_transform = Transform3D(_room.global_basis, _exit + _room.global_basis.z * 0.75 + Vector3(0, 2.5, 0))
 	var staff := _room.find_child("Staff", true, false) as Node3D
 	if staff:
-		var who: String = ["man_shirt", "woman_kurta", "man_lungi", "woman_saree"][absi(hash(d["key"])) % 4]
-		if ResourceLoader.exists(STAFF % who):
-			var npc := (load(STAFF % who) as PackedScene).instantiate() as Node3D
-			_room.add_child(npc)
+		var srng := RandomNumberGenerator.new()          # one of the crowd people (the same one every visit)
+		srng.seed = hash(d["key"] + "staff")
+		var npc := Crowd.person(_room, srng)
+		if npc:
 			npc.global_position = staff.global_position
 			var to_door := _exit - staff.global_position
 			npc.rotation.y = atan2(to_door.x, to_door.z)
