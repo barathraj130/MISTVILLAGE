@@ -21,9 +21,14 @@ Values marked **(in game)** are already built; everything else is to build.
   fall due on Monday morning.
 - The clock **runs** while you drive or walk. It **pauses** in menus, on the phone screen and in cutscenes.
   Conversations take fixed game time (most of them 10–30 minutes).
-- **Sleeping** at home skips to 6:30 AM. Staying awake more than 20 game hours makes you tired: the screen dulls at
-  the edges and steering gets slower until you sleep. Sleeping in the car is allowed, but you wake stiff and late
-  (8 AM).
+- **Sleep, food and stress** (built 2026-10-29: `scripts/city/life.gd`, GAME_DESIGN.md §3):
+  - **Tiredness** climbs about 5.5 a game hour (faster driving). Only sleep clears it, and a sleep lasts **at least
+    5 game hours** (longer the more tired he is): at home, in a hotel room, or in the car (badly: stress up). At 100 he
+    falls asleep where he is, or dozes at the wheel (the screen dims) until he pulls over.
+  - **Energy** (food) falls about 7 a game hour. Meals fill it: at home from the month's groceries, or paid for
+    outside (a mess ₹90, a restaurant ₹120, tea and a vada ₹20). Under 25 he can't run; at 0 stress climbs.
+  - **Stress** rises with traffic, challans, fines and bills, and falls with pay and time off (a match, a film, tea,
+    a quiet sit in a church or temple).
 - **Opening hours (in game):** shops, banks, offices and garages keep real hours. Fuel stations, hospitals and police
   stations never close.
 - **Story-timed drives run on real time.** On drives where the story's timeline matters (the night of the crime,
@@ -39,7 +44,7 @@ Values marked **(in game)** are already built; everything else is to build.
 - **Running costs:**
   - Fuel at real pump prices (diesel ₹94 a litre **(in game)**, petrol ₹101).
   - Rent: ₹1,200 a week.
-  - Food and daily needs: ₹200 a day, taken at night.
+  - Food: the month's groceries at the kirana (₹4,500, about 90 meals at home), or meals bought outside (§1).
   - Repairs at garage prices.
   - Optional insurance: ₹600 a week, covers 70% of repairs.
 - **Can't pay?** Nothing is taken that you don't have; the bill stays owed.
