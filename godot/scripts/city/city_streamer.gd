@@ -665,7 +665,7 @@ func _flyovers(roads: Array, out: Dictionary) -> void:
 		var xs: Array = pair[1]
 		if xs.is_empty() or pair[2] == null:
 			continue
-		var mm := MultiMesh.new()
+		var mm := _MM.new()
 		mm.transform_format = MultiMesh.TRANSFORM_3D
 		mm.mesh = pair[2]
 		mm.instance_count = xs.size()
@@ -742,7 +742,7 @@ func _medians(roads: Array, out: Dictionary) -> void:
 	shape.set_faces(faces)
 	out["median_shape"] = shape
 	if not plants.is_empty() and shrub_mesh:
-		var mm := MultiMesh.new()
+		var mm := _MM.new()
 		mm.transform_format = MultiMesh.TRANSFORM_3D
 		mm.mesh = shrub_mesh
 		mm.instance_count = plants.size()
@@ -851,7 +851,7 @@ func _buildings(blds: Array, out: Dictionary) -> void:
 			var m: Mesh = kit_meshes[variant] if lod == 0 else kit_far_meshes[variant]
 			if m == null:
 				continue
-			var mm := MultiMesh.new()
+			var mm := _MM.new()
 			mm.transform_format = MultiMesh.TRANSFORM_3D
 			mm.mesh = m
 			mm.instance_count = xs.size()
@@ -1054,7 +1054,7 @@ func _walks(walks: Array, out: Dictionary, g: Array) -> void:
 				_quad(kb, near_e, far_e, _down(g, far_e), _down(g, near_e), tq, Color(0.5, 0.48, 0.45),
 					Vector2.ZERO, Vector2.ZERO, Vector2.ZERO, Vector2.ZERO, Vector2.ZERO)
 	if not seps.is_empty():
-		var smm := MultiMesh.new()
+		var smm := _MM.new()
 		smm.transform_format = MultiMesh.TRANSFORM_3D
 		smm.mesh = shrub_mesh
 		smm.instance_count = seps.size()
@@ -1080,7 +1080,7 @@ func _walks(walks: Array, out: Dictionary, g: Array) -> void:
 		shape.set_faces(faces)
 		out["walk_shape"] = shape
 	if not lamps.is_empty():
-		var mm := MultiMesh.new()
+		var mm := _MM.new()
 		mm.transform_format = MultiMesh.TRANSFORM_3D
 		mm.mesh = lamp_mesh
 		mm.instance_count = lamps.size()
@@ -1142,7 +1142,7 @@ func _props(props: Array, out: Dictionary) -> void:
 	var mms := []
 	var hump := PackedVector3Array()
 	for kind in by:
-		var mm := MultiMesh.new()
+		var mm := _MM.new()
 		mm.transform_format = MultiMesh.TRANSFORM_3D
 		mm.use_custom_data = kind == 1
 		mm.mesh = prop_meshes[kind]
@@ -1451,7 +1451,7 @@ func _life(life: Array, out: Dictionary, roads: Array = []) -> void:
 	var names: Array = life_names
 	for key in by:
 		var kind: int = key.x
-		var mm := MultiMesh.new()
+		var mm := _MM.new()
 		mm.transform_format = MultiMesh.TRANSFORM_3D
 		mm.mesh = life_meshes[kind]
 		mm.instance_count = by[key].size()
@@ -1459,7 +1459,7 @@ func _life(life: Array, out: Dictionary, roads: Array = []) -> void:
 			mm.set_instance_transform(i, by[key][i])
 		var nm: String = names[kind]
 		if kind < life_far.size() and life_far[kind] != null:
-			var fm := MultiMesh.new()
+			var fm := _MM.new()
 			fm.transform_format = MultiMesh.TRANSFORM_3D
 			fm.mesh = life_far[kind]
 			fm.instance_count = by[key].size()
@@ -1709,7 +1709,7 @@ func _yards(yards: Array, out: Dictionary) -> void:
 	var tm := []
 	for tkey in trees:
 		for lod in 3:                                   # 0 near, 1 far, 2 the near set's shadow from the far mesh
-			var mm := MultiMesh.new()
+			var mm := _MM.new()
 			mm.transform_format = MultiMesh.TRANSFORM_3D
 			mm.mesh = tree_meshes[tkey.x][mini(lod, 1)]
 			mm.instance_count = trees[tkey].size()
@@ -1719,7 +1719,7 @@ func _yards(yards: Array, out: Dictionary) -> void:
 	out["trees"] = tm
 	var bm2 := []
 	for bi in bikes:
-		var mm := MultiMesh.new()
+		var mm := _MM.new()
 		mm.transform_format = MultiMesh.TRANSFORM_3D
 		mm.mesh = bike_meshes[bi]
 		mm.instance_count = bikes[bi].size()
@@ -1916,6 +1916,48 @@ func _tri(t: Array, a: Vector3, b: Vector3, c: Vector3, col: Color) -> void:
 
 
 # ----------------------------------------------------------------------------- main thread
+
+## Worker threads don't make MultiMeshes (a renderer resource: made off the main thread, now and then it crashed the
+## game as it started): they fill one of these with the same fields, and _instance makes the real one from it.
+class _MM:
+	var transform_format := MultiMesh.TRANSFORM_3D
+	var mesh: Mesh
+	var use_custom_data := false
+	var xforms: Array[Transform3D] = []
+	var custom: Array[Color] = []
+	var real: MultiMesh
+	var instance_count := 0:
+		set(v):
+			instance_count = v
+			xforms.resize(v)
+			custom.resize(v)
+
+	func set_instance_transform(i: int, t: Transform3D) -> void:
+		xforms[i] = t
+
+	func set_instance_custom_data(i: int, c: Color) -> void:
+		custom[i] = c
+
+
+## The real MultiMesh for a worker's _MM (made once, on the main thread).
+func _real(x) -> MultiMesh:
+	if x is MultiMesh or x == null:
+		return x
+	var m: _MM = x
+	if m.real == null:
+		var mm := MultiMesh.new()
+		mm.transform_format = m.transform_format
+		mm.use_custom_data = m.use_custom_data
+		mm.mesh = m.mesh
+		mm.instance_count = m.instance_count
+		for i in m.instance_count:
+			mm.set_instance_transform(i, m.xforms[i])
+			if m.use_custom_data:
+				mm.set_instance_custom_data(i, m.custom[i])
+		m.real = mm
+	return m.real
+
+
 func _instance(k: Vector2i, d: Dictionary) -> void:
 	if loaded.has(k) or d.is_empty():
 		return
@@ -1954,7 +1996,7 @@ func _instance(k: Vector2i, d: Dictionary) -> void:
 		node.add_child(fmi)
 	for km in ([] if "--nokits" in OS.get_cmdline_user_args() else d.get("kits", [])):
 		var mmi := MultiMeshInstance3D.new()
-		mmi.multimesh = km[0]
+		mmi.multimesh = _real(km[0])
 		if km[1] == 0:
 			mmi.visibility_range_end = kit_near + 10.0
 		else:
@@ -1990,7 +2032,7 @@ func _instance(k: Vector2i, d: Dictionary) -> void:
 		_shape(node, jcs)
 	for pm in d.get("props", []):
 		var pmi := MultiMeshInstance3D.new()
-		pmi.multimesh = pm
+		pmi.multimesh = _real(pm)
 		pmi.visibility_range_end = 350.0
 		node.add_child(pmi)
 	if d.has("hump_shape"):
@@ -2011,7 +2053,7 @@ func _instance(k: Vector2i, d: Dictionary) -> void:
 	var skip := OS.get_cmdline_user_args()
 	for tr in ([] if "--notrees" in skip else d.get("trees", [])):
 		var tmi := MultiMeshInstance3D.new()
-		tmi.multimesh = tr[0]
+		tmi.multimesh = _real(tr[0])
 		if tr[1] == 0:
 			tmi.visibility_range_end = TREE_NEAR + LIFE_CELL * 0.71
 			tmi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
@@ -2044,22 +2086,22 @@ func _instance(k: Vector2i, d: Dictionary) -> void:
 	for fk in ["fly_piers", "fly_lamps"]:
 		if d.has(fk):
 			var fpi := MultiMeshInstance3D.new()
-			fpi.multimesh = d[fk]
+			fpi.multimesh = _real(d[fk])
 			fpi.visibility_range_end = 900.0
 			node.add_child(fpi)
 	if d.has("sep_plants"):
 		var spi := MultiMeshInstance3D.new()
-		spi.multimesh = d["sep_plants"]
+		spi.multimesh = _real(d["sep_plants"])
 		spi.visibility_range_end = 250.0
 		node.add_child(spi)
 	if d.has("median_plants"):
 		var mpi := MultiMeshInstance3D.new()
-		mpi.multimesh = d["median_plants"]
+		mpi.multimesh = _real(d["median_plants"])
 		mpi.visibility_range_end = 250.0
 		node.add_child(mpi)
 	for lm in ([] if "--nolife" in OS.get_cmdline_user_args() else d.get("life", [])):
 		var lmi2 := MultiMeshInstance3D.new()
-		lmi2.multimesh = lm[0]
+		lmi2.multimesh = _real(lm[0])
 		lmi2.visibility_range_end = lm[1]
 		lmi2.visibility_range_begin = lm[2]
 		lmi2.lod_bias = lm[0].get_meta("lod_bias", 1.0)
@@ -2081,14 +2123,14 @@ func _instance(k: Vector2i, d: Dictionary) -> void:
 		node.add_child(wmi2)
 	for bm3 in d.get("bikes", []):
 		var bmi := MultiMeshInstance3D.new()
-		bmi.multimesh = bm3
+		bmi.multimesh = _real(bm3)
 		bmi.visibility_range_end = 70.0
 		bmi.lod_bias = 6.0                  # keep detail: a coarse level drops the painted body and leaves floating wheels
 		bmi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 		node.add_child(bmi)
 	if d.has("lamps"):
 		var lmi := MultiMeshInstance3D.new()
-		lmi.multimesh = d["lamps"]
+		lmi.multimesh = _real(d["lamps"])
 		lmi.visibility_range_end = 450.0
 		node.add_child(lmi)
 	if d.has("building_shape"):
