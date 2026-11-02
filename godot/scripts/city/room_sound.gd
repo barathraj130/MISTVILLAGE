@@ -232,6 +232,21 @@ static func _oneshot(kind: String) -> AudioStreamWAV:
 				var t := i / RATE
 				out[i] = (sin(t * 880.0 * TAU) + 0.7 * sin(t * 1410.0 * TAU) + 0.4 * sin(t * 2650.0 * TAU)) * exp(-t * 5.0) * 0.4 \
 					+ rng.randf_range(-1.0, 1.0) * exp(-t * 80.0) * 0.8
+		"knock":                                            # three knocks on a wooden door, a fist
+			out.resize(int(RATE * 1.3))
+			for k in 3:
+				var start := int(RATE * 0.32 * k)
+				var bp := _Biquad.bandpass(180.0 + 25.0 * k, 3.0)
+				for i in range(start, out.size()):
+					var t := (i - start) / RATE
+					out[i] += (bp.step(rng.randf_range(-1.0, 1.0)) * 3.0 + sin(t * 95.0 * TAU)) * exp(-t * 28.0) * 0.7
+		"engine":                                           # a diesel jeep's idle from the back seat (a loop of 2 s)
+			out.resize(int(RATE * 2.0))
+			var lp := _Biquad.lowpass(260.0)
+			for i in out.size():
+				var t := i / RATE
+				var firing := absf(sin(t * 15.0 * PI)) ** 6.0
+				out[i] = lp.step(rng.randf_range(-1.0, 1.0) * (0.4 + firing) + sin(t * 30.0 * TAU) * 0.6) * 0.9
 	return _store(kind, out, false)
 
 

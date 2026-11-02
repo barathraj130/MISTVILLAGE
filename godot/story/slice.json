@@ -1948,23 +1948,6 @@
    ]
   },
   {
-   "do": "room",
-   "room": "home",
-   "at": "home",
-   "keep_room": true,
-   "cast": {
-    "karthik": {
-     "mark": "karthik_room"
-    }
-   },
-   "shots": [
-    {
-     "cam": "room",
-     "dur": 3
-    }
-   ]
-  },
-  {
    "do": "home",
    "room": "home",
    "at": "home",
@@ -1983,10 +1966,6 @@
      "home_meal": true,
      "food": "dosa",
      "minutes": 15,
-     "title": {
-      "en": "Dinner: Amma kept dosa for you",
-      "ta": "இரவு சாப்பாடு: அம்மா தோசை வச்சிருக்காங்க"
-     },
      "goal": {
       "en": "Dinner: Amma kept it warm in the kitchen",
       "ta": "இரவு சாப்பாடு: அம்மா கிச்சன்ல சூடா வச்சிருக்காங்க"
@@ -1996,224 +1975,318 @@
       "ta": "சாப்பிடுங்க"
      }
     }
-   ]
+   ],
+   "keep": true
   },
   {
-   "do": "task",
-   "task": "phone",
-   "mode": "call"
-  },
-  {
-   "do": "card",
-   "clock": "08:10",
-   "add_days": 1,
-   "life": {
-    "tiredness": 22.0,
-    "energy": 55.0
-   },
-   "big": {
-    "en": "The next morning",
-    "ta": "அடுத்த நாள் காலை"
-   },
-   "small": {
-    "en": "Ganapathy. 8:15 AM.",
-    "ta": "கணபதி. காலை 8:15."
+   "do": "call",
+   "from": {
+    "en": "Unknown number",
+    "ta": "தெரியாத நம்பர்"
    }
   },
   {
-   "do": "room",
+   "do": "talk",
+   "lines": [
+    {
+     "who": "karthik",
+     "en": "Hello? ...Hello? Who is this?",
+     "ta": "ஹலோ? ...ஹலோ? யாரு?"
+    },
+    {
+     "who": "karthik",
+     "en": "(Only breathing. Then the line goes dead.)",
+     "ta": "(மூச்சு சத்தம் மட்டும். அப்புறம் லைன் கட் ஆகுது.)"
+    }
+   ]
+  },
+  {
+   "do": "home",
    "room": "home",
    "at": "home",
+   "start": "here",
+   "visits": [
+    {
+     "to": "karthik_room",
+     "sleep_until": "06:10",
+     "goal": {
+      "en": "Go to bed",
+      "ta": "தூங்க போங்க"
+     },
+     "prompt": {
+      "en": "sleep",
+      "ta": "தூங்குங்க"
+     }
+    }
+   ],
+   "keep": true
+  },
+  {
+   "do": "home",
+   "room": "home",
+   "at": "home",
+   "start": "here",
+   "knock": 3.2,
+   "add_days": 0,
    "cast": {
     "amma": {
      "mark": "amma",
-     "anim": "Sit"
+     "anim": "Idle"
     },
     "divya": {
-     "mark": "divya"
-    },
-    "karthik": {
-     "mark": "karthik"
+     "mark": "divya",
+     "anim": "Idle"
     },
     "murugesan": {
-     "mark": "door"
+     "mark": "door",
+     "anim": "Idle"
     }
    },
-   "shots": [
+   "visits": [
     {
-     "cam": "wide",
-     "dur": 2.5
-    },
-    {
-     "line": {
-      "who": "murugesan",
-      "en": "Karthik? Raghavan sir was found dead this morning, at a site off the Thondamuthur road. You're coming with us.",
-      "ta": "கார்த்திக்? ராகவன் சார் இன்னைக்கு காலையில தொண்டாமுத்தூர் ரோடு பக்கம் ஒரு சைட்ல இறந்து கிடந்தாரு. நீ எங்களோட வரணும்."
+     "to": "murugesan",
+     "reach": 1.8,
+     "goal": {
+      "en": "Someone is knocking at the door",
+      "ta": "யாரோ கதவ தட்டுறாங்க"
      },
-     "do": {
-      "murugesan": {
-       "anim": "Talk"
-      }
+     "prompt": {
+      "en": "open the door",
+      "ta": "கதவ திறங்க"
      }
+    }
+   ],
+   "keep": true,
+   "life_add": {
+    "stress": 10
+   }
+  },
+  {
+   "do": "talk",
+   "lines": [
+    {
+     "who": "murugesan",
+     "en": "Karthik? Raghavan sir was found dead this morning, at a site off the Thondamuthur road. You're coming with us.",
+     "ta": "கார்த்திக்? ராகவன் சார் இன்னைக்கு காலையில தொண்டாமுத்தூர் ரோடு பக்கம் ஒரு சைட்ல இறந்து கிடந்தாரு. நீ எங்களோட வரணும்."
     },
     {
-     "line": {
-      "who": "karthik",
-      "en": "Sir... dead? I dropped him home last night. He was...",
-      "ta": "சார்... இறந்துட்டாரா? நேத்து ராத்திரி நான் தான் வீட்ல விட்டேன். அவர் நல்லா..."
-     },
-     "do": {
-      "murugesan": {
-       "anim": "Idle"
-      },
-      "karthik": {
-       "anim": "Talk"
-      }
-     }
+     "who": "karthik",
+     "en": "Sir... dead? I dropped him home last night. He was...",
+     "ta": "சார்... இறந்துட்டாரா? நேத்து ராத்திரி நான் தான் வீட்ல விட்டேன். அவர் நல்லா..."
     },
     {
-     "line": {
-      "who": "amma",
-      "en": "What are you saying? He was home all night!",
-      "ta": "என்ன சொல்றீங்க? அவன் ராத்திரி முழுக்க வீட்லதான் இருந்தான்!"
-     },
-     "do": {
-      "karthik": {
-       "anim": "Idle"
-      },
-      "amma": {
-       "anim": "SitTalk"
-      }
-     }
+     "who": "murugesan",
+     "en": "Here. The warrant. Read it, if you like.",
+     "ta": "இந்தா. வாரண்ட். படிச்சுக்கோ.",
+     "to": "karthik"
+    }
+   ]
+  },
+  {
+   "do": "give",
+   "item": {
+    "id": "warrant",
+    "kind": "paper",
+    "stamp": true,
+    "from": {
+     "en": "Nagar Police Station, Coimbatore City",
+     "ta": "நகர் காவல் நிலையம், கோயம்புத்தூர்"
+    },
+    "title": {
+     "en": "Warrant of Arrest",
+     "ta": "கைது வாரண்ட்"
+    },
+    "body": {
+     "en": "To: Karthik M., son of the late Muthu, Ganapathy, Coimbatore.\n\nWHEREAS Karthik M. stands accused of an offence in Crime No. 412 of this year (the death of Shri R. Raghavan, Raghavan Developers), you are hereby directed to accompany the officers bearing this warrant to Nagar Police Station.\n\nGiven under my hand and the seal of the station.\n\nInspector of Police (Law & Order)\nM. Murugesan",
+     "ta": "கார்த்திக் ம., காலஞ்சென்ற முத்துவின் மகன், கணபதி, கோயம்புத்தூர்.\n\nஇந்த வருட குற்ற எண் 412 (ராகவன் டெவலப்பர்ஸ், திரு ர. ராகவன் அவர்களின் மரணம்) தொடர்பாக குற்றம் சாட்டப்பட்டுள்ளதால், இந்த வாரண்ட்டுடன் வரும் அதிகாரிகளுடன் நகர் காவல் நிலையத்திற்கு வர வேண்டும்.\n\nகாவல் ஆய்வாளர் (சட்டம் ஒழுங்கு)\nம. முருகேசன்"
+    }
+   }
+  },
+  {
+   "do": "talk",
+   "lines": [
+    {
+     "who": "amma",
+     "en": "What are you saying? He was home all night!",
+     "ta": "என்ன சொல்றீங்க? அவன் ராத்திரி முழுக்க வீட்லதான் இருந்தான்!"
     },
     {
-     "line": {
-      "who": "karthik",
-      "en": "(She's wrong. I was out on a delivery till eleven. She was asleep.)",
-      "ta": "(அம்மா தப்பா சொல்றாங்க. நான் பதினொரு மணி வரைக்கும் டெலிவரியில இருந்தேன். அவங்க தூங்கிட்டாங்க.)"
-     },
-     "do": {
-      "amma": {
-       "anim": "Sit"
-      }
-     }
+     "who": "karthik",
+     "en": "(She's wrong. I was out on a delivery till eleven. She was asleep.)",
+     "ta": "(அம்மா தப்பா சொல்றாங்க. நான் பதினொரு மணி வரைக்கும் டெலிவரியில இருந்தேன். அவங்க தூங்கிட்டாங்க.)"
     },
     {
-     "line": {
-      "who": "divya",
-      "en": "Anna? Anna, what's happening?",
-      "ta": "அண்ணா? அண்ணா, என்ன நடக்குது?"
-     },
-     "do": {
-      "divya": {
-       "anim": "Talk"
-      }
-     }
-    },
+     "who": "divya",
+     "en": "Anna? Anna, what's happening?",
+     "ta": "அண்ணா? அண்ணா, என்ன நடக்குது?"
+    }
+   ]
+  },
+  {
+   "do": "talk",
+   "lines": [
     {
-     "line": {
-      "who": "murugesan",
-      "en": "Everyone in the lane is watching, amma. Let him come quietly.",
-      "ta": "தெரு முழுக்க பாக்குது அம்மா. அமைதியா வரட்டும்."
+     "who": "murugesan",
+     "en": "Everyone in the lane is watching, amma. Let him come quietly.",
+     "ta": "தெரு முழுக்க பாக்குது அம்மா. அமைதியா வரட்டும்."
+    }
+   ]
+  },
+  {
+   "do": "home",
+   "room": "home",
+   "at": "home",
+   "start": "here",
+   "visits": [
+    {
+     "to": "door",
+     "reach": 1.4,
+     "goal": {
+      "en": "Go with them",
+      "ta": "அவங்க கூட போங்க"
      },
-     "do": {
-      "divya": {
-       "anim": "Idle"
-      },
-      "murugesan": {
-       "anim": "Talk"
-      }
+     "prompt": {
+      "en": "walk out with them",
+      "ta": "அவங்க கூட வெளியே போங்க"
      }
     }
    ]
   },
   {
-   "do": "card",
-   "clock": "11:00",
-   "big": {
-    "en": "Nagar Police Station",
-    "ta": "நகர் காவல் நிலையம்"
-   },
-   "small": {
-    "en": "Three hours on a bench. Then the inspector's table.",
-    "ta": "மூணு மணி நேரம் பெஞ்சுல. அப்புறம் இன்ஸ்பெக்டர் டேபிள்."
-   },
+   "do": "ride",
+   "vehicle": "xuv",
+   "paint": [
+    0.93,
+    0.93,
+    0.9
+   ],
+   "secs": 28,
    "life_add": {
-    "stress": 25.0
+    "stress": 15
+   },
+   "cast": {
+    "amma": {
+     "pos": [
+      -3.0,
+      1.6
+     ],
+     "look": [
+      0,
+      0
+     ],
+     "anim": "Idle"
+    },
+    "divya": {
+     "pos": [
+      -3.4,
+      2.6
+     ],
+     "look": [
+      0,
+      0
+     ],
+     "anim": "Idle"
+    }
    }
   },
   {
-   "do": "room",
+   "do": "home",
    "room": "police",
    "at": "police",
-   "keep_room": true,
+   "start": "door",
    "cast": {
     "murugesan": {
-     "mark": "inspector"
+     "mark": "inspector",
+     "anim": "Idle"
     },
     "selvi": {
-     "mark": "constable"
-    },
-    "karthik": {
-     "mark": "karthik"
+     "mark": "constable",
+     "anim": "Idle"
     }
    },
-   "shots": [
+   "visits": [
     {
-     "cam": "wide",
-     "dur": 2.5
+     "to": "selvi",
+     "auto": true,
+     "reach": 2.2,
+     "goal": {
+      "en": "Constable Selvi is waiting",
+      "ta": "கான்ஸ்டபிள் செல்வி காத்திருக்காங்க"
+     }
+    }
+   ],
+   "keep": true
+  },
+  {
+   "do": "talk",
+   "lines": [
+    {
+     "who": "selvi",
+     "en": "Your phone. Give it here. And sit there, where I can see you.",
+     "ta": "உன் ஃபோன். இங்க குடு. அங்க உட்காரு, நான் பாக்கற மாதிரி."
+    }
+   ]
+  },
+  {
+   "do": "home",
+   "room": "police",
+   "at": "police",
+   "start": "here",
+   "keep": true,
+   "visits": [
+    {
+     "to": "selvi",
+     "goal": {
+      "en": "Hand Selvi your phone",
+      "ta": "செல்வி கிட்ட ஃபோன குடுங்க"
+     },
+     "prompt": {
+      "en": "hand over your phone",
+      "ta": "ஃபோன குடுங்க"
+     },
+     "hand_phone": true
     },
     {
-     "line": {
-      "who": "murugesan",
-      "en": "9:52 last night. A message to Raghavan sir from your phone: 'I'll come with the car.' Read it.",
-      "ta": "நேத்து ராத்திரி 9:52. உன் ஃபோன்லிருந்து ராகவன் சாருக்கு மெசேஜ்: 'கார்ல வரேன்.' படி.",
-      "to": "karthik"
+     "to": "karthik",
+     "goal": {
+      "en": "Sit and wait",
+      "ta": "உட்கார்ந்து காத்திருங்க"
      },
-     "do": {
-      "murugesan": {
-       "anim": "Talk"
-      }
-     }
+     "prompt": {
+      "en": "sit down",
+      "ta": "உட்காருங்க"
+     },
+     "wait": 45,
+     "stress_per_hour": 20
+    }
+   ]
+  },
+  {
+   "do": "talk",
+   "lines": [
+    {
+     "who": "murugesan",
+     "en": "9:52 last night. A message to Raghavan sir from your phone: 'I'll come with the car.' Read it.",
+     "ta": "நேத்து ராத்திரி 9:52. உன் ஃபோன்லிருந்து ராகவன் சாருக்கு மெசேஜ்: 'கார்ல வரேன்.' படி.",
+     "to": "karthik"
     },
     {
-     "line": {
-      "who": "murugesan",
-      "en": "10:12. His car on the Lawley Road camera, going west. You drive that car. Only you.",
-      "ta": "10:12. லாலி ரோடு கேமராவுல அவரோட கார், மேற்கு பக்கம் போகுது. அந்த கார நீ தான் ஓட்டுவ. நீ மட்டும் தான்.",
-      "to": "karthik"
-     },
-     "do": {
-      "murugesan": {
-       "anim": "Talk"
-      }
-     }
+     "who": "murugesan",
+     "en": "10:12. His car on the Lawley Road camera, going west. You drive that car. Only you.",
+     "ta": "10:12. லாலி ரோடு கேமராவுல அவரோட கார், மேற்கு பக்கம் போகுது. அந்த கார நீ தான் ஓட்டுவ. நீ மட்டும் தான்.",
+     "to": "karthik"
     },
     {
-     "line": {
-      "who": "murugesan",
-      "en": "And four lakh rupees, in your signature, from the bank that morning. Gone. Your sister's fees are due Friday, no?",
-      "ta": "அப்புறம் அன்னைக்கு காலையில பேங்க்ல உன் கையெழுத்துல நாலு லட்சம். காணோம். உன் தங்கச்சிக்கு வெள்ளிக்கிழமை ஃபீஸ் கட்டணும், இல்ல?",
-      "to": "karthik"
-     },
-     "do": {
-      "murugesan": {
-       "anim": "Talk"
-      }
-     }
+     "who": "murugesan",
+     "en": "And four lakh rupees, in your signature, from the bank that morning. Gone. Your sister's fees are due Friday, no?",
+     "ta": "அப்புறம் அன்னைக்கு காலையில பேங்க்ல உன் கையெழுத்துல நாலு லட்சம். காணோம். உன் தங்கச்சிக்கு வெள்ளிக்கிழமை ஃபீஸ் கட்டணும், இல்ல?",
+     "to": "karthik"
     },
     {
-     "line": {
-      "who": "murugesan",
-      "en": "So. Explain.",
-      "ta": "சரி. சொல்லு.",
-      "to": "karthik"
-     },
-     "do": {
-      "murugesan": {
-       "anim": "Idle"
-      }
-     }
+     "who": "murugesan",
+     "en": "So. Explain.",
+     "ta": "சரி. சொல்லு.",
+     "to": "karthik"
     }
    ]
   },

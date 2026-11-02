@@ -41,6 +41,7 @@ var photos: Array = []                         # [{"tex": Texture2D, "tag": "", 
                                                #   [{"lines": [[who, text]...], "tag": "", "label": {en, ta}}]
 var targets: Array = []                        # [{"node": Node3D, "tag": "", "label": {en, ta}, "reach": metres}]
 var recording := false
+var taken := false                             # handed over (at the station): P finds an empty pocket
 var unread := 0
 var ringing := {}                              # an incoming call: {"from": {en, ta}}
 var _rec: Array = []
@@ -142,6 +143,8 @@ func has_photo(tag: String) -> bool:
 
 func _arrive() -> void:
 	unread += 1
+	if taken:
+		return
 	if _buzz and is_inside_tree():
 		_buzz.play()
 
@@ -183,7 +186,7 @@ func _process(dt: float) -> void:
 	if recording:
 		_rec_t += dt
 	var p := Input.is_key_pressed(KEY_P)
-	if p and not _p_down and not _blocked():
+	if p and not _p_down and not _blocked() and not taken:
 		if app == "camera" and is_open:
 			_open_app("")
 		else:

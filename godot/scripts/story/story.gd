@@ -112,6 +112,7 @@ var _f2f: Node3D                      # face to face: the person Karthik is talk
 var _goal_first := ""                 # the goal now on his phone (its first line)
 var prompt: Label                     # the key for the thing in front of him
 var _KEY_LINE := RegEx.create_from_string("^(E|F|Q|P|I|Enter|Shift|Space)\\b|^[A-Z]: ")
+var _knock_t := 0.0
 var _note := ""                       # home: a line under the goal for a few seconds (the car's HUD is off indoors)
 var _note_t := 0.0
 var room: Node3D                    # the room a scene is playing in, under the street
@@ -234,6 +235,8 @@ func _process(dt: float) -> void:
 				city.hands.put_back()
 			if t_step > 0.3 and city.hands.held.is_empty():
 				_next()
+		"ride":
+			_ride(dt)
 		"call":                                          # the phone rings until he answers
 			if _skip and t_step > 1.5:
 				city.phone.answer()
@@ -358,11 +361,12 @@ func _next() -> void:
 	if cur.has("add_minutes") and fines:                # time that passes off screen (a ride on the scooter)
 		fines.sim.minute += float(cur["add_minutes"])
 	_jumped = false
-	if _f2f and not str(cur["do"]) in ["talk", "choose"]:          # the talk is over: his own eyes again
+	if _f2f and not str(cur["do"]) in ["talk", "choose", "give"]:          # the talk is over: his own eyes again
 		_f2f_off()
 	if _climbing and not str(cur["do"]) in ["talk", "choose"]:     # out of the dark building, back to the street
 		_end_climb()
-	if room != null and not str(cur["do"]) in ["room", "task", "talk", "comfort_verdict", "deliver_verdict", "card", "home", "choose"]:
+	if room != null and not str(cur["do"]) in ["room", "task", "talk", "comfort_verdict", "deliver_verdict", "card", "home", "choose",
+			"give", "take", "note", "message", "contact", "pin", "call", "table"]:
 		_unload_room()
 		_cams_back()
 	if cur.has("vehicle") and car.vehicle != str(cur["vehicle"]):     # (the night delivery is on his scooter)
@@ -391,8 +395,12 @@ func _next() -> void:
 			return
 		"give":                                          # into his hands, to read
 			city.hands.give(cur["item"])
+			if city.walker:
+				city.walker.active = false
 		"call":
 			city.phone.call_from(cur["from"])
+		"ride":
+			_ride_start()
 		"drive":
 			var p := place_pos(cur["to"])
 			map.pin = Vector2(p.x, p.z)
@@ -446,7 +454,12 @@ func _next() -> void:
 			_cast(cur.get("cast", {}))
 			_visit = 0
 			_in_task = false
-			_walk_in(str(cur.get("start", "karthik_room")))
+			_knock_t = 0.0
+			if str(cur.get("start", "")) == "here" and city.walker:   # (on from where he stands: a talk in between)
+				city.walker.activate()
+				_ring.visible = true
+			else:
+				_walk_in(str(cur.get("start", "karthik_room")))
 		"talk":
 			if city.walker and not cur.get("backdrop", false):
 				_face_to_face()
@@ -1062,7 +1075,10 @@ func _task_done(result: Dictionary) -> void:
 			if cur.has("late_after") and fines:          # out of the house after this: late (for later steps)
 				var hm: PackedStringArray = str(cur["late_after"]).split(":")
 				flags["late_morning"] = fines.sim.minute > float(hm[0]) * 60.0 + float(hm[1])
-			_walk_out()
+			if not cur.get("keep", false):               # ("keep": he stays on his feet in the room for what follows)
+				_walk_out()
+			elif _ring:
+				_ring.visible = false
 			_next()
 		return
 	if str(cur.get("do", "")) == "eat_out" and room != null:     # eating out: a moment of him eating, then on
@@ -1142,13 +1158,28 @@ func _home() -> void:
 	if _in_task or city.walker == null:
 		return
 	var v: Dictionary = cur["visits"][_visit]
-	var m := _mark(str(v["to"]))
-	if m == null:
-		_task_done({})
-		return
-	var at := m.global_position
+	if cur.has("knock"):                                 # someone at the door, knocking until it's opened
+		_knock_t -= get_process_delta_time()
+		if _knock_t <= 0.0:
+			_knock_t = float(cur["knock"])
+			_play_sfx("knock", -4.0)
+	var at := Vector3.INF
+	if cast.has(str(v["to"])) and (cast[str(v["to"])] as Node3D).visible:   # (to a person: up to them)
+		var a: Node3D = cast[str(v["to"])]
+		at = a.global_position + (city.walker.global_position - a.global_position).normalized() * 0.9
+		at.y = a.global_position.y
+	else:
+		var m := _mark(str(v["to"]))
+		if m == null:
+			_task_done({})
+			return
+		at = m.global_position
 	_ring.global_position = at + Vector3.UP * 0.03 + Vector3(0, sin(t_step * 4.0) * 0.02, 0)
-	var near := Vector2(city.walker.global_position.x - at.x, city.walker.global_position.z - at.z).length() < 1.1
+	var near := Vector2(city.walker.global_position.x - at.x, city.walker.global_position.z - at.z).length() < float(v.get("reach", 1.1))
+	if near and v.get("auto", false):                    # (just getting there is enough: the door, the corridor's end)
+		t_step = 0.0
+		_start_visit(v)
+		return
 	var e := Input.is_key_pressed(KEY_E)
 	if _skip and v.get("home_meal", false) and _peek == -1 and t_step > 0.2:   # (testing: walk him up to the meal)
 		_peek = _visit
@@ -1171,12 +1202,15 @@ func _home() -> void:
 		_start_visit(v)
 	_e_down = e
 	_note_t -= get_process_delta_time()
-	goal.text = tr_(v["goal"]) + ("\n" + ("E: " if lang == "en" else "E: ") + tr_(v.get("prompt", {"en": "go", "ta": "போ"})) if near else "") \
+	goal.text = tr_(v.get("goal", "")) + ("\n" + ("E: " if lang == "en" else "E: ") + tr_(v.get("prompt", {"en": "go", "ta": "போ"})) if near else "") \
 		+ ("\n" + _note if _note_t > 0.0 else "")
 
 
 func _start_visit(v: Dictionary) -> void:
 	_in_task = true
+	if not v.has("task"):                                # walking somewhere, and what he does there
+		_visit_do(v)
+		return
 	var spec: Dictionary = v.duplicate()
 	if v.get("home_meal", false) and fines and fines.sim.groceries <= 0:
 		# the month's groceries are finished: the next month's bought now (the kirana delivers)
@@ -1188,6 +1222,200 @@ func _start_visit(v: Dictionary) -> void:
 		spec["wallet"] = fines.sim.money
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 	tasks.start(str(v.get("task", "ready")), spec, lang, _skip)
+
+
+## A visit without a picture task: what he does when he gets there.
+##   "sleep_until": "06:10"  lies down; his eyes close and the night goes by (life.gd), to that time the next day
+##   "wait": minutes         sits there (the mark faces the way he sits) while the clock runs, stress "stress_per_hour"
+##   "hand_phone": true      hands his phone over (it's gone from his pocket until "phone_back")
+##   "phone_back": true      gets it back
+##   (none of these)         just being there (and E) is enough: the next step follows
+func _visit_do(v: Dictionary) -> void:
+	var life = city.life
+	if v.has("sleep_until") and life:
+		var hm: PackedStringArray = str(v["sleep_until"]).split(":")
+		var to := float(hm[0]) * 60.0 + float(hm[1])
+		var mins: float = to - fines.sim.minute + (1440.0 if to <= fines.sim.minute else 0.0)
+		var m0: float = fines.sim.minute
+		await life._pass(mins, "night's sleep", null, {"sleep": true, "stress": -8.0, "food": 0.0})
+		life.tiredness = 0.0
+		print("STORY slept %.0f min: %.0f → day %d %.0f" % [mins, m0, fines.sim.day, fines.sim.minute])
+	elif v.has("wait") and life:
+		var m := _mark(str(v["to"]))
+		var s0: float = life.stress
+		var m0: float = fines.sim.minute
+		var mins := float(v["wait"]) * (0.2 if _skip else 1.0)
+		await life.sit_wait(m, fines.sim.minute + mins, str(v.get("pose", "Sit")))
+		life.stress = clampf(s0 + float(v.get("stress_per_hour", 0.0)) * (fines.sim.minute - m0) / 60.0, 0.0, 100.0)
+	if v.get("hand_phone", false):
+		city.phone.hold(false)
+		city.phone.taken = true
+	if v.get("phone_back", false):
+		city.phone.taken = false
+	_task_done({})
+
+
+# ---- riding as a passenger ----
+## "ride": Karthik in the back seat of someone else's vehicle ("vehicle", "paint"), the streets going past the window,
+## for "secs"; then the picture goes dark and the next step finds him there. "cast": people where it sets off
+## (Amma at the gate), placed in the vehicle's frame as scenes are.
+var _ride_path := PackedVector3Array()
+var _ride_i2 := 0
+var _ride_speed := 0.0
+var _ride_used := {}
+var _ride_snd: AudioStreamPlayer
+var _window: Control                     # the back seat's window: a dark frame and the rear grille's bars
+
+
+func _draw_window() -> void:
+	var vs := _window.get_viewport_rect().size
+	var c := Color(0.02, 0.02, 0.025)
+	var m := Vector4(vs.x * 0.07, vs.y * 0.1, vs.x * 0.07, vs.y * 0.2)     # left, top, right, bottom
+	_window.draw_rect(Rect2(0, 0, vs.x, m.y), c)
+	_window.draw_rect(Rect2(0, vs.y - m.w, vs.x, m.w), c)
+	_window.draw_rect(Rect2(0, 0, m.x, vs.y), c)
+	_window.draw_rect(Rect2(vs.x - m.z, 0, m.z, vs.y), c)
+	var r := 60.0                                         # rounded inner corners
+	for k in 4:
+		var cx: float = m.x if k % 2 == 0 else vs.x - m.z
+		var cy: float = m.y if k < 2 else vs.y - m.w
+		var sx := 1.0 if k % 2 == 0 else -1.0
+		var sy := 1.0 if k < 2 else -1.0
+		var pts := PackedVector2Array([Vector2(cx, cy)])
+		for i in 9:
+			var a := PI * 0.5 * i / 8.0
+			pts.append(Vector2(cx + sx * (r - r * sin(a)), cy + sy * (r - r * cos(a))))
+		_window.draw_colored_polygon(pts, c)
+	for i in 3:                                           # the steel bars of a police jeep's back
+		var x := m.x + (vs.x - m.x - m.z) * (i + 1) / 4.0
+		_window.draw_rect(Rect2(x - 5.0, m.y, 10.0, vs.y - m.y - m.w), Color(0.08, 0.08, 0.09))
+	_window.draw_rect(Rect2(m.x, vs.y - m.w - 70.0, vs.x - m.x - m.z, 8.0), Color(0.08, 0.08, 0.09))
+
+
+func _ride_start() -> void:
+	_walk_out()
+	_unload_room()
+	if car.vehicle != str(cur.get("vehicle", "xuv")):
+		var pc: Array = cur.get("paint", [0.95, 0.95, 0.93])
+		car.configure(str(cur.get("vehicle", "xuv")), Color(pc[0], pc[1], pc[2]))
+	car.visible = false                                  # (we're inside it: the window's frame is drawn over the view)
+	car.freeze = true
+	map.visible = false
+	hud.visible = false
+	_window.visible = true
+	_anchor()
+	_cast(cur.get("cast", {}))
+	_ride_path = PackedVector3Array()
+	_ride_i2 = 0
+	_ride_speed = 0.0
+	_ride_used = {}
+	if scene_cam == null:
+		scene_cam = Camera3D.new()
+		scene_cam.far = 4000.0
+		add_child(scene_cam)
+	scene_cam.fov = 62.0
+	scene_cam.make_current()
+	_ride_snd = AudioStreamPlayer.new()
+	_ride_snd.stream = RoomSound.sound("engine")
+	(_ride_snd.stream as AudioStreamWAV).loop_mode = AudioStreamWAV.LOOP_FORWARD
+	(_ride_snd.stream as AudioStreamWAV).loop_end = (_ride_snd.stream as AudioStreamWAV).data.size() / 2
+	_ride_snd.volume_db = -14.0
+	add_child(_ride_snd)
+	_ride_snd.play()
+
+
+## The next stretch of street from p: a road piece that starts or ends there (the bigger roads first, none twice); at
+## the start, the street he's on, from the point of it nearest the gate onwards.
+func _ride_next(p: Vector3, first: bool) -> PackedVector3Array:
+	var best := PackedVector3Array()
+	var score := INF
+	var rank := {"trunk": 0.0, "primary": 0.0, "secondary": 2.0, "tertiary": 4.0, "residential": 8.0, "unclassified": 8.0}
+	for k in city.streamer.loaded:
+		for r in (city.streamer.loaded[k] as Node3D).get_meta("roads", []):
+			if not rank.has(str(r["c"])):
+				continue
+			var a = r["p"]
+			var n: int = a.size() / 3
+			if n < 2:
+				continue
+			var key := "%.1f,%.1f" % [a[0], a[2]]
+			if _ride_used.has(key):
+				continue
+			if first:                                       # the nearest point of any street, then along it
+				for i in n:
+					var d := Vector2(a[i * 3] - p.x, a[i * 3 + 2] - p.z).length()
+					if d < score:
+						score = d
+						best = PackedVector3Array()
+						var fwd: bool = i < n - 1
+						var j := i
+						while j >= 0 and j < n:
+							best.append(Vector3(a[j * 3], a[j * 3 + 1], a[j * 3 + 2]))
+							j += 1 if fwd else -1
+						_ride_used[key] = true
+				continue
+			for flip in [false, true]:
+				var e := (n - 1) * 3 if flip else 0
+				var d := Vector2(a[e] - p.x, a[e + 2] - p.z).length()
+				if d > 30.0:
+					continue
+				var sc: float = d + float(rank[str(r["c"])]) + randf() * 3.0
+				if sc < score:
+					score = sc
+					best = PackedVector3Array()
+					for i in n:
+						var j: int = n - 1 - i if flip else i
+						best.append(Vector3(a[j * 3], a[j * 3 + 1], a[j * 3 + 2]))
+	if not best.is_empty() and not first:
+		_ride_used["%.1f,%.1f" % [best[0].x, best[0].z]] = true
+		_ride_used["%.1f,%.1f" % [best[best.size() - 1].x, best[best.size() - 1].z]] = true
+	if best.is_empty() and not first and _ride_path.size() >= 2:   # a dead end: turn round, back the way we came
+		for i in _ride_path.size():
+			best.append(_ride_path[_ride_path.size() - 1 - i])
+	return best
+
+
+func _ride(dt: float) -> void:
+	var secs := float(cur.get("secs", 25.0)) * (0.25 if _skip else 1.0)
+	if _ride_path.is_empty() or _ride_i2 >= _ride_path.size() - 1:
+		var from: Vector3 = car.global_position if _ride_path.is_empty() else _ride_path[_ride_path.size() - 1]
+		var nxt := _ride_next(from, _ride_path.is_empty())
+		if not nxt.is_empty():
+			_ride_path = nxt
+			_ride_i2 = 0
+	if _ride_path.size() >= 2 and _ride_i2 < _ride_path.size() - 1 and t_step > 2.5:          # (a moment at the gate first, then away)
+		_ride_speed = move_toward(_ride_speed, 9.0, dt * 2.0)
+		var a := _ride_path[_ride_i2]
+		var b := _ride_path[_ride_i2 + 1]
+		var dir := Vector3(b.x - a.x, 0.0, b.z - a.z).normalized()
+		var tgt := b + Vector3(dir.z, 0.0, -dir.x) * 1.1      # keeping left
+		var to := Vector3(tgt.x - car.global_position.x, 0.0, tgt.z - car.global_position.z)
+		if to.length() < 1.5:
+			_ride_i2 += 1
+		var stepv := to.normalized() * minf(_ride_speed * dt, to.length())
+		var y := lerpf(car.global_position.y, b.y, minf(1.0, dt * 3.0))   # (the road's own height: the street
+		car.global_position = Vector3(car.global_position.x + stepv.x, y, car.global_position.z + stepv.z)   # may not be loaded yet)
+		if to.length() > 0.2:
+			var want := atan2(-to.x, -to.z)
+			car.rotation.y = lerp_angle(car.rotation.y, want, minf(1.0, dt * 2.0))
+	var fwd: Vector3 = Vector3(car.forward().x, 0.0, car.forward().z).normalized()
+	var left := Vector3(-fwd.z, 0.0, fwd.x)
+	var seat: Vector3 = car.global_position + Vector3.UP * float(cur.get("eye", 1.45)) - fwd * 0.7 + left * 0.45 \
+		+ Vector3.UP * sin(t_step * 9.0) * 0.008 * _ride_speed / 9.0
+	scene_cam.global_position = seat                     # the back seat, on the footpath side: out of his window
+	scene_cam.look_at(seat + fwd * 1.6 + left * 2.0 - Vector3.UP * 0.2, Vector3.UP)
+	if _shots != "" and int(t_step / 6.0) != int((t_step - dt) / 6.0):   # (testing: the view every 6 s)
+		_shot()
+	if t_step > secs:
+		_window.visible = false
+		car.visible = true
+		if _ride_snd:
+			_ride_snd.queue_free()
+			_ride_snd = null
+		_clear_cast()
+		_cams_back()
+		car.freeze = false
+		_next()
 
 
 ## Somewhere to eat: on foot at the door of any of the eateries, E for the menu.
@@ -1565,6 +1793,13 @@ func _build_ui() -> void:
 		ui.add_child(b)
 		ui.move_child(b, 1)
 		bars.append(b)
+	_window = Control.new()
+	_window.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_window.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_window.visible = false
+	_window.draw.connect(_draw_window)
+	ui.add_child(_window)
+	ui.move_child(_window, 0)
 	tasks = Tasks.new()
 	tasks.visible = false
 	tasks.finished.connect(_task_done)
