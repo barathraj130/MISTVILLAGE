@@ -9,6 +9,10 @@ the story, cast, crime, evidence and acts are in [STORY_BIBLE.md](STORY_BIBLE.md
 pieces make one game. Everything decided before stays as it was (from "Structure" on). Items marked **(proposal)**
 are new and wait for a yes.
 
+**v3, 2026-11-02: played, not read.** §8 turns every part of the story that is now told in text (title cards, evidence
+cards, time skips, scenes you only watch, goals written on screen) into something the player does. It replaces those
+parts of §5 and of STORY_BIBLE.md §8's slice where they differ. **(proposal)**
+
 ## 0. The game in one paragraph
 You are Karthik, 28, a driver in Coimbatore who lives with his mother and sister in a rented house in Ganapathy.
 The game is his life, played day by day in the real city: driving, working, eating, sleeping, keeping his family
@@ -120,6 +124,91 @@ story's leads and evidence (§4).
 2. **Platform first:** PC / Mac, or mobile (India)?
 3. **Voices:** who records Tamil and English.
 4. **The name:** "The Mist Village", or another.
+
+## 8. Played, not read (v3, 2026-11-02) (proposal)
+**The rule:** nothing in the story is told by text on the screen. What happens, the player does or sees happen in
+front of Karthik; what he learns, he picks up, hears, photographs or pins on his wall; time passes because he waits,
+works or sleeps. People still speak (subtitled until there are voices), but no narrator, no title cards, no evidence
+written out as a list, no goal line at the top of the screen, no choice made from a menu where an action can make it.
+The one card left is the game's own title, and "To be continued" at the end of a part.
+
+### 8.1 Ten rules
+1. **Every event happens in front of Karthik**, at the place and time it happens. The arrest is the knock at the
+   door you walk to, not a card saying "the next morning".
+2. **Goals come from people and the phone.** Raghavan tells you where to drive; a call, a message or a pin on the
+   phone's map holds it afterwards. The goal line at the top of the screen goes.
+3. **Choices are actions.** A bribe is the wallet opened and a note held out; being honest with the watchman is
+   walking to the tea stall and coming back with tea and a vadai; silence is not answering.
+4. **Evidence is a thing.** A paper, a photo on Karthik's phone, a recording, an object. You look at it in your hands,
+   photograph it, and pin it on the wall at home. No evidence card text.
+5. **The board is a wall in Karthik's room.** Photos and papers pinned, threads between them, a calendar of the night
+   of the murder. You arrange it yourself; it is where you work out who, how, when and why.
+6. **Time passes by doing.** Sit on the drivers' bench and wait (time runs fast while you sit), wash the car, run an
+   office errand, sleep in your bed. No time-skip cameras, no "three days later".
+7. **Days that matter are played; days that don't are slept through.** The player sleeps; the night passes in the
+   bed; the next morning starts where he wakes.
+8. **The body shows the meters.** A hungry Karthik's stomach growls and his run gives out; a tired one yawns, the edges
+   of the view soften, his walk is heavier; a stressed one breathes fast, his hands shake on the phone, the sound
+   narrows. The bars stay for those who want them (a "show meters" option) but the game is readable without them.
+9. **The phone is the menu.** Calls, messages, contacts, the map with pins, the camera and recorder, the delivery
+   app, the wallet balance and the board's photos all live on Karthik's phone, held up on screen.
+10. **Controls are taught once, by doing.** A key prompt beside the thing (E on the door), shown the first time and
+    then gone. No "On foot: WASD..." banners.
+
+### 8.2 What changes in the slice
+| Now (text) | Played instead |
+|---|---|
+| Opening camera over the street | Start in bed; the phone alarm rings; you turn it off |
+| Home rooms filmed from fixed cameras | You walk in; Amma and Divya speak when you come near, carry on with their morning |
+| "Late" jump to Raghavan's house (+25 min) | Ride the scooter there yourself; you're late if you dawdled |
+| The office scene (11 shots) | Walk into Raghavan Developers; Suresh at his desk, Raghavan calls you into his cabin; he hands you the cheque (it is in your pocket, you can look at it) |
+| Goal lines ("Take the cheque to the bank") | Raghavan says it; the bank is pinned on the phone's map |
+| Time skips to 1:05, 6:30 and 8:05 PM | The drivers' bench: sit and wait, or wash the car (a tip), take a courier for Suresh, have lunch, chat with Muniyandi on his evening round (so you know him before you need him) |
+| "Tips" written after tasks | The person says it ("Plug it in properly, thambi") |
+| "The next morning" card | You go to bed; the night passes; at 6:10 knocking at the door wakes you |
+| The arrest (7 filmed shots) | Walk to the door yourself. Murugesan holds out the warrant (you can read it in your hands); Amma pleads; Divya grabs your arm. You walk to the jeep; if you turn back, a constable stops you, firmly. You ride in the back seat: the street goes past, neighbours on their steps watching |
+| "Nagar Police Station" card (stress +25) | Walk the corridor between constables; Selvi asks for your phone and you hand it over; the bench and the wall clock, the wait you sit through; stress rises while you wait, heard in your breathing |
+| The questioning: truth / lie / silent from a menu | **The table** (§8.3) |
+| "The case against him" card (E01–E04) | Each was put on the table in front of you: the 9:52 message on your own work phone, the camera still of the car, the bank slip in your signature, your delivery app's times. When Sundaram gets you out, he gives you a copy of the FIR; at home you pin it and photograph what you remember onto the wall |
+| "You lied" card | Its cost happens: at the first signing Murugesan says it in front of the bench; a constable comes to the house and questions Amma |
+| "Three days later" card | Played short: two nights in the cell (lie on the bench; the light under the door, the sounds; sleep), the release (Amma waiting outside; ride home), then the evenings: drive to the station, sign, ride back. At the third signing Selvi slides a folded note under your pen; you open it: "Ask the night watchman" |
+| Jump to the office building at 9:30 PM | You decide when to go and ride there yourself; the watchman is only at the gate at night |
+| Bribe or tea from a menu | Open the wallet and hold out ₹500, or cross to the tea stall, buy tea and vadai, carry them back. Or come back another night |
+| "Evidence E06" card | Before he talks, you can start the phone's recorder (he notices if he sees it, and says less); what he says is the recording, which you play back and pin |
+| "New lead: Kathir, Saibaba Colony" | Muniyandi gives you Kathir's number; it is in your contacts and his shop is pinned |
+| "To be continued" with the next step written out | Ride home: in the mirror, the same sedan's headlights two junctions behind you. Then "To be continued" |
+
+### 8.3 The table: how the questioning plays
+Karthik sits across from Murugesan; Selvi types at the side. The inspector puts things on the table one at a time,
+each with a question. You answer by what you do:
+- **Look at a thing** (move the view to it): you see it close. Looking away from the inspector too long, he notes it.
+- **Pick a thing up and show it to him**, which is your answer about it: the 9:52 message → "the phone was at the
+  office". Answering about something you did is only possible if you did it: the phone is on the office charger
+  because you plugged it in (S4), so the charger's log backs you; if you didn't, you have only your word.
+- **Say where you were**: your delivery app is in your pocket; show it, or say "at home" (the lie). The lie is a
+  spoken line you pick from two, the only words-choice in the scene, because a lie is words.
+- **Say nothing**: let the question hang; the timer is his patience. After two silences you ask for a lawyer.
+- **Stress is your hands.** Showing a thing means holding it steady in front of him; the higher your stress, the more
+  the hand shakes and the harder it is to hold, and over 85 the phone slips and he takes it as nerves. Rested, fed
+  Karthik answers better: the meters decide the scene without a single number shown.
+
+### 8.4 What has to be built
+| Piece | For |
+|---|---|
+| Things in hand: pick up, turn, read, put down; a few pocket items (cheque, wallet, phone, keys, note) | the warrant, the FIR, Selvi's note, the cheque, the evidence |
+| The phone as the interface: calls, messages, contacts, map pins, camera, recorder, delivery app, board photos | goals, leads, evidence |
+| The wall in Karthik's room: pin, move, thread | the board |
+| Sit and wait (time runs while seated); sleep in any bed | the time skips |
+| Wallet hand-over: open, pick notes, hold out | bribes, fares, tea |
+| Riding as a passenger (the jeep, a bus, an auto) | the arrest, later travel |
+| People who start talking when you come near and carry on with their own business | the home, the office, the station |
+| Body signs for the meters (sounds, view, walk, hand shake), meters hidden by default | §8.1 rule 8 |
+| The interrogation table | §8.3 |
+| Key prompts at the thing, shown once | rule 10 |
+
+**Order (proposal):** things in hand and the phone first (everything else uses them), then sit/sleep and the body
+signs, then the arrest and the table, then the wall, then the rest of the slice redone on these pieces (§8.2 from
+the top). The story's JSON keeps its steps, but "card", "lapse" and filmed "room" steps leave the slice.
 
 ## Structure (updated 2026-10-11: the story is the spine)
 
