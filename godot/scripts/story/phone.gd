@@ -385,7 +385,7 @@ func _draw() -> void:
 		_draw_viewfinder()
 		return
 	if _slide <= 0.01:
-		if unread > 0:                                 # the phone's corner in his pocket, lit: something new
+		if unread > 0 and not taken:                   # the phone's corner in his pocket, lit: something new
 			var vs := get_viewport_rect().size
 			var c := Vector2(vs.x - 60.0, vs.y - 300.0)
 			var k := 0.5 + 0.5 * sin(_t * 5.0)

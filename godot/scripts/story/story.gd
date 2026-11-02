@@ -50,6 +50,7 @@ extends Node
 
 const Sim := preload("res://scripts/drive/sim.gd")
 const Tasks := preload("res://scripts/story/tasks.gd")
+const Table := preload("res://scripts/story/table.gd")
 const Actor := preload("res://scripts/story/actor.gd")
 const Walker := preload("res://scripts/player.gd")
 const RoomSound := preload("res://scripts/city/room_sound.gd")
@@ -89,6 +90,7 @@ var _beam: MeshInstance3D
 var flags := {}                     # what the player did in tasks (short_found, signed, ...)
 var _paid := {}                     # lines that already paid (step:line)
 var tasks: Control
+var table: Control                    # the questioning (table.gd)
 var cast := {}                      # story people in the world: key → Actor
 var _o := Vector3.ZERO              # the scene frame: origin (the car), forward, right
 var _f := Vector3.FORWARD
@@ -361,7 +363,7 @@ func _next() -> void:
 	if cur.has("add_minutes") and fines:                # time that passes off screen (a ride on the scooter)
 		fines.sim.minute += float(cur["add_minutes"])
 	_jumped = false
-	if _f2f and not str(cur["do"]) in ["talk", "choose", "give"]:          # the talk is over: his own eyes again
+	if _f2f and not str(cur["do"]) in ["talk", "choose", "give", "table"]:          # the talk is over: his own eyes again
 		_f2f_off()
 	if _climbing and not str(cur["do"]) in ["talk", "choose"]:     # out of the dark building, back to the street
 		_end_climb()
@@ -401,6 +403,24 @@ func _next() -> void:
 			city.phone.call_from(cur["from"])
 		"ride":
 			_ride_start()
+		"table":                                         # across the table from him: answer by what you do
+			if city.walker:
+				_face_to_face()
+			box.anchor_top = 0.0                           # (his words above on the left, clear of his face;
+			box.anchor_bottom = 0.0                        #  the table below)
+			box.anchor_left = 0.0
+			box.anchor_right = 0.0
+			box.offset_top = 24.0
+			box.offset_bottom = 150.0
+			box.offset_left = 24.0
+			box.offset_right = 520.0
+			var pick := 0
+			for a in OS.get_cmdline_user_args():
+				if a.begins_with("--storychoose="):
+					pick = int(a.get_slice("=", 1))
+			table.lang = lang
+			table.life = city.life
+			table.start(cur, lang, _skip, pick)
 		"drive":
 			var p := place_pos(cur["to"])
 			map.pin = Vector2(p.x, p.z)
@@ -1768,7 +1788,7 @@ func _build_ui() -> void:
 	vb.add_child(who)
 	said = _label(22, Color(0.95, 0.95, 0.95))
 	said.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	said.custom_minimum_size = Vector2(800, 60)
+	said.custom_minimum_size = Vector2(440, 60)
 	vb.add_child(said)
 	hint = _label(14, Color(0.6, 0.6, 0.65))
 	hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
@@ -1800,6 +1820,30 @@ func _build_ui() -> void:
 	_window.draw.connect(_draw_window)
 	ui.add_child(_window)
 	ui.move_child(_window, 0)
+	table = Table.new()
+	table.visible = false
+	table.said.connect(func(line: Dictionary):
+		_say(line)
+		if _f2f:
+			_f2f.play("Talk" if str(line["who"]) == str(_f2f.get("who")) else "Idle")
+		_shot()
+		if _shots != "" and line == cur["lines"][-1]:     # (testing: the table while he waits, and the phone held up)
+			get_tree().create_timer(1.3).timeout.connect(_shot)
+			get_tree().create_timer(2.6).timeout.connect(_shot))
+	table.finished.connect(func(result: Dictionary):
+		for k in result:
+			flags[k] = result[k]
+		print("STORY table → %s" % str(result))
+		box.anchor_top = 1.0
+		box.anchor_bottom = 1.0
+		box.anchor_left = 0.5
+		box.anchor_right = 0.5
+		box.offset_top = -200
+		box.offset_bottom = -40
+		box.offset_left = -430
+		box.offset_right = 430
+		_next())
+	ui.add_child(table)
 	tasks = Tasks.new()
 	tasks.visible = false
 	tasks.finished.connect(_task_done)

@@ -2262,69 +2262,35 @@
    ]
   },
   {
-   "do": "talk",
+   "do": "table",
+   "who": "murugesan",
    "lines": [
     {
      "who": "murugesan",
      "en": "9:52 last night. A message to Raghavan sir from your phone: 'I'll come with the car.' Read it.",
      "ta": "நேத்து ராத்திரி 9:52. உன் ஃபோன்லிருந்து ராகவன் சாருக்கு மெசேஜ்: 'கார்ல வரேன்.' படி.",
-     "to": "karthik"
+     "to": "karthik",
+     "exhibit": "workphone"
     },
     {
      "who": "murugesan",
      "en": "10:12. His car on the Lawley Road camera, going west. You drive that car. Only you.",
      "ta": "10:12. லாலி ரோடு கேமராவுல அவரோட கார், மேற்கு பக்கம் போகுது. அந்த கார நீ தான் ஓட்டுவ. நீ மட்டும் தான்.",
-     "to": "karthik"
+     "to": "karthik",
+     "exhibit": "still"
     },
     {
      "who": "murugesan",
      "en": "And four lakh rupees, in your signature, from the bank that morning. Gone. Your sister's fees are due Friday, no?",
      "ta": "அப்புறம் அன்னைக்கு காலையில பேங்க்ல உன் கையெழுத்துல நாலு லட்சம். காணோம். உன் தங்கச்சிக்கு வெள்ளிக்கிழமை ஃபீஸ் கட்டணும், இல்ல?",
-     "to": "karthik"
+     "to": "karthik",
+     "exhibit": "slip"
     },
     {
      "who": "murugesan",
      "en": "So. Explain.",
      "ta": "சரி. சொல்லு.",
      "to": "karthik"
-    }
-   ]
-  },
-  {
-   "do": "choose",
-   "prompt": {
-    "en": "The inspector waits. Selvi has stopped typing.",
-    "ta": "இன்ஸ்பெக்டர் காத்திருக்கார். செல்வி டைப் பண்றத நிறுத்திட்டாங்க."
-   },
-   "options": [
-    {
-     "text": {
-      "en": "Tell him everything: the phone was left at the office, and you were out on a delivery from 9:35",
-      "ta": "எல்லாத்தையும் சொல்லுங்க: ஃபோன் ஆஃபீஸ்ல இருந்துச்சு, நீங்க 9:35-லிருந்து டெலிவரியில இருந்தீங்க"
-     },
-     "set": "told_truth",
-     "max_stress": 85,
-     "stress": -5,
-     "shaken": {
-      "en": "(Tell him everything: your hands are shaking, the words won't come in order. Breathe first.)",
-      "ta": "(எல்லாத்தையும் சொல்லணும்: கை நடுங்குது, வார்த்தை வரிசையா வரல. முதல்ல மூச்சு விடுங்க.)"
-     }
-    },
-    {
-     "text": {
-      "en": "Say you were home all night, as Amma said",
-      "ta": "அம்மா சொன்ன மாதிரி, ராத்திரி முழுக்க வீட்லதான் இருந்தேன்னு சொல்லுங்க"
-     },
-     "set": "lied_home",
-     "stress": 5
-    },
-    {
-     "text": {
-      "en": "Say nothing until a lawyer comes",
-      "ta": "வக்கீல் வர வரைக்கும் ஒண்ணும் சொல்லாதீங்க"
-     },
-     "set": "kept_silent",
-     "stress": -8
     }
    ]
   },
