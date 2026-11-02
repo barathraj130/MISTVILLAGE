@@ -97,7 +97,7 @@ def build(c):
         if p:
             o = SP.HS.add_mhclo_asset(p, h, asset_type=typ, subdiv_levels=0, material_type="MAKESKIN")
             if typ == "Hair":
-                SP.tint(o, (0.05, 0.04, 0.035) if yrs < 55 else (0.45, 0.44, 0.42), 0.9)
+                hair_colour(o, (0.05, 0.04, 0.035) if yrs < 55 else (0.45, 0.44, 0.42))
             objs.append(o)
     top = {"trousers": "male_casualsuit03", "veshti": "male_casualsuit03", "saree": "female_casualsuit02",
            "modern_f": "female_casualsuit01"}[outfit]
@@ -163,6 +163,32 @@ def build(c):
     if hair.startswith("sf:"):
         objs.append(sketchfab_hair(h, arm, hair[3:], (0.025, 0.02, 0.018)))
     return arm, objs
+
+
+def hair_colour(o, colour):
+    """Recolours the hair proxy's own texture: its strands' light and shade kept, the colour made this one (a tint
+    node, SP.tint, is lost in the glTF export: the game showed the textures' own blond and light brown)."""
+    import numpy as np
+    for slot in o.material_slots:
+        m = slot.material
+        if not m or not m.use_nodes:
+            continue
+        for n in m.node_tree.nodes:
+            if n.type != 'TEX_IMAGE' or not n.image or n.image.colorspace_settings.name != "sRGB":
+                continue
+            img = n.image.copy()
+            img.name = "%s_hair" % o.name
+            px = np.empty(len(img.pixels), dtype=np.float32)
+            img.pixels.foreach_get(px)
+            px = px.reshape(-1, 4)
+            lum = px[:, :3] @ np.array([0.2126, 0.7152, 0.0722], dtype=np.float32)
+            solid = px[:, 3] > 0.5
+            lum = lum / max(float(np.percentile(lum[solid], 90)) if solid.any() else 1.0, 1e-3)
+            for c in range(3):                              # (in the texture's sRGB: the colour's own sRGB, its
+                px[:, c] = np.clip(lum * 0.6 * colour[c] ** (1 / 2.2), 0.0, 1.0)   # highlights no brighter)
+            img.pixels.foreach_set(px.ravel())
+            img.pack()
+            n.image = img
 
 
 def moustache(h, colour, narrow):
