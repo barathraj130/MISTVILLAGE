@@ -372,13 +372,7 @@ func _draw() -> void:
 	var vs := get_viewport_rect().size
 	draw_rect(Rect2(Vector2.ZERO, vs), Color(0, 0, 0, 0.55))
 	var p := _panel()
-	# the tip from the owner / boss, above the picture
-	if spec.has("tip"):
-		var tb := Rect2(p.position.x, p.position.y - 72.0, p.size.x, 58.0)
-		draw_rect(tb, Color(0.1, 0.09, 0.05, 0.92))
-		draw_rect(tb, Color(1.0, 0.82, 0.35, 0.9), false, 2.0)
-		_text(tb.position + Vector2(16, 24), t_(spec.get("tip_who", {"en": "Tip", "ta": "டிப்"})), 16, Color(1.0, 0.82, 0.35))
-		_text(tb.position + Vector2(16, 47), t_(spec["tip"]), 18, Color.WHITE, tb.size.x - 32.0)
+	# (a tip is said by whoever gave it, as a subtitle: story.gd _speak_tip)
 	match kind:
 		"sign":
 			_draw_sign(p)

@@ -16,15 +16,18 @@ signal photo_taken(tag: String)
 signal recording_stopped(clip: Dictionary)
 signal call_answered
 signal opened_app(app: String)
+signal rider_answer(accepted: bool)            # the delivery app: an order taken (or turned down)
+signal otp_done                                # the delivery app: the customer's code typed in right
 
 const W := 300.0
 const H := 560.0
-const APPS := ["notes", "messages", "contacts", "map", "camera", "recorder", "photos"]
+const APPS := ["notes", "messages", "contacts", "map", "camera", "recorder", "photos", "rider"]
 const APP_NAME := {"notes": ["Notes", "குறிப்பு"], "messages": ["Messages", "மெசேஜ்"], "contacts": ["Contacts", "தொடர்புகள்"],
-	"map": ["Map", "மேப்"], "camera": ["Camera", "கேமரா"], "recorder": ["Recorder", "ரெக்கார்டர்"], "photos": ["Photos", "படங்கள்"]}
+	"map": ["Map", "மேப்"], "camera": ["Camera", "கேமரா"], "recorder": ["Recorder", "ரெக்கார்டர்"], "photos": ["Photos", "படங்கள்"],
+	"rider": ["QuickBite", "குவிக்பைட்"]}
 const APP_COL := {"notes": Color(0.95, 0.75, 0.2), "messages": Color(0.25, 0.7, 0.35), "contacts": Color(0.3, 0.55, 0.9),
 	"map": Color(0.2, 0.65, 0.6), "camera": Color(0.35, 0.35, 0.4), "recorder": Color(0.85, 0.25, 0.25),
-	"photos": Color(0.75, 0.4, 0.8)}
+	"photos": Color(0.75, 0.4, 0.8), "rider": Color(0.9, 0.35, 0.1)}
 const BG := Color(0.07, 0.08, 0.1)
 const FG := Color(0.95, 0.95, 0.97)
 const DIM := Color(0.6, 0.62, 0.68)
@@ -44,6 +47,8 @@ var recording := false
 var taken := false                             # handed over (at the station): P finds an empty pocket
 var unread := 0
 var ringing := {}                              # an incoming call: {"from": {en, ta}}
+var rider := {}                                # the delivery app's screen: {"mode": offer | job | otp, "app", "lines", "code",
+                                               #  "typed", "decline": label of the turn-down button}
 var _rec: Array = []
 var _rec_t := 0.0
 var _view := -1                                # Photos / Messages: the one open (-1: the list)
@@ -112,6 +117,72 @@ func add_contact(c: Dictionary) -> void:
 
 func pin(place: String, label) -> void:
 	pins.push_front({"place": place, "label": label})
+
+
+## The delivery app: an order pings in and the phone comes up by itself (a rider looks at once); Accept or turn
+## it down (rider_answer). A job: the order being done, on the app's screen. An OTP: the keypad for the customer's code.
+func rider_offer(app, lines: Array, decline = null) -> void:
+	rider = {"mode": "offer", "app": app, "lines": lines, "decline": decline if decline != null else {"en": "Decline", "ta": "வேண்டாம்"}}
+	_ping()
+	hold(true)
+	_open_app("rider")
+
+
+func rider_job(app, lines: Array) -> void:
+	rider = {"mode": "job", "app": app, "lines": lines}
+
+
+func rider_otp(app, lines: Array, code: String) -> void:
+	rider = {"mode": "otp", "app": app, "lines": lines, "code": code, "typed": ""}
+	hold(true)
+	_open_app("rider")
+
+
+func rider_clear() -> void:
+	rider = {}
+	if app == "rider":
+		_open_app("")
+
+
+func _ping() -> void:
+	if _buzz and is_inside_tree() and not taken:
+		_buzz.play()
+
+
+func _rider_key(k: String) -> void:
+	if str(rider.get("mode", "")) != "otp":
+		return
+	var t := str(rider["typed"])
+	if k == "⌫":
+		t = t.left(maxi(t.length() - 1, 0))
+	elif t.length() < 4:
+		t += k
+	rider["typed"] = t
+	if t.length() == 4:
+		if t == str(rider["code"]):
+			rider = {"mode": "job", "app": rider["app"], "lines": [{"en": "Delivered ✓", "ta": "டெலிவரி ஆச்சு ✓"}]}
+			get_tree().create_timer(0.8).timeout.connect(func():
+				hold(false)
+				otp_done.emit())
+		else:
+			rider["typed"] = ""
+			rider["wrong"] = 1.0
+
+
+func _rider_keys() -> Array:
+	var s := _screen()
+	var out: Array = []
+	var w := (s.size.x - 40.0) / 3.0
+	var labels := ["1", "2", "3", "4", "5", "6", "7", "8", "9", "", "0", "⌫"]
+	for i in 12:
+		if labels[i] != "":
+			out.append([Rect2(s.position.x + 12.0 + (i % 3) * (w + 8.0), s.position.y + 230.0 + floori(i / 3.0) * 54.0, w, 46.0), labels[i]])
+	return out
+
+
+func _rider_btn(i: int) -> Rect2:
+	var s := _screen()
+	return Rect2(s.position.x + 12.0 + i * (s.size.x * 0.5 - 6.0), s.end.y - 80.0, s.size.x * 0.5 - 18.0, 56.0)
 
 
 func call_from(from) -> void:
@@ -183,6 +254,8 @@ func _process(dt: float) -> void:
 	_t += dt
 	_slide = move_toward(_slide, 1.0 if is_open else 0.0, dt * 5.0)
 	_flash = maxf(_flash - dt * 3.0, 0.0)
+	if rider.has("wrong"):
+		rider["wrong"] = maxf(float(rider["wrong"]) - dt * 2.0, 0.0)
 	if recording:
 		_rec_t += dt
 	var p := Input.is_key_pressed(KEY_P)
@@ -276,6 +349,17 @@ func _gui_input(e: InputEvent) -> void:
 			var s := _screen()
 			if Rect2(s.get_center() - Vector2(60, 60), Vector2(120, 120)).has_point(q):
 				_toggle_rec()
+		"rider":
+			match str(rider.get("mode", "")):
+				"offer":
+					if _rider_btn(1).has_point(q):
+						_rider_take(true)
+					elif _rider_btn(0).has_point(q):
+						_rider_take(false)
+				"otp":
+					for k in _rider_keys():
+						if (k[0] as Rect2).has_point(q):
+							_rider_key(str(k[1]))
 
 
 func _unhandled_key_input(e: InputEvent) -> void:
@@ -283,6 +367,12 @@ func _unhandled_key_input(e: InputEvent) -> void:
 		return
 	if not ringing.is_empty() and (e.keycode == KEY_ENTER or e.keycode == KEY_KP_ENTER or e.keycode == KEY_E):
 		answer()
+		get_viewport().set_input_as_handled()
+	elif app == "rider" and str(rider.get("mode", "")) == "otp" and (e.keycode >= KEY_0 and e.keycode <= KEY_9 or e.keycode == KEY_BACKSPACE):
+		_rider_key("⌫" if e.keycode == KEY_BACKSPACE else str(e.keycode - KEY_0))
+		get_viewport().set_input_as_handled()
+	elif app == "rider" and str(rider.get("mode", "")) == "offer" and (e.keycode == KEY_ENTER or e.keycode == KEY_KP_ENTER):
+		_rider_take(true)
 		get_viewport().set_input_as_handled()
 	elif e.keycode == KEY_ESCAPE or e.keycode == KEY_BACKSPACE:
 		_back()
@@ -316,6 +406,15 @@ func _input(e: InputEvent) -> void:
 		elif e.button_index == MOUSE_BUTTON_RIGHT:
 			_open_app("")
 		get_viewport().set_input_as_handled()
+
+
+func _rider_take(yes: bool) -> void:
+	if str(rider.get("mode", "")) != "offer":
+		return
+	if yes:
+		rider["mode"] = "job"
+		hold(false)
+	rider_answer.emit(yes)
 
 
 func answer() -> void:
@@ -473,6 +572,8 @@ func _draw() -> void:
 					draw_rect(Rect2(s.position.x + 30.0 + k * 9.5, c.y + 150.0 - hh * 0.5, 5.0, hh), Color(0.95, 0.4, 0.4))
 			else:
 				draw_circle(c, 30.0, Color(0.95, 0.25, 0.25))
+		"rider":
+			_draw_rider(s)
 		"photos":
 			_title(s, APP_NAME["photos"])
 			if _view >= 0 and _view < photos.size():
@@ -498,6 +599,43 @@ func _draw() -> void:
 						draw_circle(tr.get_center(), 14.0, Color(0.95, 0.3, 0.3))
 	if _flash > 0.0:
 		draw_rect(s, Color(1, 1, 1, _flash))
+
+
+func _draw_rider(s: Rect2) -> void:
+	draw_rect(s, Color(0.97, 0.96, 0.95))
+	draw_rect(Rect2(s.position, Vector2(s.size.x, 52)), APP_COL["rider"])
+	_text(s.position + Vector2(12, 34), t_(rider.get("app", {"en": "QuickBite Rider", "ta": "குவிக்பைட் ரைடர்"})), 18, Color.WHITE)
+	var ink := Color(0.1, 0.1, 0.12)
+	var mode := str(rider.get("mode", ""))
+	var y := s.position.y + 84.0
+	if mode == "":
+		_text(Vector2(s.position.x + 12.0, y), L("No order now.", "இப்போ ஆர்டர் இல்ல."), 15, Color(0.4, 0.4, 0.45))
+		return
+	if mode == "offer":
+		_text(Vector2(s.position.x + 12.0, y), L("New order nearby", "அருகில் புது ஆர்டர்"), 19, ink)
+		y += 30.0
+	for ln in rider.get("lines", []):
+		y += _wrap(Vector2(s.position.x + 12.0, y), t_(ln), 14, ink, s.size.x - 24.0, 3) + 6.0
+	match mode:
+		"offer":
+			var a := _rider_btn(0)
+			var b := _rider_btn(1)
+			draw_rect(a, Color(0.6, 0.6, 0.64))
+			draw_rect(b, Color(0.2, 0.6, 0.3))
+			_text(a.position + Vector2(0, 35), t_(rider["decline"]), 15, Color.WHITE, a.size.x, HORIZONTAL_ALIGNMENT_CENTER)
+			_text(b.position + Vector2(0, 35), L("Accept", "ஏத்துக்கோ"), 17, Color.WHITE, b.size.x, HORIZONTAL_ALIGNMENT_CENTER)
+		"otp":
+			_text(Vector2(s.position.x + 12.0, s.position.y + 196.0), L("Customer's OTP", "வாடிக்கையாளர் OTP"), 14, Color(0.4, 0.4, 0.45))
+			var t := str(rider.get("typed", ""))
+			var wrong := float(rider.get("wrong", 0.0))
+			for i in 4:
+				var bx := Rect2(s.position.x + 40.0 + i * 52.0 + sin(wrong * 30.0) * wrong * 6.0, s.position.y + 160.0 - 8.0, 40.0, 0.0)
+				draw_line(Vector2(bx.position.x, bx.position.y + 30.0), Vector2(bx.end.x, bx.position.y + 30.0), Color(0.95, 0.3, 0.25) if wrong > 0.0 else ink, 2.0)
+				if i < t.length():
+					_text(Vector2(bx.position.x, bx.position.y + 24.0), t[i], 24, ink, 40.0, HORIZONTAL_ALIGNMENT_CENTER)
+			for k in _rider_keys():
+				draw_rect(k[0], Color(0.88, 0.88, 0.9))
+				_text((k[0] as Rect2).position + Vector2(0, 31), str(k[1]), 20, ink, (k[0] as Rect2).size.x, HORIZONTAL_ALIGNMENT_CENTER)
 
 
 func _thumb(i: int) -> Rect2:

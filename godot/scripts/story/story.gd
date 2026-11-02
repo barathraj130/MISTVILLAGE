@@ -47,6 +47,7 @@ extends Node
 ##   --storyta       start in Tamil
 ##   --storychoose=N testing: at every choice, option N (1, 2...)
 ##   --storyfrom=N   testing: start the chapter at step N
+##   --storyclock=HH:MM testing: the clock it starts at
 
 const Sim := preload("res://scripts/drive/sim.gd")
 const Tasks := preload("res://scripts/story/tasks.gd")
@@ -237,6 +238,12 @@ func _process(dt: float) -> void:
 			_climb_step(dt)
 		"gigs":
 			_gigs(dt)
+		"task":
+			if _skip and t_step > 1.5 and str(cur["task"]) == "phone" and str(cur.get("mode", "offer")) == "offer" and not city.phone.rider.is_empty():
+				city.phone._rider_take(true)
+			elif _skip and t_step > 1.5 and str(cur["task"]) == "otp" and str(city.phone.rider.get("mode", "")) == "otp":
+				for ch in str(cur.get("code", "")):
+					city.phone._rider_key(ch)
 		"give":                                          # read it, then put it in his pocket (E)
 			if _skip and t_step > 1.5:
 				city.hands.put_back()
@@ -334,6 +341,10 @@ func _sync_lang() -> void:
 func _next() -> void:
 	_sync_lang()
 	if step < 0:
+		for a in OS.get_cmdline_user_args():          # (testing: --storyclock=HH:MM, the time it starts at)
+			if a.begins_with("--storyclock=") and fines:
+				var hm0: PackedStringArray = a.get_slice("=", 1).split(":")
+				fines.sim.minute = float(hm0[0]) * 60.0 + float(hm0[1])
 		for a in OS.get_cmdline_user_args():          # (testing: --storyfrom=N starts the chapter at step N)
 			if a.begins_with("--storyfrom="):
 				step = int(a.get_slice("=", 1)) - 1
@@ -473,7 +484,18 @@ func _next() -> void:
 			var k := "5" if stars >= 4.5 else ("3" if stars >= 2.5 else "1")
 			cur = {"do": "comfort_verdict", "lines": [cur["lines"][k]]}
 		"task":
-			tasks.start(str(cur["task"]), cur, lang, _skip)
+			var tk := str(cur["task"])
+			if tk == "phone" and str(cur.get("mode", "offer")) == "offer":   # the order, on his phone's rider app
+				if not city.phone.rider_answer.is_connected(_offer_answer):
+					city.phone.rider_answer.connect(_offer_answer)
+				city.phone.rider_offer(cur.get("app", {}), cur.get("order", []))
+			elif tk == "otp":                              # the customer's code, on the app's keypad
+				if not city.phone.otp_done.is_connected(_otp_typed):
+					city.phone.otp_done.connect(_otp_typed)
+				city.phone.rider_otp(cur.get("app", {}), cur.get("order", []), str(cur.get("code", "")))
+			else:
+				tasks.start(tk, cur, lang, _skip)
+			_speak_tip.call_deferred(cur)
 		"scene":
 			_anchor()
 			_cast(cur.get("cast", {}))
@@ -552,7 +574,9 @@ func _next() -> void:
 			var pay := int(cur["pay"][k])
 			if fines:
 				fines.sim.money += pay
-			hud.warn(("Delivery paid  +" if lang == "en" else "டெலிவரி பணம்  +") + "₹%d" % pay + ("" if on_time else ("  (late)" if lang == "en" else "  (தாமதம்)")), 5.0)
+			city.phone.message(cur.get("app", {"en": "QuickBite Rider", "ta": "குவிக்பைட் ரைடர்"}),
+				{"en": "Order delivered%s. ₹%d credited to your wallet." % ["" if on_time else " (late)", pay],
+				"ta": "ஆர்டர் டெலிவரி ஆச்சு%s. ₹%d வாலட்ல வந்துச்சு." % ["" if on_time else " (தாமதம்)", pay]})
 			cur = {"do": "deliver_verdict", "lines": cur["lines"][k]}
 	_refresh()
 	_shot()
@@ -1024,7 +1048,6 @@ func _choose() -> void:
 		flags[str(o["set"])] = true
 	if int(o.get("pay", 0)) > 0 and fines:
 		fines.sim.money -= int(o["pay"])
-		hud.warn(("Paid  −₹%d" if lang == "en" else "கொடுத்தது  −₹%d") % int(o["pay"]), 4.0)
 	var life = city.life if "life" in city else null
 	if life and o.has("stress"):
 		life.add_stress(float(o["stress"]))
@@ -1089,7 +1112,6 @@ func _power_cut() -> void:
 	city.walker.camera.add_child(_torch)
 	_torch.position = Vector3(0.15, -0.15, 0.0)
 	_play_sfx("powercut", 0.0)
-	hud.warn("Power cut. Phone torch on." if lang == "en" else "கரண்ட் போயிடுச்சு. போன் டார்ச்.", 3.0)
 	print("STORY power cut")
 
 
@@ -1121,9 +1143,10 @@ func _task_done(result: Dictionary) -> void:
 		fines.sim.minute += float(result["minutes"])
 	if int(result.get("paid", 0)) > 0 and fines:         # a meal out, from the wallet
 		fines.sim.money -= int(result["paid"])
-		hud.warn(("Paid  −₹%d" if lang == "en" else "கொடுத்தது  −₹%d") % int(result["paid"]), 4.0)
 	print("STORY task %s → %s" % [cur.get("task", cur.get("do", "")), str(result)])
 	_in_task = false
+	box.visible = false
+	_box_at_top(false)
 	if str(cur.get("do", "")) == "home":
 		var v: Dictionary = cur["visits"][_visit]
 		if v.get("home_meal", false) and result.get("ate", false) and fines:   # a meal at home: the groceries
@@ -1282,6 +1305,47 @@ func _start_visit(v: Dictionary) -> void:
 		spec["wallet"] = fines.sim.money
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 	tasks.start(str(v.get("task", "ready")), spec, lang, _skip)
+	_speak_tip(v)
+
+
+## The rider app's first order: accepted, the story goes on; turned down, Divya's text, and it's still there.
+func _offer_answer(yes: bool) -> void:
+	if str(cur.get("do", "")) != "task" or str(cur.get("task", "")) != "phone":
+		return
+	if yes:
+		_task_done({"accepted": true})
+	else:
+		city.phone.message({"en": "Divya", "ta": "திவ்யா"}, cur.get("decline_says", {"en": "Anna. Friday. Fees.", "ta": "அண்ணா. வெள்ளி. ஃபீஸ்."}))
+		city.phone.rider_offer(cur.get("app", {}), cur.get("order", []))
+
+
+func _otp_typed() -> void:
+	if str(cur.get("do", "")) == "task" and str(cur.get("task", "")) == "otp":
+		_task_done({"otp": true})
+
+
+## A task's tip is said by whoever gave it (in his ear, remembered): a subtitle over the task, not a box of text.
+const TIP_BY := {"Raghavan": "raghavan", "Amma": "amma", "Hotel owner": "cook", "Suresh": "suresh", "Divya": "divya"}
+
+
+func _speak_tip(spec: Dictionary) -> void:
+	if not spec.has("tip"):
+		return
+	var by := "karthik"
+	var label := str(spec.get("tip_who", {}).get("en", "")) if spec.get("tip_who") is Dictionary else ""
+	for k in TIP_BY:
+		if label.begins_with(k):
+			by = TIP_BY[k]
+	_say({"who": by, "en": str(spec["tip"].get("en", "")), "ta": str(spec["tip"].get("ta", ""))}, false)
+	ui.move_child(box, ui.get_child_count() - 1)        # (over the task's picture, above it: its buttons are below)
+	_box_at_top(true)
+
+
+func _box_at_top(on: bool) -> void:
+	box.anchor_top = 0.0 if on else 1.0
+	box.anchor_bottom = 0.0 if on else 1.0
+	box.offset_top = 20.0 if on else -200.0
+	box.offset_bottom = 150.0 if on else -40.0
 
 
 ## A visit without a picture task: what he does when he gets there.
@@ -1701,6 +1765,14 @@ func _since_noon(m: float) -> float:
 ## at, the pay and the time to be there by); E takes it, Q ends the shift. Ride to the restaurant, then to the
 ## customer: paid on arrival (with a tip when on time), and the next order comes in. The shift ends on Q or at
 ## "until"; the story goes on (home).
+var _gig_take := 0                    # the rider app's answer: 1 taken, 2 shift ended
+
+
+func _gig_answer(yes: bool) -> void:
+	if str(cur.get("do", "")) == "gigs":
+		_gig_take = 1 if yes else 2
+
+
 func _gig_offer() -> void:
 	var here: Vector3 = car.global_position
 	var picks: Array = cur["pickups"].duplicate()
@@ -1715,6 +1787,15 @@ func _gig_offer() -> void:
 	var pay := int(round((30.0 + ride_km * 12.0) / 5.0)) * 5
 	var by := fmod((fines.sim.minute if fines else 1320.0) + km / float(cur.get("speed_kmh", 25.0)) * 60.0 + 12.0, 1440.0)
 	_gig = {"state": "offer", "pick": pick, "drop": drop, "pay": pay, "by": by, "no": 4472 + _gig_done + randi() % 20}
+	get_tree().create_timer(4.0 if not _skip else 0.5).timeout.connect(func():   # (after the last one's message)
+		if str(cur.get("do", "")) != "gigs" or str(_gig.get("state", "")) != "offer":
+			return
+		if not city.phone.rider_answer.is_connected(_gig_answer):
+			city.phone.rider_answer.connect(_gig_answer)
+		city.phone.rider_offer(cur.get("app", {"en": "QuickBite Rider", "ta": "குவிக்பைட் ரைடர்"}), [
+			{"en": "Order #%d · pickup %s" % [_gig["no"], tr_(data["places"][pick])], "ta": "ஆர்டர் #%d · பிக்அப் %s" % [_gig["no"], tr_(data["places"][pick])]},
+			{"en": "Drop: %s, by %s" % [tr_(data["places"][drop]), _clock12_of(by)], "ta": "டிராப்: %s, %s-க்குள்" % [tr_(data["places"][drop]), _clock12_of(by)]},
+			{"en": "Pay ₹%d + tip" % pay, "ta": "கூலி ₹%d + டிப்" % pay}], {"en": "End shift", "ta": "ஷிஃப்ட் முடி"}))
 	map.pin = null
 	_beam.visible = false
 	goal.text = ""
@@ -1723,20 +1804,15 @@ func _gig_offer() -> void:
 
 
 func _gig_goal() -> void:
-	var app: String = tr_(cur.get("app", {"en": "QuickBite Rider", "ta": "குவிக்பைட் ரைடர்"}))
-	var en := lang == "en"
-	var shift := ("Shift: %d delivered · ₹%d" if en else "ஷிஃப்ட்: %d டெலிவரி · ₹%d") % [_gig_done, _gig_earned]
+	var app = cur.get("app", {"en": "QuickBite Rider", "ta": "குவிக்பைட் ரைடர்"})
 	var by := _clock12_of(float(_gig.get("by", 0.0)))
+	goal.text = ""                                       # (it's on the rider app, and the map's pin)
 	match str(_gig.get("state", "")):
-		"offer":
-			goal.text = "%s · %s #%d\n%s %s → %s\n₹%d · %s %s\n%s\n%s" % [app, "New order" if en else "புது ஆர்டர்", _gig["no"],
-				"Pickup" if en else "பிக்அப்", tr_(data["places"][_gig["pick"]]), tr_(data["places"][_gig["drop"]]), _gig["pay"],
-				"drop by" if en else "டிராப்", by, "E: accept · Q: end the shift and go home" if en else "E: ஏத்துக்கோ · Q: ஷிஃப்ட் முடிச்சு வீட்டுக்கு", shift]
 		"pickup":
-			goal.text = "%s #%d: %s %s\n%s" % [app, _gig["no"], "pick up at" if en else "பிக்அப்:", tr_(data["places"][_gig["pick"]]), shift]
+			city.phone.rider_job(app, [{"en": "Order #%d: pick up at" % _gig["no"], "ta": "ஆர்டர் #%d: பிக்அப்" % _gig["no"]}, data["places"][_gig["pick"]]])
 		"drop":
-			goal.text = "%s #%d: %s %s %s %s\n%s" % [app, _gig["no"], "deliver to" if en else "டெலிவரி:", tr_(data["places"][_gig["drop"]]),
-				"by" if en else "நேரம்", by, shift]
+			city.phone.rider_job(app, [{"en": "Order #%d: deliver to" % _gig["no"], "ta": "ஆர்டர் #%d: டெலிவரி" % _gig["no"]}, data["places"][_gig["drop"]],
+				{"en": "by " + by, "ta": by + "-க்குள்"}])
 
 
 func _clock12_of(m: float) -> String:
@@ -1751,8 +1827,9 @@ func _gigs(dt: float) -> void:
 		city.toggle_on_foot()
 	var e := Input.is_key_pressed(KEY_E)
 	var q := Input.is_key_pressed(KEY_Q)
-	var e_hit := e and not _e_down
-	var q_hit := q and not _q_down
+	var e_hit := _gig_take == 1
+	var q_hit := _gig_take == 2
+	_gig_take = 0
 	_e_down = e
 	_q_down = q
 	var late_night: bool = fines != null and cur.has("until") and _since_noon(fines.sim.minute) > _since_noon(_hhmm(str(cur["until"])))
@@ -1761,15 +1838,18 @@ func _gigs(dt: float) -> void:
 			if t_step < 4.0:                             # (the next order shows once the "paid" note has gone)
 				goal.text = ""
 				return
-			if goal.text == "":
-				_gig_goal()
+			goal.text = ""
 			if _skip and t_step > 4.5:                 # (testing: take two more orders, then go home)
 				if _gig_done < 2:
 					e_hit = true
 				else:
 					q_hit = true
+				city.phone.rider["mode"] = "job"
+				city.phone.hold(false)
 			if q_hit or late_night:
-				hud.warn(("Shift over: %d orders, ₹%d" if lang == "en" else "ஷிஃப்ட் முடிஞ்சது: %d ஆர்டர், ₹%d") % [_gig_done, _gig_earned], 6.0)
+				city.phone.message(cur.get("app", {"en": "QuickBite Rider", "ta": "குவிக்பைட் ரைடர்"}),
+					{"en": "Shift ended: %d orders, ₹%d earned." % [_gig_done, _gig_earned], "ta": "ஷிஃப்ட் முடிஞ்சது: %d ஆர்டர், ₹%d." % [_gig_done, _gig_earned]})
+				city.phone.rider_clear()
 				print("STORY gigs: %d orders, ₹%d" % [_gig_done, _gig_earned])
 				flags["gig_orders"] = _gig_done
 				_next()
@@ -1797,7 +1877,7 @@ func _gigs(dt: float) -> void:
 				_jumped = false
 				t_step = 0.0
 				if _gig["state"] == "pickup":
-					hud.warn(("Picked up order #%d" if lang == "en" else "ஆர்டர் #%d எடுத்தாச்சு") % _gig["no"], 3.0)
+					pass                                 # (the app moves on to the drop: _gig_goal)
 					_gig["state"] = "drop"
 					_gig_goal()
 				else:
@@ -1807,8 +1887,9 @@ func _gigs(dt: float) -> void:
 					fines.sim.money += paid
 					_gig_done += 1
 					_gig_earned += paid
-					hud.warn((("Delivered  +₹%d" + ("  (₹%d tip)" % tip if tip else "  (late: no tip)")) if lang == "en" else
-						("டெலிவரி  +₹%d" + ("  (₹%d டிப்)" % tip if tip else "  (தாமதம்: டிப் இல்ல)"))) % paid, 5.0)
+					city.phone.message(cur.get("app", {"en": "QuickBite Rider", "ta": "குவிக்பைட் ரைடர்"}),
+						{"en": "Order #%d delivered. ₹%d credited%s." % [_gig["no"], paid, (" (₹%d tip)" % tip) if tip else " (late: no tip)"],
+						"ta": "ஆர்டர் #%d டெலிவரி. ₹%d வந்துச்சு%s." % [_gig["no"], paid, (" (₹%d டிப்)" % tip) if tip else " (தாமதம்)"]})
 					print("STORY gig #%d %s → %s paid %d %s" % [_gig["no"], _gig["pick"], _gig["drop"], paid, "ontime" if ontime else "late"])
 					_gig_offer()
 
@@ -1864,7 +1945,7 @@ func _drive(dt: float) -> void:
 		_beam.visible = false
 		if cur.get("comfort", false):
 			stars = clampf(5.0 - _pen - float((fines.challans.size() if fines else 0) - _challans0), 1.0, 5.0)
-			hud.warn(("Ride comfort  " if lang == "en" else "பயண சௌகரியம்  ") + "★".repeat(int(round(stars))) + "☆".repeat(5 - int(round(stars))), 5.0)
+			pass                                         # (his word on the ride is the verdict: comfort_verdict)
 		_next()
 
 
@@ -1879,7 +1960,10 @@ func _comfort(dt: float) -> void:
 	var acc := dv.length() / dt
 	if dv.length() > 3.0:
 		_pen += 1.0
-		hud.warn("Raghavan sir: \"Aiyo!\"" if lang == "en" else "ராகவன் சார்: \"ஐயோ!\"", 2.0)
+		_say({"who": "raghavan", "en": "Aiyo!", "ta": "ஐயோ!"}, false)
+		get_tree().create_timer(1.8).timeout.connect(func():
+			if str(cur.get("do", "")) == "drive":
+				box.visible = false)
 	elif acc > 3.5:
 		_pen += (acc - 3.5) * dt * 0.12
 
@@ -2085,7 +2169,7 @@ func _say(line: Dictionary, arrow := true) -> void:
 	if line.has("pay") and not _paid.has(key) and fines:
 		_paid[key] = true
 		fines.sim.money += int(line["pay"])
-		hud.warn(("+₹%d  " % int(line["pay"])) + ("tip from " if lang == "en" else "டிப்: ") + tr_(data["people"].get(line["who"], {})), 5.0)
+		pass                                             # (handed over in the line itself: no notice)
 	var p: Dictionary = data["people"].get(line["who"], {})
 	who.text = tr_(p)
 	if city and city.phone:

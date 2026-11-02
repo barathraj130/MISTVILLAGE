@@ -22,6 +22,7 @@ var car
 var streamer
 var hud
 var fines
+var phone                                   # Karthik's phone: the police's SMS
 var _mesh: Mesh
 var _set: Node3D
 var _next := 0.0
@@ -61,7 +62,7 @@ func _process(dt: float) -> void:
 	var dist := cp.distance_to(_set.global_transform * OFFICER)
 	if not _warned and dist < 70.0 and past < 0.0:
 		_warned = true
-		_say("POLICE CHECKING AHEAD — slow down and stop")
+		_say("Slow, slow! Stop here, police checking!")
 	if not _done:
 		if dist < 16.0 and absf(car.speed) < 1.0 and absf(local.x) < 9.0:
 			_stopped_for += dt
@@ -73,9 +74,10 @@ func _process(dt: float) -> void:
 			_done = true
 			if fines:
 				var paid: int = fines.pay(Fines.SKIP_CHECK)
-				_say("FINED %s — you drove through a police check" % Fines.rupees(paid), 5.0)
+				_say("Hey! Stop! ...Write the number down. You'll pay for that.", 5.0)
+				_sms("Fined %s on the spot: drove through a police check." % Fines.rupees(paid))
 			else:
-				_say("You drove through a police check!", 5.0)
+				_say("Hey! Stop! Stop, I said!", 5.0)
 	_prev_past = past
 	if past > 150.0 or _age > 300.0 or dist > 900.0:
 		_set.queue_free()
@@ -85,22 +87,30 @@ func _process(dt: float) -> void:
 func _check() -> void:
 	_done = true
 	if fines == null:
-		_say("Papers checked — drive safely", 5.0)
+		_say("Papers? ...Fine. Go, drive safely.", 5.0)
 		return
 	var n: int = fines.challans.size()
 	if n == 0:
-		_say("Papers in order. Drive safely!", 5.0)
+		_say("All in order. Go, go. Drive safely.", 5.0)
 		return
 	var r: Array = fines.settle_challans()
 	if r[0] == n:
-		_say("Papers checked · %d challan(s) paid, %s" % [r[0], Fines.rupees(r[1])], 6.0)
+		_say("You have challans pending. Pay them here, now.", 6.0)
+		_sms("%d challan(s) paid at a police check: %s." % [r[0], Fines.rupees(r[1])])
 	else:
-		_say("Papers checked · paid %s · %s still due (wallet short)" % [Fines.rupees(r[1]), Fines.rupees(fines.owed())], 6.0)
+		_say("That's all you have? Pay the rest online. This week.", 6.0)
+		_sms("Paid %s at a police check. %s still due." % [Fines.rupees(r[1]), Fines.rupees(fines.owed())])
 
 
 func _say(text: String, secs := 4.0) -> void:
 	if hud:
-		hud.warn(text, secs)
+		hud.say("Traffic police", text, secs)
+
+
+## What a fine leaves behind: the SMS from the police on Karthik's phone (no notice on the screen).
+func _sms(text: String) -> void:
+	if phone:
+		phone.message({"en": "Coimbatore City Police", "ta": "கோவை மாநகர காவல்"}, {"en": text, "ta": text})
 
 
 ## Set it up on the road you're driving, about AHEAD metres on, facing you, in your carriageway.

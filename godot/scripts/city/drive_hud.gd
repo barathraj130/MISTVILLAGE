@@ -7,6 +7,9 @@ var fines                          # wallet and challans (fines.gd), when playin
 var life                           # Karthik's stress (life.gd)
 var message := ""                  # a short warning shown for a few seconds (e.g. a red light jumped)
 var message_time := 0.0
+var said_who := ""                 # a spoken line (a policeman, Karthik to himself): who and what, subtitled
+var said := ""
+var said_time := 0.0
 
 func _ready() -> void:
 	set_anchors_preset(Control.PRESET_FULL_RECT)
@@ -15,7 +18,15 @@ func _ready() -> void:
 
 func _process(dt: float) -> void:
 	message_time = maxf(0.0, message_time - dt)
+	said_time = maxf(0.0, said_time - dt)
 	queue_redraw()
+
+
+## Someone says something: shown as a subtitle with their name, as the story's people speak.
+func say(who: String, text: String, secs := 3.5) -> void:
+	said_who = who
+	said = text
+	said_time = secs
 
 
 func warn(text: String, secs := 3.5) -> void:
@@ -24,6 +35,14 @@ func warn(text: String, secs := 3.5) -> void:
 
 
 func _draw() -> void:
+	if said_time > 0.0:
+		var vsz := get_viewport_rect().size
+		var fa := ThemeDB.fallback_font
+		var aa := clampf(said_time * 2.0, 0.0, 1.0)
+		var r := Rect2(vsz.x * 0.5 - 430.0, vsz.y - 190.0, 860.0, 110.0)
+		draw_rect(r, Color(0.05, 0.05, 0.07, 0.86 * aa))
+		draw_string(fa, r.position + Vector2(22, 34), said_who, HORIZONTAL_ALIGNMENT_LEFT, -1, 20, Color(1.0, 0.85, 0.5, aa))
+		draw_multiline_string(fa, r.position + Vector2(22, 66), said, HORIZONTAL_ALIGNMENT_LEFT, r.size.x - 44.0, 22, 2, Color(1, 1, 1, aa))
 	if message_time > 0.0:
 		var vs0 := get_viewport_rect().size
 		var a := clampf(message_time, 0.0, 1.0)

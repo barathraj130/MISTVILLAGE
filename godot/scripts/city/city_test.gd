@@ -21,6 +21,7 @@ const CityDoors := preload("res://scripts/city/city_doors.gd")
 const Life := preload("res://scripts/city/life.gd")
 const Story := preload("res://scripts/story/story.gd")
 const Phone := preload("res://scripts/story/phone.gd")
+const RoomSound := preload("res://scripts/city/room_sound.gd")
 const Hands := preload("res://scripts/story/hands.gd")
 const Walker := preload("res://scripts/player.gd")
 
@@ -203,6 +204,7 @@ func _ready() -> void:
 		phone.name = "Phone"
 		phone.city = self
 		pl.add_child(phone)
+		police.phone = phone
 		traffic.physics_interpolation_mode = Node.PHYSICS_INTERPOLATION_MODE_OFF
 		map = CityMap.new()
 		map.name = "Map"
@@ -470,8 +472,7 @@ var _sig_prev := {}
 ## F: step out of the car (driver's door, on the right) or back in when you're next to it.
 func toggle_on_foot() -> bool:
 	if walker == null:
-		if absf(car.speed) > 1.0:
-			hud.warn("Stop the car first.", 3.0)
+		if absf(car.speed) > 1.0:                               # (moving: nothing happens until he stops)
 			return false
 		Walker.avatar = "res://assets/people/story_karthik.glb"     # you on foot are Karthik, the story's own man
 		walker = Walker.new()
@@ -495,7 +496,6 @@ func toggle_on_foot() -> bool:
 			hud.warn("WASD walk · Shift run · F at the car", 4.0)
 		return true
 	if walker.global_position.distance_to(car.global_position) > 4.5:
-		hud.warn("Walk back to the car to drive.", 3.0)
 		return false
 	walker.deactivate()
 	walker.queue_free()
@@ -546,12 +546,31 @@ func _crossed_signal(sp: Vector3, state: int) -> void:
 	if state == 2:
 		if fines and Fines.has_red_camera(sp):
 			fines.challan("Red light jumped", Fines.RED_LIGHT)
-			hud.warn("E-CHALLAN %s · red light jumped (camera)" % Fines.rupees(Fines.RED_LIGHT))
-		else:
-			hud.warn("RED LIGHT — you jumped the signal")
+			_sms("E-challan %s: red light jumped, signal camera, %s." % [Fines.rupees(Fines.RED_LIGHT), _now12()])
+		else:                                               # (no camera: the horns around him say it)
+			var hp := AudioStreamPlayer.new()
+			hp.stream = RoomSound.sound("horn")
+			hp.volume_db = -6.0
+			add_child(hp)
+			hp.play()
+			hp.finished.connect(hp.queue_free)
 	elif fines and kmh > Fines.CITY_LIMIT_KMH + 5.0 and Fines.has_speed_camera(sp):
 		fines.challan("Overspeeding %d km/h" % roundi(kmh), Fines.OVERSPEED)
-		hud.warn("E-CHALLAN %s · %d km/h in a 50 zone (camera)" % [Fines.rupees(Fines.OVERSPEED), roundi(kmh)])
+		_sms("E-challan %s: %d km/h in a 50 zone, speed camera, %s." % [Fines.rupees(Fines.OVERSPEED), roundi(kmh), _now12()])
+
+
+## An e-challan arrives as it does in Coimbatore: an SMS from the police, on his phone.
+func _sms(text: String) -> void:
+	if phone:
+		phone.message({"en": "Coimbatore City Police", "ta": "கோவை மாநகர காவல்"}, {"en": text, "ta": text})
+
+
+func _now12() -> String:
+	if fines == null:
+		return ""
+	var m: float = fines.sim.minute
+	var h := floori(m / 60.0) % 24
+	return "%d:%02d %s" % [12 if h % 12 == 0 else h % 12, floori(fmod(m, 60.0)), "AM" if h < 12 else "PM"]
 
 
 func _drive_camera(dt: float) -> void:

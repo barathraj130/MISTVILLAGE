@@ -207,13 +207,13 @@ func go(d: Dictionary, room: Node3D) -> void:
 	var f = city.fines
 	var cost: int = d.get("cost", 0)
 	if f.sim.money < cost:
-		city.hud.warn("Not enough in the wallet for that.", 3.0)
+		city.hud.say("Karthik", "(Not enough in my wallet for that.)", 3.0)
 		return
 	if d.get("groceries", false) and f.sim.groceries <= 0:
-		city.hud.warn("The month's groceries are finished: buy them at the kirana.", 4.0)
+		city.hud.say("Amma", "Kanna, the rice and dal are finished. Bring the month's things from the kirana.", 4.0)
 		return
 	if d.get("sleep", false) and tiredness < 35.0:
-		city.hud.warn("He isn't tired enough to sleep yet.", 3.0)
+		city.hud.say("Karthik", "(I'm not sleepy yet.)", 3.0)
 		return
 	f.sim.money -= cost
 	_money = f.sim.money
