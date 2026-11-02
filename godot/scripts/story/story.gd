@@ -51,6 +51,7 @@ extends Node
 const Sim := preload("res://scripts/drive/sim.gd")
 const Tasks := preload("res://scripts/story/tasks.gd")
 const Table := preload("res://scripts/story/table.gd")
+const Wall := preload("res://scripts/story/wall.gd")
 const Actor := preload("res://scripts/story/actor.gd")
 const Walker := preload("res://scripts/player.gd")
 const RoomSound := preload("res://scripts/city/room_sound.gd")
@@ -91,6 +92,8 @@ var flags := {}                     # what the player did in tasks (short_found,
 var _paid := {}                     # lines that already paid (step:line)
 var tasks: Control
 var table: Control                    # the questioning (table.gd)
+var wall: Control                     # the wall in his room (wall.gd)
+var _park := ""                       # a place the car is being set down at, out of sight (after a ride)
 var cast := {}                      # story people in the world: key → Actor
 var _o := Vector3.ZERO              # the scene frame: origin (the car), forward, right
 var _f := Vector3.FORWARD
@@ -195,6 +198,8 @@ func _process(dt: float) -> void:
 		return
 	t_step += dt
 	_keys()
+	if _park != "" and str(cur.get("do", "")) != "ride" and _place_at(place_pos(_park)):
+		_park = ""
 	match str(cur["do"]):
 		"card":
 			if t_step > (2.0 if _skip else 5.0):
@@ -239,6 +244,8 @@ func _process(dt: float) -> void:
 				_next()
 		"ride":
 			_ride(dt)
+		"wait":
+			_wait_step()
 		"call":                                          # the phone rings until he answers
 			if _skip and t_step > 1.5:
 				city.phone.answer()
@@ -478,9 +485,13 @@ func _next() -> void:
 			if str(cur.get("start", "")) == "here" and city.walker:   # (on from where he stands: a talk in between)
 				city.walker.activate()
 				_ring.visible = true
+			elif str(cur.get("start", "")) == "here":     # (nobody on foot yet: a test started here) in at the door
+				_walk_in("door" if _mark("door") else str(cur["visits"][0]["to"]))
 			else:
 				_walk_in(str(cur.get("start", "karthik_room")))
 		"talk":
+			if cur.has("cast"):                         # (someone comes in: Sundaram at the door)
+				_cast(cur["cast"])
 			if city.walker and not cur.get("backdrop", false):
 				_face_to_face()
 		"climb":
@@ -1255,7 +1266,7 @@ func _visit_do(v: Dictionary) -> void:
 	if v.has("sleep_until") and life:
 		var hm: PackedStringArray = str(v["sleep_until"]).split(":")
 		var to := float(hm[0]) * 60.0 + float(hm[1])
-		var mins: float = to - fines.sim.minute + (1440.0 if to <= fines.sim.minute else 0.0)
+		var mins: float = to - fines.sim.minute + (1440.0 if to <= fines.sim.minute + 30.0 else 0.0)   # (a night, not a nap)
 		var m0: float = fines.sim.minute
 		await life._pass(mins, "night's sleep", null, {"sleep": true, "stress": -8.0, "food": 0.0})
 		life.tiredness = 0.0
@@ -1267,6 +1278,29 @@ func _visit_do(v: Dictionary) -> void:
 		var mins := float(v["wait"]) * (0.2 if _skip else 1.0)
 		await life.sit_wait(m, fines.sim.minute + mins, str(v.get("pose", "Sit")))
 		life.stress = clampf(s0 + float(v.get("stress_per_hour", 0.0)) * (fines.sim.minute - m0) / 60.0, 0.0, 100.0)
+	if v.get("wall", false):                             # at his wall: pin what he has (wall.gd); done when he steps back
+		for it in city.hands.items:
+			wall.add(it)
+		for ph in city.phone.photos:
+			if str(ph.get("tag", "")) != "":
+				var w: Dictionary = ph.duplicate()
+				w["id"] = ph["tag"]
+				w["title"] = ph["label"]
+				w["kind"] = "photo" if ph.has("tex") else "recording"
+				wall.add(w)
+		wall.open(lang)
+		if _skip:                                        # (testing: everything up, two threads, then back)
+			var i := 0
+			for it in wall.pool:
+				wall.state["pins"][str(it["id"])] = Vector2(0.15 + (i % 5) * 0.17, 0.35 + floori(i / 5.0) * 0.3)
+				i += 1
+			if wall.pool.size() >= 3:
+				wall.state["threads"] = [[str(wall.pool[0]["id"]), str(wall.pool[1]["id"])], [str(wall.pool[1]["id"]), str(wall.pool[2]["id"])]]
+			get_tree().create_timer(0.8).timeout.connect(_shot)
+			get_tree().create_timer(1.6).timeout.connect(func():
+				wall.visible = false
+				wall.closed.emit())
+		return
 	if v.get("hand_phone", false):
 		city.phone.hold(false)
 		city.phone.taken = true
@@ -1435,7 +1469,33 @@ func _ride(dt: float) -> void:
 		_clear_cast()
 		_cams_back()
 		car.freeze = false
+		_park = str(cur.get("park", ""))                # (the car's set down there, out of sight, for later)
 		_next()
+
+
+## "wait": somewhere to be until a time ("until": "21:00"): on foot, E sits him down where he is (the kerb, a step)
+## and the evening goes by (life.gd sit_wait); already that late, on at once.
+func _wait_step() -> void:
+	var hm: PackedStringArray = str(cur["until"]).split(":")
+	var to := float(hm[0]) * 60.0 + float(hm[1])
+	if fines.sim.minute >= to or (fines.sim.minute < 240.0 and to > 720.0):   # (past it, or past midnight)
+		_next()
+		return
+	if _in_task:
+		return
+	if _skip and t_step > 1.0 and city.walker == null and city.has_method("toggle_on_foot"):
+		car.speed = 0.0
+		city.toggle_on_foot()
+	var e := Input.is_key_pressed(KEY_E)
+	if city.walker and ((e and not _e_down) or (_skip and t_step > 1.5)):
+		_in_task = true
+		await city.life.sit_wait(null, to if not _skip else minf(to, fines.sim.minute + 20.0))
+		_in_task = false
+		if _skip:
+			fines.sim.minute = to
+	_e_down = e
+	var hint := _off_key() if city.walker == null else ("E: sit and wait" if lang == "en" else "E: உட்கார்ந்து காத்திருங்க")
+	goal.text = tr_(cur["goal"]) + "\n" + hint
 
 
 ## Somewhere to eat: on foot at the door of any of the eateries, E for the menu.
@@ -1834,6 +1894,8 @@ func _build_ui() -> void:
 		for k in result:
 			flags[k] = result[k]
 		print("STORY table → %s" % str(result))
+		for c in cur.get("remember", []):              # what he'll write down from memory, for the wall
+			wall.add(c)
 		box.anchor_top = 1.0
 		box.anchor_bottom = 1.0
 		box.anchor_left = 0.5
@@ -1844,6 +1906,12 @@ func _build_ui() -> void:
 		box.offset_right = 430
 		_next())
 	ui.add_child(table)
+	wall = Wall.new()
+	wall.visible = false
+	wall.closed.connect(func():
+		if str(cur.get("do", "")) == "home" and _in_task:
+			_task_done({"pinned": wall.pinned(), "tied": wall.tied()}))
+	ui.add_child(wall)
 	tasks = Tasks.new()
 	tasks.visible = false
 	tasks.finished.connect(_task_done)
