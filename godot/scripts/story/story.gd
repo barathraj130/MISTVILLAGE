@@ -518,7 +518,7 @@ func _next_shot() -> void:
 			a.visible = false
 		if act.get("show", false):
 			a.visible = true
-	if sh.has("line") and not sh.get("fixed_cam", false) and _auto_frame(str(sh["line"]["who"])):
+	if sh.has("line") and not sh.get("fixed_cam", false) and _auto_frame(str(sh["line"]["who"]), str(sh["line"].get("to", ""))):
 		pass                                             # dialogue: framed on whoever is speaking (rooms too)
 	elif sh.get("cam") is String and room != null:
 		_room_cam(str(sh["cam"]))                        # a planned shot of the room (wide, the photos...)
@@ -645,7 +645,7 @@ func _put_cam(at: Vector3, look: Vector3) -> void:
 
 ## Dialogue framing: over the listener's shoulder onto the speaker's face, from the road side; if the speaker isn't
 ## standing in the scene (Karthik talking from the car), onto the person he's talking to. False if nobody's there.
-func _auto_frame(who: String) -> bool:
+func _auto_frame(who: String, to := "") -> bool:
 	var sp: Node3D = cast.get(who)
 	if sp != null and not sp.visible:
 		sp = null
@@ -662,6 +662,8 @@ func _auto_frame(who: String) -> bool:
 	for o in others:
 		if li == null or o.global_position.distance_to(sp.global_position) < li.global_position.distance_to(sp.global_position):
 			li = o
+	if to != "" and cast.has(to) and (cast[to] as Node3D).visible:   # a line said to someone in particular
+		li = cast[to]
 	var head := sp.global_position + Vector3.UP * (1.05 if sp.get("seated") else 1.45)     # (seated: lower)
 	if li != null:
 		sp.face(li.global_position)                      # people talk to each other, not to the camera
@@ -702,6 +704,7 @@ func _auto_frame(who: String) -> bool:
 			fw.dot((at - sp.global_position).normalized())])
 	scene_cam.global_position = at
 	scene_cam.look_at(head - Vector3.UP * 0.12, Vector3.UP)
+	scene_cam.fov = clampf(rad_to_deg(2.0 * atan(0.42 / maxf(at.distance_to(head), 0.5))), 12.0, 50.0)   # head and shoulders fill it
 	_key_light(sp, at)
 	return true
 
@@ -761,7 +764,12 @@ func _meet() -> void:
 	if a == null:
 		_next()
 		return
-	if _skip and t_step > 1.0:
+	if _skip and t_step > 1.0:                           # (testing: out of the car and up to them, as a player would)
+		if city.walker == null and city.has_method("toggle_on_foot"):
+			car.speed = 0.0
+			city.toggle_on_foot()
+		if city.walker:
+			city.walker.global_position = a.global_position + Vector3(a.global_basis.z.x, 0.0, a.global_basis.z.z).normalized() * 1.4 + Vector3.UP * 0.1
 		_next()
 		return
 	var near: bool = city.walker != null and city.walker.global_position.distance_to(a.global_position) < 2.4
@@ -811,6 +819,8 @@ func _face_to_face() -> void:
 	if w.model:
 		w.model.visible = false                         # (it's his eyes: he isn't in the picture)
 	w.active = false
+	hud.visible = false                                 # (only the face and the words, no map or meters)
+	map.visible = false
 	_f2f = who
 
 
@@ -820,6 +830,8 @@ func _f2f_off() -> void:
 		face_light.visible = false
 	if scene_cam:
 		scene_cam.fov = 50.0
+	hud.visible = true
+	map.visible = true
 	var w: Node3D = city.walker
 	if w:
 		if w.model:
@@ -1025,6 +1037,11 @@ func _walk_out() -> void:
 		city.walker.deactivate()
 		city.walker.queue_free()
 		city.walker = null
+	city.streamer.target = car                           # (out of the car by F, the city followed him on foot:
+	if city.map:                                         #  it follows the car again, as getting back in does)
+		city.map.target = car
+	if city.traffic:
+		city.traffic.player = car
 	car.visible = true
 	car.freeze = false
 	map.visible = true

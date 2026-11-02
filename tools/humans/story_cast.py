@@ -54,6 +54,10 @@ CAST = [
      (0.95, 0.95, 0.93), 1616),
 ]
 UNIFORM = {"murugesan": (0.52, 0.41, 0.24), "selvi": (0.52, 0.41, 0.24)}   # police khaki, shirt and trousers alike
+# a moustache, as most Tamil men of their age wear one (the CC0 MPFB proxy, weighted to the face, so it moves with
+# the head and exports with the rig): its colour, and how much narrower than the proxy's own (wide) shape
+MOUSTACHE = {"murugesan": ((0.085, 0.08, 0.075), 0.95), "sundaram": ((0.5, 0.49, 0.47), 0.8),
+             "muniyandi": ((0.6, 0.59, 0.57), 0.86)}
 FPS = 24
 
 
@@ -117,6 +121,9 @@ def build(c):
     shoes = SP.asset("shoes0%d.mhclo" % (1 + rng.randrange(3)), "clothes")
     if shoes and outfit == "trousers":                    # (Divya is at home in her scenes: barefoot, as at home)
         objs.append(SP.HS.add_mhclo_asset(shoes, h, asset_type="Clothes", subdiv_levels=0, material_type="MAKESKIN"))
+    mo = moustache(h, *MOUSTACHE[key]) if key in MOUSTACHE else None
+    if mo is not None:
+        objs.append(mo)
     if outfit == "saree":
         objs += saree(h, arm, cl if p else None, colour, rng)
     # the veshti is a cloth tube round the legs: it rides on the pelvis bone
@@ -156,6 +163,50 @@ def build(c):
     if hair.startswith("sf:"):
         objs.append(sketchfab_hair(h, arm, hair[3:], (0.025, 0.02, 0.018)))
     return arm, objs
+
+
+def moustache(h, colour, narrow):
+    """The moustache proxy on the face: in its own colour (the strands cut out by the proxy's texture's alpha; the
+    MAKESKIN material's own colour ignores a tint), narrowed about its middle and shortened up to the lip (the proxy's
+    is a wide, long Viking shape), its tips drawn a little down: the trimmed moustache men wear in Coimbatore."""
+    p = SP.asset("rehmanpolanski_moustache_viking.mhclo", "clothes")
+    if not p:
+        print("CAST moustache proxy not found", flush=True)
+        return None
+    m = SP.HS.add_mhclo_asset(p, h, asset_type="Clothes", subdiv_levels=0, material_type="MAKESKIN")
+    tex = None
+    for slot in m.material_slots:
+        if slot.material and slot.material.use_nodes:
+            tex = tex or next((n.image for n in slot.material.node_tree.nodes if n.type == 'TEX_IMAGE' and n.image), None)
+    mat = bpy.data.materials.new("Moustache")
+    mat.use_nodes = True
+    nt = mat.node_tree
+    bsdf = nt.nodes["Principled BSDF"]
+    bsdf.inputs["Base Color"].default_value = (*colour, 1.0)
+    bsdf.inputs["Roughness"].default_value = 0.75
+    if tex is not None:
+        it = nt.nodes.new("ShaderNodeTexImage")
+        it.image = tex
+        nt.links.new(it.outputs["Alpha"], bsdf.inputs["Alpha"])
+        if hasattr(mat, "surface_render_method"):
+            mat.surface_render_method = 'DITHERED'
+        else:
+            mat.blend_method = 'HASHED'
+    m.data.materials.clear()
+    m.data.materials.append(mat)
+    vs = m.data.vertices
+    cx = sum(v.co.x for v in vs) / len(vs)
+    half = max(abs(v.co.x - cx) for v in vs) or 1.0
+    up = max(v.co.z for v in vs)
+    for v in vs:
+        d = v.co.x - cx
+        v.co.x = cx + d * narrow
+        v.co.z = up - (up - v.co.z) * 0.5                # up to the lip, not hanging over it
+        t = abs(d) / half
+        if t > 0.55:                                     # the ends drop a little, as they do
+            v.co.z -= 0.004 * (t - 0.55) / 0.45
+    m.data.update()
+    return m
 
 
 HAIRS = os.path.join(HERE, "..", "..", "mapdata", "sketchfab", "people", "free_male_fashion_hair_collection_02_lowpoly.glb")
