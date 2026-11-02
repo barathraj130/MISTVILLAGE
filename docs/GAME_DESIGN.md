@@ -115,13 +115,13 @@ crowd people built in MakeHuman with real walks and runs; Karthik's energy, tire
 4. **Act 1 at full length** (3 days, or the slice's one day: open item) and **Acts 3–4**: isolation, the open
    investigation across the city's places (§4).
 5. **Acts 5–6** and the ending, then **Part 2** in the Nilgiris.
-Alongside: voices, a native-speaker pass on the Tamil, performance on a mid-range PC, then mobile.
+Alongside: voices, a native-speaker pass on the Tamil, performance on a mid-range PC.
 
 ## 7. Open decisions for you
 Decided 2026-10-30: the meters change the story's choices and the driving (§3), and the city's places hold the
 story's leads and evidence (§4).
 1. **Act 1's length:** three game days, or the slice's single compressed day?
-2. **Platform first:** PC / Mac, or mobile (India)?
+2. ~~Platform first~~ **decided 2026-11-02: a PC game** (keyboard and mouse; controllers later).
 3. **Voices:** who records Tamil and English.
 4. **The name:** "The Mist Village", or another.
 

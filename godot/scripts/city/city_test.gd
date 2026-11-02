@@ -20,6 +20,8 @@ const CityPolice := preload("res://scripts/city/city_police.gd")
 const CityDoors := preload("res://scripts/city/city_doors.gd")
 const Life := preload("res://scripts/city/life.gd")
 const Story := preload("res://scripts/story/story.gd")
+const Phone := preload("res://scripts/story/phone.gd")
+const Hands := preload("res://scripts/story/hands.gd")
 const Walker := preload("res://scripts/player.gd")
 
 var streamer
@@ -58,6 +60,8 @@ var _shake := 0.0
 var hud: Control
 var fines                                   # wallet and e-challans (fines.gd)
 var life                                    # Karthik's stress and his outings (life.gd)
+var phone                                   # Karthik's phone, P (story/phone.gd)
+var hands                                   # what he holds and carries, I (story/hands.gd)
 var _prof_frames := 0
 var _r_down := false
 var _jolt := 0.0
@@ -187,6 +191,17 @@ func _ready() -> void:
 		var hl := CanvasLayer.new()
 		hl.add_child(hud)
 		add_child(hl)
+		var pl := CanvasLayer.new()                   # (over the story's subtitles: the phone and his hands are his)
+		pl.layer = 25
+		add_child(pl)
+		hands = Hands.new()
+		hands.name = "Hands"
+		hands.city = self
+		pl.add_child(hands)
+		phone = Phone.new()
+		phone.name = "Phone"
+		phone.city = self
+		pl.add_child(phone)
 		traffic.physics_interpolation_mode = Node.PHYSICS_INTERPOLATION_MODE_OFF
 		map = CityMap.new()
 		map.name = "Map"

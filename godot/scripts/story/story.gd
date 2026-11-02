@@ -109,6 +109,9 @@ var _torch: SpotLight3D
 var _sfx: AudioStreamPlayer
 var _num_down := {}
 var _f2f: Node3D                      # face to face: the person Karthik is talking to, filling the view
+var _goal_first := ""                 # the goal now on his phone (its first line)
+var prompt: Label                     # the key for the thing in front of him
+var _KEY_LINE := RegEx.create_from_string("^(E|F|Q|P|I|Enter|Shift|Space)\\b|^[A-Z]: ")
 var _note := ""                       # home: a line under the goal for a few seconds (the car's HUD is off indoors)
 var _note_t := 0.0
 var room: Node3D                    # the room a scene is playing in, under the street
@@ -226,6 +229,16 @@ func _process(dt: float) -> void:
 			_climb_step(dt)
 		"gigs":
 			_gigs(dt)
+		"give":                                          # read it, then put it in his pocket (E)
+			if _skip and t_step > 1.5:
+				city.hands.put_back()
+			if t_step > 0.3 and city.hands.held.is_empty():
+				_next()
+		"call":                                          # the phone rings until he answers
+			if _skip and t_step > 1.5:
+				city.phone.answer()
+			if city.phone.ringing.is_empty():
+				_next()
 		"free":
 			_tick_clock(dt)
 			if _skip and t_step > 4.0:
@@ -234,6 +247,32 @@ func _process(dt: float) -> void:
 					fines.sim.money if fines else 0, _clock12(), fines.sim.day if fines else 1])
 				get_tree().quit()
 	clock.text = "%s %d   %s" % ["Day" if lang == "en" else "நாள்", fines.sim.day if fines else 1, _clock12()]
+	_route_goal()
+
+
+## What the story wants of him goes on his phone (a buzz, the Notes app), not on the screen; only the key for the
+## thing in front of him ("E: talk") shows, small, under the middle of the view (GAME_DESIGN.md §8).
+func _route_goal() -> void:
+	var lines: PackedStringArray = goal.text.split("\n") if goal.visible else PackedStringArray()
+	var keys: Array = []
+	var rest: Array = []
+	for l in lines:
+		if l.strip_edges() == "":
+			continue
+		if _KEY_LINE.search(l):
+			keys.append(l)
+		else:
+			rest.append(l)
+	goal.modulate.a = 0.0
+	prompt.text = "   ·   ".join(keys)
+	prompt.visible = not keys.is_empty() and not city.hands.is_busy() and not city.phone.is_open
+	if rest.is_empty() or city.phone == null:
+		return
+	if rest[0] != _goal_first:
+		_goal_first = rest[0]
+		city.phone.note("\n".join(rest))
+	elif not city.phone.notes.is_empty():
+		city.phone.notes[0]["text"] = "\n".join(rest)
 
 
 func _keys() -> void:
@@ -251,11 +290,35 @@ func _keys() -> void:
 	var tk := Input.is_key_pressed(KEY_T)
 	if tk and not _t_down:
 		lang = "en" if lang == "ta" else "ta"
+		_sync_lang()
 		_refresh()
 	_t_down = tk
 
 
+func _bike() -> bool:
+	return "scooter" in str(car.vehicle) or "bike" in str(car.vehicle)
+
+
+func _off_key() -> String:
+	if _bike():
+		return "F: get off" if lang == "en" else "F: இறங்குங்க"
+	return "F: get out" if lang == "en" else "F: இறங்குங்க"
+
+
+func _on_key() -> String:
+	if _bike():
+		return "F: back on the scooter" if lang == "en" else "F: ஸ்கூட்டர்ல ஏறுங்க"
+	return "F: back in the car" if lang == "en" else "F: காருக்குள்ள ஏறுங்க"
+
+
+func _sync_lang() -> void:
+	if city and city.phone:
+		city.phone.lang = lang
+		city.hands.lang = lang
+
+
 func _next() -> void:
+	_sync_lang()
 	if step < 0:
 		for a in OS.get_cmdline_user_args():          # (testing: --storyfrom=N starts the chapter at step N)
 			if a.begins_with("--storyfrom="):
@@ -305,6 +368,31 @@ func _next() -> void:
 	if cur.has("vehicle") and car.vehicle != str(cur["vehicle"]):     # (the night delivery is on his scooter)
 		car.configure(str(cur["vehicle"]))
 	match str(cur["do"]):
+		"message":                                       # a text arrives (from, en/ta)
+			city.phone.message(cur["from"], cur["text"], str(cur.get("time", "")))
+			_next()
+			return
+		"contact":                                       # a number he's given
+			city.phone.add_contact(cur["contact"])
+			_next()
+			return
+		"pin":                                           # a place pinned on his phone's map
+			city.phone.pin(str(cur["place"]), cur.get("label", data["places"].get(cur["place"], {})))
+			_next()
+			return
+		"note":                                          # something to do, on his phone
+			city.phone.note(cur["text"])
+			_goal_first = ""
+			_next()
+			return
+		"take":                                          # out of his pocket (handed over, taken from him)
+			city.hands.take(str(cur["id"]))
+			_next()
+			return
+		"give":                                          # into his hands, to read
+			city.hands.give(cur["item"])
+		"call":
+			city.phone.call_from(cur["from"])
 		"drive":
 			var p := place_pos(cur["to"])
 			map.pin = Vector2(p.x, p.z)
@@ -782,7 +870,7 @@ func _meet() -> void:
 	_e_down = e
 	var hint := ""
 	if city.walker == null:
-		hint = "F: get out of the car" if lang == "en" else "F: காரை விட்டு இறங்குங்க"
+		hint = _off_key()
 	elif near:
 		hint = "E: talk" if lang == "en" else "E: பேசுங்க"
 	goal.text = tr_(cur["goal"]) + ("\n" + hint if hint != "" else "")
@@ -1147,7 +1235,7 @@ func _eat_out() -> void:
 	_e_down = e
 	var hint := ""
 	if near_k != "":
-		hint = ("F: get out of the car" if lang == "en" else "F: காரை விட்டு இறங்குங்க") if city.walker == null else \
+		hint = (_off_key()) if city.walker == null else \
 			(("E: go in and eat at " if lang == "en" else "E: சாப்பிட உள்ளே போங்க: ") + tr_(data["places"][near_k]))
 	goal.text = tr_(cur["goal"]) + ("\n" + hint if hint != "" else "")
 
@@ -1483,6 +1571,15 @@ func _build_ui() -> void:
 	tasks.stage_changed.connect(_shot)
 	tasks.dish_chosen.connect(_dish)
 	ui.add_child(tasks)
+	prompt = _label(18, Color(1, 1, 1, 0.9))
+	prompt.anchor_left = 0.5
+	prompt.anchor_right = 0.5
+	prompt.anchor_top = 0.62
+	prompt.offset_left = -400
+	prompt.offset_right = 400
+	prompt.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	prompt.visible = false
+	ui.add_child(prompt)
 	clock = _label(18, Color(0.9, 0.9, 0.9))
 	clock.offset_left = 24
 	clock.offset_top = 18
@@ -1500,7 +1597,7 @@ func _label(size: int, col: Color) -> Label:
 	return l
 
 
-func _say(line: Dictionary, prompt := true) -> void:
+func _say(line: Dictionary, arrow := true) -> void:
 	var key := "%d:%d:%s" % [step, line_i, str(line.get("en", "")).left(12)]
 	if line.has("pay") and not _paid.has(key) and fines:
 		_paid[key] = true
@@ -1508,9 +1605,11 @@ func _say(line: Dictionary, prompt := true) -> void:
 		hud.warn(("+₹%d  " % int(line["pay"])) + ("tip from " if lang == "en" else "டிப்: ") + tr_(data["people"].get(line["who"], {})), 5.0)
 	var p: Dictionary = data["people"].get(line["who"], {})
 	who.text = tr_(p)
+	if city and city.phone:
+		city.phone.heard(tr_(p), tr_(line))
 	who.add_theme_color_override("font_color", Color.html(str(p.get("colour", "#ffffff"))))
 	said.text = tr_(line)
-	hint.text = ("Enter ▸   ·   T: தமிழ்" if lang == "en" else "Enter ▸   ·   T: English") if prompt else ""
+	hint.text = "▸" if arrow else ""
 	box.visible = true
 
 
@@ -1544,7 +1643,7 @@ func _refresh() -> void:
 			var to: Dictionary = data["places"][cur["to"]]
 			goal.text = tr_(cur["goal"]) + "\n" + tr_(to)
 			if city.walker:
-				goal.text += "\n" + ("F: back in the car" if lang == "en" else "F: காருக்குள்ள ஏறுங்க")
+				goal.text += "\n" + _on_key()
 			if cur.has("ride_talk") and _ride_i >= 0 and _ride_i < cur["ride_talk"]["lines"].size():
 				_say(cur["ride_talk"]["lines"][_ride_i], false)
 		"free":
