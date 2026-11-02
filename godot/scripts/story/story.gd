@@ -380,6 +380,9 @@ func _next() -> void:
 			"give", "take", "note", "message", "contact", "pin", "call", "table"]:
 		_unload_room()
 		_cams_back()
+	for k in cur.get("hide", []):                       # (someone gone in: sir into his car, through his gate)
+		if cast.has(k):
+			cast[k].visible = false
 	if cur.has("vehicle") and car.vehicle != str(cur["vehicle"]):     # (the night delivery is on his scooter)
 		car.configure(str(cur["vehicle"]))
 	match str(cur["do"]):
@@ -1301,9 +1304,16 @@ func _visit_do(v: Dictionary) -> void:
 		var m := _mark(str(v["to"]))
 		var s0: float = life.stress
 		var m0: float = fines.sim.minute
-		var mins := float(v["wait"]) * (0.2 if _skip else 1.0)
+		var mins := float(v["wait"])
+		if v.has("until"):                               # (till a time of day: the drivers' hours)
+			var hm: PackedStringArray = str(v["until"]).split(":")
+			mins = float(hm[0]) * 60.0 + float(hm[1]) - fines.sim.minute
+		mins = maxf(mins, 0.0) * (0.2 if _skip else 1.0)
 		await life.sit_wait(m, fines.sim.minute + mins, str(v.get("pose", "Sit")))
 		life.stress = clampf(s0 + float(v.get("stress_per_hour", 0.0)) * (fines.sim.minute - m0) / 60.0, 0.0, 100.0)
+		if _skip and v.has("until"):                     # (testing: the rest of the wait at once)
+			var hm2: PackedStringArray = str(v["until"]).split(":")
+			fines.sim.minute = maxf(fines.sim.minute, float(hm2[0]) * 60.0 + float(hm2[1]))
 	if v.get("wall", false):                             # at his wall: pin what he has (wall.gd); done when he steps back
 		for it in city.hands.items:
 			wall.add(it)
@@ -1736,6 +1746,9 @@ func _clock12_of(m: float) -> String:
 
 func _gigs(dt: float) -> void:
 	_tick_clock(dt)
+	if _skip and city.walker and city.has_method("toggle_on_foot"):   # (testing: back on the scooter)
+		city.walker.global_position = car.global_position + Vector3.UP
+		city.toggle_on_foot()
 	var e := Input.is_key_pressed(KEY_E)
 	var q := Input.is_key_pressed(KEY_Q)
 	var e_hit := e and not _e_down
@@ -1828,6 +1841,9 @@ func _drive(dt: float) -> void:
 	var p := place_pos(cur["to"])
 	var g: float = city.streamer.height_at(p.x, p.z)
 	_beam.global_position = Vector3(p.x, (g if not is_nan(g) else car.global_position.y) + 35.0, p.z)
+	if _skip and t_step > 1.5 and city.walker and city.has_method("toggle_on_foot"):   # (testing: back in, as a player would)
+		city.walker.global_position = car.global_position + Vector3.UP
+		city.toggle_on_foot()
 	if _skip and t_step > 3.0 and not _jumped:            # (testing: jump to the place)
 		if _skip_minutes > 0.0 and fines:                 # (and spend the minutes a real drive would take)
 			fines.sim.minute += _skip_minutes

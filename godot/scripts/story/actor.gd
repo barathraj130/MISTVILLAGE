@@ -103,8 +103,15 @@ func _h(x: float, z: float) -> float:
 	return global_position.y
 
 
+var _reground := 0.0
+
+
 func _process(dt: float) -> void:
 	if _target == Vector3.INF:
+		_reground -= dt                                  # standing: now and then, the ground under him again (the
+		if _reground <= 0.0 and is_nan(floor_y):         #  footpath's collision may load after he was put there)
+			_reground = 0.5
+			global_position.y = _h(global_position.x, global_position.z)
 		return
 	var p := global_position
 	var d := Vector3(_target.x - p.x, 0.0, _target.z - p.z)

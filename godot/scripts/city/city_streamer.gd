@@ -1078,7 +1078,8 @@ func _walks(walks: Array, out: Dictionary, g: Array) -> void:
 	if not faces.is_empty():
 		var shape := ConcavePolygonShape3D.new()
 		shape.set_faces(faces)
-		out["walk_shape"] = shape
+		shape.backface_collision = true                  # (some strips' faces wind downwards: one-sided, people
+		out["walk_shape"] = shape                        #  sank through them to the ground, legs in the footpath)
 	if not lamps.is_empty():
 		var mm := _MM.new()
 		mm.transform_format = MultiMesh.TRANSFORM_3D
@@ -1705,6 +1706,7 @@ func _yards(yards: Array, out: Dictionary) -> void:
 	if not faces.is_empty():
 		var shape := ConcavePolygonShape3D.new()
 		shape.set_faces(faces)
+		shape.backface_collision = true
 		out["yard_shape"] = shape
 	var tm := []
 	for tkey in trees:

@@ -481,6 +481,9 @@ func toggle_on_foot() -> bool:
 		add_child(walker)
 		Walker.avatar = ""
 		var door: Vector3 = car.global_position - car.global_basis.x * 1.6
+		var top: float = streamer.height_at(door.x, door.z)    # (on top of what's there: a footpath can stand 0.55 m
+		if not is_nan(top) and top < door.y + 1.5:             #  above the road, and its collision is one-sided)
+			door.y = maxf(door.y, top)
 		walker.spawn_at(door + Vector3(0, 0.4, 0), car.global_position + car.forward() * 12.0)
 		walker.activate()
 		car.freeze = true
