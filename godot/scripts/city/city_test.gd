@@ -60,6 +60,7 @@ var _shake := 0.0
 var hud: Control
 var fines                                   # wallet and e-challans (fines.gd)
 var life                                    # Karthik's stress and his outings (life.gd)
+var _taught_foot := false
 var phone                                   # Karthik's phone, P (story/phone.gd)
 var hands                                   # what he holds and carries, I (story/hands.gd)
 var _prof_frames := 0
@@ -486,7 +487,9 @@ func toggle_on_foot() -> bool:
 		streamer.target = walker
 		map.target = walker
 		traffic.player = walker
-		hud.warn("On foot: WASD walk · Shift run · mouse looks · F at the car to drive", 5.0)
+		if not _taught_foot:                                    # (taught once: GAME_DESIGN.md §8 rule 10)
+			_taught_foot = true
+			hud.warn("WASD walk · Shift run · F at the car", 4.0)
 		return true
 	if walker.global_position.distance_to(car.global_position) > 4.5:
 		hud.warn("Walk back to the car to drive.", 3.0)

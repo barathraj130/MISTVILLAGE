@@ -29,7 +29,7 @@ func _draw() -> void:
 		var a := clampf(message_time, 0.0, 1.0)
 		draw_rect(Rect2(vs0.x * 0.5 - 260, 70, 520, 54), Color(0.55, 0.02, 0.02, 0.75 * a))
 		draw_string(ThemeDB.fallback_font, Vector2(vs0.x * 0.5 - 260, 107), message, HORIZONTAL_ALIGNMENT_CENTER, 520, 26, Color(1, 1, 1, a))
-	if fines:
+	if fines and (life == null or life.show_meters):        # (F1: otherwise the phone has the wallet, his body the rest)
 		var vs1 := get_viewport_rect().size
 		var f1 := ThemeDB.fallback_font
 		draw_rect(Rect2(vs1.x - 250, 18, 232, 56 if fines.challans.size() > 0 else 34), Color(0, 0, 0, 0.4))
@@ -50,7 +50,7 @@ func _draw() -> void:
 				if bad > 0.5:
 					col = Color(0.95, 0.75, 0.2).lerp(Color(0.95, 0.25, 0.2), (bad - 0.5) * 2.0)
 				draw_rect(Rect2(vs1.x - 175, y + 4, 145.0 * float(rows[i][2]), 9), col)
-	if car == null or car.cockpit:
+	if car == null or car.cockpit or car.freeze:           # (on foot: no speedometer)
 		return
 	var vs := get_viewport_rect().size
 	var c := Vector2(vs.x - 150.0, vs.y - 110.0)

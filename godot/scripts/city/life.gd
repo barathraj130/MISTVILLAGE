@@ -9,8 +9,10 @@ extends Node
 ##   stress     traffic, every e-challan and fine, money going out (pay coming in eases it a little), hunger, bad
 ##              sleep. What brings it down is what people here do to get away for a while: a ticket for the match
 ##              at Nehru Stadium, a film at the mall's multiplex, a tea at a tea stall, a quiet sit in a pew.
-## Each of these is at its own spot in a room (city_doors.gd offers it: "E: ..."): it costs what it costs, passes
-## its hours on the clock and shows him there (the stand, the cot) before he's back on his feet.
+## Each of these is at its own spot in a room (city_doors.gd offers it: "E: ..."): it costs what it costs, and its
+## hours pass while we see him there (the stand, the cot), the clock and the light running on; sleep is his eyes
+## closing and opening again. No caption, no numbers (GAME_DESIGN.md §8): body.gd shows what it did to him, and
+## F1 brings back the bars (show_meters).
 
 const Sim := preload("res://scripts/drive/sim.gd")
 const STRESS0 := 55.0                # where the story finds him: a lot on his mind
@@ -22,6 +24,7 @@ const CHALLAN := 6.0
 const PER_RUPEE_LOST := 1.0 / 150.0
 const PER_RUPEE_EARNED := 1.0 / 400.0
 const SLEEP_MIN_HOURS := 5.0
+const Body := preload("res://scripts/city/body.gd")
 
 ## room → what there is to do there. mark: the room's empty to stand at; cost (₹); hours (game); stress: change;
 ## food: energy gained; sleep: a night's sleep (hours from how tired he is, never under 5); groceries: eats one of the
@@ -69,7 +72,10 @@ var _challans := -1
 var _clock := -1.0                   # the game clock (day * 1440 + minute) last frame
 var _warn := {}
 var _card: ColorRect
-var _text: Label
+var body                             # body.gd: his eyes, his heart, his stomach
+var show_meters := false             # F1: the bars under the wallet
+var _f1_down := false
+var waiting := false                 # sit_wait under way
 
 
 func _ready() -> void:
@@ -91,17 +97,10 @@ func _ready() -> void:
 	_card.color = Color(0, 0, 0, 0)
 	_card.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	layer.add_child(_card)
-	_text = Label.new()
-	_text.set_anchors_preset(Control.PRESET_FULL_RECT)
-	_text.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_text.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	_text.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	_text.add_theme_font_size_override("font_size", 26)
-	_text.add_theme_color_override("font_color", Color(1, 0.96, 0.85))
-	_text.add_theme_color_override("font_outline_color", Color(0, 0, 0))
-	_text.add_theme_constant_override("outline_size", 6)
-	_text.modulate.a = 0.0
-	layer.add_child(_text)
+	body = Body.new()
+	body.life = self
+	add_child(body)
+	show_meters = "--meters" in OS.get_cmdline_user_args()
 
 
 func _clock_now() -> float:
@@ -116,6 +115,10 @@ func _process(dt: float) -> void:
 		_money = f.sim.money
 		_challans = f.challans.size()
 		_clock = _clock_now()
+	var f1 := Input.is_key_pressed(KEY_F1)
+	if f1 and not _f1_down:
+		show_meters = not show_meters
+	_f1_down = f1
 	if busy:
 		return
 	var hours := clampf((_clock_now() - _clock) / 60.0, 0.0, 24.0)   # game hours since last frame (story jumps too)
@@ -152,18 +155,17 @@ func _process(dt: float) -> void:
 			_pass(SLEEP_MIN_HOURS * 60.0, "He pulls over, puts the seat back and is asleep at once.", null,
 				{"sleep": true, "stress": 6.0, "rough": true})
 		elif driving:
-			_card.color.a = 0.35 + 0.25 * sin(Time.get_ticks_msec() / 400.0)   # his eyes closing at the wheel
+			body.lids_hold = 0.45 + 0.35 * sin(Time.get_ticks_msec() / 400.0)   # his eyes closing at the wheel
 			if not _warn.has("wheel"):
 				_warn["wheel"] = 0.0
-				city.hud.warn("He's falling asleep at the wheel. Pull over.", 5.0)
 				print("LIFE dozing at the wheel")
-	elif _card.color.a > 0.0:
-		_card.color.a = 0.0
+	elif body.lids_hold > 0.0 and not busy:
+		body.lids_hold = 0.0
 
 
 func _nag(dt: float, key: String, on: bool, text: String) -> void:
 	_warn[key] = float(_warn.get(key, 0.0)) - dt
-	if on and _warn[key] <= 0.0:
+	if on and _warn[key] <= 0.0 and show_meters:          # (otherwise his body says it: body.gd)
 		_warn[key] = 180.0
 		city.hud.warn(text, 5.0)
 
@@ -233,48 +235,89 @@ func _pass(mins: float, caption: String, seat: Node3D, d: Dictionary) -> void:
 	var w: Node3D = city.walker
 	if w:
 		w.set_physics_process(false)
-	await _fade(1.0, 0.8)
+	var sleep: bool = d.get("sleep", false)
+	if sleep:
+		await body.eyes(true, 2.0)                     # his eyes close
+	else:
+		await _fade(1.0, 0.6)
 	if seat and w:                                     # (the stand, the cot: there he is)
 		w.global_position = seat.global_position - Vector3(0, float(d.get("drop", 0.0)), 0)
 		w.rotation.y = seat.global_rotation.y + PI
 		if d.has("pose") and w.anim and w.anim.has_animation(d["pose"]):   # sitting in his seat with everyone
 			w.anim.play(d["pose"], 0.3)
-	_text.text = caption
-	_text.modulate.a = 1.0
-	if seat:
-		await _fade(0.0, 0.6)
-		_text.vertical_alignment = VERTICAL_ALIGNMENT_BOTTOM
-		_text.offset_bottom = -150
-	await get_tree().create_timer(5.0).timeout
-	var f = city.fines
-	f.sim.minute += mins
-	while f.sim.minute >= 1440.0:
-		f.sim.minute -= 1440.0
-		f.sim.day += 1
-	_clock = _clock_now()
+	if not sleep and seat:
+		await _fade(0.0, 0.6)                          # we watch him there while the hours go
 	var was: Array[int] = [roundi(energy), roundi(tiredness), roundi(stress)]
-	energy = clampf(energy + float(d.get("food", 0.0)) - (2.0 * mins / 60.0 if d.get("sleep", false) else 0.0), 0.0, 100.0)
-	if d.get("sleep", false):
+	await _run_clock(mins, clampf(mins / 60.0 * 1.6, 3.0, 9.0))
+	energy = clampf(energy + float(d.get("food", 0.0)) - (2.0 * mins / 60.0 if sleep else 0.0), 0.0, 100.0)
+	if sleep:
 		tiredness = 25.0 if d.get("rough", false) else 0.0
 	add_stress(float(d.get("stress", 0.0)))
-	var parts: Array = []
-	for k in 3:
-		var now: int = [roundi(energy), roundi(tiredness), roundi(stress)][k]
-		if now != was[k]:
-			parts.append("%s %d → %d" % [["energy", "tiredness", "stress"][k], was[k], now])
-	_text.text = "%s later.   %s\n%s" % [_hours(mins), Sim_clock(f.sim.minute), " · ".join(parts)]
-	_text.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	_text.offset_bottom = 0
-	await _fade(1.0, 0.5)
-	await get_tree().create_timer(3.0).timeout
-	_text.modulate.a = 0.0
-	await _fade(0.0, 0.8)
+	if sleep:
+		await body.eyes(false, 1.6)                    # and open
+	elif _card.color.a > 0.0:
+		await _fade(0.0, 0.6)
 	if w and is_instance_valid(w):
 		w.set_physics_process(true)
 		(w as CharacterBody3D).velocity = Vector3.ZERO
 	save()
 	busy = false
+	var parts: Array = []
+	for k in 3:
+		var now: int = [roundi(energy), roundi(tiredness), roundi(stress)][k]
+		if now != was[k]:
+			parts.append("%s %d → %d" % [["energy", "tiredness", "stress"][k], was[k], now])
 	print("LIFE %s: %s" % [caption.left(40), " · ".join(parts)])
+
+
+## The clock runs on: mins of game time in secs of real time (the sun and the street lights with it).
+func _run_clock(mins: float, secs: float) -> void:
+	var f = city.fines
+	var done := 0.0
+	while done < mins:
+		await get_tree().process_frame
+		var step := minf(mins * get_process_delta_time() / secs, mins - done)
+		done += step
+		f.sim.minute += step
+		while f.sim.minute >= 1440.0:
+			f.sim.minute -= 1440.0
+			f.sim.day += 1
+		_clock = _clock_now()
+
+
+## Sit and wait (a bench, a chair): he sits there and the time runs fast, 20 game minutes a second, until the clock
+## reaches until_min (a game minute of the day) or the player gets up (W, S, E or Space). Awaitable.
+func sit_wait(seat: Node3D, until_min: float, pose := "Sit") -> void:
+	var w = city.walker
+	if w == null or busy:
+		return
+	busy = true
+	waiting = true
+	w.set_physics_process(false)
+	if seat:
+		w.global_position = seat.global_position
+		w.rotation.y = seat.global_rotation.y + PI
+	if w.anim and w.anim.has_animation(pose):
+		w.anim.play(pose, 0.3)
+	var f = city.fines
+	await get_tree().create_timer(0.6).timeout
+	while waiting:
+		await get_tree().process_frame
+		var left: float = until_min - f.sim.minute
+		if left <= 0.0 or Input.is_key_pressed(KEY_W) or Input.is_key_pressed(KEY_S) or Input.is_key_pressed(KEY_SPACE):
+			break
+		var step := minf(20.0 * get_process_delta_time(), left)
+		f.sim.minute += step
+		var hours := step / 60.0
+		energy = clampf(energy - ENERGY_PER_HOUR * hours, 0.0, 100.0)
+		tiredness = clampf(tiredness + TIRED_PER_HOUR * 0.6 * hours, 0.0, 100.0)
+		_clock = _clock_now()
+	waiting = false
+	if is_instance_valid(w):
+		w.set_physics_process(true)
+		if w.anim and w.anim.has_animation("Idle"):
+			w.anim.play("Idle", 0.3)
+	busy = false
 
 
 func _fade(to: float, secs: float) -> void:
