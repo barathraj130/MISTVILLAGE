@@ -426,7 +426,7 @@ func _draw_sign(p: Rect2) -> void:
 				pts.append(q + box.position)
 			draw_polyline(pts, INK, 3.0, true)
 	draw_circle(Vector2(p.position.x + 120, box.get_center().y), 46.0, Color(0.55, 0.12, 0.2, 0.25))
-	_text(Vector2(p.position.x + 74, box.get_center().y + 6), L("BANK SEAL", "வங்கி முத்திரை"), 14, Color(0.55, 0.12, 0.2, 0.6))
+	_text(Vector2(p.position.x + 74, box.get_center().y + 6), t_(spec.get("seal", {"en": "BANK SEAL", "ta": "வங்கி முத்திரை"})), 14, Color(0.55, 0.12, 0.2, 0.6))
 	_btn(_button(0, 2), L("Clear", "அழி"))
 	_btn(_button(1, 2), L("Done  (Enter)", "முடிஞ்சது  (Enter)"), _ink > 120.0)
 

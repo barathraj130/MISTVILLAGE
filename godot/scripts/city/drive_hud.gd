@@ -60,6 +60,10 @@ func _draw() -> void:
 			draw_rect(Rect2(vs1.x - 250, y0, 232, 76), Color(0, 0, 0, 0.4))
 			var rows := [["Energy", 1.0 - life.energy / 100.0, life.energy / 100.0], ["Tired", life.tiredness / 100.0, life.tiredness / 100.0],
 				["Stress", life.stress / 100.0, life.stress / 100.0]]
+			var bail = life.city.bail if life.city and "bail" in life.city else null
+			if bail and bail.active:                     # (F1: the bail's count too)
+				draw_string(f1, Vector2(vs1.x - 240, y0 + 96.0), "Bail  strikes %d · lates %d · suspicion %d" % [bail.strikes.size(), bail.lates, roundi(bail.suspicion)],
+					HORIZONTAL_ALIGNMENT_LEFT, -1, 14, Color(1, 0.85, 0.6, 0.9))
 			for i in rows.size():
 				var bad: float = rows[i][1]
 				var y := y0 + 8.0 + i * 22.0

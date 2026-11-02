@@ -42,6 +42,7 @@ var _t := 0.0
 var _e_down := false
 var _label: Label
 var _home := Vector2(INF, INF)       # where Karthik's house stands (the story's "home" place)
+var _police := Vector2(INF, INF)     # Nagar Police Station (the story's "police" place): its building is the station
 
 
 func _ready() -> void:
@@ -50,6 +51,10 @@ func _ready() -> void:
 		var h = (JSON.parse_string(f.get_as_text()) as Dictionary).get("places", {}).get("home", {})
 		if h is Dictionary and h.has("x"):
 			_home = Vector2(float(h["x"]), float(h["z"]))
+		f.seek(0)
+		var pl = (JSON.parse_string(f.get_as_text()) as Dictionary).get("places", {}).get("police", {})
+		if pl is Dictionary and pl.has("x"):
+			_police = Vector2(float(pl["x"]), float(pl["z"]))
 	for a in OS.get_cmdline_user_args():                # (testing: --doortest=N walks into N buildings near the start,
 		if a.begins_with("--soundtest="):              # (testing: every room sound written as WAVs into the folder)
 			RoomSound.save_all(a.get_slice("=", 1))
@@ -94,10 +99,14 @@ func _process(dt: float) -> void:
 			return
 		var at_door := w.global_position.distance_to(_exit) < 1.8
 		var todo: Dictionary = life.offer(inside["room"], _room, w.global_position) if life and not at_door else {}
+		var bail = city.bail if "bail" in city else null
+		var sign: String = bail.offer(inside["room"], _room, w.global_position) if bail and not at_door else ""
 		_label.text = ("Inside %s · E: go out" % NAMES.get(inside["room"], "the building")) if at_door else \
-			("E: %s" % todo["offer"] if not todo.is_empty() else "")
+			("E: %s" % todo["offer"] if not todo.is_empty() else ("E: " + sign if sign != "" else ""))
 		if at_door and pressed:
 			leave(w)
+		elif pressed and sign != "":
+			bail.go()
 		elif pressed and not todo.is_empty():
 			life.go(todo, _room)
 		return
@@ -160,7 +169,7 @@ func door_near(p: Vector3) -> Dictionary:
 							nrm = -nrm
 						bd = d
 						best = {"pos": Vector3(q.x, p.y, q.y), "out": Vector3(nrm.x, 0, nrm.y),
-							"room": "home" if centre.distance_to(_home) < 10.0 else _room_for(b, s),
+							"room": "home" if centre.distance_to(_home) < 10.0 else ("police" if centre.distance_to(_police) < 25.0 else _room_for(b, s)),
 							"key": "%d,%d" % [roundi(centre.x), roundi(centre.y)]}
 	return best
 

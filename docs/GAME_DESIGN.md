@@ -110,7 +110,10 @@ crowd people built in MakeHuman with real walks and runs; Karthik's energy, tire
 **Next, in order (proposal):**
 1. **Finish the vertical slice** (S8–S11): the arrest at the door, the interrogation with choices, the first evidence
    on the board, the first lead with Muniyandi, the cliffhanger. Weave the meters in (breakfast, a tired night job).
-2. **The bail rhythm:** the evening signing with reminders, lates and strikes, the district border.
+2. ~~**The bail rhythm**~~ **built 2026-11-03** (city/bail.gd): the evening signing at Selvi's desk (6–7 PM, 7–8
+   late, three lates a strike), the phone's reminders at 5 and 5:45, a missed evening a strike (Selvi's text, the
+   inspector's suspicion), three strikes in 7 days cancel bail (Sundaram's call, days inside, ₹15,000: the jail
+   chapter itself still to build), the district border check at the map's edges (the second time a strike).
 3. **The phone:** job board, evidence board, contacts, map with leads.
 4. **Act 1 at full length** (3 days, or the slice's one day: open item) and **Acts 3–4**: isolation, the open
    investigation across the city's places (§4).

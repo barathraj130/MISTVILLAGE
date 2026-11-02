@@ -2418,7 +2418,7 @@
     },
     {
      "to": "karthik_room",
-     "sleep_until": "17:15",
+     "sleep_until": "17:35",
      "goal": {
       "en": "Rest till evening",
       "ta": "சாயங்காலம் வரைக்கும் ஓய்வு"
@@ -2431,11 +2431,7 @@
    ]
   },
   {
-   "do": "note",
-   "text": {
-    "en": "Sign at Nagar Police Station: 6–7 PM, every evening",
-    "ta": "நகர் காவல் நிலையத்துல கையெழுத்து: தினமும் சாயங்காலம் 6–7"
-   }
+   "do": "bail"
   },
   {
    "do": "drive",
@@ -2513,6 +2509,10 @@
      "sign_label": {
       "en": "Signature of the accused",
       "ta": "குற்றம் சாட்டப்பட்டவர் கையொப்பம்"
+     },
+     "seal": {
+      "en": "STATION SEAL",
+      "ta": "நிலைய முத்திரை"
      }
     }
    ]

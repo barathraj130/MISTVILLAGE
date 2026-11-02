@@ -409,6 +409,11 @@ func _next() -> void:
 			city.phone.pin(str(cur["place"]), cur.get("label", data["places"].get(cur["place"], {})))
 			_next()
 			return
+		"bail":                                          # bail begins: the evenings at the station (city/bail.gd)
+			if city.bail:
+				city.bail.start()
+			_next()
+			return
 		"note":                                          # something to do, on his phone
 			city.phone.note(cur["text"])
 			_goal_first = ""
@@ -1144,6 +1149,8 @@ func _task_done(result: Dictionary) -> void:
 	if int(result.get("paid", 0)) > 0 and fines:         # a meal out, from the wallet
 		fines.sim.money -= int(result["paid"])
 	print("STORY task %s → %s" % [cur.get("task", cur.get("do", "")), str(result)])
+	if result.get("signed", false) and room != null and str(room.get_meta("room", "")) == "police" and city.bail:
+		city.bail.sign_now()                             # (the story's signing is the register's too)
 	_in_task = false
 	box.visible = false
 	_box_at_top(false)
