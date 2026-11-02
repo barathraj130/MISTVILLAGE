@@ -246,6 +246,8 @@ func _process(dt: float) -> void:
 			_ride(dt)
 		"wait":
 			_wait_step()
+		"gate":
+			_gate()
 		"call":                                          # the phone rings until he answers
 			if _skip and t_step > 1.5:
 				city.phone.answer()
@@ -410,6 +412,30 @@ func _next() -> void:
 			city.phone.call_from(cur["from"])
 		"ride":
 			_ride_start()
+		"gate":
+			_has_tea = false
+			_in_task = false
+			_cast(cur.get("cast", {}))
+			if cast.has("seller") and not cast["seller"].has_node("Lamp"):   # the stall's bulb, warm in the dark
+				var lamp := OmniLight3D.new()
+				lamp.name = "Lamp"
+				lamp.position = Vector3(0, 2.4, 0.4)
+				lamp.light_color = Color(1.0, 0.72, 0.38)
+				lamp.light_energy = 2.2
+				lamp.omni_range = 7.0
+				cast["seller"].add_child(lamp)
+			if _ring:
+				_ring.visible = false
+		"record":                                        # (testing only: the recorder a player would start himself)
+			if _skip:
+				city.phone.recording = not bool(cur.get("on", true))
+				city.phone._toggle_rec()
+			_next()
+			return
+		"evidence":                                      # what was recorded becomes evidence, if it was
+			_evidence()
+			_next()
+			return
 		"table":                                         # across the table from him: answer by what you do
 			if city.walker:
 				_face_to_face()
@@ -1496,6 +1522,100 @@ func _wait_step() -> void:
 	_e_down = e
 	var hint := _off_key() if city.walker == null else ("E: sit and wait" if lang == "en" else "E: உட்கார்ந்து காத்திருங்க")
 	goal.text = tr_(cur["goal"]) + "\n" + hint
+
+
+## "gate": someone won't let him by, and two ways round it, both done, not chosen from a list: take out his wallet
+## and hold a note out to them (a "bribe" or more: "sets"["bribe"]); or go to the stall nearby ("cast"'s "seller"),
+## buy tea and vadai ("price") and bring them back ("sets"["tea"]).
+var _has_tea := false
+
+
+func _gate() -> void:
+	var a: Node3D = cast.get(str(cur["who"]))
+	var sl: Node3D = cast.get("seller")
+	if a == null or city.walker == null or _in_task:
+		return
+	var w: Vector3 = city.walker.global_position
+	var near_him := w.distance_to(a.global_position) < 2.4
+	var near_stall := sl != null and w.distance_to(sl.global_position) < 2.4
+	var e := Input.is_key_pressed(KEY_E)
+	var pick := 0
+	for arg in OS.get_cmdline_user_args():
+		if arg.begins_with("--storychoose="):
+			pick = int(arg.get_slice("=", 1))
+	if _skip and t_step > 1.0:                           # (testing: 1 the note, 2 the tea)
+		if pick != 2:
+			_gate_note(int(cur.get("bribe", 300)))
+			return
+		var to: Node3D = a if _has_tea else sl
+		city.walker.global_position = to.global_position + Vector3(1.0, 0.1, 0.0)
+		near_him = _has_tea
+		near_stall = not _has_tea
+		e = true
+		_e_down = false
+	if e and not _e_down:
+		if near_stall and not _has_tea:
+			var price := int(cur.get("price", 40))
+			if fines.sim.money >= price:
+				fines.sim.money -= price
+				_has_tea = true
+				_play_sfx("clink", -6.0)
+				city.hands.items.append({"id": "tea", "kind": "note", "title": {"en": "Tea and vadai", "ta": "டீ, வடை"},
+					"body": {"en": "Two glasses of tea, two vadai in newspaper.", "ta": "ரெண்டு கிளாஸ் டீ, பேப்பர்ல ரெண்டு வடை."}})
+		elif near_him and _has_tea:
+			city.hands.take("tea")
+			flags[str(cur["sets"]["tea"])] = true
+			print("STORY gate → tea")
+			_next()
+			return
+		elif near_him:
+			city.hands.give({"id": "wallet", "kind": "wallet", "title": {"en": "Wallet", "ta": "பர்ஸ்"}})
+			if not city.hands.note_given.is_connected(_gate_note):
+				city.hands.note_given.connect(_gate_note)
+	_e_down = e
+	var hint := ""
+	if near_stall and not _has_tea:
+		hint = ("E: tea and vadai, ₹%d" if lang == "en" else "E: டீ, வடை, ₹%d") % int(cur.get("price", 40))
+	elif near_him and _has_tea:
+		hint = "E: give him the tea" if lang == "en" else "E: அவருக்கு டீ குடுங்க"
+	elif near_him:
+		hint = "E: your wallet" if lang == "en" else "E: உங்க பர்ஸ்"
+	goal.text = tr_(cur["goal"]) + ("\n" + hint if hint != "" else "")
+
+
+func _gate_note(amount: int) -> void:
+	if str(cur.get("do", "")) != "gate":
+		return
+	if city.hands.note_given.is_connected(_gate_note):
+		city.hands.note_given.disconnect(_gate_note)
+	city.hands.take("wallet")
+	if amount < int(cur.get("bribe", 300)):              # too little: he pushes it back
+		_say({"who": str(cur["who"]), "en": "₹%d? For that you can go home. Go." % amount, "ta": "₹%d-ஆ? அதுக்கு வீட்டுக்கு போ. போ." % amount}, false)
+		get_tree().create_timer(2.5).timeout.connect(func(): box.visible = false)
+		return
+	fines.sim.money -= amount
+	flags[str(cur["sets"]["bribe"])] = true
+	print("STORY gate → note %d" % amount)
+	_next()
+
+
+## "evidence": the newest recording on his phone with "speaker" in it becomes evidence ("tag", "label"; "label_paid"
+## when the flag "paid" is set: a bought word); either way the wall gets his memory of it ("memory": a card).
+func _evidence() -> void:
+	var who := tr_(data["people"].get(str(cur["speaker"]), {}))
+	for ph in city.phone.photos:
+		if ph.has("lines") and str(ph.get("tag", "")) == "":
+			var has := false
+			for ln in ph["lines"]:
+				if str(ln[0]) == who:
+					has = true
+			if has:
+				ph["tag"] = str(cur["tag"])
+				ph["label"] = cur.get("label_paid", cur["label"]) if flags.get(str(cur.get("paid", "-")), false) else cur["label"]
+				print("STORY evidence: recording → %s" % ph["tag"])
+				break
+	if cur.has("memory"):
+		wall.add(cur["memory"])
 
 
 ## Somewhere to eat: on foot at the door of any of the eateries, E for the menu.

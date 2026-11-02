@@ -6,6 +6,7 @@ extends Control
 ## His hands are his: the more stressed he is, the more the paper shakes (life.gd's stress).
 
 signal put_away(id: String)
+signal note_given(amount: int)              # the wallet: a note taken out and held out to someone
 
 const PAPER := Color(0.96, 0.95, 0.9)
 const NOTE := Color(0.98, 0.93, 0.62)
@@ -138,6 +139,14 @@ func _gui_input(e: InputEvent) -> void:
 		elif e.button_index == MOUSE_BUTTON_WHEEL_DOWN:
 			_zoom = maxf(_zoom - 0.1, 0.7)
 		elif e.button_index == MOUSE_BUTTON_LEFT:
+			if str(held.get("kind", "")) == "wallet":     # a note out of the wallet, held out
+				for n in _notes():
+					if (n[1] as Rect2).has_point(e.position):
+						var amount: int = n[0]
+						put_back()
+						note_given.emit(amount)
+						accept_event()
+						return
 			if pocket_open:
 				for i in items.size():
 					if _slot(i).has_point(e.position):
@@ -175,7 +184,7 @@ func _shake() -> Vector2:
 func _sheet() -> Rect2:
 	var vs := get_viewport_rect().size
 	var k := str(held.get("kind", "paper"))
-	var base := {"paper": Vector2(560, 760), "note": Vector2(380, 300), "cheque": Vector2(820, 360),
+	var base := {"paper": Vector2(560, 760), "note": Vector2(380, 300), "cheque": Vector2(820, 360), "wallet": Vector2(900, 420),
 		"photo": Vector2(720, 480)}.get(k, Vector2(560, 760)) as Vector2
 	var sc := minf(1.0, (vs.y - 120.0) / base.y) * _zoom
 	var size := base * sc
@@ -216,11 +225,21 @@ func _draw() -> void:
 	var k := str(held.get("kind", "paper"))
 	draw_rect(Rect2(r.position + Vector2(10, 14), r.size), Color(0, 0, 0, 0.35))
 	draw_rect(r, _paper_col(k))
-	var sc: float = r.size.x / {"paper": 560.0, "note": 380.0, "cheque": 820.0, "photo": 720.0}.get(k, 560.0)
+	var sc: float = r.size.x / {"paper": 560.0, "note": 380.0, "cheque": 820.0, "photo": 720.0, "wallet": 900.0}.get(k, 560.0)
 	match k:
 		"photo":
 			if held.has("tex"):
 				draw_texture_rect(held["tex"], r.grow(-14.0 * sc), false)
+		"wallet":                                      # open, the notes standing up in it: pick one
+			draw_rect(r, Color(0.28, 0.17, 0.1))
+			draw_rect(r.grow(-10.0 * sc), Color(0.35, 0.22, 0.13))
+			for n in _notes():
+				var nr: Rect2 = n[1]
+				draw_rect(Rect2(nr.position + Vector2(3, 4), nr.size), Color(0, 0, 0, 0.3))
+				draw_rect(nr, NOTE_COL.get(n[0], Color(0.8, 0.8, 0.7)))
+				draw_string(font, nr.position + Vector2(10, nr.size.y * 0.6), "₹%d" % n[0], HORIZONTAL_ALIGNMENT_LEFT, -1, int(24 * sc), Color(0.15, 0.12, 0.1))
+			if _notes().is_empty():
+				draw_string(font, r.get_center() + Vector2(-80, 0), L("Empty.", "காலி."), HORIZONTAL_ALIGNMENT_LEFT, -1, int(26 * sc), Color(1, 1, 1, 0.7))
 		"note":                                        # a scrap torn from a pad, folded twice, written in a hurry
 			draw_line(Vector2(r.position.x, r.get_center().y), Vector2(r.end.x, r.get_center().y), Color(0, 0, 0, 0.08), 2.0)
 			draw_line(Vector2(r.get_center().x, r.position.y), Vector2(r.get_center().x, r.end.y), Color(0, 0, 0, 0.06), 2.0)
@@ -245,6 +264,27 @@ func _draw() -> void:
 				draw_arc(c, 62.0 * sc, 0, TAU, 48, Color(0.45, 0.2, 0.6, 0.75), 4.0 * sc)
 				draw_arc(c, 46.0 * sc, 0, TAU, 48, Color(0.45, 0.2, 0.6, 0.6), 2.0 * sc)
 				draw_string(font, c + Vector2(-60, 6) * sc, L("POLICE", "காவல்"), HORIZONTAL_ALIGNMENT_CENTER, 120.0 * sc, int(16 * sc), Color(0.45, 0.2, 0.6, 0.8))
+
+
+const NOTE_COL := {500: Color(0.72, 0.7, 0.62), 200: Color(0.95, 0.75, 0.35), 100: Color(0.72, 0.68, 0.85),
+	50: Color(0.6, 0.85, 0.85), 20: Color(0.78, 0.85, 0.55), 10: Color(0.8, 0.65, 0.5)}
+
+
+## The wallet's notes: [amount, rect], what's in it now (the wallet's money, as notes a man carries).
+func _notes() -> Array:
+	var money := 0
+	if city and city.fines:
+		money = mini(int(city.fines.sim.money), 2000)          # (the rest is in the bank)
+	var out: Array = []
+	var r := _sheet()
+	var i := 0
+	for v in [500, 200, 100, 50, 20, 10]:
+		if money >= v:
+			var w := r.size.x * 0.13
+			out.append([v, Rect2(r.position.x + r.size.x * 0.06 + i * (w + r.size.x * 0.025), r.position.y + r.size.y * 0.2, w, r.size.y * 0.6)])
+			money -= v
+			i += 1
+	return out
 
 
 func _paper_col(k: String) -> Color:

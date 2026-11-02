@@ -2850,31 +2850,32 @@
    ]
   },
   {
-   "do": "choose",
-   "prompt": {
-    "en": "He won't let you in.",
-    "ta": "உள்ள விட மாட்டேங்கறார்."
+   "do": "gate",
+   "who": "muniyandi",
+   "bribe": 300,
+   "price": 40,
+   "sets": {
+    "bribe": "bribed_watchman",
+    "tea": "honest_watchman"
    },
-   "options": [
-    {
-     "text": {
-      "en": "Hold out ₹500: \"For your tea, anna.\"",
-      "ta": "₹500 நீட்டுங்க: \"டீக்கு வச்சுக்கோங்க அண்ணா.\""
-     },
-     "set": "bribed_watchman",
-     "pay": 500,
-     "stress": 0
-    },
-    {
-     "text": {
-      "en": "Walk to the tea stall, come back with tea and vadai, and sit with him",
-      "ta": "டீக்கடைக்கு போய், டீயும் வடையும் வாங்கிட்டு வந்து, அவர் கூட உக்காருங்க"
-     },
-     "set": "honest_watchman",
-     "pay": 40,
-     "stress": -3
+   "cast": {
+    "seller": {
+     "pos": [
+      3.5,
+      16.0
+     ],
+     "look": [
+      -3.2,
+      1.5
+     ],
+     "model": "crowd_m3",
+     "anim": "Idle"
     }
-   ]
+   },
+   "goal": {
+    "en": "He won't let you in. A tea stall's still open across the road",
+    "ta": "உள்ள விட மாட்டேங்கறார். ரோட்டுக்கு அந்த பக்கம் டீக்கடை இன்னும் திறந்திருக்கு"
+   }
   },
   {
    "do": "talk",
@@ -2953,6 +2954,20 @@
    "do": "talk",
    "lines": [
     {
+     "who": "karthik",
+     "en": "(My phone. If he says it, I want it said twice.)",
+     "ta": "(என் ஃபோன். அவர் சொன்னா, அத ரெண்டு தடவ கேக்கணும்.)"
+    }
+   ]
+  },
+  {
+   "do": "record",
+   "on": true
+  },
+  {
+   "do": "talk",
+   "lines": [
+    {
      "who": "muniyandi",
      "en": "Careful. The third step from the top is broken. The current has gone again, see.",
      "ta": "பாத்து. மேல இருந்து மூணாவது படி உடைஞ்சிருக்கு. பாத்தியா, திரும்ப கரண்ட் போச்சு."
@@ -3003,28 +3018,89 @@
    ]
   },
   {
-   "do": "card",
-   "when": "honest_watchman",
-   "big": {
-    "en": "Evidence E06",
-    "ta": "சாட்சியம் E06"
+   "do": "record",
+   "on": false
+  },
+  {
+   "do": "evidence",
+   "speaker": "muniyandi",
+   "tag": "E06",
+   "paid": "bribed_watchman",
+   "label": {
+    "en": "Watchman: man in a cap, 9:40–9:58",
+    "ta": "வாட்ச்மேன்: தொப்பி, 9:40–9:58"
    },
-   "small": {
-    "en": "The watchman's word: a man in a cap went up at 9:40 PM with a key card, and came down at 9:58.\nUnverified until a second source backs it.  New lead: Kathir, the nephew, Saibaba Colony.",
-    "ta": "வாட்ச்மேனோட வாக்குமூலம்: தொப்பி போட்ட ஒருத்தன் ராத்திரி 9:40க்கு கீ கார்டோட மேல போனான், 9:58க்கு கீழ வந்தான்.\nஇன்னொரு ஆதாரம் வர வரைக்கும் உறுதி இல்ல.  புது தடயம்: கதிர், அக்கா பையன், சாயிபாபா காலனி."
+   "label_paid": {
+    "en": "Watchman (paid): man in a cap",
+    "ta": "வாட்ச்மேன் (காசு குடுத்தது): தொப்பி"
+   },
+   "memory": {
+    "id": "mem_watchman",
+    "kind": "card",
+    "title": {
+     "en": "The watchman",
+     "ta": "வாட்ச்மேன்"
+    },
+    "body": {
+     "en": "Cap, dark jacket, key card. Up 9:40, down 9:58.",
+     "ta": "தொப்பி, கருப்பு ஜாக்கெட், கீ கார்டு. 9:40 மேல, 9:58 கீழ."
+    }
    }
   },
   {
-   "do": "card",
-   "when": "bribed_watchman",
-   "big": {
-    "en": "Evidence E06 (disputed)",
-    "ta": "சாட்சியம் E06 (சர்ச்சை)"
-   },
-   "small": {
-    "en": "The watchman's word: a man in a cap went up at 9:40 PM with a key card, and came down at 9:58.\nDisputed: you paid him. Suresh's lawyer will say you bought it. Find a second source.",
-    "ta": "வாட்ச்மேனோட வாக்குமூலம்: தொப்பி போட்ட ஒருத்தன் ராத்திரி 9:40க்கு கீ கார்டோட மேல போனான், 9:58க்கு கீழ வந்தான்.\nசர்ச்சை: நீங்க காசு குடுத்தீங்க. இத விலைக்கு வாங்கினதுன்னு சுரேஷோட வக்கீல் சொல்லுவாரு. இன்னொரு ஆதாரம் தேடுங்க."
+   "do": "contact",
+   "when": "honest_watchman",
+   "contact": {
+    "name": {
+     "en": "Kathir (Muniyandi's nephew)",
+     "ta": "கதிர் (முனியாண்டி அக்கா பையன்)"
+    },
+    "number": "98431 6•••5",
+    "where": {
+     "en": "CCTV repair, Saibaba Colony, behind the bakery",
+     "ta": "சிசிடிவி ரிப்பேர், சாயிபாபா காலனி, பேக்கரி பின்னாடி"
+    }
    }
+  },
+  {
+   "do": "pin",
+   "when": "honest_watchman",
+   "place": "drop_saibaba_colony",
+   "label": {
+    "en": "Kathir's shop, behind the bakery",
+    "ta": "கதிர் கடை, பேக்கரி பின்னாடி"
+   }
+  },
+  {
+   "do": "drive",
+   "to": "home",
+   "radius": 45,
+   "goal": {
+    "en": "Home",
+    "ta": "வீடு"
+   }
+  },
+  {
+   "do": "call",
+   "from": {
+    "en": "Unknown number",
+    "ta": "தெரியாத நம்பர்"
+   }
+  },
+  {
+   "do": "talk",
+   "lines": [
+    {
+     "who": "karthik",
+     "en": "Hello? ...Who is this?",
+     "ta": "ஹலோ? ...யாரு இது?"
+    },
+    {
+     "who": "karthik",
+     "en": "(The same breathing. Then, very quietly, a car's indicator ticking. Then nothing.)",
+     "ta": "(அதே மூச்சு. அப்புறம், ரொம்ப மெதுவா, ஒரு காரோட இண்டிகேட்டர் டிக் டிக். அப்புறம் ஒண்ணுமில்ல.)"
+    }
+   ]
   },
   {
    "do": "card",
@@ -3033,8 +3109,8 @@
     "ta": "தொடரும்"
    },
    "small": {
-    "en": "Next: the nephew's copy of the camera.",
-    "ta": "அடுத்து: அக்கா பையன் கிட்ட இருக்கற கேமரா காப்பி."
+    "en": "",
+    "ta": ""
    }
   },
   {
