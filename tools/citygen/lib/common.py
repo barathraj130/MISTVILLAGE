@@ -67,6 +67,29 @@ def bbox(cfg):
     raise SystemExit("boundary: set circle or geojson in config/city.yaml (osm_relation not supported yet)")
 
 
+def area_utm(cfg):
+    """The boundary (without margin) as one shapely geometry in the city's CRS (UTM metres)."""
+    import shapely
+    from shapely.geometry import Point, shape
+    to_utm = Transformer.from_crs("EPSG:4326", cfg["crs"], always_xy=True)
+    b = cfg["boundary"]
+    if b.get("circle"):
+        c = b["circle"]
+        return Point(*to_utm.transform(c["lon"], c["lat"])).buffer(float(c["radius_m"]), 64)
+    with open(path(b["geojson"])) as f:
+        gj = json.load(f)
+    geoms = [shape(ft["geometry"]) for ft in gj.get("features", [gj])]
+    return shapely.union_all([shapely.transform(g, lambda c: list(zip(*to_utm.transform(c[:, 0], c[:, 1])))) for g in geoms])
+
+
+def area_name(cfg):
+    b = cfg["boundary"]
+    if b.get("circle"):
+        c = b["circle"]
+        return "circle %.0f km round (%.4f N, %.4f E)" % (float(c["radius_m"]) / 1000, c["lat"], c["lon"])
+    return "the shape in %s" % b["geojson"]
+
+
 def inside(cfg):
     """A fast point test (lon, lat) → bool for the boundary plus margin."""
     b = cfg["boundary"]
@@ -78,5 +101,17 @@ def inside(cfg):
         lon0, lat0 = c["lon"], c["lat"]
         r2 = r * r
         return lambda lon, lat: ((lon - lon0) * kx) ** 2 + ((lat - lat0) * 110540.0) ** 2 <= r2
+    if b.get("geojson"):                                  # the area's own shape (plus margin), in local metres
+        import shapely
+        from shapely.geometry import shape
+        with open(path(b["geojson"])) as f:
+            gj = json.load(f)
+        lon0, lat0 = cfg["origin"]["lon"], cfg["origin"]["lat"]
+        kx = 111320.0 * math.cos(math.radians(lat0))
+        geoms = [shape(ft["geometry"]) for ft in gj.get("features", [gj])]
+        local = shapely.union_all([shapely.transform(g, lambda c: (c - [lon0, lat0]) * [kx, 110540.0]) for g in geoms])
+        area = local.buffer(m, 8)
+        shapely.prepare(area)
+        return lambda lon, lat: bool(shapely.contains_xy(area, (lon - lon0) * kx, (lat - lat0) * 110540.0))
     x0, y0, x1, y1 = bbox(cfg)
     return lambda lon, lat: x0 <= lon <= x1 and y0 <= lat <= y1

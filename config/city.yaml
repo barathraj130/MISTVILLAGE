@@ -5,8 +5,9 @@ origin: {lat: 11.0183, lon: 76.9678} # Gandhipuram; game x = E - E0, z = -(N - N
 
 # which area to build: exactly one of these
 boundary:
-  circle: {lat: 11.0183, lon: 76.9678, radius_m: 12000}   # the city core (start here)
-  geojson: null                                            # e.g. config/cbe_boundary.geojson
+  circle: null                                             # (was the city core: 12 km round Gandhipuram)
+  geojson: config/cbe_boundary.geojson                     # the core + the Mettupalayam corridor to the ghat feet
+                                                           #  (tools/citygen/boundary.py)
   osm_relation: null                                       # e.g. the corporation boundary relation id
 margin_m: 1500                        # extra data kept around the boundary (terrain, roads leaving it)
 

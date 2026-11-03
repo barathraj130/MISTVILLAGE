@@ -15,7 +15,7 @@ import pandas as pd
 from shapely.geometry import Point
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from lib.common import Projection, build_dir, load  # noqa: E402
+from lib.common import Projection, area_name, area_utm, build_dir, load  # noqa: E402
 
 
 def _num(v, default):
@@ -33,9 +33,7 @@ def run(cfg, roads_cfg):
     out = build_dir(cfg)
     gpkg = os.path.join(out, "cache", "osm.gpkg")
     proj = Projection(cfg)
-    c = cfg["boundary"]["circle"]
-    centre = gpd.GeoSeries([Point(c["lon"], c["lat"])], crs="EPSG:4326").to_crs(cfg["crs"]).iloc[0]
-    area = centre.buffer(float(c["radius_m"]))
+    area = area_utm(cfg)
     roads = gpd.read_file(gpkg, layer="roads").to_crs(cfg["crs"])
     roads = roads[roads.intersects(area)].copy()
     classes = roads_cfg["classes"]
@@ -66,8 +64,8 @@ def run(cfg, roads_cfg):
     rail = layer("rail")
     pois = layer("pois")
     lines = ["# Coimbatore map — data report", "",
-             "Boundary: circle %.0f km round (%.4f N, %.4f E). Source: %s. Everything below is **REAL** OSM data "
-             "(nothing generated yet)." % (float(c["radius_m"]) / 1000, c["lat"], c["lon"], cfg["source"]["pbf"]), "",
+             "Boundary: %s. Source: %s. Everything below is **REAL** OSM data "
+             "(nothing generated yet)." % (area_name(cfg), cfg["source"]["pbf"]), "",
              "## Roads by class", "", "| Class | Ways | Length km | One-way | Bridges |", "|---|---|---|---|---|"]
     for cls in classes:
         r = roads[roads["cls"] == cls]

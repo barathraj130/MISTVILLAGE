@@ -54,7 +54,7 @@ from shapely.geometry import Point
 from shapely.strtree import STRtree
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from lib.common import build_dir, load, path  # noqa: E402
+from lib.common import area_utm, build_dir, load, path  # noqa: E402
 
 TILE = 256.0
 HSTEP = 8.0
@@ -151,12 +151,14 @@ def run(cfg, roads_cfg):
     # grid; every road samples the same surface, so roads that meet are at the same height and ride smoothly
     from scipy.ndimage import gaussian_filter
     from scipy.interpolate import RegularGridInterpolator
-    R = float(cfg["boundary"]["circle"]["radius_m"]) + float(cfg.get("margin_m", 1500)) + 600.0
+    pad = float(cfg.get("margin_m", 1500)) + 600.0     # (the area's bounding box in the game frame, padded)
+    ux0, uy0, ux1, uy1 = area_utm(cfg).bounds
     gs = 10.0
-    ax = np.arange(-R, R + gs, gs)
-    GX, GZ = np.meshgrid(ax, ax)
-    RG = gaussian_filter(height(GX.ravel(), GZ.ravel()).reshape(GX.shape), sigma=7.0, mode="nearest")   # ~70 m
-    _road_h = RegularGridInterpolator((ax, ax), RG.T, bounds_error=False, fill_value=None)
+    axx = np.arange(ux0 - e0 - pad, ux1 - e0 + pad + gs, gs)
+    axz = np.arange(-(uy1 - n0) - pad, -(uy0 - n0) + pad + gs, gs)
+    GX, GZ = np.meshgrid(axx, axz)
+    RG = gaussian_filter(height(GX.ravel(), GZ.ravel()).reshape(GX.shape).astype(np.float32), sigma=7.0, mode="nearest")   # ~70 m
+    _road_h = RegularGridInterpolator((axx, axz), RG.T, bounds_error=False, fill_value=None)
 
     def road_height(x, z):
         return _road_h(np.column_stack([np.asarray(x, dtype=float).ravel(), np.asarray(z, dtype=float).ravel()]))
@@ -232,9 +234,7 @@ def run(cfg, roads_cfg):
     line_tree = STRtree(np.array(road_geoms, dtype=object))
     main = {"trunk", "primary", "secondary"}
     b = gpd.read_file(os.path.join(bdir, "cache", "osm.gpkg"), layer="buildings").to_crs(cfg["crs"])
-    c = cfg["boundary"]["circle"]
-    area_circle = gpd.GeoSeries([Point(c["lon"], c["lat"])], crs="EPSG:4326").to_crs(cfg["crs"]).iloc[0].buffer(float(c["radius_m"]))
-    b = b[b.intersects(area_circle)]
+    b = b[b.intersects(area_utm(cfg))]
     print("  %d buildings to place (%ds)" % (len(b), time.time() - t0), flush=True)
     grid = {}                                   # 32 m cell → placed building rectangles (overlap checks)
     placed = []                                 # for yards and walls: (rect, kind, C, nx, nz, hx, hz, tile key)

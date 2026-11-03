@@ -7,9 +7,9 @@ extends Node
 ##   missed    no signature by 8 PM: a strike. Selvi texts the warning; the inspector's suspicion rises.
 ##             A third strike within 7 days cancels bail: Sundaram calls, Karthik spends the next days inside, and
 ##             ₹15,000 to Sundaram gets bail back (the jail chapter itself is still to be built).
-##   border    he may not leave Coimbatore district: where the roads run off the edge of the map (the Kerala border
-##             at Walayar to the west, the district's other edges) a police check turns him back; the second time
-##             is a strike.
+##   border    he may not leave Coimbatore district: at the foot of each ghat out of Mettupalayam (Kallar on the
+##             Coonoor road, the Kotagiri road's first climb) a police checkpost turns him back, and so do the
+##             checkposts where any other road leaves the built world (borders.json); the second time is a strike.
 ## Nothing of this is written on the screen: the phone, the people and the register say it. F1's bars show the count.
 ## While the story is playing one of its own steps the evening is the story's (an excuse, as the rules say).
 
@@ -17,7 +17,6 @@ const Tasks := preload("res://scripts/story/tasks.gd")
 const Actor := preload("res://scripts/story/actor.gd")
 const WINDOW := 18.0 * 60.0                  # 6 PM
 const LATE_END := 20.0 * 60.0                # 8 PM: missed
-const EDGE := 700.0                          # metres from the map's edge: the border check
 
 var city
 var active := false
@@ -123,12 +122,27 @@ func _test(dir: String) -> void:
 	await tree.create_timer(1.0).timeout
 	city.walker.global_position = city.car.global_position + Vector3.UP
 	city.toggle_on_foot()
-	var b: Array = city.streamer.index["bounds"]
-	var t: float = city.streamer.tile
-	city.car.global_position = Vector3(b[0] * t + EDGE - 50.0, city.car.global_position.y + 5.0, city.car.global_position.z)
-	_border_t = 0.0
-	await tree.create_timer(1.0).timeout
-	await _shot(dir, "bail_6_border")
+	_load_borders()
+	if not _checks.is_empty():                        # (to the Kallar checkpost, from just below it)
+		var c: Dictionary = _checks[0]
+		var below := Vector3(float(c["x"]) - float(c["up_x"]) * 120.0, 0.0, float(c["z"]) - float(c["up_z"]) * 120.0)
+		city.car.global_position = Vector3(below.x, 900.0, below.z)
+		city.car.freeze = true
+		for k in 40:                                  # (the ground there loads)
+			await tree.create_timer(0.5).timeout
+			var g: float = city.streamer.height_at(below.x, below.z)
+			if not is_nan(g):
+				city.car.global_position = Vector3(below.x, g + 0.8, below.z)
+				break
+		city.car.freeze = false
+		var f: Vector3 = city.car.forward()
+		city.car.rotate_y(Vector3(f.x, 0.0, f.z).normalized().signed_angle_to(Vector3(float(c["up_x"]), 0.0, float(c["up_z"])), Vector3.UP))
+		await tree.create_timer(1.5).timeout
+		await _shot(dir, "bail_6a_below_checkpost")
+		city.car.global_position = Vector3(float(c["x"]), city.car.global_position.y, float(c["z"]))
+		_border_t = 0.0
+		await tree.create_timer(1.0).timeout
+		await _shot(dir, "bail_6_border")
 	print("BAILTEST done: strikes %d lates %d suspicion %.0f border %d" % [strikes.size(), lates, suspicion, border_tries])
 	tree.quit()
 
@@ -298,34 +312,97 @@ func _station_people() -> void:
 
 
 # ---- the district border ----
+## godot/assets/landmarks/borders.json (tools/citygen/boundary.py): "checks", the police checkposts at the ghat feet
+## where Coimbatore district ends (Kallar on the Coonoor road, the Kotagiri road's first climb), each with the way up
+## the ghat; "area", the outline of the built world (the city and the Mettupalayam corridor). On bail he's turned
+## back at a checkpost, and anywhere a road would take him out of the area (the police checkposts on the city's other
+## roads out); the second time is a strike.
+const BORDERS := "res://assets/landmarks/borders.json"
+var _checks: Array = []
+var _area := PackedVector2Array()
+var _last_inside := Vector3.INF
+var _posts := {}                             # check index → the checkpost's set, once its ground has loaded
+
+
+func _load_borders() -> void:
+	if not FileAccess.file_exists(BORDERS):
+		return
+	var d = JSON.parse_string(FileAccess.get_file_as_string(BORDERS))
+	if d is Dictionary:
+		_checks = d.get("checks", [])
+		for q in d.get("area", []):
+			_area.append(Vector2(float(q[0]), float(q[1])))
+	elif d is Array:
+		_checks = d
+
+
 func _border(dt: float) -> void:
+	if _checks.is_empty() and _area.is_empty():
+		_load_borders()
+	_posts_near()
 	_border_t -= dt
 	var who: Node3D = city.walker if city.walker else city.car
-	if who == null or _border_t > 0.0 or city.streamer == null or city.streamer.index.is_empty():
+	if who == null or _border_t > 0.0:
 		return
-	var b: Array = city.streamer.index.get("bounds", [])
-	if b.size() < 4:
-		return
-	var t: float = city.streamer.tile
+	_border_t = 0.25
 	var p := who.global_position
-	var near: bool = p.x < b[0] * t + EDGE or p.x > (b[2] + 1) * t - EDGE or p.z < b[1] * t + EDGE or p.z > (b[3] + 1) * t - EDGE
-	if not near:
-		return
-	_border_t = 20.0
-	var centre := Vector3((b[0] + b[2] + 1) * t * 0.5, p.y, (b[1] + b[3] + 1) * t * 0.5)
-	var back := (centre - p).normalized()
+	for c in _checks:                                 # the ghat checkposts
+		var cp := Vector3(float(c["x"]), p.y, float(c["z"]))
+		if Vector2(p.x - cp.x, p.z - cp.z).length() < 40.0:
+			var down := -Vector3(float(c["up_x"]), 0.0, float(c["up_z"]))
+			_turn_back(who, cp + down * 35.0, down, "Police (%s)" % str(c["name"]),
+				"Stop. Beyond here is the Nilgiris. ...Karthik? On bail? You can't leave Coimbatore district. Turn back.")
+			return
+	if _area.size() > 2:                              # out of the built world by some other road
+		if Geometry2D.is_point_in_polygon(Vector2(p.x, p.z), _area):
+			_last_inside = p
+		elif _last_inside != Vector3.INF:
+			var back := Vector3(_last_inside.x - p.x, 0.0, _last_inside.z - p.z).normalized()
+			_turn_back(who, _last_inside + back * 20.0, back, "Police checkpost",
+				"Stop. Where to? ...On bail, the inspector said: not past the checkposts. Turn back.")
+
+
+func _turn_back(who: Node3D, to: Vector3, facing: Vector3, who_says: String, line: String) -> void:
+	_border_t = 8.0
 	border_tries += 1
-	city.hud.say("Police (district border)", "Stop. Where to? ...Karthik, on bail? You can't leave the district. Turn back. Now.", 5.0)
-	if who == city.car:                               # turned round, set back on his own side of the check
+	city.hud.say(who_says, line, 5.0)
+	if who == city.car:
 		city.car.speed = 0.0
 		city.car.linear_velocity = Vector3.ZERO
-		city.car.global_position = p + back * 40.0 + Vector3.UP * 0.5
+		var g: float = city.streamer.height_at(to.x, to.z)
+		city.car.global_position = Vector3(to.x, (g if not is_nan(g) else to.y) + 0.6, to.z)
 		var f: Vector3 = city.car.forward()
-		city.car.rotate_y(Vector3(f.x, 0.0, f.z).normalized().signed_angle_to(Vector3(back.x, 0.0, back.z).normalized(), Vector3.UP))
+		city.car.rotate_y(Vector3(f.x, 0.0, f.z).normalized().signed_angle_to(facing, Vector3.UP))
 	else:
-		who.global_position = p + back * 25.0 + Vector3.UP * 0.5
-	print("BAIL border turned back (%d)" % border_tries)
+		who.global_position = to + Vector3.UP * 0.5
+	print("BAIL border turned back (%d) at %s" % [border_tries, who_says])
 	if border_tries == 2:
-		_strike({"en": "The border check called the station. Second time. That's a strike, Karthik. – Selvi",
-			"ta": "பார்டர் செக்போஸ்ட்லேர்ந்து ஸ்டேஷனுக்கு போன் வந்துச்சு. ரெண்டாவது தடவ. இது ஒரு ஸ்ட்ரைக். – செல்வி"})
+		_strike({"en": "The checkpost called the station. Second time. That's a strike, Karthik. – Selvi",
+			"ta": "செக்போஸ்ட்லேர்ந்து ஸ்டேஷனுக்கு போன் வந்துச்சு. ரெண்டாவது தடவ. இது ஒரு ஸ்ட்ரைக். – செல்வி"})
 	_save()
+
+
+## The ghat checkposts stand there for good (the police checking set: barricades, the SUV, the policemen), put down
+## once the ground under them has loaded.
+func _posts_near() -> void:
+	if city.streamer == null:
+		return
+	for i in _checks.size():
+		if _posts.has(i):
+			continue
+		var c: Dictionary = _checks[i]
+		var g: float = city.streamer.height_at(float(c["x"]), float(c["z"]))
+		if is_nan(g):
+			continue
+		var mesh: Mesh = city.streamer._scene_mesh("res://assets/city_props/police_checkpoint.glb") if city.streamer.has_method("_scene_mesh") else null
+		var set := Node3D.new()
+		set.name = "Checkpost%d" % i
+		city.add_child(set)
+		set.global_position = Vector3(float(c["x"]), g, float(c["z"]))
+		set.look_at(set.global_position + Vector3(float(c["up_x"]), 0.0, float(c["up_z"])), Vector3.UP)   # facing down to town
+		if mesh:
+			var mi := MeshInstance3D.new()
+			mi.mesh = mesh
+			set.add_child(mi)
+		_posts[i] = set
+		print("BAIL checkpost at %s (%.0f, %.0f)" % [c["name"], c["x"], c["z"]])
