@@ -118,7 +118,10 @@ var _climb := 0                       # climb: 0 walking up, 1 the power's gone,
 var _f_down := false                  # (F held: Amma's money, once per press)
 var _paid_test := false
 var _props: Array[Node3D] = []         # things a meet sets out (a tea stall), until the next drive
-var _snap_ready := false               # (a snapshot step: its picture is in his hands)
+var _snap_ready := false
+var _tail: Node3D                      # a car following him ("tail" on a drive: Suresh's black sedan in the mirror)
+var _crumbs: Array[Vector3] = []       # (the way he drove, for it to follow)
+var _tail_gap := 24.0               # (a snapshot step: its picture is in his hands)
 var _climbing := false                # (on foot in a climb's room, until the story leaves it)
 var _torch: SpotLight3D
 var _sfx: AudioStreamPlayer
@@ -556,6 +559,9 @@ func _next() -> void:
 			table.life = city.life
 			table.start(cur, lang, _skip, pick)
 		"drive":
+			_tail_end()
+			if cur.has("tail"):
+				_tail_start(cur["tail"])
 			var p := place_pos(cur["to"])
 			map.pin = Vector2(p.x, p.z)
 			if cur.get("realtime", false):              # (testing: a skipped drive takes its road time at 30 km/h)
@@ -819,6 +825,10 @@ func _next_shot() -> void:
 		_room_cam(str(sh["cam"]))                        # a planned shot of the room (wide, the photos...)
 	elif sh.has("cam"):
 		_put_cam(_w3(sh["cam"]), _w3(sh.get("look", [0.0, 1.5, 0.0])))
+	if sh.get("look_tail", false) and _tail:              # (his mirror: from his shoulder, on the car behind him)
+		var tp: Vector3 = _tail.global_position
+		var from: Vector3 = car.global_position + Vector3.UP * 1.5 + (Vector3(tp.x, car.global_position.y, tp.z) - car.global_position).normalized() * 0.6
+		_put_cam(from, tp + Vector3.UP * 0.9)
 	if sh.has("line"):
 		line_i = shot_i
 		_say(sh["line"])
@@ -1887,6 +1897,65 @@ func _on_photo(tag: String) -> void:
 		_deal_pay()
 
 
+## "tail": {"gap": metres}: a black sedan that keeps that far behind him along the way he drives, from where he
+## starts; when he stops, it stops, and it stays parked there till his next drive.
+func _tail_start(spec: Dictionary) -> void:
+	var ps := load("res://assets/vehicles/fleet_sedan.glb") as PackedScene
+	if ps == null:
+		return
+	_tail = ps.instantiate() as Node3D
+	add_child(_tail)
+	_tail_gap = float(spec.get("gap", 24.0))
+	var paint := StandardMaterial3D.new()
+	paint.albedo_color = Color(0.03, 0.03, 0.035)
+	paint.metallic = 0.6
+	paint.roughness = 0.25
+	for mi in _tail.find_children("*", "MeshInstance3D", true, false):
+		var m3 := mi as MeshInstance3D
+		for i in m3.mesh.get_surface_count():
+			var mat := m3.get_active_material(i)
+			if mat and mat.resource_name == "Paint":
+				m3.set_surface_override_material(i, paint)
+	var back: Vector3 = car.global_position - car.forward() * _tail_gap
+	_crumbs = [back, car.global_position]
+	_tail_tick()
+
+
+func _tail_tick() -> void:
+	if _tail == null:
+		return
+	var here: Vector3 = car.global_position
+	if here.distance_to(_crumbs[-1]) > 40.0:            # (the car was moved, not driven: it's behind him again)
+		_crumbs = [here - car.forward() * _tail_gap, here]
+	elif here.distance_to(_crumbs[-1]) > 0.6:
+		_crumbs.append(here)
+	var left := _tail_gap                                 # walk back along the crumbs from where he is
+	var at: Vector3 = _crumbs[0]
+	var ahead: Vector3 = _crumbs[min(1, _crumbs.size() - 1)]
+	var prev := here
+	for i in range(_crumbs.size() - 1, -1, -1):
+		var seg := prev.distance_to(_crumbs[i])
+		if seg >= left:
+			at = prev.lerp(_crumbs[i], left / maxf(seg, 0.001))
+			ahead = prev
+			break
+		left -= seg
+		prev = _crumbs[i]
+	while _crumbs.size() > 400:
+		_crumbs.pop_front()
+	_tail.global_position = at                           # (on the road where he was: the crumbs carry its height)
+	var dir := Vector3(ahead.x - at.x, 0.0, ahead.z - at.z)
+	if dir.length() > 0.05:
+		_tail.rotation.y = atan2(dir.x, dir.z)
+
+
+func _tail_end() -> void:
+	if _tail:
+		_tail.queue_free()
+	_tail = null
+	_crumbs.clear()
+
+
 ## The doorbell in Ashwin's door frame, beside him, looking at whoever is at the door (Karthik): a few seconds of
 ## him, and the clock (doorbell.gd keeps it for E05).
 func _doorbell_capture() -> void:
@@ -2441,6 +2510,7 @@ func _advance_line() -> void:
 
 func _drive(dt: float) -> void:
 	_tick_clock(dt)
+	_tail_tick()
 	var p := place_pos(cur["to"])
 	var g: float = city.streamer.height_at(p.x, p.z)
 	_beam.global_position = Vector3(p.x, (g if not is_nan(g) else car.global_position.y) + 35.0, p.z)

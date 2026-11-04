@@ -264,6 +264,14 @@
    "z": -626.6,
    "en": "The Noyyal Galleria, Avinashi Road",
    "ta": "தி நொய்யல் கேலரியா, அவிநாசி ரோடு"
+  },
+  "gov_hospital": {
+   "lat": 10.99659,
+   "lon": 76.96982,
+   "x": 236.3,
+   "z": 2400.0,
+   "en": "Coimbatore Medical College Hospital",
+   "ta": "கோயம்புத்தூர் அரசு மருத்துவக் கல்லூரி மருத்துவமனை"
   }
  },
  "people": {
@@ -445,6 +453,14 @@
    "model": "crowd_m4",
    "hair": "#9a958c",
    "top": "#7a1f2b"
+  },
+  "attendant": {
+   "en": "The mortuary attendant",
+   "ta": "பிணவறை உதவியாளர்",
+   "colour": "#b0c0b0",
+   "model": "crowd_m6",
+   "hair": "#3a3530",
+   "top": "#8a9a8a"
   }
  },
  "spawn": "home",
@@ -7763,6 +7779,553 @@
      "goal": {
       "en": "Your wall: the ring",
       "ta": "உங்க சுவர்: மோதிரம்"
+     },
+     "prompt": {
+      "en": "the wall",
+      "ta": "சுவர்"
+     }
+    },
+    {
+     "to": "karthik_room",
+     "sleep_until": "07:00",
+     "goal": {
+      "en": "Sleep",
+      "ta": "தூங்குங்க"
+     },
+     "prompt": {
+      "en": "lie down",
+      "ta": "படுங்க"
+     }
+    }
+   ]
+  },
+  {
+   "do": "home",
+   "room": "home",
+   "at": "home",
+   "start": "here",
+   "cast": {
+    "amma": {
+     "mark": "amma_kitchen"
+    }
+   },
+   "keep": true,
+   "visits": [
+    {
+     "to": "karthik_room",
+     "wall": true,
+     "goal": {
+      "en": "Your wall: when did he die?",
+      "ta": "உங்க சுவர்: அவர் எப்போ இறந்தாரு?"
+     },
+     "prompt": {
+      "en": "the wall",
+      "ta": "சுவர்"
+     }
+    }
+   ]
+  },
+  {
+   "do": "talk",
+   "lines": [
+    {
+     "who": "karthik",
+     "en": "(10:20, Ashwin's door. 10:35, Sekar sees the SUV turn in. If sir died after that, I was on the road home, twelve kilometres away.)",
+     "ta": "(10:20, அஷ்வின் வாசல். 10:35, எஸ்யூவி திரும்பறத சேகர் பாக்கறாரு. அதுக்கு அப்புறம் சார் இறந்திருந்தா, நான் பன்னிரண்டு கிலோமீட்டர் தள்ளி வீட்டுக்கு வர்ற ரோட்டுல இருந்தேன்.)"
+    },
+    {
+     "who": "karthik",
+     "en": "(The post-mortem. The Government Hospital's mortuary.)",
+     "ta": "(போஸ்ட்மார்ட்டம். அரசு மருத்துவமனை பிணவறை.)"
+    }
+   ]
+  },
+  {
+   "do": "pin",
+   "place": "gov_hospital",
+   "label": {
+    "en": "Government Hospital: the mortuary",
+    "ta": "அரசு மருத்துவமனை: பிணவறை"
+   }
+  },
+  {
+   "do": "home",
+   "room": "home",
+   "at": "home",
+   "start": "here",
+   "visits": [
+    {
+     "to": "door",
+     "auto": true,
+     "reach": 1.4,
+     "goal": {
+      "en": "Out to your scooter",
+      "ta": "வெளியே, ஸ்கூட்டருக்கு"
+     }
+    }
+   ]
+  },
+  {
+   "do": "drive",
+   "to": "gov_hospital",
+   "radius": 60,
+   "vehicle": "karthik_scooter",
+   "goal": {
+    "en": "Coimbatore Medical College Hospital",
+    "ta": "கோயம்புத்தூர் அரசு மருத்துவக் கல்லூரி மருத்துவமனை"
+   }
+  },
+  {
+   "do": "meet",
+   "who": "attendant",
+   "cast": {
+    "attendant": {
+     "world": [
+      236.3,
+      2409.0
+     ],
+     "look_world": [
+      236.3,
+      2398.0
+     ],
+     "anim": "Idle"
+    }
+   },
+   "goal": {
+    "en": "The mortuary attendant, by the side gate",
+    "ta": "சைட் கேட் பக்கத்துல பிணவறை உதவியாளர்"
+   }
+  },
+  {
+   "do": "talk",
+   "lines": [
+    {
+     "who": "karthik",
+     "en": "Anna. The post-mortem report. Raghavan, Race Course. Two weeks ago.",
+     "ta": "அண்ணா. போஸ்ட்மார்ட்டம் ரிப்போர்ட். ராகவன், ரேஸ் கோர்ஸ். ரெண்டு வாரம் முன்னாடி."
+    },
+    {
+     "who": "attendant",
+     "en": "Family only. Police or court. ...You are family?",
+     "ta": "குடும்பத்துக்கு மட்டும். போலீஸ், இல்லனா கோர்ட். ...நீங்க குடும்பமா?"
+    },
+    {
+     "who": "attendant",
+     "en": "(He lowers his voice.) For close friends of the family, it can be seen. Three thousand. A copy, with seal.",
+     "ta": "(குரல தாழ்த்தறார்.) குடும்ப நண்பர்களுக்கு, பாக்கலாம். மூணாயிரம். நகல், சீலோட."
+    }
+   ]
+  },
+  {
+   "do": "choose",
+   "prompt": {
+    "en": "Three thousand rupees. Or the family.",
+    "ta": "மூணாயிரம் ரூபாய். இல்லனா குடும்பம்."
+   },
+   "options": [
+    {
+     "text": {
+      "en": "Refuse, and ask Priya. She is the family",
+      "ta": "மறுத்துட்டு, பிரியா கிட்ட கேளுங்க. அவங்க தான் குடும்பம்"
+     },
+     "set": "pm_priya"
+    },
+    {
+     "text": {
+      "en": "Pay him (₹3,000)",
+      "ta": "அவருக்கு குடுங்க (₹3,000)"
+     },
+     "set": "pm_paid",
+     "pay": 3000
+    }
+   ]
+  },
+  {
+   "do": "talk",
+   "when": "pm_paid",
+   "lines": [
+    {
+     "who": "attendant",
+     "en": "Wait here. (Twenty minutes. He comes back with two photocopied pages, a round seal, still damp.)",
+     "ta": "இங்க இருங்க. (இருபது நிமிஷம். ரெண்டு ஜெராக்ஸ் பக்கத்தோட வர்றார், வட்ட சீல், இன்னும் ஈரமா.)"
+    }
+   ]
+  },
+  {
+   "do": "give",
+   "when": "pm_paid",
+   "item": {
+    "id": "pm_fake",
+    "kind": "paper",
+    "stamp": true,
+    "title": {
+     "en": "Post-mortem report (a copy)",
+     "ta": "போஸ்ட்மார்ட்டம் அறிக்கை (நகல்)"
+    },
+    "from": {
+     "en": "Department of Forensic Medicine",
+     "ta": "தடயவியல் மருத்துவத் துறை"
+    },
+    "body": {
+     "en": "Name: R. Raghavan, 61.\nCause of death: head injury.\nTime of death: approximately 10 PM.\n\n(The type is crooked. The doctor's signature is the same squiggle on both pages.)",
+     "ta": "பெயர்: ரா. ராகவன், 61.\nஇறப்புக் காரணம்: தலையில் காயம்.\nஇறந்த நேரம்: சுமார் இரவு 10 மணி.\n\n(எழுத்து கோணலா இருக்கு. டாக்டர் கையெழுத்து ரெண்டு பக்கத்துலயும் ஒரே கிறுக்கல்.)"
+    }
+   }
+  },
+  {
+   "do": "message",
+   "when": "pm_paid",
+   "from": {
+    "en": "Sundaram sir",
+    "ta": "சுந்தரம் சார்"
+   },
+   "text": {
+    "en": "You sent me a photo of a 'post-mortem'. Thambi, that seal is from a rubber-stamp shop, and no forensic doctor writes 'approximately 10 PM'. It's fake. Three thousand rupees. Ask the family. – Sundaram",
+    "ta": "ஒரு 'போஸ்ட்மார்ட்டம்' போட்டோ அனுப்பினியே. தம்பி, அந்த சீல் ரப்பர் ஸ்டாம்ப் கடையோடது, எந்த தடயவியல் டாக்டரும் 'சுமார் இரவு 10 மணி'ன்னு எழுத மாட்டாங்க. போலி. மூணாயிரம் ரூபாய். குடும்பத்துகிட்ட கேளு. – சுந்தரம்"
+   }
+  },
+  {
+   "do": "take",
+   "when": "pm_paid",
+   "id": "pm_fake"
+  },
+  {
+   "do": "talk",
+   "lines": [
+    {
+     "who": "karthik",
+     "en": "(I call Priya. She listens without a word, then: 'I'm his daughter. I'll ask for it myself.')",
+     "ta": "(பிரியாவுக்கு கூப்பிடறேன். ஒரு வார்த்த பேசாம கேக்கறாங்க, அப்புறம்: 'நான் அவர் பொண்ணு. நானே கேக்கறேன்.')"
+    }
+   ]
+  },
+  {
+   "do": "drive",
+   "to": "home",
+   "radius": 45,
+   "tail": {
+    "gap": 26
+   },
+   "goal": {
+    "en": "Home",
+    "ta": "வீடு"
+   }
+  },
+  {
+   "do": "scene",
+   "shots": [
+    {
+     "cam": [
+      0.35,
+      1.45,
+      -0.6
+     ],
+     "look": [
+      0.0,
+      1.0,
+      -30.0
+     ],
+     "fixed_cam": true,
+     "dur": 5.0,
+     "line": {
+      "who": "karthik",
+      "en": "(In the mirror: a black sedan. It was behind me at the hospital. It stops when I stop.)",
+      "ta": "(கண்ணாடியில: ஒரு கருப்பு செடான். மருத்துவமனையில என் பின்னாடி இருந்துச்சு. நான் நின்னா, அதுவும் நிக்குது.)"
+     },
+     "look_tail": true
+    }
+   ]
+  },
+  {
+   "do": "home",
+   "room": "home",
+   "at": "home",
+   "start": "door",
+   "cast": {
+    "amma": {
+     "mark": "amma_kitchen"
+    },
+    "divya": {
+     "mark": "divya",
+     "anim": "Idle"
+    }
+   },
+   "keep": true,
+   "visits": [
+    {
+     "to": "divya",
+     "goal": {
+      "en": "Divya, at the window",
+      "ta": "ஜன்னல் பக்கத்துல திவ்யா"
+     },
+     "prompt": {
+      "en": "go to her",
+      "ta": "அவகிட்ட போங்க"
+     }
+    }
+   ]
+  },
+  {
+   "do": "talk",
+   "lines": [
+    {
+     "who": "divya",
+     "en": "Anna. There's a black car at the corner. It came in right after you. Nobody's got out.",
+     "ta": "அண்ணா. மூலையில ஒரு கருப்பு கார் நிக்குது. நீ வந்த உடனே வந்துச்சு. யாரும் இறங்கல."
+    },
+    {
+     "who": "karthik",
+     "en": "Stay away from the window. And don't tell Amma.",
+     "ta": "ஜன்னல் கிட்ட இருந்து தள்ளி இரு. அம்மா கிட்ட சொல்லாத."
+    },
+    {
+     "who": "divya",
+     "en": "(She already has her phone up.) Number plate. TN 37... the last four are covered with mud. On purpose.",
+     "ta": "(ஏற்கனவே ஃபோன தூக்கிட்டா.) நம்பர் பிளேட். TN 37... கடைசி நாலு நம்பர் மேல சேறு. வேணும்னே."
+    }
+   ]
+  },
+  {
+   "do": "evidence",
+   "speaker": "divya",
+   "tag": "lead_sedan",
+   "label": {
+    "en": "A black sedan, following",
+    "ta": "பின்தொடரும் கருப்பு செடான்"
+   },
+   "memory": {
+    "id": "mem_sedan",
+    "kind": "card",
+    "title": {
+     "en": "The black sedan",
+     "ta": "கருப்பு செடான்"
+    },
+    "body": {
+     "en": "Behind me from the hospital, at our corner after. TN 37, the last four muddied. Sekar saw a black car at the site gate that night.",
+     "ta": "மருத்துவமனையில இருந்து என் பின்னாடி, அப்புறம் எங்க மூலையில. TN 37, கடைசி நாலு சேறு. அன்னைக்கு ராத்திரி சைட் கேட்ல கருப்பு கார சேகர் பாத்தாரு."
+    }
+   }
+  },
+  {
+   "do": "message",
+   "from": {
+    "en": "Dr. Priya",
+    "ta": "டாக்டர் பிரியா"
+   },
+   "text": {
+    "en": "I read the post-mortem myself, as his daughter. Time of death between 10:40 and 11:10 PM. Karthik... where were you then? Tell me the truth. – Priya",
+    "ta": "அவர் பொண்ணா, போஸ்ட்மார்ட்டத்த நானே படிச்சேன். இறந்த நேரம் இரவு 10:40 முதல் 11:10 வரை. கார்த்திக்... அப்போ நீ எங்க இருந்த? உண்மைய சொல்லு. – பிரியா"
+   }
+  },
+  {
+   "do": "talk",
+   "lines": [
+    {
+     "who": "karthik",
+     "en": "(10:40. At 10:21 Ashwin's doorbell had me in Saravanampatti. Twelve kilometres. On a scooter, at night, twenty-five minutes at least.)",
+     "ta": "(10:40. 10:21-க்கு அஷ்வின் டோர்பெல் என்ன சரவணம்பட்டியில பாத்துச்சு. பன்னிரண்டு கிலோமீட்டர். ராத்திரி ஸ்கூட்டர்ல, குறைஞ்சது இருபத்தஞ்சு நிமிஷம்.)"
+    },
+    {
+     "who": "karthik",
+     "en": "(I send her the doorbell clip's time, and the road home. Nothing else. She can do the sum herself.)",
+     "ta": "(டோர்பெல் கிளிப் நேரத்தையும், வீட்டுக்கு வந்த ரோட்டையும் அனுப்பறேன். வேற எதுவும் இல்ல. கணக்க அவங்களே போட்டுக்கலாம்.)"
+    }
+   ]
+  },
+  {
+   "do": "evidence",
+   "speaker": "priya",
+   "tag": "E17",
+   "label": {
+    "en": "Post-mortem: death 10:40 to 11:10 PM",
+    "ta": "போஸ்ட்மார்ட்டம்: இறப்பு இரவு 10:40 முதல் 11:10"
+   },
+   "memory": {
+    "id": "mem_pm",
+    "kind": "card",
+    "title": {
+     "en": "The post-mortem (E17)",
+     "ta": "போஸ்ட்மார்ட்டம் (E17)"
+    },
+    "body": {
+     "en": "Death between 10:40 and 11:10 PM. Read by Priya, his daughter. At 10:21 I was at Ashwin's door, 12 km away.",
+     "ta": "இறப்பு இரவு 10:40 முதல் 11:10 வரை. அவர் பொண்ணு பிரியா படிச்சாங்க. 10:21-க்கு நான் அஷ்வின் வாசல்ல, 12 கி.மீ தள்ளி."
+    }
+   }
+  },
+  {
+   "do": "home",
+   "room": "home",
+   "at": "home",
+   "start": "here",
+   "cast": {
+    "amma": {
+     "mark": "amma_kitchen"
+    }
+   },
+   "keep": true,
+   "visits": [
+    {
+     "to": "karthik_room",
+     "wait": 0,
+     "until": "17:20",
+     "goal": {
+      "en": "Rest till it's time to sign",
+      "ta": "கையெழுத்து போடற நேரம் வரைக்கும் ஓய்வு"
+     },
+     "prompt": {
+      "en": "sit down",
+      "ta": "உட்காருங்க"
+     }
+    }
+   ]
+  },
+  {
+   "do": "home",
+   "room": "home",
+   "at": "home",
+   "start": "here",
+   "visits": [
+    {
+     "to": "door",
+     "auto": true,
+     "reach": 1.4,
+     "goal": {
+      "en": "Out: the station by seven. The corner is empty now",
+      "ta": "வெளியே: ஏழு மணிக்குள்ள ஸ்டேஷன். மூலை இப்போ காலி"
+     }
+    }
+   ]
+  },
+  {
+   "do": "drive",
+   "to": "police",
+   "radius": 45,
+   "vehicle": "karthik_scooter",
+   "by": "19:00",
+   "goal": {
+    "en": "Sign at the station by 7 PM",
+    "ta": "7 மணிக்குள்ள ஸ்டேஷன்ல கையெழுத்து"
+   }
+  },
+  {
+   "do": "home",
+   "room": "police",
+   "at": "police",
+   "start": "door",
+   "cast": {
+    "murugesan": {
+     "mark": "inspector",
+     "anim": "Idle"
+    },
+    "selvi": {
+     "mark": "constable",
+     "anim": "Idle"
+    }
+   },
+   "keep": true,
+   "visits": [
+    {
+     "to": "selvi",
+     "task": "sign",
+     "goal": {
+      "en": "Sign the bail register at Selvi's desk",
+      "ta": "செல்வி மேஜையில ஜாமீன் பதிவேட்டுல கையெழுத்து"
+     },
+     "prompt": {
+      "en": "sign the register",
+      "ta": "பதிவேட்டுல கையெழுத்து"
+     },
+     "header": {
+      "en": "Nagar Police Station",
+      "ta": "நகர் காவல் நிலையம்"
+     },
+     "form": {
+      "en": "BAIL ATTENDANCE REGISTER",
+      "ta": "ஜாமீன் வருகை பதிவேடு"
+     },
+     "fields": [
+      [
+       {
+        "en": "Crime No.",
+        "ta": "குற்ற எண்"
+       },
+       "412"
+      ],
+      [
+       {
+        "en": "Name",
+        "ta": "பெயர்"
+       },
+       {
+        "en": "Karthik M.",
+        "ta": "கார்த்திக் ம."
+       }
+      ],
+      [
+       {
+        "en": "Day",
+        "ta": "நாள்"
+       },
+       "10"
+      ]
+     ],
+     "sign_label": {
+      "en": "Signature of the accused",
+      "ta": "குற்றம் சாட்டப்பட்டவர் கையொப்பம்"
+     },
+     "seal": {
+      "en": "STATION SEAL",
+      "ta": "நிலைய முத்திரை"
+     }
+    }
+   ]
+  },
+  {
+   "do": "home",
+   "room": "police",
+   "at": "police",
+   "start": "here",
+   "visits": [
+    {
+     "to": "door",
+     "auto": true,
+     "reach": 1.4,
+     "goal": {
+      "en": "Out",
+      "ta": "வெளியே"
+     }
+    }
+   ]
+  },
+  {
+   "do": "drive",
+   "to": "home",
+   "radius": 45,
+   "goal": {
+    "en": "Home",
+    "ta": "வீடு"
+   }
+  },
+  {
+   "do": "home",
+   "room": "home",
+   "at": "home",
+   "start": "door",
+   "cast": {
+    "amma": {
+     "mark": "amma",
+     "anim": "Sit"
+    }
+   },
+   "keep": true,
+   "visits": [
+    {
+     "to": "karthik_room",
+     "wall": true,
+     "goal": {
+      "en": "Your wall: the minutes, and the car",
+      "ta": "உங்க சுவர்: நிமிஷங்கள், கார்"
      },
      "prompt": {
       "en": "the wall",
