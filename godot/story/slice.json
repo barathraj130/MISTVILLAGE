@@ -305,6 +305,13 @@
    "colour": "#9fe0b0",
    "model": "crowd_m1",
    "hair": "#0f0c0a"
+  },
+  "lakshmi": {
+   "en": "Lakshmi aunty",
+   "ta": "லட்சுமி ஆன்ட்டி",
+   "colour": "#e8c0d8",
+   "model": "crowd_w5",
+   "hair": "#0f0c0a"
   }
  },
  "spawn": "home",
@@ -1617,7 +1624,8 @@
      "en": "Finally! The OTP? Five, five, one, two.",
      "ta": "வந்துட்டீங்களா! ஓடிபி? அஞ்சு, அஞ்சு, ஒண்ணு, ரெண்டு."
     }
-   ]
+   ],
+   "doorbell": true
   },
   {
    "do": "task",
@@ -3695,6 +3703,539 @@
      "goal": {
       "en": "Your wall: the lobby camera",
       "ta": "உங்க சுவர்: லாபி கேமரா"
+     },
+     "prompt": {
+      "en": "the wall",
+      "ta": "சுவர்"
+     }
+    },
+    {
+     "to": "karthik_room",
+     "sleep_until": "07:00",
+     "goal": {
+      "en": "Sleep",
+      "ta": "தூங்குங்க"
+     },
+     "prompt": {
+      "en": "lie down",
+      "ta": "படுங்க"
+     }
+    }
+   ]
+  },
+  {
+   "do": "home",
+   "room": "home",
+   "at": "home",
+   "start": "here",
+   "cast": {
+    "amma": {
+     "mark": "amma_kitchen"
+    },
+    "divya": {
+     "mark": "divya",
+     "anim": "Idle"
+    }
+   },
+   "keep": true,
+   "visits": [
+    {
+     "to": "divya",
+     "goal": {
+      "en": "Divya, before she leaves for college",
+      "ta": "திவ்யா, காலேஜ் போறதுக்கு முன்னாடி"
+     },
+     "prompt": {
+      "en": "talk to her",
+      "ta": "அவகிட்ட பேசுங்க"
+     }
+    }
+   ]
+  },
+  {
+   "do": "talk",
+   "lines": [
+    {
+     "who": "karthik",
+     "en": "(Ashwin, that night. 'Smile, you're on my doorbell camera. Landlord's rule.')",
+     "ta": "(அஷ்வின், அன்னைக்கு ராத்திரி. 'சிரிங்க, என் டோர்பெல் கேமராவுல இருக்கீங்க. ஓனரோட ரூல்.')"
+    },
+    {
+     "who": "karthik",
+     "en": "Divya. Those doorbell cameras. Do they keep what they see?",
+     "ta": "திவ்யா. அந்த டோர்பெல் கேமரா எல்லாம். பாத்தத வச்சிருக்குமா?"
+    },
+    {
+     "who": "divya",
+     "en": "The cheap plans keep clips seven days, anna. Then they delete themselves. Why?",
+     "ta": "சீப் பிளான்ல ஏழு நாள் கிளிப் வச்சிருக்கும் அண்ணா. அப்புறம் தானா அழிஞ்சிடும். ஏன்?"
+    },
+    {
+     "who": "karthik",
+     "en": "The delivery. Saravanampatti, ten twenty that night. His door had a camera.",
+     "ta": "அந்த டெலிவரி. சரவணம்பட்டி, அன்னைக்கு ராத்திரி பத்து இருபது. அவர் கதவுல கேமரா இருந்துச்சு."
+    },
+    {
+     "who": "divya",
+     "en": "That was six days ago. Anna... tomorrow it's gone. Go today. Now.",
+     "ta": "அது ஆறு நாள் முன்னாடி. அண்ணா... நாளைக்கு போயிடும். இன்னைக்கே போ. இப்பவே."
+    },
+    {
+     "who": "amma",
+     "en": "Eat something first. Then go.",
+     "ta": "முதல்ல ஏதாவது சாப்பிடு. அப்புறம் போ."
+    }
+   ]
+  },
+  {
+   "do": "contact",
+   "contact": {
+    "id": "sundaram",
+    "name": {
+     "en": "Sundaram sir (advocate)",
+     "ta": "சுந்தரம் சார் (வக்கீல்)"
+    },
+    "number": "98422 4•••1",
+    "where": {
+     "en": "Advocate, District Court, Coimbatore",
+     "ta": "வக்கீல், மாவட்ட நீதிமன்றம், கோவை"
+    }
+   }
+  },
+  {
+   "do": "pin",
+   "place": "ashwin",
+   "label": {
+    "en": "Ashwin's building, Saravanampatti",
+    "ta": "அஷ்வின் வீடு, சரவணம்பட்டி"
+   }
+  },
+  {
+   "do": "home",
+   "room": "home",
+   "at": "home",
+   "start": "here",
+   "visits": [
+    {
+     "to": "door",
+     "auto": true,
+     "reach": 1.4,
+     "goal": {
+      "en": "Out to your scooter",
+      "ta": "வெளியே, ஸ்கூட்டருக்கு"
+     }
+    }
+   ]
+  },
+  {
+   "do": "drive",
+   "to": "ashwin",
+   "radius": 50,
+   "vehicle": "karthik_scooter",
+   "goal": {
+    "en": "Ashwin's building in Saravanampatti, before the clip is deleted",
+    "ta": "சரவணம்பட்டியில அஷ்வின் வீடு, கிளிப் அழியறதுக்கு முன்னாடி"
+   }
+  },
+  {
+   "do": "meet",
+   "who": "ashwin",
+   "cast": {
+    "ashwin": {
+     "pos": [
+      -2.81,
+      1
+     ],
+     "look": [
+      0,
+      0
+     ]
+    }
+   },
+   "goal": {
+    "en": "Ashwin, at his door",
+    "ta": "அஷ்வின், அவர் வாசல்ல"
+   }
+  },
+  {
+   "do": "talk",
+   "lines": [
+    {
+     "who": "ashwin",
+     "en": "Bro? ...Wait. You're the delivery guy. You're the one on the news!",
+     "ta": "ப்ரோ? ...இருங்க. நீங்க அந்த டெலிவரி ஆள். நியூஸ்ல வந்தவர் நீங்க தான்!"
+    },
+    {
+     "who": "karthik",
+     "en": "That night I was here, at your door. Ten twenty. Your camera saw me.",
+     "ta": "அன்னைக்கு ராத்திரி நான் இங்க இருந்தேன், உங்க வாசல்ல. பத்து இருபது. உங்க கேமரா என்ன பாத்துச்சு."
+    },
+    {
+     "who": "ashwin",
+     "en": "Bro, my company does background checks. I can't be in a police case.",
+     "ta": "ப்ரோ, என் கம்பெனி பேக்ரவுண்ட் செக் பண்ணுவாங்க. நான் போலீஸ் கேஸ்ல மாட்ட முடியாது."
+    },
+    {
+     "who": "ashwin",
+     "en": "And it's not my camera. It's the owner's. Lakshmi aunty, downstairs. The app is on her tablet. Ask her. And... sorry, bro.",
+     "ta": "அப்புறம் அது என் கேமரா இல்ல. ஓனரோடது. லட்சுமி ஆன்ட்டி, கீழ. ஆப் அவங்க டேப்லெட்ல. அவங்க கிட்ட கேளுங்க. அப்புறம்... சாரி ப்ரோ."
+    }
+   ]
+  },
+  {
+   "do": "meet",
+   "who": "lakshmi",
+   "hide": [
+    "ashwin"
+   ],
+   "cast": {
+    "lakshmi": {
+     "pos": [
+      -3.6,
+      -1.4
+     ],
+     "look": [
+      0,
+      0
+     ],
+     "anim": "Idle"
+    }
+   },
+   "goal": {
+    "en": "Lakshmi aunty, the owner, at her door downstairs",
+    "ta": "லட்சுமி ஆன்ட்டி, ஓனர், கீழ அவங்க வாசல்ல"
+   }
+  },
+  {
+   "do": "talk",
+   "lines": [
+    {
+     "who": "lakshmi",
+     "en": "Ashwin rang me. You're the boy from the news. Raghavan's driver.",
+     "ta": "அஷ்வின் ஃபோன் பண்ணான். நீ தான் நியூஸ்ல வந்த பையன். ராகவனோட டிரைவர்."
+    },
+    {
+     "who": "karthik",
+     "en": "Aunty, the clip from that night. It shows me at his door at ten twenty. He died across the city.",
+     "ta": "ஆன்ட்டி, அன்னைக்கு ராத்திரி கிளிப். பத்து இருபதுக்கு அவர் வாசல்ல நான் இருக்கேன். அவர் செத்தது ஊரோட அந்த பக்கம்."
+    },
+    {
+     "who": "lakshmi",
+     "en": "Sixteen years in a bank, thambi. I don't hand things over because someone asks nicely. Who is your advocate?",
+     "ta": "பதினாறு வருஷமா பேங்க்ல இருக்கேன், தம்பி. யாராவது நல்லா கேட்டாங்கன்னு எதையும் குடுக்க மாட்டேன். உன் வக்கீல் யாரு?"
+    }
+   ]
+  },
+  {
+   "do": "choose",
+   "prompt": {
+    "en": "She waits, the grill gate between you.",
+    "ta": "கிரில் கேட் நடுவுல, அவங்க காத்திருக்காங்க."
+   },
+   "options": [
+    {
+     "text": {
+      "en": "Call Sundaram sir and let her talk to him",
+      "ta": "சுந்தரம் சாருக்கு ஃபோன் பண்ணி அவங்கள பேச விடுங்க"
+     },
+     "set": "lakshmi_lawyer"
+    },
+    {
+     "text": {
+      "en": "\"Aunty, for your trouble...\" (hold out ₹1,000)",
+      "ta": "\"ஆன்ட்டி, உங்க சிரமத்துக்கு...\" (₹1,000 நீட்டுங்க)"
+     },
+     "set": "lakshmi_offered",
+     "stress": 6
+    }
+   ]
+  },
+  {
+   "do": "talk",
+   "when": "lakshmi_offered",
+   "lines": [
+    {
+     "who": "lakshmi",
+     "en": "Put that away! At my own gate! ...If you had paid, would I believe your clip? Would a judge? Call your advocate.",
+     "ta": "அத உள்ள வை! என் வீட்டு கேட்லயே! ...காசு குடுத்திருந்தா உன் கிளிப்ப நான் நம்புவேனா? ஜட்ஜ் நம்புவாரா? உன் வக்கீலுக்கு ஃபோன் பண்ணு."
+    },
+    {
+     "who": "karthik",
+     "en": "(The note goes back in my pocket. My face is hot.)",
+     "ta": "(நோட்டு திரும்ப பாக்கெட்டுக்கு. மூஞ்சி சூடாகுது.)"
+    }
+   ]
+  },
+  {
+   "do": "dial",
+   "who": "sundaram",
+   "goal": {
+    "en": "Call Sundaram sir: your phone, Contacts",
+    "ta": "சுந்தரம் சாருக்கு ஃபோன்: உங்க ஃபோன், தொடர்புகள்"
+   }
+  },
+  {
+   "do": "talk",
+   "lines": [
+    {
+     "who": "sundaram",
+     "en": "(on the phone) Thambi? ...A doorbell. Good. Give her the phone.",
+     "ta": "(ஃபோன்ல) தம்பி? ...டோர்பெல். நல்லது. அவங்க கிட்ட ஃபோன குடு."
+    },
+    {
+     "who": "karthik",
+     "en": "(I hold it through the grill. She listens a long time.)",
+     "ta": "(கிரில் வழியா நீட்டறேன். அவங்க ரொம்ப நேரம் கேக்கறாங்க.)"
+    },
+    {
+     "who": "lakshmi",
+     "en": "Yes, sir. Lakshmi Narayanan, branch manager, State Bank. ...From my own account, yes. With the date. To your number. ...I understand.",
+     "ta": "ஆமா சார். லட்சுமி நாராயணன், பிராஞ்ச் மேனேஜர், ஸ்டேட் பேங்க். ...என் அக்கவுண்ட்ல இருந்தே, ஆமா. தேதியோட. உங்க நம்பருக்கு. ...புரியுது."
+    },
+    {
+     "who": "lakshmi",
+     "en": "Your advocate gets it, not you. But you can look.",
+     "ta": "உன் வக்கீலுக்கு தான், உனக்கு இல்ல. ஆனா நீ பாக்கலாம்."
+    }
+   ]
+  },
+  {
+   "do": "doorbell",
+   "who": "lakshmi",
+   "goal": {
+    "en": "Her tablet: the doorbell's clips",
+    "ta": "அவங்க டேப்லெட்: டோர்பெல் கிளிப்கள்"
+   }
+  },
+  {
+   "do": "talk",
+   "lines": [
+    {
+     "who": "lakshmi",
+     "en": "There. Sent to your Sundaram, from my account. One more day and it would have deleted itself.",
+     "ta": "இதோ. உன் சுந்தரத்துக்கு அனுப்பிட்டேன், என் அக்கவுண்ட்ல இருந்து. இன்னும் ஒரு நாள் போயிருந்தா தானா அழிஞ்சிருக்கும்."
+    },
+    {
+     "who": "lakshmi",
+     "en": "And thambi. The police never came to ask me. Not once.",
+     "ta": "அப்புறம் தம்பி. போலீஸ் என் கிட்ட கேக்க ஒரு தடவை கூட வரல."
+    }
+   ]
+  },
+  {
+   "do": "evidence",
+   "speaker": "lakshmi",
+   "tag": "E05",
+   "label": {
+    "en": "Doorbell clip, Saravanampatti",
+    "ta": "டோர்பெல் கிளிப், சரவணம்பட்டி"
+   },
+   "memory": {
+    "id": "mem_doorbell",
+    "kind": "card",
+    "title": {
+     "en": "Ashwin's doorbell",
+     "ta": "அஷ்வின் டோர்பெல்"
+    },
+    "body": {
+     "en": "Me at his door, Saravanampatti, that night. Sent to Sundaram sir from the owner's own account.",
+     "ta": "அன்னைக்கு ராத்திரி அவர் வாசல்ல நான், சரவணம்பட்டி. ஓனர் அக்கவுண்ட்ல இருந்தே சுந்தரம் சாருக்கு போச்சு."
+    }
+   }
+  },
+  {
+   "do": "message",
+   "from": {
+    "en": "Sundaram sir",
+    "ta": "சுந்தரம் சார்"
+   },
+   "text": {
+    "en": "Got Mrs. Lakshmi's clip. Her account, her date, her phone. This one walks on two legs, thambi. – Sundaram",
+    "ta": "லட்சுமி அம்மா கிளிப் வந்துச்சு. அவங்க அக்கவுண்ட், அவங்க தேதி, அவங்க ஃபோன். இது ரெண்டு கால்ல நடக்கும், தம்பி. – சுந்தரம்"
+   }
+  },
+  {
+   "do": "drive",
+   "to": "home",
+   "radius": 45,
+   "goal": {
+    "en": "Home",
+    "ta": "வீடு"
+   }
+  },
+  {
+   "do": "home",
+   "room": "home",
+   "at": "home",
+   "start": "door",
+   "cast": {
+    "amma": {
+     "mark": "amma_kitchen"
+    }
+   },
+   "keep": true,
+   "visits": [
+    {
+     "to": "karthik_room",
+     "wait": 0,
+     "until": "17:20",
+     "goal": {
+      "en": "Rest till it's time to sign",
+      "ta": "கையெழுத்து போடற நேரம் வரைக்கும் ஓய்வு"
+     },
+     "prompt": {
+      "en": "sit down",
+      "ta": "உட்காருங்க"
+     }
+    }
+   ]
+  },
+  {
+   "do": "home",
+   "room": "home",
+   "at": "home",
+   "start": "here",
+   "visits": [
+    {
+     "to": "door",
+     "auto": true,
+     "reach": 1.4,
+     "goal": {
+      "en": "Out: the station by seven",
+      "ta": "வெளியே: ஏழு மணிக்குள்ள ஸ்டேஷன்"
+     }
+    }
+   ]
+  },
+  {
+   "do": "drive",
+   "to": "police",
+   "radius": 45,
+   "vehicle": "karthik_scooter",
+   "by": "19:00",
+   "goal": {
+    "en": "Sign at the station by 7 PM",
+    "ta": "7 மணிக்குள்ள ஸ்டேஷன்ல கையெழுத்து"
+   }
+  },
+  {
+   "do": "home",
+   "room": "police",
+   "at": "police",
+   "start": "door",
+   "cast": {
+    "murugesan": {
+     "mark": "inspector",
+     "anim": "Idle"
+    },
+    "selvi": {
+     "mark": "constable",
+     "anim": "Idle"
+    }
+   },
+   "keep": true,
+   "visits": [
+    {
+     "to": "selvi",
+     "task": "sign",
+     "goal": {
+      "en": "Sign the bail register at Selvi's desk",
+      "ta": "செல்வி மேஜையில ஜாமீன் பதிவேட்டுல கையெழுத்து"
+     },
+     "prompt": {
+      "en": "sign the register",
+      "ta": "பதிவேட்டுல கையெழுத்து"
+     },
+     "header": {
+      "en": "Nagar Police Station",
+      "ta": "நகர் காவல் நிலையம்"
+     },
+     "form": {
+      "en": "BAIL ATTENDANCE REGISTER",
+      "ta": "ஜாமீன் வருகை பதிவேடு"
+     },
+     "fields": [
+      [
+       {
+        "en": "Crime No.",
+        "ta": "குற்ற எண்"
+       },
+       "412"
+      ],
+      [
+       {
+        "en": "Name",
+        "ta": "பெயர்"
+       },
+       {
+        "en": "Karthik M.",
+        "ta": "கார்த்திக் ம."
+       }
+      ],
+      [
+       {
+        "en": "Day",
+        "ta": "நாள்"
+       },
+       "3"
+      ]
+     ],
+     "sign_label": {
+      "en": "Signature of the accused",
+      "ta": "குற்றம் சாட்டப்பட்டவர் கையொப்பம்"
+     },
+     "seal": {
+      "en": "STATION SEAL",
+      "ta": "நிலைய முத்திரை"
+     }
+    }
+   ]
+  },
+  {
+   "do": "home",
+   "room": "police",
+   "at": "police",
+   "start": "here",
+   "visits": [
+    {
+     "to": "door",
+     "auto": true,
+     "reach": 1.4,
+     "goal": {
+      "en": "Out",
+      "ta": "வெளியே"
+     }
+    }
+   ]
+  },
+  {
+   "do": "drive",
+   "to": "home",
+   "radius": 45,
+   "goal": {
+    "en": "Home",
+    "ta": "வீடு"
+   }
+  },
+  {
+   "do": "home",
+   "room": "home",
+   "at": "home",
+   "start": "door",
+   "cast": {
+    "amma": {
+     "mark": "amma",
+     "anim": "Sit"
+    }
+   },
+   "keep": true,
+   "visits": [
+    {
+     "to": "karthik_room",
+     "wall": true,
+     "goal": {
+      "en": "Your wall: the doorbell",
+      "ta": "உங்க சுவர்: டோர்பெல்"
      },
      "prompt": {
       "en": "the wall",

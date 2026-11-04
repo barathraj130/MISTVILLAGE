@@ -55,6 +55,7 @@ const Tasks := preload("res://scripts/story/tasks.gd")
 const Table := preload("res://scripts/story/table.gd")
 const Wall := preload("res://scripts/story/wall.gd")
 const Dvr := preload("res://scripts/story/dvr.gd")
+const Doorbell := preload("res://scripts/story/doorbell.gd")
 const Actor := preload("res://scripts/story/actor.gd")
 const Walker := preload("res://scripts/player.gd")
 const RoomSound := preload("res://scripts/city/room_sound.gd")
@@ -97,6 +98,7 @@ var tasks: Control
 var table: Control                    # the questioning (table.gd)
 var wall: Control                     # the wall in his room (wall.gd)
 var dvr: Control                      # a camera recorder's footage on someone's monitor (dvr.gd)
+var doorbell: Control                 # Ashwin's doorbell camera: it records him that night, plays on a tablet later (doorbell.gd)
 var _park := ""                       # a place the car is being set down at, out of sight (after a ride)
 var cast := {}                      # story people in the world: key → Actor
 var _o := Vector3.ZERO              # the scene frame: origin (the car), forward, right
@@ -280,6 +282,10 @@ func _process(dt: float) -> void:
 			_gate()
 		"dvr":
 			_dvr_step()
+		"dial":                                          # he calls someone from his contacts
+			if _skip and t_step > 1.5 and t_step < 9.0:
+				t_step = 9.0
+				_on_dial({"id": str(cur["who"])})
 		"deal":
 			_deal()
 		"call":                                          # the phone rings until he answers
@@ -433,6 +439,8 @@ func _next() -> void:
 		var want := "bike" if str(cur["vehicle"]) == "karthik_scooter" and city.money and city.money.seized else str(cur["vehicle"])
 		if car.vehicle != want:
 			car.configure(want)
+	if cur.get("doorbell", false):                     # (at Ashwin's door: his doorbell camera is recording)
+		_doorbell_capture()
 	match str(cur["do"]):
 		"message":                                       # a text arrives (from, en/ta)
 			city.phone.message(cur["from"], cur["text"], str(cur.get("time", "")))
@@ -495,6 +503,12 @@ func _next() -> void:
 		"dvr":
 			_photo_hook()
 			_dvr_open()
+		"doorbell":
+			_photo_hook()
+			_doorbell_open()
+		"dial":
+			if not city.phone.dialled.is_connected(_on_dial):
+				city.phone.dialled.connect(_on_dial)
 		"deal":
 			_photo_hook()
 			_deal_start()
@@ -1815,7 +1829,13 @@ func _photo_hook() -> void:
 
 
 func _on_photo(tag: String) -> void:
-	if dvr.visible and not city.phone.photos.is_empty():   # a picture of the monitor: what's on the screen right now
+	if doorbell.visible and not city.phone.photos.is_empty():   # a picture of her tablet: that night's clip
+		var fd: Dictionary = doorbell.frame_tag()
+		city.phone.photos[0]["tag"] = fd["tag"]
+		city.phone.photos[0]["label"] = fd["label"]
+		flags["doorbell_photo"] = true
+		print("STORY photo of the doorbell clip")
+	elif dvr.visible and not city.phone.photos.is_empty():   # a picture of the monitor: what's on the screen right now
 		var ft: Dictionary = dvr.frame_tag()
 		city.phone.photos[0]["tag"] = ft["tag"]
 		city.phone.photos[0]["label"] = ft["label"]
@@ -1827,6 +1847,60 @@ func _on_photo(tag: String) -> void:
 	elif str(cur.get("do", "")) == "deal" and tag == "qr_" + str(cur["who"]):
 		city.phone.photos.pop_front()                   # (a scan, not a picture he keeps)
 		_deal_pay()
+
+
+## The doorbell in Ashwin's door frame, beside him, looking at whoever is at the door (Karthik): a few seconds of
+## him, and the clock (doorbell.gd keeps it for E05).
+func _doorbell_capture() -> void:
+	var a: Node3D = cast.get("ashwin")
+	var w = city.walker
+	if a == null or w == null:
+		return
+	var to_him: Vector3 = w.global_position - a.global_position
+	to_him.y = 0.0
+	if to_him.length() < 0.2:
+		return
+	var side := to_him.normalized().cross(Vector3.UP)
+	var from: Vector3 = a.global_position + side * 0.8 + to_him.normalized() * 0.1 + Vector3.UP * 1.65
+	if w.model:
+		w.model.visible = true                           # (his body, for the camera, even in his own eyes)
+	await doorbell.capture(self, get_viewport().world_3d, from, w.global_position + Vector3.UP * 1.1, fines.sim.minute, fines.sim.day)
+	if w.model and is_instance_valid(w):
+		w.model.visible = w.third_person
+
+
+## "doorbell": she holds out her tablet with the app open on that night's clip; he can take a picture of it (P on his
+## phone's camera); Enter gives it back.
+func _doorbell_open() -> void:
+	if city.walker:
+		city.walker.active = false
+	_in_task = true
+	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
+	doorbell.open(lang)
+	if _skip:                                           # (testing: a picture of it, then back)
+		await get_tree().create_timer(1.2).timeout
+		_shot()
+		await city.phone._take_photo()
+		await get_tree().create_timer(0.4).timeout
+		doorbell.close()
+
+
+func _doorbell_closed() -> void:
+	if str(cur.get("do", "")) != "doorbell":
+		return
+	_in_task = false
+	if city.walker:
+		city.walker.active = true
+		Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
+	_next()
+
+
+## "dial": done when he calls "who" from his contacts (phone.gd's dialled, after it rings out).
+func _on_dial(c: Dictionary) -> void:
+	if str(cur.get("do", "")) != "dial" or str(c.get("id", "")) != str(cur["who"]):
+		return
+	print("STORY dialled %s" % str(c.get("id", "")))
+	_next()
 
 
 func _dvr_open() -> void:
@@ -2478,6 +2552,10 @@ func _build_ui() -> void:
 	dvr.visible = false
 	dvr.closed.connect(_dvr_closed)
 	ui.add_child(dvr)
+	doorbell = Doorbell.new()
+	doorbell.visible = false
+	doorbell.closed.connect(_doorbell_closed)
+	ui.add_child(doorbell)
 	tasks = Tasks.new()
 	tasks.visible = false
 	tasks.finished.connect(_task_done)
