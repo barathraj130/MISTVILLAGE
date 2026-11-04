@@ -117,6 +117,8 @@ var _ring: MeshInstance3D             # home: the marker on the floor where to g
 var _climb := 0                       # climb: 0 walking up, 1 the power's gone, 3 at the top
 var _f_down := false                  # (F held: Amma's money, once per press)
 var _paid_test := false
+var _props: Array[Node3D] = []         # things a meet sets out (a tea stall), until the next drive
+var _snap_ready := false               # (a snapshot step: its picture is in his hands)
 var _climbing := false                # (on foot in a climb's room, until the story leaves it)
 var _torch: SpotLight3D
 var _sfx: AudioStreamPlayer
@@ -269,6 +271,11 @@ func _process(dt: float) -> void:
 			elif _skip and t_step > 1.5 and str(cur["task"]) == "otp" and str(city.phone.rider.get("mode", "")) == "otp":
 				for ch in str(cur.get("code", "")):
 					city.phone._rider_key(ch)
+		"snapshot":                                      # (then like a give: his to look at, then the pocket)
+			if _snap_ready and _skip and t_step > 1.5:
+				city.hands.put_back()
+			if _snap_ready and t_step > 0.3 and city.hands.held.is_empty():
+				_next()
 		"give":                                          # read it, then put it in his pocket (E)
 			if _skip and t_step > 1.5:
 				city.hands.put_back()
@@ -429,7 +436,7 @@ func _next() -> void:
 	if _climbing and not str(cur["do"]) in ["talk", "choose"]:     # out of the dark building, back to the street
 		_end_climb()
 	if room != null and not str(cur["do"]) in ["room", "task", "talk", "comfort_verdict", "deliver_verdict", "card", "home", "choose",
-			"give", "take", "note", "message", "contact", "pin", "call", "table", "dvr", "deal", "money", "bail"]:
+			"give", "take", "note", "message", "contact", "pin", "call", "table", "dvr", "deal", "money", "bail", "snapshot", "evidence", "record"]:
 		_unload_room()
 		_cams_back()
 	for k in cur.get("hide", []):                       # (someone gone in: sir into his car, through his gate)
@@ -439,6 +446,11 @@ func _next() -> void:
 		var want := "bike" if str(cur["vehicle"]) == "karthik_scooter" and city.money and city.money.seized else str(cur["vehicle"])
 		if car.vehicle != want:
 			car.configure(want)
+	if str(cur["do"]) in ["drive", "jump", "home", "ride"] and not _props.is_empty():
+		for pr in _props:
+			if is_instance_valid(pr):
+				pr.queue_free()
+		_props.clear()
 	if cur.get("doorbell", false):                     # (at Ashwin's door: his doorbell camera is recording)
 		_doorbell_capture()
 	match str(cur["do"]):
@@ -506,6 +518,9 @@ func _next() -> void:
 		"doorbell":
 			_photo_hook()
 			_doorbell_open()
+		"snapshot":
+			_snap_ready = false
+			_snapshot()
 		"dial":
 			if not city.phone.dialled.is_connected(_on_dial):
 				city.phone.dialled.connect(_on_dial)
@@ -596,6 +611,19 @@ func _next() -> void:
 		"meet":
 			_anchor()
 			_cast(cur.get("cast", {}))
+			for pr in cur.get("props", []):              # (a tea stall at the roadside: city_props, in the car's frame)
+				var ps := load(str(pr["scene"])) as PackedScene
+				if ps == null:
+					continue
+				var pn := ps.instantiate() as Node3D
+				add_child(pn)
+				var at := _w2(pr["pos"])
+				var gy: float = city.streamer.height_at(at.x, at.z)
+				at.y = gy if not is_nan(gy) else at.y
+				var lk := _w2(pr.get("look", [0.0, 0.0]))
+				pn.global_position = at
+				pn.rotation.y = atan2(lk.x - at.x, lk.z - at.z) + float(pr.get("turn", 0.0))
+				_props.append(pn)
 			var a: Node3D = cast.get(cur["who"])
 			if a:
 				map.pin = Vector2(a.global_position.x, a.global_position.z)
@@ -1867,6 +1895,74 @@ func _doorbell_capture() -> void:
 	await doorbell.capture(self, get_viewport().world_3d, from, w.global_position + Vector3.UP * 1.1, fines.sim.minute, fines.sim.day)
 	if w.model and is_instance_valid(w):
 		w.model.visible = w.third_person
+
+
+## "snapshot": a family photo, taken in the room he's in (an album's picture: "group" stood in a row before the room's
+## wide camera, facing it), warm and faded like an old print, then put in his hands ("item": a photo) to look at.
+func _snapshot() -> void:
+	var cm := room.find_child("Cam_wide", true, false) as Node3D if room else null
+	var lk := room.find_child("Look_wide", true, false) as Node3D if room else null
+	if cm == null or lk == null:
+		_snap_ready = true
+		return
+	var flat := Vector3(lk.global_position.x - cm.global_position.x, 0.0, lk.global_position.z - cm.global_position.z)
+	var floor_y: float = _mark("karthik").global_position.y if _mark("karthik") else lk.global_position.y - 1.0
+	var mid := Vector3(cm.global_position.x, floor_y, cm.global_position.z) + flat.normalized() * minf(flat.length() * 0.55, 2.3)
+	var side := flat.normalized().cross(Vector3.UP)
+	mid -= side * 0.5                                    # (clear of the plastic chairs in the middle of the room)
+	var group: Array = cur.get("group", [])
+	var spec := {}
+	for k in group:
+		spec[k] = {}
+	_cast(spec)
+	for i in group.size():
+		var a: Node3D = cast[group[i]]
+		a.floor_y = floor_y
+		var at := mid + side * (float(i) - (group.size() - 1) * 0.5) * 0.62
+		a.place(at, Vector3(cm.global_position.x, floor_y, cm.global_position.z))
+		a.play("Idle")
+	var w = city.walker
+	var shown: bool = w != null and w.model != null and w.model.visible
+	if shown:
+		w.model.visible = false
+	var vp := SubViewport.new()
+	vp.size = Vector2i(720, 480)
+	vp.world_3d = get_viewport().world_3d
+	vp.render_target_update_mode = SubViewport.UPDATE_ALWAYS
+	add_child(vp)
+	var cam := Camera3D.new()
+	cam.fov = 48.0
+	vp.add_child(cam)
+	var from := Vector3(cm.global_position.x, floor_y + 1.45, cm.global_position.z) + flat.normalized() * 0.1
+	cam.global_transform = Transform3D(Basis.looking_at(mid + Vector3.UP * 1.2 - from, Vector3.UP), from)
+	cam.make_current()
+	for i in 4:
+		await RenderingServer.frame_post_draw
+	var img := vp.get_texture().get_image()
+	vp.queue_free()
+	if shown and is_instance_valid(w):
+		w.model.visible = true
+	for k in group:
+		cast[k].visible = false
+	for y in img.get_height():                           # an old print: warm, faded, the corners darker
+		for x in img.get_width():
+			var c := img.get_pixel(x, y)
+			var dx := (x / float(img.get_width())) - 0.5
+			var dy := (y / float(img.get_height())) - 0.5
+			var v := 1.0 - 0.7 * (dx * dx + dy * dy)
+			c = Color(c.r * 0.88 + 0.1, c.g * 0.8 + 0.08, c.b * 0.62 + 0.06) * v
+			img.set_pixel(x, y, c)
+	var item: Dictionary = cur["item"].duplicate()
+	item["tex"] = ImageTexture.create_from_image(img)
+	city.hands.give(item)
+	if city.walker:
+		city.walker.active = false
+	_snap_ready = true
+	t_step = 0.0
+	print("STORY snapshot: %s" % str(group))
+	if _skip:
+		await get_tree().create_timer(0.6).timeout
+		_shot()
 
 
 ## "doorbell": she holds out her tablet with the app open on that night's clip; he can take a picture of it (P on his
