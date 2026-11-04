@@ -1203,6 +1203,82 @@ def police(T):
     shot("wide", (3.8, -3.4, 2.4), (-1.0, 0.8, 1.1))
 
 
+def cctv_shop(T):
+    """Kathir CCTV Service, Saibaba Colony, behind the bakery (STORY_BIBLE.md E07): a narrow shop open to the lane
+    under its rolled-up shutter; a glass counter of cameras across it with the monitor turned to the customer (the
+    building's recorder copy plays on it), boxed cameras and DVRs on the side shelves, Kathir's bench at the back with
+    a soldering iron, a coil of cable, the recorders stacked and blinking, and the four-way picture of his own
+    shop's cameras on the wall."""
+    W, D, h = 3.8, 6.0, 3.0
+    floor = mat("tile_cream", (1, 1, 1), 0.2, tex=T["tile_cream"], scale=1.2)
+    wall = mat("wall_blue_shop", (0.62, 0.72, 0.8), 0.9)
+    shell(W, D, h, floor, wall, mat("ceiling_white", (0.93, 0.93, 0.9), 0.95), door_w=3.4, door_x=0.0)
+    steel = mat("steel", (0.74, 0.75, 0.77), 0.32, 0.55)
+    black = mat("plastic_black", (0.04, 0.04, 0.045), 0.35)
+    white = mat("plastic_white", (0.9, 0.9, 0.88), 0.35)
+    glass = mat("glass", (0.6, 0.72, 0.75), 0.05, alpha=0.18)
+    box((0, -D / 2 + 0.06, h - 0.25), (3.4, 0.4, 0.4), mat("shutter_rolled", (0.45, 0.47, 0.5), 0.5, 0.6), 0.04)
+    # the glass counter across the shop (the way in at its right end)
+    cy = -0.9
+    box((-0.45, cy, 0.05), (2.7, 0.6, 0.1), black)
+    box((-0.45, cy, 1.0), (2.75, 0.62, 0.025), glass)
+    for k in (-1, 1):
+        box((-0.45, cy + k * 0.3, 0.52), (2.7, 0.01, 0.92), glass)
+    box((-1.8, cy, 0.52), (0.01, 0.6, 0.92), glass)
+    box((-0.45, cy, 0.5), (2.6, 0.55, 0.012), glass)                               # its shelf
+    for k in range(6):                                                           # cameras on show: domes and bullets
+        x = -1.55 + k * 0.42
+        if k % 2:
+            dome((x, cy, 0.52), 0.07, 0.07, white)
+        else:
+            box((x, cy, 0.56), (0.08, 0.2, 0.07), white, 0.02)
+            cyl((x, cy - 0.11, 0.56), 0.025, 0.02, black, 12, rot=(math.pi / 2, 0, 0))
+    for k in range(4):                                                           # and on the top, by the till
+        box((-1.4 + k * 0.3, cy + 0.15, 1.05), (0.18, 0.12, 0.06), mat("dvr_box", (0.85, 0.82, 0.75), 0.6), 0.004)
+    monitor(-0.85, cy - 0.05, 1.015, -0.35)                                      # turned to the customer, at the side
+    box((0.45, cy + 0.18, 1.03), (0.18, 0.12, 0.02), black, 0.005)               # his mouse pad and keyboard, his side
+    box((0.0, cy + 0.2, 1.025), (0.4, 0.13, 0.015), black, 0.003)
+    # the side shelves: camera cartons, cable reels, DVRs
+    for side in (-1, 1):
+        x = side * (W / 2 - 0.2)
+        for z in (0.5, 1.1, 1.7, 2.3):
+            box((x, 1.0, z - 0.02), (0.38, 2.6, 0.03), mat("shelf_ply", (0.62, 0.5, 0.36), 0.7))
+            for j in range(6):
+                c = (0.85, 0.82, 0.75) if (j + int(z * 10)) % 3 else (0.2, 0.35, 0.6)
+                box((x, -0.05 + j * 0.42, z + 0.12), (0.3, 0.3, 0.22), mat("carton_%d" % (j % 3), c, 0.8), 0.004)
+    for k in range(3):
+        cyl((W / 2 - 0.25, 2.7 - k * 0.25, 0.15), 0.14, 0.1, mat("cable_reel", (0.1, 0.1, 0.1), 0.5), 20, rot=(0, math.pi / 2, 0))
+    # Kathir's bench at the back: recorders stacked and blinking, a soldering station, a stool
+    table(0.0, D / 2 - 0.45, 2.4, 0.7, 0.85, mat("bench_top", (0.3, 0.32, 0.3), 0.6), steel)
+    for k in range(3):
+        box((-0.8, D / 2 - 0.4, 0.92 + k * 0.08), (0.42, 0.32, 0.07), black, 0.005)
+        box((-0.95, D / 2 - 0.57, 0.92 + k * 0.08), (0.02, 0.005, 0.01), mat("led_green", (0.1, 1, 0.2), 0.3, emit=(0.1, 1.0, 0.2), strength=6))
+    box((0.4, D / 2 - 0.35, 0.92), (0.2, 0.15, 0.08), mat("solder_stn", (0.7, 0.15, 0.1), 0.5), 0.01)
+    cyl((0.65, D / 2 - 0.4, 0.95), 0.008, 0.2, steel, 8, rot=(0, math.pi / 2.5, 0))
+    cyl((0.0, D / 2 - 1.1, 0.33), 0.17, 0.04, mat("stool_red", (0.7, 0.1, 0.08), 0.4), 20)
+    cyl((0.0, D / 2 - 1.1, 0.16), 0.12, 0.32, mat("stool_red", (0.7, 0.1, 0.08), 0.4), 20, r2=0.15)
+    # the wall over the bench: his own cameras, four ways, and the name board
+    box((0.9, D / 2 - 0.04, 1.75), (0.95, 0.04, 0.56), black, 0.01)
+    for i in range(2):
+        for j in range(2):
+            box((0.9 - 0.22 + i * 0.44, D / 2 - 0.065, 1.75 + 0.13 - j * 0.26), (0.42, 0.005, 0.24),
+                mat("cctv_tile_%d" % (i * 2 + j), (0.3, 0.32, 0.3), 0.2, emit=(0.09 + 0.02 * i, 0.1, 0.09 - 0.01 * j), strength=1.0))
+    sign("KATHIR CCTV SERVICE", (-0.7, D / 2 - 0.05, 2.45), 2.0, 0.42, mat("board_red", (0.7, 0.08, 0.06), 0.4),
+         mat("letters_white", (0.97, 0.97, 0.97), 0.4), "-y", 0.17)
+    text("SALES  ·  INSTALLATION  ·  SERVICE  ·  AMC", (-0.7, D / 2 - 0.08, 2.08), 0.07, mat("ink_navy", (0.1, 0.15, 0.4), 0.5), "-y")
+    box((-1.2, D / 2 - 0.03, 1.6), (0.5, 0.03, 0.6), mat("calendar", (0.95, 0.94, 0.9), 0.8))     # a calendar, the gods on it
+    for k, yy in enumerate((-1.4, 1.4)):
+        tube_light(0.0, yy, h - 0.05, True, k)
+    mark("kathir", -0.1, cy + 0.65, math.pi)                                     # behind his counter, at the monitor
+    mark("karthik", -0.1, cy - 0.65, 0.0)                                        # across it, the screen to him
+    mark("counter", -0.1, cy - 0.65, 0.0)
+    mark("qr", 0.75, cy - 0.15, 0.0)                                             # the QR on its stand, on the glass
+    mark("door", 0.0, -D / 2 + 0.4, 0.0)
+    shot("wide", (1.4, -D / 2 + 0.3, 1.8), (-0.6, 1.5, 1.0))
+    shot("counter", (0.9, cy - 1.6, 1.6), (-0.1, cy + 0.4, 1.2))
+    shot("kathir", (-0.1, cy - 0.9, 1.55), (-0.1, cy + 0.65, 1.5))
+
+
 # ============================================================================ the detail pass: what makes each place
 FONT_BOLD = "/System/Library/Fonts/Supplemental/Arial Bold.ttf"
 FONT_COND = "/System/Library/Fonts/Supplemental/DIN Condensed Bold.ttf"
@@ -1775,11 +1851,11 @@ def police_detail(T):
 
 
 DETAIL = {"home": home_detail, "dev_office": office_detail, "coopbank": bank_detail, "mess": mess_detail,
-          "police": police_detail, "fine_dining": fine_dining_detail}
+          "police": police_detail, "fine_dining": fine_dining_detail, "cctv_shop": lambda T: None}
 
 
 ROOMS = {"home": home, "dev_office": dev_office, "coopbank": coopbank, "mess": mess, "police": police,
-         "fine_dining": fine_dining}
+         "fine_dining": fine_dining, "cctv_shop": cctv_shop}
 
 
 def reset():

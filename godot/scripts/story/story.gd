@@ -43,6 +43,7 @@ extends Node
 ## and in talk.
 ##   --storyskip     testing: each drive step jumps the car to its place after 3 s, and talk advances by itself
 ##   --storyshots=D  testing: a screenshot of every card, talk line and arrival into the folder D
+##   --storyflags=a,b / --storymoney=N  testing: with --storyfrom, what had happened before, and his wallet
 ##   --eatat=P       testing: the lunch break is eaten at the place P (an eat_out "eateries" key)
 ##   --storyta       start in Tamil
 ##   --storychoose=N testing: at every choice, option N (1, 2...)
@@ -53,6 +54,7 @@ const Sim := preload("res://scripts/drive/sim.gd")
 const Tasks := preload("res://scripts/story/tasks.gd")
 const Table := preload("res://scripts/story/table.gd")
 const Wall := preload("res://scripts/story/wall.gd")
+const Dvr := preload("res://scripts/story/dvr.gd")
 const Actor := preload("res://scripts/story/actor.gd")
 const Walker := preload("res://scripts/player.gd")
 const RoomSound := preload("res://scripts/city/room_sound.gd")
@@ -94,6 +96,7 @@ var _paid := {}                     # lines that already paid (step:line)
 var tasks: Control
 var table: Control                    # the questioning (table.gd)
 var wall: Control                     # the wall in his room (wall.gd)
+var dvr: Control                      # a camera recorder's footage on someone's monitor (dvr.gd)
 var _park := ""                       # a place the car is being set down at, out of sight (after a ride)
 var cast := {}                      # story people in the world: key → Actor
 var _o := Vector3.ZERO              # the scene frame: origin (the car), forward, right
@@ -255,6 +258,10 @@ func _process(dt: float) -> void:
 			_wait_step()
 		"gate":
 			_gate()
+		"dvr":
+			_dvr_step()
+		"deal":
+			_deal()
 		"call":                                          # the phone rings until he answers
 			if _skip and t_step > 1.5:
 				city.phone.answer()
@@ -345,6 +352,14 @@ func _next() -> void:
 			if a.begins_with("--storyclock=") and fines:
 				var hm0: PackedStringArray = a.get_slice("=", 1).split(":")
 				fines.sim.minute = float(hm0[0]) * 60.0 + float(hm0[1])
+		for a in OS.get_cmdline_user_args():          # (testing: --storyflags=a,b as if those had happened;
+			if a.begins_with("--storyflags="):        #  --storymoney=N in his wallet)
+				for f in a.get_slice("=", 1).split(","):
+					flags[f] = true
+					if f == "frozen" and city.money:     # (the account, as the arrest leaves it)
+						city.money.freeze(23400)
+			elif a.begins_with("--storymoney=") and fines:
+				fines.sim.money = int(a.get_slice("=", 1))
 		for a in OS.get_cmdline_user_args():          # (testing: --storyfrom=N starts the chapter at step N)
 			if a.begins_with("--storyfrom="):
 				step = int(a.get_slice("=", 1)) - 1
@@ -388,7 +403,7 @@ func _next() -> void:
 	if _climbing and not str(cur["do"]) in ["talk", "choose"]:     # out of the dark building, back to the street
 		_end_climb()
 	if room != null and not str(cur["do"]) in ["room", "task", "talk", "comfort_verdict", "deliver_verdict", "card", "home", "choose",
-			"give", "take", "note", "message", "contact", "pin", "call", "table"]:
+			"give", "take", "note", "message", "contact", "pin", "call", "table", "dvr", "deal", "money", "bail"]:
 		_unload_room()
 		_cams_back()
 	for k in cur.get("hide", []):                       # (someone gone in: sir into his car, through his gate)
@@ -407,6 +422,14 @@ func _next() -> void:
 			return
 		"pin":                                           # a place pinned on his phone's map
 			city.phone.pin(str(cur["place"]), cur.get("label", data["places"].get(cur["place"], {})))
+			_next()
+			return
+		"money":                                         # the account frozen ("freeze": bank, "wallet"), bills due ("bills")
+			if city.money:
+				if cur.has("freeze"):
+					city.money.freeze(int(cur["freeze"]), int(cur.get("wallet", -1)))
+				for b in cur.get("bills", []):
+					city.money.add_bill(b)
 			_next()
 			return
 		"bail":                                          # bail begins: the evenings at the station (city/bail.gd)
@@ -445,6 +468,12 @@ func _next() -> void:
 				cast["seller"].add_child(lamp)
 			if _ring:
 				_ring.visible = false
+		"dvr":
+			_photo_hook()
+			_dvr_open()
+		"deal":
+			_photo_hook()
+			_deal_start()
 		"record":                                        # (testing only: the recorder a player would start himself)
 			if _skip:
 				city.phone.recording = not bool(cur.get("on", true))
@@ -535,6 +564,8 @@ func _next() -> void:
 		"home":
 			_load_room(str(cur["room"]), str(cur.get("at", data["spawn"])))
 			_cast(cur.get("cast", {}))
+			if str(cur["room"]) == "home" and cur.get("cast", {}).has("amma") and city.money:
+				city.money.handover.call_deferred()     # (what the app paid into her account, into his hand)
 			_visit = 0
 			_in_task = false
 			_knock_t = 0.0
@@ -1699,6 +1730,231 @@ func _evidence() -> void:
 		wall.add(cur["memory"])
 
 
+## "dvr": someone's monitor with a recorder's footage on it (dvr.gd), worked by him: he steps up to it with E, plays
+## and scrubs it, and takes pictures of the screen with his phone. The step is done when he steps back with at least
+## one picture of it (until then E at "who" opens it again: "(I should have a picture of that.)").
+func _photo_hook() -> void:
+	if not city.phone.photo_taken.is_connected(_on_photo):
+		city.phone.photo_taken.connect(_on_photo)
+
+
+func _on_photo(tag: String) -> void:
+	if dvr.visible and not city.phone.photos.is_empty():   # a picture of the monitor: what's on the screen right now
+		var ft: Dictionary = dvr.frame_tag()
+		city.phone.photos[0]["tag"] = ft["tag"]
+		city.phone.photos[0]["label"] = ft["label"]
+		flags["dvr_photo"] = true
+		flags[str(ft["tag"])] = true
+		if ft.get("card", false):
+			flags["dvr_card"] = true
+		print("STORY photo of the screen: %s at %s" % [ft["tag"], dvr.hms(dvr.t)])
+	elif str(cur.get("do", "")) == "deal" and tag == "qr_" + str(cur["who"]):
+		city.phone.photos.pop_front()                   # (a scan, not a picture he keeps)
+		_deal_pay()
+
+
+func _dvr_open() -> void:
+	if city.walker:
+		city.walker.active = false
+	_in_task = true
+	dvr.open(lang)
+	if _skip:                                           # (testing: 9:39 he comes in, a picture; 9:58 he leaves, another; then back)
+		dvr.t = 21.0 * 3600 + 2393.0
+		dvr.playing = false
+		await get_tree().create_timer(0.5).timeout
+		await city.phone._take_photo()
+		dvr.t = 21.0 * 3600 + 3494.0
+		await get_tree().create_timer(0.5).timeout
+		await city.phone._take_photo()
+		_shot()
+		dvr.close()
+		dvr.closed.emit()
+
+
+func _dvr_closed() -> void:
+	if str(cur.get("do", "")) != "dvr":
+		return
+	_in_task = false
+	if city.walker:
+		city.walker.active = true
+		Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
+	if flags.get("dvr_photo", false):
+		_next()
+		return
+	_say({"who": "karthik", "en": "(I should have a picture of that. On my phone.)", "ta": "(அத ஒரு படம் எடுத்திருக்கணும். என் ஃபோன்ல.)"}, false)
+	get_tree().create_timer(3.0).timeout.connect(func(): box.visible = false)
+
+
+func _dvr_step() -> void:
+	if _in_task or dvr.visible:
+		return
+	var a: Node3D = cast.get(str(cur["who"]))
+	var near: bool = city.walker != null and a != null and city.walker.global_position.distance_to(a.global_position) < 2.6
+	var e := Input.is_key_pressed(KEY_E)
+	if near and e and not _e_down:
+		_dvr_open()
+	_e_down = e
+	goal.text = tr_(cur["goal"]) + ("\n" + ("E: his screen" if lang == "en" else "E: அவர் ஸ்கிரீன்") if near else "")
+
+
+## "deal": he wants money for it ("price"), by UPI: the QR code on his counter ("qr": where, in the scene frame), which
+## Karthik's phone camera scans (P, the camera, a picture of the code) and the money goes; "sets"["paid"]. Or he walks
+## away ("away" metres, or onto his scooter): "sets"["walked"]. Short of money, the payment fails and the code stays.
+var _qr: Node3D
+
+
+func _deal_start() -> void:
+	_anchor()
+	_cast(cur.get("cast", {}))
+	if _qr == null:
+		_qr = Node3D.new()
+		add_child(_qr)
+		var stand := MeshInstance3D.new()                # a printed QR on a little acrylic stand
+		var qm := QuadMesh.new()
+		qm.size = Vector2(0.22, 0.28)
+		stand.mesh = qm
+		var mat := StandardMaterial3D.new()
+		mat.albedo_texture = _qr_texture()
+		mat.texture_filter = BaseMaterial3D.TEXTURE_FILTER_NEAREST
+		mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+		mat.cull_mode = BaseMaterial3D.CULL_DISABLED
+		stand.material_override = mat
+		stand.position = Vector3(0, 1.15, 0)
+		_qr.add_child(stand)
+		var leg := MeshInstance3D.new()                  # (on a stool by his shutter, at a hand's height)
+		var bm := BoxMesh.new()
+		bm.size = Vector3(0.4, 1.0, 0.4)
+		leg.mesh = bm
+		leg.position = Vector3(0, 0.5, 0)
+		_qr.add_child(leg)
+	_qr.visible = true
+	var qm: Node3D = _mark(str(cur["qr_mark"])) if cur.has("qr_mark") and room != null else null
+	if qm:                                               # (on his counter: the stand only, no stool)
+		_qr.global_position = qm.global_position + Vector3.UP * 0.05
+		_qr.get_child(0).position = Vector3(0, 0.13, 0)
+		_qr.get_child(1).visible = false
+	else:
+		var at := _w2(cur.get("qr", [-3.0, 2.0]))
+		var g: float = city.streamer.height_at(at.x, at.z)
+		_qr.global_position = Vector3(at.x, g if not is_nan(g) else _o.y, at.z)
+		_qr.get_child(0).position = Vector3(0, 1.15, 0)
+		_qr.get_child(1).visible = true
+	var a: Node3D = cast.get(str(cur["who"]))
+	if a:
+		_qr.look_at(Vector3(a.global_position.x, _qr.global_position.y, a.global_position.z), Vector3.UP)   # (its face, +z, to the customer)
+	city.phone.target(_qr.get_child(0), "qr_" + str(cur["who"]), {"en": "QR", "ta": "QR"}, 3.0)
+	if _skip:
+		var pick := 1
+		for arg in OS.get_cmdline_user_args():
+			if arg.begins_with("--storychoose="):
+				pick = int(arg.get_slice("=", 1))
+		await get_tree().create_timer(1.0).timeout
+		if pick == 1 and city.money and city.money.frozen and fines.sim.money >= int(cur["price"]):
+			_deal_note(int(cur["price"]))                # (frozen: the cash, at once)
+		elif pick == 1:
+			_deal_pay()
+		if str(cur.get("do", "")) == "deal":
+			_deal_end("walked")
+
+
+func _deal() -> void:
+	var a: Node3D = cast.get(str(cur["who"]))
+	if a == null:
+		return
+	var door: Node3D = _mark("door") if room != null else null
+	if city.walker == null or city.walker.global_position.distance_to(a.global_position) > float(cur.get("away", 18.0)) \
+			or (door != null and city.walker.global_position.distance_to(door.global_position) < 1.0):   # (out of his shop)
+		if t_step > 1.0:
+			_deal_end("walked")
+		return
+	var near: bool = city.walker.global_position.distance_to(_qr.global_position) < 3.0
+	var hint := ("P: your phone, the camera: scan the QR (₹%d)" if lang == "en" else "P: உங்க ஃபோன், கேமரா: QR ஸ்கேன் (₹%d)") % int(cur["price"])
+	var cash_ok: bool = city.money != null and city.money.frozen
+	if cash_ok and city.walker.global_position.distance_to(a.global_position) < 2.6:
+		hint = ("E: your wallet (₹%d of ₹%d in his hand)" if lang == "en" else "E: உங்க பர்ஸ் (₹%d / ₹%d அவர் கையில)") % [_cash_in, int(cur["price"])]
+		var e := Input.is_key_pressed(KEY_E)
+		if e and not _e_down and not city.hands.is_busy():
+			city.hands.give({"id": "wallet", "kind": "wallet", "title": {"en": "Wallet", "ta": "பர்ஸ்"}})
+			if not city.hands.note_given.is_connected(_deal_note):
+				city.hands.note_given.connect(_deal_note)
+		_e_down = e
+	goal.text = tr_(cur["goal"]) + ("\n" + hint if near or cash_ok else "")
+
+
+## Cash for the deal, a note at a time; what's held out stays with him until it's all there (then it's paid).
+var _cash_in := 0
+
+
+func _deal_note(amount: int) -> void:
+	if str(cur.get("do", "")) != "deal":
+		return
+	fines.sim.money -= amount
+	_cash_in += amount
+	if _cash_in >= int(cur["price"]):
+		_cash_in = 0
+		if city.hands.note_given.is_connected(_deal_note):
+			city.hands.note_given.disconnect(_deal_note)
+		_play_sfx("clink", -6.0)
+		_deal_end("paid")
+	elif fines.sim.money <= 0:                          # all he had: he takes it back
+		fines.sim.money += _cash_in
+		_say({"who": str(cur["who"]), "en": "₹%d? Come back when you have five." % _cash_in, "ta": "₹%d-ஆ? அஞ்சாயிரம் இருக்கும்போது வா." % _cash_in}, false)
+		get_tree().create_timer(3.0).timeout.connect(func(): box.visible = false)
+		_cash_in = 0
+	else:
+		city.hands.give({"id": "wallet", "kind": "wallet", "title": {"en": "Wallet", "ta": "பர்ஸ்"}})
+
+
+func _deal_pay() -> void:
+	var price := int(cur["price"])
+	if city.money and city.money.frozen:
+		city.money.pay_online(price, tr_(cur.get("payee", {"en": "merchant"})))
+		_say({"who": str(cur["who"]), "en": "Frozen? Then cash. Five thousand, in my hand.", "ta": "முடக்கமா? அப்போ கேஷ். அஞ்சாயிரம், என் கையில."}, false)
+		get_tree().create_timer(3.0).timeout.connect(func(): box.visible = false)
+		return
+	if fines.sim.money < price:
+		city.phone.message({"en": "UPI", "ta": "UPI"}, {"en": "Payment of ₹%d failed: not enough balance." % price,
+			"ta": "₹%d பேமென்ட் தோல்வி: பேலன்ஸ் போதாது." % price})
+		return
+	fines.sim.money -= price
+	city.phone.message({"en": "UPI", "ta": "UPI"}, {"en": "₹%d paid to %s." % [price, tr_(cur.get("payee", {"en": "merchant"}))],
+		"ta": "₹%d %s-க்கு அனுப்பப்பட்டது." % [price, tr_(cur.get("payee", {"en": "merchant"}))]})
+	_play_sfx("clink", -6.0)
+	_deal_end("paid")
+
+
+func _deal_end(how: String) -> void:
+	if how == "walked" and _cash_in > 0:                # (the notes he'd held out go back in his wallet)
+		fines.sim.money += _cash_in
+		_cash_in = 0
+	if city.hands.note_given.is_connected(_deal_note):
+		city.hands.note_given.disconnect(_deal_note)
+	city.phone.clear_targets()
+	if _qr:
+		_qr.visible = false
+	flags[str(cur["sets"][how])] = true
+	print("STORY deal → %s" % how)
+	_next()
+
+
+static func _qr_texture() -> ImageTexture:
+	var n := 29
+	var img := Image.create(n + 4, n + 4, false, Image.FORMAT_RGB8)
+	img.fill(Color.WHITE)
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 4120
+	for y in n:
+		for x in n:
+			if rng.randf() < 0.5:
+				img.set_pixel(x + 2, y + 2, Color.BLACK)
+	for c in [Vector2i(0, 0), Vector2i(n - 7, 0), Vector2i(0, n - 7)]:   # the three finder squares
+		for y in 7:
+			for x in 7:
+				var ring := maxi(absi(x - 3), absi(y - 3))
+				img.set_pixel(c.x + x + 2, c.y + y + 2, Color.BLACK if ring != 2 else Color.WHITE)
+	return ImageTexture.create_from_image(img)
+
+
 ## Somewhere to eat: on foot at the door of any of the eateries, E for the menu.
 func _eat_out() -> void:
 	if _in_task:
@@ -1891,7 +2147,10 @@ func _gigs(dt: float) -> void:
 					var ontime := _since_noon(fines.sim.minute) <= _since_noon(float(_gig["by"]))
 					var tip: int = (10 + randi() % 4 * 10) if ontime else 0
 					var paid: int = int(_gig["pay"]) + tip
-					fines.sim.money += paid
+					if city.money:
+						city.money.earn(paid, cur.get("app", {"en": "QuickBite Rider", "ta": "குவிக்பைட் ரைடர்"}))
+					else:
+						fines.sim.money += paid
 					_gig_done += 1
 					_gig_earned += paid
 					city.phone.message(cur.get("app", {"en": "QuickBite Rider", "ta": "குவிக்பைட் ரைடர்"}),
@@ -2139,6 +2398,10 @@ func _build_ui() -> void:
 		if str(cur.get("do", "")) == "home" and _in_task:
 			_task_done({"pinned": wall.pinned(), "tied": wall.tied()}))
 	ui.add_child(wall)
+	dvr = Dvr.new()
+	dvr.visible = false
+	dvr.closed.connect(_dvr_closed)
+	ui.add_child(dvr)
 	tasks = Tasks.new()
 	tasks.visible = false
 	tasks.finished.connect(_task_done)

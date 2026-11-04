@@ -101,10 +101,16 @@ func _process(dt: float) -> void:
 		var todo: Dictionary = life.offer(inside["room"], _room, w.global_position) if life and not at_door else {}
 		var bail = city.bail if "bail" in city else null
 		var sign: String = bail.offer(inside["room"], _room, w.global_position) if bail and not at_door else ""
+		var money = city.money if "money" in city else null
+		var pay: String = money.offer(inside["room"], _room, w.global_position) if money and not at_door and sign == "" else ""
+		if pay != "":
+			sign = pay
 		_label.text = ("Inside %s · E: go out" % NAMES.get(inside["room"], "the building")) if at_door else \
 			("E: %s" % todo["offer"] if not todo.is_empty() else ("E: " + sign if sign != "" else ""))
 		if at_door and pressed:
 			leave(w)
+		elif pressed and pay != "":
+			money.go()
 		elif pressed and sign != "":
 			bail.go()
 		elif pressed and not todo.is_empty():

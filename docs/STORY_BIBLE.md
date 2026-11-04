@@ -221,7 +221,7 @@ Advocate Sundaram), or **disputed** when a source contradicts it. Each item has 
 | E04 | Delivery app record: pickup 21:50, drop 22:20 with OTP | Karthik's phone | Alibi | Weak alone: a phone can be carried | Act 2 (slice) |
 | E05 | Ashwin's doorbell video, 22:21: Karthik's face | Ashwin, Saravanampatti | Alibi confirmed | Karthik was 12 km away at 22:20 | Act 4 |
 | E06 | Watchman: a man in a cap entered at 21:40 with a card | Muniyandi | Someone else used the office | Unverified until E07 | Act 2 (slice) |
-| E07 | Building DVR backup: cap man 21:40–21:58; card log #07 = Suresh | Muniyandi's nephew kept a copy | The phone was used by someone else | Verifies E06; points at Suresh | Act 4 |
+| E07 | Building DVR backup: cap man in at 21:39, card #07 opens the 1F office door 21:40:15, out 21:58; card #07 = Suresh | Muniyandi's nephew Kathir kept a copy (his CCTV shop, Saibaba Colony): Karthik works the footage on Kathir's monitor and photographs the screen; the drive itself for ₹5,000 by UPI (bought, weak), or on Sundaram's letter after Divya reads the recorder's ID (RAGHAVAN DEV GPM NVR-1) off the photo | The phone was used by someone else | Verifies E06; points at Suresh (whose card #07 is, found later) | Act 4 (slice: Day 5) |
 | E08 | Tea shop owner: white SUV 22:35, black sedan parked nose-out | Sekar | A second car was at the site | Suresh was there | Act 4 |
 | E09 | Raghavan's handwritten note in the Green Valley file | Priya and Revathi | The cash was for the farmers; he refused to sign | Motive for Suresh, not Karthik | Act 4 |
 | E10 | Cash deposit of ₹4 L into "Om Sakthi Traders", Day 5 | court order (via Sundaram) | The cash went to Suresh's lender | Money trail | Act 6 |

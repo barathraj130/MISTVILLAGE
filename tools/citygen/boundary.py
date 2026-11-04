@@ -29,6 +29,10 @@ CORRIDOR_M = 1500.0          # either side of NH 181
 TOWN_M = 2500.0              # round Mettupalayam
 GHAT_M = 600.0               # either side of a ghat road, up to its foot
 FOOT_ABOVE = 110.0           # the foot: where the road has climbed this far above the town
+HILL_ABOVE = 15.0            # past the corridor's highest foot: the Nilgiris' slopes, left out (their side roads climb
+                             #  at 30-47 % on the 30 m height data; the city's circle keeps its own hills)
+HILL_CELL = 90.0             # the slopes' mask, in cells of this many metres
+ROAD_KEEP_M = 80.0           # NH 181 and the ghat roads up to their feet are kept, this far either side
 METTUPALAYAM = (76.9365, 11.2990)
 
 
@@ -120,11 +124,12 @@ def main():
           and min(q[1] for q in w["pts"]) < METTUPALAYAM[1] + 0.004 and max(q[1] for q in w["pts"]) > 11.04
           and min(q[0] for q in w["pts"]) > 76.9 and max(q[0] for q in w["pts"]) < 76.99]
     road = shapely.ops.linemerge(shapely.MultiLineString([[m(p) for p in w["pts"]] for w in nh]))
-    area = Point(0, 0).buffer(CIRCLE_M, 64).union(road.buffer(CORRIDOR_M, 16))
-    area = area.union(Point(m(METTUPALAYAM)).buffer(TOWN_M, 48))
+    circle = Point(0, 0).buffer(CIRCLE_M, 64)
+    area = road.buffer(CORRIDOR_M, 16).union(Point(m(METTUPALAYAM)).buffer(TOWN_M, 48))
     town_h = height(*METTUPALAYAM)
     tm = m(METTUPALAYAM)
     borders = []
+    roads = [road]                                       # the roads themselves stay in, whatever the hills do
     for name, pick in (("Kallar (Coonoor ghat)", lambda w: w["ref"] == "NH181" and max(q[1] for q in w["pts"]) > METTUPALAYAM[1] + 0.003),
                        ("Kotagiri ghat", lambda w: w["ref"] == "SH15" and max(q[1] for q in w["pts"]) > 11.305
                         and min(q[0] for q in w["pts"]) < 76.96)):   # (SH 15 also runs east to Sathy)
@@ -145,6 +150,7 @@ def main():
             continue
         part = cs[:foot + 1]
         area = area.union(LineString(part).buffer(GHAT_M, 8))
+        roads.append(LineString(part))
         fx, fz = pr.game(*ll(*part[-1]))
         bx, bz = pr.game(*ll(*part[max(0, len(part) - 6)]))
         d = math.hypot(fx - bx, fz - bz) or 1.0
@@ -153,10 +159,24 @@ def main():
                         "up_z": round((fz - bz) / d, 3), "lat": round(flat, 5), "lon": round(flon, 5), "height": height(flon, flat)})
         print("%s: foot at %.4f N %.4f E, %.0f m (town %.0f m), %.1f km of road from its start" % (
             name, flat, flon, height(flon, flat), town_h, LineString(part).length / 1000))
+    top = max([b["height"] for b in borders] or [height(*METTUPALAYAM) + FOOT_ABOVE]) + HILL_ABOVE
+    x0, y0, x1, y1 = area.bounds                         # the corridor's ground higher than its highest foot: out
+    hills = []
+    for y in np.arange(y0, y1, HILL_CELL):
+        for x in np.arange(x0, x1, HILL_CELL):
+            if height(*ll(x + HILL_CELL / 2, y + HILL_CELL / 2)) > top:
+                hills.append(shapely.box(x, y, x + HILL_CELL, y + HILL_CELL))
+    if hills:
+        high = shapely.union_all(hills)
+        print("hills above %.0f m: %.1f km² left out of the corridor" % (top, high.intersection(area).area / 1e6))
+        area = area.difference(high).union(shapely.union_all([r.buffer(ROAD_KEEP_M, 8) for r in roads]))
+    area = circle.union(area)
     if area.geom_type != "Polygon":
         print("pieces:", [round(g.area / 1e6, 1) for g in area.geoms])
         area = max(area.geoms, key=lambda g: g.area)
     area = shapely.simplify(area, 30.0)
+    for r in roads:                                      # (every metre of the roads to the feet is in the area)
+        print("road %.1f km: %.0f m of it outside the area" % (r.length / 1000, r.difference(area).length))
     ring = [ll(x, y) for x, y in area.exterior.coords]
     gj = {"type": "FeatureCollection", "features": [{"type": "Feature", "properties": {"name": "Coimbatore city + the Mettupalayam corridor"},
           "geometry": {"type": "Polygon", "coordinates": [ring]}}]}

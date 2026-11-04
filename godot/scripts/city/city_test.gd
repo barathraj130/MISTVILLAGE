@@ -22,6 +22,7 @@ const Life := preload("res://scripts/city/life.gd")
 const Story := preload("res://scripts/story/story.gd")
 const Phone := preload("res://scripts/story/phone.gd")
 const Bail := preload("res://scripts/city/bail.gd")
+const Money := preload("res://scripts/city/money.gd")
 const RoomSound := preload("res://scripts/city/room_sound.gd")
 const Hands := preload("res://scripts/story/hands.gd")
 const Walker := preload("res://scripts/player.gd")
@@ -64,6 +65,7 @@ var fines                                   # wallet and e-challans (fines.gd)
 var life                                    # Karthik's stress and his outings (life.gd)
 var _taught_foot := false
 var bail                                    # his bail: signing, strikes, the district border (city/bail.gd)
+var money                                   # his money after the arrest: the frozen account, bills (city/money.gd)
 var phone                                   # Karthik's phone, P (story/phone.gd)
 var hands                                   # what he holds and carries, I (story/hands.gd)
 var _prof_frames := 0
@@ -211,6 +213,10 @@ func _ready() -> void:
 		bail.name = "Bail"
 		bail.city = self
 		add_child(bail)
+		money = Money.new()
+		money.name = "Money"
+		money.city = self
+		add_child(money)
 		traffic.physics_interpolation_mode = Node.PHYSICS_INTERPOLATION_MODE_OFF
 		map = CityMap.new()
 		map.name = "Map"

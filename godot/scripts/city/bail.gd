@@ -135,6 +135,7 @@ func _test(dir: String) -> void:
 				city.car.global_position = Vector3(below.x, g + 0.8, below.z)
 				break
 		city.car.freeze = false
+		city.car.global_basis = Basis()
 		var f: Vector3 = city.car.forward()
 		city.car.rotate_y(Vector3(f.x, 0.0, f.z).normalized().signed_angle_to(Vector3(float(c["up_x"]), 0.0, float(c["up_z"])), Vector3.UP))
 		await tree.create_timer(1.5).timeout
@@ -328,6 +329,7 @@ func _load_borders() -> void:
 	if not FileAccess.file_exists(BORDERS):
 		return
 	var d = JSON.parse_string(FileAccess.get_file_as_string(BORDERS))
+	_area.clear()                                     # (loaded again: once, not twice over)
 	if d is Dictionary:
 		_checks = d.get("checks", [])
 		for q in d.get("area", []):
@@ -358,6 +360,7 @@ func _border(dt: float) -> void:
 			_last_inside = p
 		elif _last_inside != Vector3.INF:
 			var back := Vector3(_last_inside.x - p.x, 0.0, _last_inside.z - p.z).normalized()
+			print("BAIL out of the area: %s at (%.0f, %.0f)" % [who.name, p.x, p.z])
 			_turn_back(who, _last_inside + back * 20.0, back, "Police checkpost",
 				"Stop. Where to? ...On bail, the inspector said: not past the checkposts. Turn back.")
 
@@ -367,19 +370,46 @@ func _turn_back(who: Node3D, to: Vector3, facing: Vector3, who_says: String, lin
 	border_tries += 1
 	city.hud.say(who_says, line, 5.0)
 	if who == city.car:
+		var spot: Array = _road_spot(to, facing)          # on a carriageway, heading back, not on the median
+		to = spot[0]
+		facing = spot[1]
 		city.car.speed = 0.0
 		city.car.linear_velocity = Vector3.ZERO
 		var g: float = city.streamer.height_at(to.x, to.z)
+		city.car.angular_velocity = Vector3.ZERO
+		city.car.global_basis = Basis()                  # upright, whatever it had been doing
 		city.car.global_position = Vector3(to.x, (g if not is_nan(g) else to.y) + 0.6, to.z)
 		var f: Vector3 = city.car.forward()
 		city.car.rotate_y(Vector3(f.x, 0.0, f.z).normalized().signed_angle_to(facing, Vector3.UP))
 	else:
 		who.global_position = to + Vector3.UP * 0.5
-	print("BAIL border turned back (%d) at %s" % [border_tries, who_says])
+	print("BAIL border turned back (%d) at %s, to (%.0f, %.0f)" % [border_tries, who_says, to.x, to.z])
 	if border_tries == 2:
 		_strike({"en": "The checkpost called the station. Second time. That's a strike, Karthik. – Selvi",
 			"ta": "செக்போஸ்ட்லேர்ந்து ஸ்டேஷனுக்கு போன் வந்துச்சு. ரெண்டாவது தடவ. இது ஒரு ஸ்ட்ரைக். – செல்வி"})
 	_save()
+
+
+## The nearest point of a road's centreline to `to` (within 60 m) and the way along it closest to `facing`.
+func _road_spot(to: Vector3, facing: Vector3) -> Array:
+	var best := [to, facing]
+	var bd := 60.0
+	for k in city.streamer.loaded:
+		for r in (city.streamer.loaded[k] as Node3D).get_meta("roads", []):
+			if str(r["c"]) in ["footway", "track", "path", "service"]:
+				continue
+			var a = r["p"]
+			var n: int = a.size() / 3
+			for i in n - 1:
+				var p0 := Vector3(a[i * 3], a[i * 3 + 1], a[i * 3 + 2])
+				var p1 := Vector3(a[i * 3 + 3], a[i * 3 + 4], a[i * 3 + 5])
+				var q := Geometry3D.get_closest_point_to_segment(to, p0, p1)
+				var d := Vector2(q.x - to.x, q.z - to.z).length()
+				if d < bd:
+					var dir := Vector3(p1.x - p0.x, 0.0, p1.z - p0.z).normalized()
+					bd = d
+					best = [q, dir if dir.dot(facing) >= 0.0 else -dir]
+	return best
 
 
 ## The ghat checkposts stand there for good (the police checking set: barricades, the SUV, the policemen), put down

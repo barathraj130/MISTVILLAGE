@@ -298,6 +298,13 @@
    "ta": "வக்கீல் சுந்தரம்",
    "colour": "#f0f0f0",
    "model": "story_sundaram"
+  },
+  "kathir": {
+   "en": "Kathir",
+   "ta": "கதிர்",
+   "colour": "#9fe0b0",
+   "model": "crowd_m1",
+   "hair": "#0f0c0a"
   }
  },
  "spawn": "home",
@@ -2035,6 +2042,10 @@
    ]
   },
   {
+   "do": "money",
+   "freeze": 23400
+  },
+  {
    "do": "table",
    "who": "murugesan",
    "lines": [
@@ -2343,6 +2354,101 @@
     "en": "Karthik, don't come to the office until this is cleared. I'm sorry. Sir's family is very upset. – Suresh",
     "ta": "கார்த்திக், இது முடியற வரைக்கும் ஆஃபீஸ் வர வேண்டாம். மன்னிச்சுக்கோ. சார் குடும்பம் ரொம்ப வருத்தத்துல இருக்கு. – சுரேஷ்"
    }
+  },
+  {
+   "do": "money",
+   "bills": [
+    {
+     "id": "fees",
+     "kind": "fees",
+     "amount": 32000,
+     "in_days": 3,
+     "label": {
+      "en": "Divya's fees",
+      "ta": "திவ்யா ஃபீஸ்"
+     },
+     "from": {
+      "en": "Divya",
+      "ta": "திவ்யா"
+     },
+     "text": {
+      "en": "College gave time till Monday for the fees. Amma paid 10,000 from her chit. 32,000 more. Don't worry about it anna, just come home.",
+      "ta": "காலேஜ்ல ஃபீஸுக்கு திங்கள் வரைக்கும் டைம் குடுத்திருக்காங்க. அம்மா சீட்டுல இருந்து 10,000 கட்டிட்டாங்க. இன்னும் 32,000. கவலைப்படாத அண்ணா, வீட்டுக்கு வா."
+     }
+    },
+    {
+     "id": "rent",
+     "kind": "rent",
+     "amount": 9500,
+     "in_days": 4,
+     "label": {
+      "en": "the rent",
+      "ta": "வாடகை"
+     },
+     "from": {
+      "en": "Amma",
+      "ta": "அம்மா"
+     },
+     "text": {
+      "en": "Rent is due on the 5th, kanna. Rajendran sir asked this morning. He asked about you too.",
+      "ta": "அஞ்சாம் தேதி வாடகை கண்ணா. ராஜேந்திரன் சார் காலையில கேட்டாரு. உன்ன பத்தியும் கேட்டாரு."
+     }
+    },
+    {
+     "id": "emi",
+     "kind": "emi",
+     "amount": 2850,
+     "in_days": 6,
+     "label": {
+      "en": "the scooter's instalment",
+      "ta": "ஸ்கூட்டர் தவணை"
+     },
+     "from": {
+      "en": "Kongu Two-Wheeler Finance",
+      "ta": "கொங்கு டூ-வீலர் ஃபைனான்ஸ்"
+     },
+     "text": {
+      "en": "Dear customer, your instalment of Rs 2,850 for TN 38 is due on the 10th. Kindly pay in cash at the branch or by UPI.",
+      "ta": "அன்புள்ள வாடிக்கையாளரே, TN 38 தவணை ரூ 2,850 பத்தாம் தேதி. கிளையில் ரொக்கமாக அல்லது UPI மூலம் செலுத்தவும்."
+     }
+    },
+    {
+     "id": "power",
+     "kind": "power",
+     "amount": 1340,
+     "in_days": 12,
+     "label": {
+      "en": "the current bill",
+      "ta": "கரண்ட் பில்"
+     },
+     "from": {
+      "en": "TNEB",
+      "ta": "மின் வாரியம்"
+     },
+     "text": {
+      "en": "Service 04-317-2281: bill Rs 1,340 for two months. Last date in 12 days.",
+      "ta": "இணைப்பு 04-317-2281: இரண்டு மாத பில் ரூ 1,340. கடைசி தேதி 12 நாள்ல."
+     }
+    },
+    {
+     "id": "sundaram",
+     "kind": "other",
+     "amount": 2000,
+     "in_days": 7,
+     "label": {
+      "en": "Sundaram sir's fee",
+      "ta": "சுந்தரம் சார் ஃபீஸ்"
+     },
+     "from": {
+      "en": "Amma",
+      "ta": "அம்மா"
+     },
+     "text": {
+      "en": "Sundaram sir won't say a number. I asked his clerk: two thousand, for now, and the typing.",
+      "ta": "சுந்தரம் சார் எவ்வளவுன்னு சொல்ல மாட்டாரு. அவர் கிளார்க் கிட்ட கேட்டேன்: இப்போதைக்கு ரெண்டாயிரம், டைப்பிங் தனி."
+     }
+    }
+   ]
   },
   {
    "do": "message",
@@ -2821,12 +2927,23 @@
    }
   },
   {
+   "do": "talk",
+   "when": "bribed_watchman",
+   "set_flag": "lead_sticker",
+   "lines": [
+    {
+     "who": "karthik",
+     "en": "(On the camera box by the lift, a sticker: KATHIR CCTV SERVICE, Saibaba Colony, behind the bakery. And a number.)",
+     "ta": "(லிஃப்ட் பக்கத்து கேமரா பெட்டியில ஒரு ஸ்டிக்கர்: கதிர் சிசிடிவி சர்வீஸ், சாயிபாபா காலனி, பேக்கரி பின்னாடி. ஒரு நம்பரும்.)"
+    }
+   ]
+  },
+  {
    "do": "contact",
-   "when": "honest_watchman",
    "contact": {
     "name": {
-     "en": "Kathir (Muniyandi's nephew)",
-     "ta": "கதிர் (முனியாண்டி அக்கா பையன்)"
+     "en": "Kathir CCTV Service",
+     "ta": "கதிர் சிசிடிவி சர்வீஸ்"
     },
     "number": "98431 6•••5",
     "where": {
@@ -2837,7 +2954,6 @@
   },
   {
    "do": "pin",
-   "when": "honest_watchman",
    "place": "drop_saibaba_colony",
    "label": {
     "en": "Kathir's shop, behind the bakery",
@@ -2872,6 +2988,730 @@
      "who": "karthik",
      "en": "(The same breathing. Then, very quietly, a car's indicator ticking. Then nothing.)",
      "ta": "(அதே மூச்சு. அப்புறம், ரொம்ப மெதுவா, ஒரு காரோட இண்டிகேட்டர் டிக் டிக். அப்புறம் ஒண்ணுமில்ல.)"
+    }
+   ]
+  },
+  {
+   "do": "home",
+   "room": "home",
+   "at": "home",
+   "start": "door",
+   "cast": {
+    "amma": {
+     "mark": "amma_kitchen"
+    }
+   },
+   "keep": true,
+   "visits": [
+    {
+     "to": "karthik_room",
+     "wall": true,
+     "goal": {
+      "en": "Your wall: what the watchman said",
+      "ta": "உங்க சுவர்: வாட்ச்மேன் சொன்னது"
+     },
+     "prompt": {
+      "en": "the wall",
+      "ta": "சுவர்"
+     }
+    },
+    {
+     "to": "karthik_room",
+     "sleep_until": "07:40",
+     "goal": {
+      "en": "Sleep",
+      "ta": "தூங்குங்க"
+     },
+     "prompt": {
+      "en": "lie down",
+      "ta": "படுங்க"
+     }
+    }
+   ]
+  },
+  {
+   "do": "talk",
+   "cast": {
+    "amma": {
+     "mark": "amma",
+     "anim": "Sit"
+    },
+    "divya": {
+     "mark": "divya",
+     "anim": "Idle"
+    }
+   },
+   "lines": [
+    {
+     "who": "divya",
+     "en": "Anna. Who calls you at midnight and says nothing?",
+     "ta": "அண்ணா. நடு ராத்திரி கூப்பிட்டு ஒண்ணும் பேசாம இருக்கறது யாரு?"
+    },
+    {
+     "who": "karthik",
+     "en": "Wrong number. Eat your breakfast.",
+     "ta": "ராங் நம்பர். சாப்பிடு."
+    },
+    {
+     "who": "amma",
+     "en": "Sundaram sir called. He'll come in the evening, before you go to sign.",
+     "ta": "சுந்தரம் சார் கூப்பிட்டாரு. சாயங்காலம் வருவாரு, நீ கையெழுத்து போட போறதுக்கு முன்னாடி."
+    },
+    {
+     "who": "divya",
+     "en": "If you find anything on a computer, show me. I'm not useless, you know.",
+     "ta": "கம்ப்யூட்டர்ல ஏதாவது கிடைச்சா எனக்கு காட்டு. நான் ஒண்ணும் உதவாதவ இல்ல."
+    }
+   ]
+  },
+  {
+   "do": "home",
+   "room": "home",
+   "at": "home",
+   "start": "here",
+   "visits": [
+    {
+     "to": "door",
+     "auto": true,
+     "reach": 1.4,
+     "goal": {
+      "en": "Out to your scooter",
+      "ta": "வெளியே, ஸ்கூட்டருக்கு"
+     }
+    }
+   ]
+  },
+  {
+   "do": "drive",
+   "to": "drop_saibaba_colony",
+   "radius": 45,
+   "vehicle": "karthik_scooter",
+   "goal": {
+    "en": "Kathir's CCTV shop, behind the bakery, Saibaba Colony",
+    "ta": "கதிர் சிசிடிவி கடை, பேக்கரி பின்னாடி, சாயிபாபா காலனி"
+   }
+  },
+  {
+   "do": "home",
+   "room": "cctv_shop",
+   "at": "drop_saibaba_colony",
+   "start": "door",
+   "keep": true,
+   "cast": {
+    "kathir": {
+     "mark": "kathir",
+     "anim": "Idle"
+    }
+   },
+   "visits": [
+    {
+     "to": "counter",
+     "auto": true,
+     "reach": 1.0,
+     "goal": {
+      "en": "Kathir, behind his counter",
+      "ta": "கதிர், கவுண்டர் பின்னாடி"
+     }
+    }
+   ]
+  },
+  {
+   "do": "talk",
+   "when": "honest_watchman",
+   "lines": [
+    {
+     "who": "kathir",
+     "en": "Muniyandi mama sent you? He said you'd come. He also said you're a fool.",
+     "ta": "முனியாண்டி மாமா அனுப்பினாரா? நீ வருவேன்னு சொன்னாரு. நீ ஒரு முட்டாள்னும் சொன்னாரு."
+    },
+    {
+     "who": "karthik",
+     "en": "Maybe. The building's camera, that night. You have it?",
+     "ta": "இருக்கலாம். கட்டிடத்து கேமரா, அன்னைக்கு ராத்திரி. உன் கிட்ட இருக்கா?"
+    },
+    {
+     "who": "kathir",
+     "en": "I have everything. I'm careful. Come, see. Don't touch my mouse.",
+     "ta": "எல்லாம் இருக்கு. நான் கவனமா இருப்பேன். வா, பாரு. என் மவுஸ தொடாத."
+    }
+   ]
+  },
+  {
+   "do": "talk",
+   "when": "bribed_watchman",
+   "lines": [
+    {
+     "who": "kathir",
+     "en": "Who gave you this address?",
+     "ta": "இந்த அட்ரஸ் யாரு குடுத்தா?"
+    },
+    {
+     "who": "karthik",
+     "en": "Your sticker. On the camera box in Raghavan Developers' lobby.",
+     "ta": "உன் ஸ்டிக்கர். ராகவன் டெவலப்பர்ஸ் லாபில கேமரா பெட்டி மேல."
+    },
+    {
+     "who": "kathir",
+     "en": "Hm. A sticker is an advertisement, not an invitation. Fine. Come, see.",
+     "ta": "ம். ஸ்டிக்கர் விளம்பரம், அழைப்பு இல்ல. சரி. வா, பாரு."
+    }
+   ]
+  },
+  {
+   "do": "dvr",
+   "who": "kathir",
+   "goal": {
+    "en": "His monitor: the building's lobby camera, that night",
+    "ta": "அவர் மானிட்டர்: அன்னைக்கு ராத்திரி கட்டிடத்து லாபி கேமரா"
+   }
+  },
+  {
+   "do": "talk",
+   "lines": [
+    {
+     "who": "kathir",
+     "en": "Seen? Good. The copy is mine. I made it, on my drive. Five thousand.",
+     "ta": "பாத்தியா? சரி. காப்பி என்னுது. நான் பண்ணது, என் டிரைவ்ல. அஞ்சாயிரம்."
+    },
+    {
+     "who": "karthik",
+     "en": "Five thousand? It isn't yours to sell, Kathir. It's the building's.",
+     "ta": "அஞ்சாயிரமா? அது நீ விக்கறதுக்கு இல்ல கதிர். கட்டிடத்துது."
+    },
+    {
+     "who": "kathir",
+     "en": "Then let the building come and ask me. The QR's on the stool.",
+     "ta": "அப்போ கட்டிடம் வந்து கேக்கட்டும். QR ஸ்டூல் மேல இருக்கு."
+    }
+   ]
+  },
+  {
+   "do": "deal",
+   "who": "kathir",
+   "price": 5000,
+   "payee": {
+    "en": "KATHIR CCTV SERVICE",
+    "ta": "கதிர் சிசிடிவி சர்வீஸ்"
+   },
+   "sets": {
+    "paid": "kathir_paid",
+    "walked": "kathir_walked"
+   },
+   "goal": {
+    "en": "He wants ₹5,000 for the copy. Or walk away.",
+    "ta": "காப்பிக்கு ₹5,000 கேக்கறாரு. இல்லன்னா கிளம்புங்க."
+   },
+   "qr_mark": "qr"
+  },
+  {
+   "do": "give",
+   "when": "kathir_paid",
+   "item": {
+    "id": "E07",
+    "kind": "note",
+    "title": {
+     "en": "Pen drive: lobby camera (bought)",
+     "ta": "பென் டிரைவ்: லாபி கேமரா (வாங்கினது)"
+    },
+    "body": {
+     "en": "Kathir's copy of the lobby camera, 9:30 to 10:10 PM. ₹5,000 to him. No receipt.",
+     "ta": "கதிர் காப்பி, லாபி கேமரா, இரவு 9:30 முதல் 10:10. அவருக்கு ₹5,000. ரசீது இல்ல."
+    }
+   }
+  },
+  {
+   "do": "talk",
+   "when": "kathir_paid",
+   "lines": [
+    {
+     "who": "kathir",
+     "en": "Pleasure doing business. And I never gave you anything, okay?",
+     "ta": "சந்தோஷம். நான் உனக்கு ஒண்ணும் குடுக்கல, சரியா?"
+    },
+    {
+     "who": "karthik",
+     "en": "(Bought. Sundaram sir won't like that.)",
+     "ta": "(காசு குடுத்து வாங்கினது. சுந்தரம் சாருக்கு பிடிக்காது.)"
+    }
+   ]
+  },
+  {
+   "do": "talk",
+   "when": "kathir_walked",
+   "lines": [
+    {
+     "who": "karthik",
+     "en": "(Five thousand. That's Divya's books for a term. And a court would ask where I got it.)",
+     "ta": "(அஞ்சாயிரம். திவ்யாவோட ஒரு டேர்ம் புத்தகம். அப்புறம் இது எங்க கிடைச்சதுன்னு கோர்ட் கேக்கும்.)"
+    }
+   ]
+  },
+  {
+   "do": "home",
+   "room": "cctv_shop",
+   "at": "drop_saibaba_colony",
+   "start": "here",
+   "visits": [
+    {
+     "to": "door",
+     "auto": true,
+     "reach": 1.0,
+     "goal": {
+      "en": "Out to your scooter",
+      "ta": "வெளியே, ஸ்கூட்டருக்கு"
+     }
+    }
+   ]
+  },
+  {
+   "do": "drive",
+   "to": "home",
+   "radius": 45,
+   "goal": {
+    "en": "Home: Divya's back from college at half past four",
+    "ta": "வீடு: திவ்யா நாலரைக்கு காலேஜ்ல இருந்து வருவா"
+   }
+  },
+  {
+   "do": "home",
+   "room": "home",
+   "at": "home",
+   "start": "door",
+   "cast": {
+    "amma": {
+     "mark": "amma_kitchen"
+    }
+   },
+   "keep": true,
+   "visits": [
+    {
+     "to": "karthik_room",
+     "wait": 0,
+     "until": "16:30",
+     "goal": {
+      "en": "Rest till Divya's back",
+      "ta": "திவ்யா வர்ற வரைக்கும் ஓய்வு"
+     },
+     "prompt": {
+      "en": "sit down",
+      "ta": "உட்காருங்க"
+     }
+    }
+   ]
+  },
+  {
+   "do": "home",
+   "room": "home",
+   "at": "home",
+   "start": "here",
+   "cast": {
+    "divya": {
+     "mark": "divya",
+     "anim": "Idle"
+    }
+   },
+   "keep": true,
+   "visits": [
+    {
+     "to": "divya",
+     "hand_phone": true,
+     "goal": {
+      "en": "Show Divya the pictures on your phone",
+      "ta": "திவ்யாவுக்கு ஃபோன்ல இருக்கற படங்கள காட்டுங்க"
+     },
+     "prompt": {
+      "en": "hand her your phone",
+      "ta": "ஃபோன குடுங்க"
+     }
+    }
+   ]
+  },
+  {
+   "do": "talk",
+   "lines": [
+    {
+     "who": "divya",
+     "en": "This isn't his picture, anna. See the corner: RAGHAVAN DEV, GPM, NVR-1. The recorder stamps its own name on every frame.",
+     "ta": "இது அவன் படம் இல்ல அண்ணா. மூலைய பாரு: RAGHAVAN DEV, GPM, NVR-1. ரெக்கார்டர் ஒவ்வொரு ஃப்ரேம்லயும் தன் பேர போடும்."
+    },
+    {
+     "who": "divya",
+     "en": "Nithya's father installs these. She says the recorder writes its ID inside the file too. Copy it a hundred times, it's still the building's footage.",
+     "ta": "நித்யா அப்பா இதெல்லாம் ஃபிட் பண்ணுவாரு. ரெக்கார்டர் தன் ID-ய ஃபைலுக்குள்ளயும் எழுதும்னு சொல்றா. நூறு தடவ காப்பி பண்ணாலும் அது கட்டிடத்து வீடியோ தான்."
+    },
+    {
+     "who": "divya",
+     "en": "So it isn't his to sell. It's evidence.",
+     "ta": "அதனால அது அவன் விக்கறதுக்கு இல்ல. அது சாட்சி."
+    }
+   ]
+  },
+  {
+   "do": "talk",
+   "when": "dvr_card",
+   "lines": [
+    {
+     "who": "divya",
+     "en": "And look here. 9:40, card number seven opens your office door upstairs. Whose card is seven?",
+     "ta": "அப்புறம் இத பாரு. 9:40, ஏழாம் நம்பர் கார்டு மேல உங்க ஆஃபீஸ் கதவ திறக்குது. ஏழு யாரோட கார்டு?"
+    },
+    {
+     "who": "karthik",
+     "en": "I don't know. Yet.",
+     "ta": "தெரியாது. இன்னும்."
+    }
+   ]
+  },
+  {
+   "do": "home",
+   "room": "home",
+   "at": "home",
+   "start": "here",
+   "keep": true,
+   "visits": [
+    {
+     "to": "divya",
+     "phone_back": true,
+     "goal": {
+      "en": "Your phone back",
+      "ta": "ஃபோன திரும்ப வாங்குங்க"
+     },
+     "prompt": {
+      "en": "take your phone",
+      "ta": "ஃபோன வாங்குங்க"
+     }
+    }
+   ]
+  },
+  {
+   "do": "talk",
+   "clock": "17:15",
+   "clock_forward": true,
+   "cast": {
+    "sundaram": {
+     "mark": "door",
+     "anim": "Idle"
+    }
+   },
+   "lines": [
+    {
+     "who": "sundaram",
+     "en": "Thambi. Your mother says you've been to a CCTV shop.",
+     "ta": "தம்பி. நீ ஒரு சிசிடிவி கடைக்கு போனேன்னு உங்க அம்மா சொல்றாங்க."
+    }
+   ]
+  },
+  {
+   "do": "talk",
+   "when": "kathir_paid",
+   "lines": [
+    {
+     "who": "sundaram",
+     "en": "Five thousand? For a copy with no receipt? A fact you paid for walks on one leg, thambi. Their lawyer will say you made it.",
+     "ta": "அஞ்சாயிரமா? ரசீது இல்லாத காப்பிக்கு? காசு குடுத்து வாங்கின உண்மை ஒத்த கால்ல நடக்கும் தம்பி. நீயே பண்ணினதுன்னு அவங்க வக்கீல் சொல்லுவாரு."
+    },
+    {
+     "who": "sundaram",
+     "en": "Still. Keep the drive safe and don't open it again. I'll ask the court for the building's own recorder.",
+     "ta": "சரி. டிரைவ பத்திரமா வச்சுக்கோ, திரும்ப திறக்காத. கட்டிடத்து ரெக்கார்டரையே கோர்ட் கிட்ட கேக்கறேன்."
+    }
+   ]
+  },
+  {
+   "do": "talk",
+   "when": "kathir_walked",
+   "lines": [
+    {
+     "who": "sundaram",
+     "en": "And you didn't pay him. Good. Now we ask properly.",
+     "ta": "நீ அவனுக்கு காசு குடுக்கல. நல்லது. இப்போ முறையா கேப்போம்."
+    },
+    {
+     "who": "sundaram",
+     "en": "A letter, from me. The footage is evidence in Crime No. 412; he keeps it safe and hands it to the defence. Destroying it is an offence, Section 238.",
+     "ta": "என் கிட்ட இருந்து ஒரு கடிதம். இந்த வீடியோ குற்ற எண் 412-ல சாட்சி; அவன் பத்திரமா வச்சு நம்ம கிட்ட குடுக்கணும். அழிச்சா குற்றம், பிரிவு 238."
+    },
+    {
+     "who": "sundaram",
+     "en": "Take it to him after you sign tonight. Shops in Saibaba Colony stay open till nine.",
+     "ta": "இன்னைக்கு கையெழுத்து போட்டப்புறம் அவன் கிட்ட குடு. சாயிபாபா காலனி கடைங்க ஒன்பது வரைக்கும் திறந்திருக்கும்."
+    }
+   ]
+  },
+  {
+   "do": "give",
+   "when": "kathir_walked",
+   "item": {
+    "id": "sundaram_letter",
+    "kind": "paper",
+    "title": {
+     "en": "Advocate Sundaram's letter",
+     "ta": "வக்கீல் சுந்தரம் கடிதம்"
+    },
+    "body": {
+     "en": "To Mr. Kathir, Kathir CCTV Service, Saibaba Colony. The recording of the lobby camera of the Raghavan Developers building for the night in question is evidence in Crime No. 412 of Nagar Police Station. You are requested to preserve it and hand a copy to the defence. Its destruction is an offence under Section 238 of the Bharatiya Nyaya Sanhita. – S. Sundaram, Advocate",
+     "ta": "திரு. கதிர், கதிர் சிசிடிவி சர்வீஸ், சாயிபாபா காலனி. ராகவன் டெவலப்பர்ஸ் கட்டிடத்து லாபி கேமராவின் அன்றைய இரவு பதிவு, நகர் காவல் நிலைய குற்ற எண் 412-ல் சாட்சி. அதை பாதுகாத்து ஒரு நகலை எதிர்தரப்பிடம் ஒப்படைக்க கேட்டுக்கொள்கிறேன். அதை அழிப்பது பாரதிய நியாய சன்ஹிதா பிரிவு 238-ன் கீழ் குற்றம். – எஸ். சுந்தரம், வழக்கறிஞர்"
+    }
+   }
+  },
+  {
+   "do": "home",
+   "room": "home",
+   "at": "home",
+   "start": "here",
+   "visits": [
+    {
+     "to": "door",
+     "auto": true,
+     "reach": 1.4,
+     "goal": {
+      "en": "Out: the station by seven",
+      "ta": "வெளியே: ஏழு மணிக்குள்ள ஸ்டேஷன்"
+     }
+    }
+   ]
+  },
+  {
+   "do": "drive",
+   "to": "police",
+   "radius": 45,
+   "vehicle": "karthik_scooter",
+   "by": "19:00",
+   "goal": {
+    "en": "Sign at the station by 7 PM",
+    "ta": "7 மணிக்குள்ள ஸ்டேஷன்ல கையெழுத்து"
+   }
+  },
+  {
+   "do": "home",
+   "room": "police",
+   "at": "police",
+   "start": "door",
+   "cast": {
+    "murugesan": {
+     "mark": "inspector",
+     "anim": "Idle"
+    },
+    "selvi": {
+     "mark": "constable",
+     "anim": "Idle"
+    }
+   },
+   "keep": true,
+   "visits": [
+    {
+     "to": "selvi",
+     "task": "sign",
+     "goal": {
+      "en": "Sign the bail register at Selvi's desk",
+      "ta": "செல்வி மேஜையில ஜாமீன் பதிவேட்டுல கையெழுத்து"
+     },
+     "prompt": {
+      "en": "sign the register",
+      "ta": "பதிவேட்டுல கையெழுத்து"
+     },
+     "header": {
+      "en": "Nagar Police Station",
+      "ta": "நகர் காவல் நிலையம்"
+     },
+     "form": {
+      "en": "BAIL ATTENDANCE REGISTER",
+      "ta": "ஜாமீன் வருகை பதிவேடு"
+     },
+     "fields": [
+      [
+       {
+        "en": "Crime No.",
+        "ta": "குற்ற எண்"
+       },
+       "412"
+      ],
+      [
+       {
+        "en": "Name",
+        "ta": "பெயர்"
+       },
+       {
+        "en": "Karthik M.",
+        "ta": "கார்த்திக் ம."
+       }
+      ],
+      [
+       {
+        "en": "Day",
+        "ta": "நாள்"
+       },
+       "2"
+      ]
+     ],
+     "sign_label": {
+      "en": "Signature of the accused",
+      "ta": "குற்றம் சாட்டப்பட்டவர் கையொப்பம்"
+     },
+     "seal": {
+      "en": "STATION SEAL",
+      "ta": "நிலைய முத்திரை"
+     }
+    }
+   ]
+  },
+  {
+   "do": "home",
+   "room": "police",
+   "at": "police",
+   "start": "here",
+   "visits": [
+    {
+     "to": "door",
+     "auto": true,
+     "reach": 1.4,
+     "goal": {
+      "en": "Out",
+      "ta": "வெளியே"
+     }
+    }
+   ]
+  },
+  {
+   "do": "drive",
+   "when": "kathir_walked",
+   "to": "drop_saibaba_colony",
+   "radius": 45,
+   "goal": {
+    "en": "Kathir's shop, with the letter",
+    "ta": "கதிர் கடை, கடிதத்தோட"
+   }
+  },
+  {
+   "do": "home",
+   "room": "cctv_shop",
+   "at": "drop_saibaba_colony",
+   "start": "door",
+   "keep": true,
+   "cast": {
+    "kathir": {
+     "mark": "kathir",
+     "anim": "Idle"
+    }
+   },
+   "visits": [
+    {
+     "to": "counter",
+     "auto": true,
+     "reach": 1.0,
+     "goal": {
+      "en": "Kathir, closing up",
+      "ta": "கதிர், கடைய மூடிட்டு இருக்காரு"
+     }
+    }
+   ],
+   "when": "kathir_walked"
+  },
+  {
+   "do": "talk",
+   "when": "kathir_walked",
+   "lines": [
+    {
+     "who": "karthik",
+     "en": "From my advocate.",
+     "ta": "என் வக்கீல் கிட்ட இருந்து."
+    },
+    {
+     "who": "kathir",
+     "en": "(He reads it twice.) Section two-three-eight... Mama said you were a fool. He didn't say you had a lawyer.",
+     "ta": "(ரெண்டு தடவ படிக்கறார்.) பிரிவு இருநூத்தி முப்பத்தெட்டு... மாமா நீ முட்டாள்னு சொன்னாரு. உனக்கு வக்கீல் இருக்காருன்னு சொல்லல."
+    },
+    {
+     "who": "kathir",
+     "en": "Take it. And tell your lawyer I gave it the first time I was asked properly.",
+     "ta": "எடுத்துக்கோ. முறையா கேட்ட முதல் தடவையே குடுத்தேன்னு உன் வக்கீல் கிட்ட சொல்லு."
+    }
+   ]
+  },
+  {
+   "do": "take",
+   "when": "kathir_walked",
+   "id": "sundaram_letter"
+  },
+  {
+   "do": "give",
+   "when": "kathir_walked",
+   "item": {
+    "id": "E07",
+    "kind": "note",
+    "title": {
+     "en": "Pen drive: the building's lobby camera",
+     "ta": "பென் டிரைவ்: கட்டிடத்து லாபி கேமரா"
+    },
+    "body": {
+     "en": "The lobby camera, 9:30 to 10:10 PM, the recorder's ID in every frame. Handed over on Advocate Sundaram's letter.",
+     "ta": "லாபி கேமரா, இரவு 9:30 முதல் 10:10, ஒவ்வொரு ஃப்ரேம்லயும் ரெக்கார்டர் ID. வக்கீல் சுந்தரம் கடிதத்துக்கு குடுத்தது."
+    }
+   }
+  },
+  {
+   "do": "home",
+   "room": "cctv_shop",
+   "at": "drop_saibaba_colony",
+   "start": "here",
+   "visits": [
+    {
+     "to": "door",
+     "auto": true,
+     "reach": 1.0,
+     "goal": {
+      "en": "Out to your scooter",
+      "ta": "வெளியே, ஸ்கூட்டருக்கு"
+     }
+    }
+   ],
+   "when": "kathir_walked"
+  },
+  {
+   "do": "drive",
+   "to": "home",
+   "radius": 45,
+   "goal": {
+    "en": "Home",
+    "ta": "வீடு"
+   }
+  },
+  {
+   "do": "home",
+   "room": "home",
+   "at": "home",
+   "start": "door",
+   "cast": {
+    "amma": {
+     "mark": "amma",
+     "anim": "Sit"
+    }
+   },
+   "keep": true,
+   "visits": [
+    {
+     "to": "karthik_room",
+     "wall": true,
+     "goal": {
+      "en": "Your wall: the lobby camera",
+      "ta": "உங்க சுவர்: லாபி கேமரா"
+     },
+     "prompt": {
+      "en": "the wall",
+      "ta": "சுவர்"
+     }
+    },
+    {
+     "to": "karthik_room",
+     "sleep_until": "07:00",
+     "goal": {
+      "en": "Sleep",
+      "ta": "தூங்குங்க"
+     },
+     "prompt": {
+      "en": "lie down",
+      "ta": "படுங்க"
+     }
     }
    ]
   },

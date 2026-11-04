@@ -213,6 +213,31 @@ each with a question. You answer by what you do:
 signs, then the arrest and the table, then the wall, then the rest of the slice redone on these pieces (§8.2 from
 the top). The story's JSON keeps its steps, but "card", "lapse" and filmed "room" steps leave the slice.
 
+## 9. Money after the arrest (2026-11-04, building)
+Asked for: money should be hard to handle, especially after the arrest. Every rupee is cash in his hand, a message on
+his phone or someone at the door; nothing is a number on the screen.
+
+- **The account is frozen.** At the arrest the police have the Kovai Nagar Co-op Bank debit-freeze his account
+  (Crime No. 412: the ₹4 lakh). A text from the bank says so. From then the ATM refuses, his phone's payments fail
+  ("account frozen"), and only the notes in his wallet are his to spend. Kathir's QR fails; ₹5,000 would have to be
+  cash he doesn't have.
+- **No salary.** Suresh's message ends it. The delivery app can't pay into a frozen account, so it pays into Amma's.
+  Next morning at the table she counts it out into his hand, and that is how he sees what a night earned.
+- **What falls due** (a message with a date, then a reminder, then a person):
+  | Bill | ₹ | When | Unpaid |
+  |---|---|---|---|
+  | House rent, to the owner (Rajendran) | 9,500 | the 5th | a polite visit; two weeks on, a notice in Amma's hand |
+  | Electricity (TNEB, two months) | 1,340 | in 15 days | a red slip on the meter, then the power cut at the house |
+  | Scooter's monthly instalment (Kongu Two-Wheeler Finance) | 2,850 | the 10th | the finance company's calls; three missed: the scooter taken (the bus, autos) |
+  | Divya's college fees | 42,000 | Friday | she's kept out of her exam hall (a story scene) |
+  | Advocate Sundaram: token fee, copies, typing | 2,000 + 600 | after each court day | he never asks twice; Karthik's shame does |
+  | Petrol, food | daily | | the meters (§3) |
+- **Where money comes from, and what it costs:** night shifts on the delivery app (tiredness, the bail evening in
+  the way); Bala, who lends without being asked twice (and Act 5 makes that hurt); Amma's gold chain, taken off without
+  a word and pawned at a gold-loan counter (75% of its worth at 12%, the packet sealed in front of him, redeemed later
+  or lost); skipping meals (energy); Kathir's ₹5,000 kept, by walking away.
+- **Never game over** (GAME_RULES §1): what isn't paid stays owed and comes back as a person, a cut, a loss.
+
 ## Structure (updated 2026-10-11: the story is the spine)
 
 **Part 1 — "The Wrong Accusation"** (Coimbatore) — a narrative crime thriller.
