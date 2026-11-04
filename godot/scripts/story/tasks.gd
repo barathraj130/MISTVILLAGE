@@ -753,13 +753,13 @@ func _draw_ready(p: Rect2) -> void:
 # ---- meals ----
 const FOOD_ITEMS := {"idli": ["idli", "idli", "idli", "idli", "vada"], "meals": ["rice", "sambar", "rasam", "poriyal", "kootu", "curd", "appalam"],
 	"parotta": ["parotta", "parotta", "salna", "egg"], "dosa": ["dosa", "chutney", "sambar"],
-	"curd_rice": ["curd rice", "pickle", "appalam"]}
+	"curd_rice": ["curd rice", "pickle", "appalam"], "kanji": ["kanji", "pickle"], "jail_meals": ["rice", "sambar"]}
 const FOOD_COL := {"idli": Color(0.97, 0.96, 0.9), "vada": Color(0.75, 0.5, 0.2), "rice": Color(0.97, 0.97, 0.94),
 	"sambar": Color(0.8, 0.45, 0.12), "rasam": Color(0.7, 0.25, 0.1), "poriyal": Color(0.45, 0.65, 0.25),
 	"kootu": Color(0.85, 0.75, 0.3), "curd": Color(0.98, 0.98, 0.96), "appalam": Color(0.95, 0.85, 0.55),
 	"parotta": Color(0.9, 0.75, 0.45), "salna": Color(0.65, 0.3, 0.1), "egg": Color(0.98, 0.95, 0.85),
 	"dosa": Color(0.88, 0.65, 0.3), "chutney": Color(0.95, 0.95, 0.85), "curd rice": Color(0.97, 0.97, 0.95),
-	"pickle": Color(0.75, 0.2, 0.1)}
+	"pickle": Color(0.75, 0.2, 0.1), "kanji": Color(0.9, 0.88, 0.8)}
 
 
 func _meal_food() -> String:

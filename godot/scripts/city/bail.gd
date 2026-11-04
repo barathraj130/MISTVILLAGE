@@ -52,6 +52,8 @@ func _ready() -> void:
 	for arg in OS.get_cmdline_user_args():
 		if arg.begins_with("--bailtest="):
 			_test.call_deferred(arg.get_slice("=", 1))
+		if arg == "--jailtest":                          # (testing: bail cancelled at once; with --story --storyskip)
+			_jailtest.call_deferred()
 
 
 ## (testing) --bailtest=DIR: an evening in free play, with screenshots: the reminders, the station too early, the
@@ -148,6 +150,16 @@ func _test(dir: String) -> void:
 	tree.quit()
 
 
+func _jailtest() -> void:
+	var tree := get_tree()
+	while not city.placed or city.story == null or city.story.step < 0:
+		await tree.process_frame
+	start()
+	city.phone.answer.call_deferred()
+	get_tree().create_timer(1.0).timeout.connect(city.phone.answer)
+	_cancel()
+
+
 func _shot(dir: String, name: String) -> void:
 	await RenderingServer.frame_post_draw
 	get_viewport().get_texture().get_image().save_jpg("%s/%s.jpg" % [dir, name], 0.85)
@@ -218,18 +230,27 @@ func _cancel() -> void:
 	print("BAIL cancelled")
 	city.phone.call_from({"en": "Sundaram sir (advocate)", "ta": "சுந்தரம் சார் (வக்கீல்)"})
 	await city.phone.call_answered
-	city.hud.say("Sundaram sir", "Thambi, they've cancelled your bail. Three missed evenings! Go to the station and sit. I'll come with the papers.", 7.0)
+	city.hud.say("Sundaram sir", "Thambi, they've cancelled your bail. Three missed evenings! They're coming for you. Go with them quietly. I'll come with the papers.", 7.0)
 	await get_tree().create_timer(7.5).timeout
+	var st = city.story
+	if st and not st.playing() and st.play_chapter("res://story/jail.json"):
+		return                                           # (the jail, played: its last steps restore bail)
 	if city.life:
 		await city.life._pass(3.0 * 1440.0, "three days inside", null, {"sleep": true, "stress": 20.0, "rough": true})
 	city.fines.sim.money -= 15000
+	restore()
+
+
+## Out on bail again (the magistrate's order after the jail): the slate clean, the inspector watching.
+func restore() -> void:
+	active = true
 	strikes.clear()
 	lates = 0
 	suspicion = 70.0
 	signed_day = _day()
 	city.phone.message({"en": "Sundaram sir (advocate)", "ta": "சுந்தரம் சார் (வக்கீல்)"},
-		{"en": "Bail restored. My fee, ₹15,000, I have taken from you. Do not make me do this again, thambi.",
-		"ta": "ஜாமீன் திரும்ப கிடைச்சுது. என் ஃபீஸ் ₹15,000 வாங்கிட்டேன். இனிமே இப்படி பண்ணாதே தம்பி."})
+		{"en": "Bail granted again. Six to seven, every evening. Do not make me do this again, thambi.",
+		"ta": "திரும்ப ஜாமீன் கிடைச்சுது. தினமும் ஆறிலிருந்து ஏழு. இனிமே இப்படி பண்ணாதே தம்பி."})
 	_save()
 
 

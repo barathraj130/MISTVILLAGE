@@ -175,6 +175,24 @@ func load_chapter(path := CHAPTER) -> bool:
 	return data is Dictionary
 
 
+## Another chapter now, from its first step (bail cancelled: the jail, story/jail.json); its last step is free play.
+var _chapters := 0
+
+
+func play_chapter(path: String) -> bool:
+	if not load_chapter(path):
+		return false
+	_chapters += 1
+	_clear_cast()
+	step = -1
+	cur = {}
+	return true
+
+
+func playing() -> bool:
+	return step >= 0 and step < data["steps"].size() and str(cur.get("do", "")) != "free"
+
+
 ## Where the car starts (the first scene's place), for the city scene to load the world there.
 func spawn_point() -> Vector3:
 	var p: Dictionary = data["places"][data["spawn"]]
@@ -269,7 +287,7 @@ func _process(dt: float) -> void:
 				_next()
 		"free":
 			_tick_clock(dt)
-			if _skip and t_step > 4.0:
+			if _skip and t_step > 4.0 and (_chapters > 0 or not "--jailtest" in OS.get_cmdline_user_args()):
 				print("STORY done: flags %s" % str(flags))
 				print("STORY done: comfort %.1f stars, on time %s, wallet %d, clock %s day %d" % [stars, on_time,
 					fines.sim.money if fines else 0, _clock12(), fines.sim.day if fines else 1])
@@ -347,7 +365,7 @@ func _sync_lang() -> void:
 
 func _next() -> void:
 	_sync_lang()
-	if step < 0:
+	if step < 0 and _chapters == 0:
 		for a in OS.get_cmdline_user_args():          # (testing: --storyclock=HH:MM, the time it starts at)
 			if a.begins_with("--storyclock=") and fines:
 				var hm0: PackedStringArray = a.get_slice("=", 1).split(":")
@@ -435,7 +453,9 @@ func _next() -> void:
 			_next()
 			return
 		"bail":                                          # bail begins: the evenings at the station (city/bail.gd)
-			if city.bail:
+			if city.bail and cur.get("restore", false):  # (out of jail: bail granted again)
+				city.bail.restore()
+			elif city.bail:
 				city.bail.start()
 			_next()
 			return

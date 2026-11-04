@@ -1279,6 +1279,105 @@ def cctv_shop(T):
     shot("kathir", (-0.1, cy - 0.9, 1.55), (-0.1, cy + 0.65, 1.5))
 
 
+def prison(T):
+    """Coimbatore Central Jail, for a remand prisoner (GAME_RULES §5, bail cancelled): from the front, the gate office
+    (the warder's table and register, where his things are taken), the visitors' window (a double wire mesh, stools
+    on his side, the bench on theirs), the yard open to the sky with its neem tree and the kitchen's serving window,
+    and at the back Barrack 6 behind its barred gate: the mats in two rows, a folded blanket and a steel plate and
+    tumbler on each, the high barred windows."""
+    W, D, h = 12.0, 22.0, 6.5
+    floor = mat("cement_floor", (0.62, 0.6, 0.56), 0.85)
+    wall = mat("wall_lime_jail", (0.86, 0.84, 0.76), 0.95, normal=os.path.join(DTEX, "plaster_normal.jpg"), scale=2.5)
+    sky = mat("sky_day", (0.6, 0.75, 0.9), 0.9, emit=(0.62, 0.76, 0.92), strength=1.2)
+    shell(W, D, h, floor, wall, sky, mat("dado_jail", (0.42, 0.4, 0.35), 0.7), 1.2, door_w=1.4, door_x=3.5)
+    bars = mat("jail_bars", (0.12, 0.12, 0.13), 0.4, 0.6)
+    steel = mat("steel", (0.74, 0.75, 0.77), 0.32, 0.55)
+    wood = mat("table_wood", (0.4, 0.26, 0.14), 0.6)
+    # the gate office: the warder's table, the register, a bench
+    table(3.6, -8.6, 1.4, 0.7, 0.76, wood, steel)
+    box((3.4, -8.6, 0.8), (0.4, 0.3, 0.04), mat("register_red", (0.55, 0.1, 0.08), 0.6), 0.004)
+    steel_chair(3.6, -7.95, math.pi, mat("chair_blue", (0.15, 0.3, 0.6), 0.5))
+    box((5.5, -6.5, 0.45), (0.45, 2.4, 0.05), wood, 0.01)
+    # the visitors' window: a wall across with a mesh window, his stools on this side
+    for x0, x1 in ((-W / 2, -4.6), (-0.6, 1.4)):
+        box(((x0 + x1) / 2, -9.6, h / 2), (x1 - x0, 0.15, h), wall)
+    box((-2.6, -9.6, 0.45), (4.0, 0.15, 0.9), wall)                           # the sill wall under the mesh
+    box((-2.6, -9.6, (2.4 + h) / 2), (4.0, 0.15, h - 2.4), wall)
+    for k in range(41):                                                     # the mesh, two layers a hand apart
+        x = -4.6 + k * 0.1
+        for dy in (-0.08, 0.08):
+            box((x, -9.6 + dy, 1.65), (0.008, 0.008, 1.5), bars)
+    for k in range(16):
+        for dy in (-0.08, 0.08):
+            box((-2.6, -9.6 + dy, 0.9 + k * 0.1), (4.0, 0.008, 0.008), bars)
+    for x in (-3.8, -2.6, -1.4):
+        cyl((x, -9.0, 0.22), 0.16, 0.44, mat("stool_steel", (0.55, 0.56, 0.58), 0.4, 0.5), 16)
+    box((-2.6, -10.4, 0.45), (3.6, 0.45, 0.05), wood, 0.01)                  # their bench, beyond
+    sign("MULAQAT  ·  VISITORS", (-2.6, -9.5, 2.75), 2.4, 0.3, mat("board_green", (0.1, 0.35, 0.2), 0.5),
+         mat("letters_white", (0.97, 0.97, 0.97), 0.4), "-y", 0.14)
+    # the yard: the neem tree, the kitchen's window on the right wall, a water tap
+    cyl((-3.0, 0.5, 1.6), 0.22, 3.2, mat("neem_bark", (0.3, 0.24, 0.18), 0.9), 12)
+    for (dx, dy, dz, r) in ((0, 0, 3.8, 1.6), (0.9, 0.4, 3.4, 1.1), (-0.9, -0.3, 3.5, 1.2), (0.2, -0.8, 4.3, 1.0)):
+        dome((-3.0 + dx, 0.5 + dy, dz), r, r * 1.1, mat("neem_leaves", (0.2, 0.38, 0.15), 0.8), 1.0, 1.0, 12)
+    box((W / 2 - 0.08, 1.5, 1.3), (0.16, 2.4, 1.2), mat("hatch_dark", (0.15, 0.13, 0.12), 0.8))   # the serving hatch
+    box((W / 2 - 0.4, 1.5, 0.95), (0.6, 2.6, 0.06), steel)
+    for k in range(3):
+        cyl((W / 2 - 0.45, 0.6 + k * 0.9, 1.15), 0.28, 0.38, mat("pot_alu", (0.6, 0.6, 0.62), 0.4, 0.6), 20)
+    for k in range(6):                                                       # plates stacked on the counter
+        cyl((W / 2 - 0.45, 2.75, 1.0 + k * 0.012), 0.14, 0.01, steel, 20)
+    cyl((-W / 2 + 0.3, -2.0, 0.9), 0.02, 0.25, steel, 8, rot=(0, math.pi / 2, 0))
+    box((-W / 2 + 0.4, -2.0, 0.05), (0.6, 0.8, 0.1), mat("wet_cement", (0.4, 0.4, 0.38), 0.3))
+    # Barrack 6: its front wall with the barred gate, the low roof, the mats
+    by = 5.0
+    for x0, x1 in ((-W / 2, -0.8), (0.8, W / 2)):
+        box(((x0 + x1) / 2, by, 1.9), (x1 - x0, 0.2, 3.8), wall)
+    for k in range(15):
+        box((-0.75 + k * 0.107, by, 1.25), (0.03, 0.03, 2.5), bars)
+    box((0, by, 2.55), (1.6, 0.08, 0.1), bars)
+    box((0, by, 3.2), (1.6, 0.2, 1.2), wall)
+    box((0, (by + D / 2) / 2, 3.85), (W, D / 2 - by, 0.15), mat("barrack_roof", (0.8, 0.79, 0.74), 0.9))
+    sign("BARRACK 6", (2.2, by - 0.11, 3.1), 1.4, 0.3, mat("board_black", (0.08, 0.08, 0.09), 0.4),
+         mat("letters_white", (0.97, 0.97, 0.97), 0.4), "-y", 0.16)
+    mat_c = [mat("mat_%d" % k, c, 0.9) for k, c in enumerate(((0.5, 0.35, 0.2), (0.35, 0.4, 0.3), (0.55, 0.45, 0.3)))]
+    blanket = mat("blanket_grey", (0.35, 0.35, 0.37), 0.95)
+    for row, x in enumerate((-4.6, 4.6)):
+        for k in range(6):
+            y = by + 0.9 + k * 0.9
+            box((x, y, 0.02), (1.9, 0.7, 0.03), mat_c[(k + row) % 3])
+            box((x + (0.75 if x < 0 else -0.75), y, 0.1), (0.35, 0.6, 0.14), blanket, 0.02)
+            cyl((x + (0.35 if x < 0 else -0.35), y + 0.2, 0.04), 0.13, 0.015, steel, 20)
+            cyl((x + (0.35 if x < 0 else -0.35), y - 0.2, 0.07), 0.04, 0.09, steel, 12)
+    for x in (-3.0, 0.0, 3.0):                                               # the high barred windows
+        box((x, D / 2 - 0.03, 3.0), (1.0, 0.04, 0.6), mat("window_sky", (0.7, 0.8, 0.9), 0.6, emit=(0.7, 0.8, 0.9), strength=1.0))
+        for k in range(7):
+            box((x - 0.45 + k * 0.15, D / 2 - 0.07, 3.0), (0.025, 0.025, 0.6), bars)
+    # the lights: tubes in the office and the barrack, daylight over the yard
+    for k, (x, yy, zz) in enumerate(((3.5, -8.0, h - 0.05), (-2.6, -8.2, h - 0.05), (-2.5, 8.0, 3.75), (2.5, 8.0, 3.75))):
+        tube_light(x, yy, zz, True, k)
+    for k, (x, yy) in enumerate(((-3.0, -2.0), (3.0, -2.0), (-3.0, 3.0), (3.0, 3.0))):
+        light("window", (x, yy, 5.5), k)
+    mark("gate", 3.5, -10.2, 0.0)
+    mark("door", 3.5, -10.6, 0.0)
+    mark("warder", 3.6, -8.0, math.pi)
+    mark("desk", 3.6, -9.3, 0.0)
+    mark("mulaqat", -2.6, -9.05, math.pi)
+    mark("amma", -2.9, -10.3, 0.0)
+    mark("sundaram", -2.1, -10.35, 0.0)
+    mark("count", -1.0, -0.6, 0.0)
+    mark("count_warder", 0.5, 1.8, math.pi)
+    for k, (x, yy) in enumerate(((-4.5, -4.5), (2.0, -4.0), (4.5, 3.5), (-1.0, 3.8))):
+        mark("sweep%d" % k, x, yy, 0.0)
+    mark("kitchen", W / 2 - 1.2, 1.5, -math.pi / 2)
+    mark("cook", W / 2 + 0.3, 1.5, math.pi / 2)
+    mark("eat", -2.2, -0.6, math.pi / 2)
+    mark("inmate", -2.0, 0.6, -math.pi / 2)
+    mark("mat", -4.4, by + 1.8, -math.pi / 2)
+    mark("barrack", 0.0, by + 1.2, 0.0)
+    shot("wide", (5.0, -5.5, 2.6), (-2.5, 4.0, 1.4))
+    shot("barrack", (0.0, by - 1.2, 1.8), (0.0, D / 2, 0.6))
+    shot("mulaqat", (-2.6, -7.8, 1.6), (-2.6, -10.3, 1.2))
+
+
 # ============================================================================ the detail pass: what makes each place
 FONT_BOLD = "/System/Library/Fonts/Supplemental/Arial Bold.ttf"
 FONT_COND = "/System/Library/Fonts/Supplemental/DIN Condensed Bold.ttf"
@@ -1851,11 +1950,11 @@ def police_detail(T):
 
 
 DETAIL = {"home": home_detail, "dev_office": office_detail, "coopbank": bank_detail, "mess": mess_detail,
-          "police": police_detail, "fine_dining": fine_dining_detail, "cctv_shop": lambda T: None}
+          "police": police_detail, "fine_dining": fine_dining_detail, "cctv_shop": lambda T: None, "prison": lambda T: None}
 
 
 ROOMS = {"home": home, "dev_office": dev_office, "coopbank": coopbank, "mess": mess, "police": police,
-         "fine_dining": fine_dining, "cctv_shop": cctv_shop}
+         "fine_dining": fine_dining, "cctv_shop": cctv_shop, "prison": prison}
 
 
 def reset():

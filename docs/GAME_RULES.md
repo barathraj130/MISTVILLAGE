@@ -127,6 +127,9 @@ The full ladder is in GAME_DESIGN.md (Law and consequences). The rules that set 
     2. The inspector's suspicion rises. Witnesses get harder to talk to and the police share less.
     3. A third strike within 7 game days **cancels bail**. You're arrested at home or at the next police check,
        spend 2–5 game days in jail (a story chapter), and a lawyer (₹15,000) gets bail restored.
+       Built (story/jail.json): Sundaram's call, the police jeep to Coimbatore Central Jail, two days on remand
+       played (the gate office, Barrack 6, the count, kanji, sweeping the yard, Rasu under the neem, the visitors'
+       window with Amma and Sundaram), the bail order, home; Sundaram's ₹15,000 becomes a bill.
   - A strike older than 7 days drops off.
 - **You may not leave Coimbatore district.**
   - The ghat to Kotagiri is closed through Part 1: the police at the foot of the ghat turn you back.

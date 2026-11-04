@@ -1,0 +1,669 @@
+{
+ "note": "Bail cancelled (GAME_RULES §5): two days on remand in Coimbatore Central Jail, played (bail.gd starts it).",
+ "places": {
+  "prison": {
+   "lat": 11.01379,
+   "lon": 76.97217,
+   "x": 480.9,
+   "z": 495.6,
+   "en": "Coimbatore Central Jail",
+   "ta": "கோவை மத்திய சிறை"
+  },
+  "home": {
+   "lat": 11.0362,
+   "lon": 76.9742,
+   "x": 686.4,
+   "z": -1984.9,
+   "en": "Home, Ganapathy",
+   "ta": "வீடு, கணபதி"
+  },
+  "police": {
+   "lat": 11.0192,
+   "lon": 76.9702,
+   "x": 261.7,
+   "z": -101.3,
+   "en": "Nagar Police Station, Gandhipuram",
+   "ta": "நகர் காவல் நிலையம், காந்திபுரம்"
+  }
+ },
+ "people": {
+  "karthik": {
+   "en": "Karthik",
+   "ta": "கார்த்திக்",
+   "colour": "#7fc8ff",
+   "model": "story_karthik",
+   "hair": "#0f0c0a"
+  },
+  "amma": {
+   "en": "Amma",
+   "ta": "அம்மா",
+   "colour": "#ffb37f",
+   "model": "story_amma",
+   "hair": "#5a554f"
+  },
+  "divya": {
+   "en": "Divya",
+   "ta": "திவ்யா",
+   "colour": "#ff8fc8",
+   "model": "story_divya",
+   "hair": "#0e0b09"
+  },
+  "raghavan": {
+   "en": "Raghavan sir",
+   "ta": "ராகவன் சார்",
+   "colour": "#ffe07f",
+   "model": "story_raghavan",
+   "hair": "#9a958c"
+  },
+  "suresh": {
+   "en": "Suresh",
+   "ta": "சுரேஷ்",
+   "colour": "#c9a0ff",
+   "model": "story_suresh",
+   "hair": "#121010"
+  },
+  "clerk": {
+   "en": "Bank clerk",
+   "ta": "வங்கி கிளார்க்",
+   "colour": "#bfe3c0",
+   "model": "story_clerk",
+   "hair": "#141110"
+  },
+  "cook": {
+   "en": "Hotel owner",
+   "ta": "ஹோட்டல் ஓனர்",
+   "colour": "#ffd0a0",
+   "model": "story_cook",
+   "hair": "#2a2622"
+  },
+  "ashwin": {
+   "en": "Customer",
+   "ta": "வாடிக்கையாளர்",
+   "colour": "#a0e0ff",
+   "model": "story_ashwin",
+   "hair": "#0f0c0a"
+  },
+  "muniyandi": {
+   "en": "Muniyandi (watchman)",
+   "ta": "முனியாண்டி (வாட்ச்மேன்)",
+   "colour": "#e0c890",
+   "model": "story_muniyandi"
+  },
+  "murugesan": {
+   "en": "Inspector Murugesan",
+   "ta": "இன்ஸ்பெக்டர் முருகேசன்",
+   "colour": "#d8b070",
+   "model": "story_murugesan"
+  },
+  "selvi": {
+   "en": "Constable Selvi",
+   "ta": "கான்ஸ்டபிள் செல்வி",
+   "colour": "#c8a868",
+   "model": "story_selvi"
+  },
+  "sundaram": {
+   "en": "Advocate Sundaram",
+   "ta": "வக்கீல் சுந்தரம்",
+   "colour": "#f0f0f0",
+   "model": "story_sundaram"
+  },
+  "kathir": {
+   "en": "Kathir",
+   "ta": "கதிர்",
+   "colour": "#9fe0b0",
+   "model": "crowd_m1",
+   "hair": "#0f0c0a"
+  },
+  "warder": {
+   "en": "Warder",
+   "ta": "வார்டர்",
+   "colour": "#c8b890",
+   "model": "crowd_m2",
+   "hair": "#141110"
+  },
+  "rasu": {
+   "en": "Rasu",
+   "ta": "ராசு",
+   "colour": "#d0c0a0",
+   "model": "crowd_m3",
+   "hair": "#bdb8b0"
+  }
+ },
+ "spawn": "prison",
+ "steps": [
+  {
+   "do": "ride",
+   "vehicle": "xuv",
+   "paint": [
+    0.93,
+    0.93,
+    0.9
+   ],
+   "secs": 24,
+   "park": "prison",
+   "life_add": {
+    "stress": 15
+   }
+  },
+  {
+   "do": "home",
+   "room": "prison",
+   "at": "prison",
+   "start": "door",
+   "keep": true,
+   "cast": {
+    "warder": {
+     "mark": "warder",
+     "anim": "Idle"
+    }
+   },
+   "visits": [
+    {
+     "to": "desk",
+     "hand_phone": true,
+     "goal": {
+      "en": "The warder's table: hand over your things",
+      "ta": "வார்டர் மேஜை: உங்க பொருட்கள குடுங்க"
+     },
+     "prompt": {
+      "en": "hand over your phone and wallet",
+      "ta": "ஃபோன், பர்ஸ குடுங்க"
+     }
+    }
+   ]
+  },
+  {
+   "do": "talk",
+   "lines": [
+    {
+     "who": "warder",
+     "en": "Name. ...Karthik. Remand prisoner four-one-two-seven. Phone, wallet, belt. You'll get them back when you go.",
+     "ta": "பேரு. ...கார்த்திக். ரிமாண்ட் கைதி நாலு ஒண்ணு ரெண்டு ஏழு. ஃபோன், பர்ஸ், பெல்ட். போகும்போது திரும்ப கிடைக்கும்."
+    },
+    {
+     "who": "warder",
+     "en": "Barrack six. Mat by the wall. Bell at half past five. Don't make me look for you.",
+     "ta": "ஆறாவது பேரக். சுவர் பக்கத்துல பாய். அஞ்சரைக்கு மணி. நான் உன்ன தேட வேண்டி வரக்கூடாது."
+    }
+   ]
+  },
+  {
+   "do": "give",
+   "item": {
+    "id": "property_slip",
+    "kind": "paper",
+    "title": {
+     "en": "Prisoner's property slip",
+     "ta": "கைதி பொருள் சீட்டு"
+    },
+    "body": {
+     "en": "Coimbatore Central Jail. Remand No. 4127, Karthik M. Taken in: mobile phone 1, wallet 1 (cash as counted), belt 1, chappals 1 pair. To be returned on release.",
+     "ta": "கோவை மத்திய சிறை. ரிமாண்ட் எண் 4127, கார்த்திக் ம. பெறப்பட்டது: மொபைல் 1, பர்ஸ் 1 (எண்ணிய பணத்துடன்), பெல்ட் 1, செருப்பு 1 ஜோடி. விடுதலையின் போது திருப்பி தரப்படும்."
+    }
+   }
+  },
+  {
+   "do": "home",
+   "room": "prison",
+   "at": "prison",
+   "start": "here",
+   "keep": true,
+   "visits": [
+    {
+     "to": "mat",
+     "sleep_until": "05:30",
+     "goal": {
+      "en": "Barrack six: your mat by the wall",
+      "ta": "ஆறாவது பேரக்: சுவர் பக்கத்து பாய்"
+     },
+     "prompt": {
+      "en": "lie down",
+      "ta": "படுங்க"
+     }
+    }
+   ]
+  },
+  {
+   "do": "talk",
+   "cast": {
+    "warder": {
+     "mark": "count_warder",
+     "anim": "Idle"
+    },
+    "rasu": {
+     "mark": "inmate",
+     "anim": "Idle"
+    }
+   },
+   "lines": [
+    {
+     "who": "warder",
+     "en": "Count! Out, all of you. In a line, in the yard. Four-one-two-seven, you too.",
+     "ta": "எண்ணிக்கை! எல்லாரும் வெளியே. முற்றத்துல வரிசையா. நாலு ஒண்ணு ரெண்டு ஏழு, நீயும்."
+    }
+   ]
+  },
+  {
+   "do": "home",
+   "room": "prison",
+   "at": "prison",
+   "start": "here",
+   "keep": true,
+   "visits": [
+    {
+     "to": "count",
+     "auto": true,
+     "reach": 1.2,
+     "goal": {
+      "en": "The count: stand in the line in the yard",
+      "ta": "எண்ணிக்கை: முற்றத்துல வரிசையில நில்லுங்க"
+     }
+    },
+    {
+     "to": "count",
+     "wait": 15,
+     "pose": "Idle",
+     "goal": {
+      "en": "Stand still while he counts",
+      "ta": "அவர் எண்ணும்போது அசையாம நில்லுங்க"
+     },
+     "prompt": {
+      "en": "stand in the line",
+      "ta": "வரிசையில நில்லுங்க"
+     }
+    }
+   ]
+  },
+  {
+   "do": "home",
+   "room": "prison",
+   "at": "prison",
+   "start": "here",
+   "keep": true,
+   "visits": [
+    {
+     "to": "kitchen",
+     "task": "meal",
+     "home": true,
+     "home_meal": true,
+     "food": "kanji",
+     "minutes": 15,
+     "title": {
+      "en": "Kanji, in a steel plate",
+      "ta": "கஞ்சி, எவர்சில்வர் தட்டுல"
+     },
+     "goal": {
+      "en": "Kanji at the kitchen window",
+      "ta": "சமையலறை ஜன்னல்ல கஞ்சி"
+     },
+     "prompt": {
+      "en": "hold out your plate",
+      "ta": "தட்ட நீட்டுங்க"
+     }
+    }
+   ]
+  },
+  {
+   "do": "talk",
+   "lines": [
+    {
+     "who": "warder",
+     "en": "Four-one-two-seven. Sweep the yard. The corners first, then the tap.",
+     "ta": "நாலு ஒண்ணு ரெண்டு ஏழு. முற்றத்த பெருக்கு. முதல்ல மூலைகள், அப்புறம் குழாய்."
+    }
+   ]
+  },
+  {
+   "do": "home",
+   "room": "prison",
+   "at": "prison",
+   "start": "here",
+   "keep": true,
+   "visits": [
+    {
+     "to": "sweep0",
+     "wait": 25,
+     "pose": "Idle",
+     "goal": {
+      "en": "Sweep the corner by the tap",
+      "ta": "குழாய் பக்கத்து மூலைய பெருக்குங்க"
+     },
+     "prompt": {
+      "en": "sweep",
+      "ta": "பெருக்குங்க"
+     }
+    },
+    {
+     "to": "sweep1",
+     "wait": 25,
+     "pose": "Idle",
+     "goal": {
+      "en": "Sweep by the gate",
+      "ta": "கேட் பக்கத்துல பெருக்குங்க"
+     },
+     "prompt": {
+      "en": "sweep",
+      "ta": "பெருக்குங்க"
+     }
+    },
+    {
+     "to": "sweep2",
+     "wait": 25,
+     "pose": "Idle",
+     "goal": {
+      "en": "Sweep under the kitchen window",
+      "ta": "சமையலறை ஜன்னல் கீழ பெருக்குங்க"
+     },
+     "prompt": {
+      "en": "sweep",
+      "ta": "பெருக்குங்க"
+     }
+    },
+    {
+     "to": "sweep3",
+     "wait": 25,
+     "pose": "Idle",
+     "goal": {
+      "en": "Sweep the leaves under the neem",
+      "ta": "வேப்ப மரத்து இலைகள பெருக்குங்க"
+     },
+     "prompt": {
+      "en": "sweep",
+      "ta": "பெருக்குங்க"
+     }
+    }
+   ]
+  },
+  {
+   "do": "talk",
+   "cast": {
+    "rasu": {
+     "mark": "inmate",
+     "anim": "Idle"
+    }
+   },
+   "lines": [
+    {
+     "who": "rasu",
+     "en": "New? You sweep like a man who has never swept. Sit. The warder doesn't look at this tree.",
+     "ta": "புதுசா? இதுவரைக்கும் பெருக்காத ஆள் மாதிரி பெருக்கற. உக்காரு. வார்டர் இந்த மரத்த பாக்க மாட்டாரு."
+    },
+    {
+     "who": "karthik",
+     "en": "They say I killed a man. I drove his car. That's all I did.",
+     "ta": "நான் ஒருத்தர கொன்னேன்னு சொல்றாங்க. அவர் கார ஓட்டினேன். அவ்வளவு தான்."
+    },
+    {
+     "who": "rasu",
+     "en": "Everyone here only drove the car. ...What did they catch you with?",
+     "ta": "இங்க எல்லாரும் கார மட்டும் தான் ஓட்டினாங்க. ...எதை வச்சு புடிச்சாங்க?"
+    },
+    {
+     "who": "karthik",
+     "en": "A card. Someone opened our office at night with card number seven.",
+     "ta": "ஒரு கார்டு. ராத்திரி யாரோ ஏழாம் நம்பர் கார்டுல எங்க ஆஃபீஸ திறந்திருக்காங்க."
+    },
+    {
+     "who": "rasu",
+     "en": "I fitted those locks for twenty years before this. In a firm, the small numbers go to the people who own it. One, two... the partners. The office boys get the big ones.",
+     "ta": "இதுக்கு முன்னாடி இருபது வருஷம் அந்த பூட்டு தான் போட்டேன். ஒரு கம்பெனில சின்ன நம்பர் எல்லாம் முதலாளிங்களுக்கு. ஒண்ணு, ரெண்டு... பார்ட்னர்ங்க. ஆஃபீஸ் பையன்களுக்கு பெரிய நம்பர்."
+    },
+    {
+     "who": "karthik",
+     "en": "(Seven. Not an office boy's number.)",
+     "ta": "(ஏழு. ஆஃபீஸ் பையன் நம்பர் இல்ல.)"
+    }
+   ]
+  },
+  {
+   "do": "give",
+   "item": {
+    "id": "rasu_cards",
+    "kind": "card",
+    "title": {
+     "en": "Rasu: who gets which card",
+     "ta": "ராசு: யாருக்கு எந்த கார்டு"
+    },
+    "body": {
+     "en": "Small card numbers go to the owners and partners. Office staff get the big ones. #07 is small.",
+     "ta": "சின்ன நம்பர் முதலாளி, பார்ட்னர்களுக்கு. ஸ்டாஃப்க்கு பெரிய நம்பர். #07 சின்னது."
+    }
+   }
+  },
+  {
+   "do": "home",
+   "room": "prison",
+   "at": "prison",
+   "start": "here",
+   "keep": true,
+   "clock": "12:30",
+   "clock_forward": true,
+   "visits": [
+    {
+     "to": "kitchen",
+     "task": "meal",
+     "home": true,
+     "home_meal": true,
+     "food": "jail_meals",
+     "minutes": 20,
+     "title": {
+      "en": "Rice and sambar",
+      "ta": "சோறு, சாம்பார்"
+     },
+     "goal": {
+      "en": "Lunch at the kitchen window",
+      "ta": "சமையலறை ஜன்னல்ல மதிய சாப்பாடு"
+     },
+     "prompt": {
+      "en": "hold out your plate",
+      "ta": "தட்ட நீட்டுங்க"
+     }
+    },
+    {
+     "to": "mat",
+     "wait": 0,
+     "until": "14:00",
+     "goal": {
+      "en": "Visitors come at two",
+      "ta": "ரெண்டு மணிக்கு பார்வையாளர்கள்"
+     },
+     "prompt": {
+      "en": "sit on your mat",
+      "ta": "பாய்ல உக்காருங்க"
+     }
+    }
+   ]
+  },
+  {
+   "do": "talk",
+   "lines": [
+    {
+     "who": "warder",
+     "en": "Four-one-two-seven! Mulaqat. Your people.",
+     "ta": "நாலு ஒண்ணு ரெண்டு ஏழு! முலாகத். உன் ஆளுங்க."
+    }
+   ]
+  },
+  {
+   "do": "home",
+   "room": "prison",
+   "at": "prison",
+   "start": "here",
+   "keep": true,
+   "cast": {
+    "amma": {
+     "mark": "amma",
+     "anim": "Idle"
+    },
+    "sundaram": {
+     "mark": "sundaram",
+     "anim": "Idle"
+    }
+   },
+   "visits": [
+    {
+     "to": "mulaqat",
+     "auto": true,
+     "reach": 1.0,
+     "goal": {
+      "en": "The visitors' window",
+      "ta": "பார்வையாளர் ஜன்னல்"
+     }
+    }
+   ]
+  },
+  {
+   "do": "talk",
+   "lines": [
+    {
+     "who": "amma",
+     "en": "(Her fingers through the mesh.) Are they giving you food? Are you sleeping?",
+     "ta": "(வலை வழியா அவங்க விரல்கள்.) சாப்பாடு குடுக்கறாங்களா? தூங்கறியா?"
+    },
+    {
+     "who": "karthik",
+     "en": "I'm fine, Amma. I'm fine.",
+     "ta": "நல்லா இருக்கேன் அம்மா. நல்லா இருக்கேன்."
+    },
+    {
+     "who": "sundaram",
+     "en": "Three evenings, thambi. Three. Tomorrow the magistrate. I'll file again, and he'll grant it again, because I'll beg him.",
+     "ta": "மூணு சாயங்காலம் தம்பி. மூணு. நாளைக்கு மாஜிஸ்திரேட். திரும்ப மனு போடறேன், அவர் திரும்ப குடுப்பாரு, ஏன்னா நான் கெஞ்சுவேன்."
+    },
+    {
+     "who": "sundaram",
+     "en": "The application, the surety, the clerk's typing. Fifteen thousand. I don't want it from you. But the court wants it from someone.",
+     "ta": "மனு, ஜாமீன்தாரர், கிளார்க் டைப்பிங். பதினஞ்சாயிரம். உன் கிட்ட வேண்டாம். ஆனா கோர்ட்டுக்கு யாராவது குடுக்கணும்."
+    },
+    {
+     "who": "amma",
+     "en": "I'll find it.",
+     "ta": "நான் பாத்துக்கறேன்."
+    },
+    {
+     "who": "karthik",
+     "en": "(She says it the way she said it about the fees.)",
+     "ta": "(ஃபீஸ் பத்தி சொன்ன மாதிரியே சொல்றாங்க.)"
+    }
+   ]
+  },
+  {
+   "do": "money",
+   "bills": [
+    {
+     "id": "bail_again",
+     "kind": "other",
+     "amount": 15000,
+     "in_days": 10,
+     "label": {
+      "en": "the bail again (Sundaram sir)",
+      "ta": "திரும்ப ஜாமீன் (சுந்தரம் சார்)"
+     }
+    }
+   ]
+  },
+  {
+   "do": "home",
+   "room": "prison",
+   "at": "prison",
+   "start": "here",
+   "keep": true,
+   "visits": [
+    {
+     "to": "mat",
+     "sleep_until": "06:00",
+     "goal": {
+      "en": "Night in barrack six",
+      "ta": "ஆறாவது பேரக்ல ராத்திரி"
+     },
+     "prompt": {
+      "en": "lie down",
+      "ta": "படுங்க"
+     }
+    }
+   ]
+  },
+  {
+   "do": "talk",
+   "cast": {
+    "warder": {
+     "mark": "warder",
+     "anim": "Idle"
+    }
+   },
+   "lines": [
+    {
+     "who": "warder",
+     "en": "Four-one-two-seven. Your bail order's come. Collect your things. And don't come back here.",
+     "ta": "நாலு ஒண்ணு ரெண்டு ஏழு. உன் ஜாமீன் உத்தரவு வந்துடுச்சு. பொருட்கள எடுத்துக்கோ. திரும்ப இங்க வராத."
+    }
+   ]
+  },
+  {
+   "do": "home",
+   "room": "prison",
+   "at": "prison",
+   "start": "here",
+   "keep": true,
+   "visits": [
+    {
+     "to": "desk",
+     "phone_back": true,
+     "goal": {
+      "en": "Your things, at the warder's table",
+      "ta": "உங்க பொருட்கள், வார்டர் மேஜையில"
+     },
+     "prompt": {
+      "en": "take your phone and wallet",
+      "ta": "ஃபோன், பர்ஸ வாங்குங்க"
+     }
+    }
+   ]
+  },
+  {
+   "do": "take",
+   "id": "property_slip"
+  },
+  {
+   "do": "bail",
+   "restore": true
+  },
+  {
+   "do": "home",
+   "room": "prison",
+   "at": "prison",
+   "start": "here",
+   "visits": [
+    {
+     "to": "door",
+     "auto": true,
+     "reach": 1.2,
+     "goal": {
+      "en": "Out of the gate: Amma is waiting",
+      "ta": "கேட்ட விட்டு வெளியே: அம்மா காத்திருக்காங்க"
+     }
+    }
+   ]
+  },
+  {
+   "do": "ride",
+   "vehicle": "auto",
+   "paint": [
+    0.15,
+    0.15,
+    0.13
+   ],
+   "secs": 20,
+   "park": "home",
+   "eye": 1.25
+  },
+  {
+   "do": "free",
+   "goal": {
+    "en": "Out on bail again. Sign every evening, six to seven.",
+    "ta": "திரும்ப ஜாமீன்ல. தினமும் சாயங்காலம் ஆறிலிருந்து ஏழுக்குள்ள கையெழுத்து."
+   },
+   "vehicle": "karthik_scooter"
+  }
+ ]
+}
