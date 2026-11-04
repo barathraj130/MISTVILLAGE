@@ -243,11 +243,27 @@
   },
   "kongu_hospital": {
    "lat": 11.04351,
-   "lon": 77.04034,
-   "x": 7910.0,
+   "lon": 77.03973,
+   "x": 7842.6,
    "z": -2842.2,
    "en": "Kongu Multispeciality Hospital",
    "ta": "கொங்கு மல்டிஸ்பெஷாலிட்டி மருத்துவமனை"
+  },
+  "collectorate": {
+   "lat": 10.99983,
+   "lon": 76.96694,
+   "x": -80.4,
+   "z": 2044.3,
+   "en": "District Collectorate, Coimbatore",
+   "ta": "மாவட்ட ஆட்சியர் அலுவலகம், கோவை"
+  },
+  "galleria": {
+   "lat": 11.02368,
+   "lon": 77.01083,
+   "x": 4698.7,
+   "z": -626.6,
+   "en": "The Noyyal Galleria, Avinashi Road",
+   "ta": "தி நொய்யல் கேலரியா, அவிநாசி ரோடு"
   }
  },
  "people": {
@@ -396,6 +412,39 @@
    "colour": "#ff9f9f",
    "model": "crowd_w2",
    "hair": "#0e0b09"
+  },
+  "clerk_patta": {
+   "en": "The patta clerk",
+   "ta": "பட்டா கிளார்க்",
+   "colour": "#c0c8e0",
+   "model": "crowd_m2",
+   "hair": "#2a2622",
+   "top": "#c8d0e0"
+  },
+  "tout": {
+   "en": "A man by the gate",
+   "ta": "கேட் பக்கத்துல ஒருத்தர்",
+   "colour": "#e0b0a0",
+   "model": "crowd_m6",
+   "hair": "#0f0c0a",
+   "top": "#3a3f5a"
+  },
+  "security": {
+   "en": "Hotel security",
+   "ta": "ஹோட்டல் செக்யூரிட்டி",
+   "colour": "#a0b0d0",
+   "model": "crowd_m1",
+   "hair": "#0f0c0a",
+   "top": "#26304a",
+   "pants": "#26304a"
+  },
+  "ganesan": {
+   "en": "Ganesan (doorman)",
+   "ta": "கணேசன் (வாயில்காப்பாளர்)",
+   "colour": "#e0a080",
+   "model": "crowd_m4",
+   "hair": "#9a958c",
+   "top": "#7a1f2b"
   }
  },
  "spawn": "home",
@@ -6147,11 +6196,11 @@
    "cast": {
     "priya": {
      "world": [
-      7904.0,
+      7860.6,
       -2842.2
      ],
      "look_world": [
-      7930.0,
+      7854.1,
       -2842.2
      ],
      "anim": "Idle"
@@ -6562,6 +6611,1158 @@
      "goal": {
       "en": "Your wall: sir's note, and 'S.'",
       "ta": "உங்க சுவர்: சார் குறிப்பு, 'S.'"
+     },
+     "prompt": {
+      "en": "the wall",
+      "ta": "சுவர்"
+     }
+    },
+    {
+     "to": "karthik_room",
+     "sleep_until": "07:00",
+     "goal": {
+      "en": "Sleep",
+      "ta": "தூங்குங்க"
+     },
+     "prompt": {
+      "en": "lie down",
+      "ta": "படுங்க"
+     }
+    }
+   ]
+  },
+  {
+   "do": "home",
+   "room": "home",
+   "at": "home",
+   "start": "here",
+   "cast": {
+    "amma": {
+     "mark": "amma_kitchen"
+    }
+   },
+   "keep": true,
+   "visits": [
+    {
+     "to": "karthik_room",
+     "wall": true,
+     "goal": {
+      "en": "Your wall: who gains from Green Valley?",
+      "ta": "உங்க சுவர்: கிரீன் வேலியால யாருக்கு லாபம்?"
+     },
+     "prompt": {
+      "en": "the wall",
+      "ta": "சுவர்"
+     }
+    }
+   ]
+  },
+  {
+   "do": "talk",
+   "lines": [
+    {
+     "who": "karthik",
+     "en": "(Suresh sir wanted the Green Valley transfer signed before the farmers were paid. Why the hurry? Whose land is it now?)",
+     "ta": "(விவசாயிங்களுக்கு குடுக்கறதுக்கு முன்னாடியே கிரீன் வேலி மாற்றத்துல கையெழுத்து வேணும்னு சுரேஷ் சார் நினைச்சாரு. ஏன் அவசரம்? இப்போ அந்த நிலம் யாரோடது?)"
+    },
+    {
+     "who": "karthik",
+     "en": "(The patta records. The Collectorate.)",
+     "ta": "(பட்டா பதிவு. கலெக்டர் ஆஃபீஸ்.)"
+    }
+   ]
+  },
+  {
+   "do": "message",
+   "from": {
+    "en": "Sundaram sir",
+    "ta": "சுந்தரம் சார்"
+   },
+   "text": {
+    "en": "Land records: the Collectorate, the patta counter. Pudhur Vayal survey numbers 214 to 226. Don't pay anybody, thambi. Anybody. – Sundaram",
+    "ta": "நில பதிவு: கலெக்டர் ஆஃபீஸ், பட்டா கவுண்டர். புதூர் வயல் சர்வே நம்பர் 214 முதல் 226. யாருக்கும் காசு குடுக்காத, தம்பி. யாருக்கும். – சுந்தரம்"
+   }
+  },
+  {
+   "do": "pin",
+   "place": "collectorate",
+   "label": {
+    "en": "District Collectorate: the patta counter",
+    "ta": "மாவட்ட ஆட்சியர் அலுவலகம்: பட்டா கவுண்டர்"
+   }
+  },
+  {
+   "do": "home",
+   "room": "home",
+   "at": "home",
+   "start": "here",
+   "visits": [
+    {
+     "to": "door",
+     "auto": true,
+     "reach": 1.4,
+     "goal": {
+      "en": "Out to your scooter",
+      "ta": "வெளியே, ஸ்கூட்டருக்கு"
+     }
+    }
+   ]
+  },
+  {
+   "do": "drive",
+   "to": "collectorate",
+   "radius": 55,
+   "vehicle": "karthik_scooter",
+   "goal": {
+    "en": "The District Collectorate: land records for Pudhur Vayal",
+    "ta": "மாவட்ட ஆட்சியர் அலுவலகம்: புதூர் வயல் நில பதிவு"
+   }
+  },
+  {
+   "do": "meet",
+   "who": "clerk_patta",
+   "cast": {
+    "clerk_patta": {
+     "world": [
+      -82.83,
+      2030.97
+     ],
+     "look_world": [
+      -82.02,
+      2035.38
+     ],
+     "anim": "Idle"
+    },
+    "tout": {
+     "world": [
+      -78.83999999999999,
+      2035.76
+     ],
+     "look_world": [
+      -82.55999999999999,
+      2032.44
+     ],
+     "anim": "Idle"
+    }
+   },
+   "goal": {
+    "en": "The patta counter, by the Collectorate's side door",
+    "ta": "கலெக்டர் ஆஃபீஸ் பக்க கதவுல பட்டா கவுண்டர்"
+   }
+  },
+  {
+   "do": "talk",
+   "lines": [
+    {
+     "who": "karthik",
+     "en": "Sir. Pudhur Vayal, survey numbers two-fourteen to two-twenty-six. Only to see whose name—",
+     "ta": "சார். புதூர் வயல், சர்வே நம்பர் இருநூத்தி பதினாலு முதல் இருநூத்தி இருபத்தாறு வரைக்கும். யார் பேர்ல இருக்குன்னு மட்டும்—"
+    },
+    {
+     "who": "clerk_patta",
+     "en": "Apply online. Tamil Nilam. Fifteen working days. Next!",
+     "ta": "ஆன்லைன்ல அப்ளை பண்ணுங்க. தமிழ் நிலம். பதினஞ்சு வேலை நாள். அடுத்து!"
+    },
+    {
+     "who": "karthik",
+     "en": "Sir, fifteen days, I'm on bail, I—",
+     "ta": "சார், பதினஞ்சு நாள், நான் பெயில்ல இருக்கேன், நான்—"
+    },
+    {
+     "who": "clerk_patta",
+     "en": "Everybody has a reason. Online. Next!",
+     "ta": "எல்லாருக்கும் ஒரு காரணம் இருக்கு. ஆன்லைன். அடுத்து!"
+    }
+   ]
+  },
+  {
+   "do": "talk",
+   "lines": [
+    {
+     "who": "tout",
+     "en": "(A man by the gate falls into step beside me.) Anna. Patta? Two thousand, today itself. Printout with seal. I know the people inside.",
+     "ta": "(கேட் பக்கத்துல இருந்த ஒருத்தர் என் கூட நடக்க ஆரம்பிக்கிறார்.) அண்ணா. பட்டாவா? ரெண்டாயிரம், இன்னைக்கே. சீலோட பிரிண்ட்அவுட். உள்ள இருக்கறவங்கள எனக்கு தெரியும்."
+    }
+   ]
+  },
+  {
+   "do": "choose",
+   "prompt": {
+    "en": "Fifteen working days. Or two thousand rupees, now.",
+    "ta": "பதினஞ்சு வேலை நாள். இல்லனா ரெண்டாயிரம் ரூபாய், இப்பவே."
+   },
+   "options": [
+    {
+     "text": {
+      "en": "Apply online on your phone, and wait",
+      "ta": "ஃபோன்ல ஆன்லைன்ல அப்ளை பண்ணிட்டு, காத்திருங்க"
+     },
+     "set": "patta_online"
+    },
+    {
+     "text": {
+      "en": "Ask Priya whether Revathi can find the office's copy",
+      "ta": "ஆஃபீஸ் நகல ரேவதி கண்டுபிடிக்க முடியுமான்னு பிரியா கிட்ட கேளுங்க"
+     },
+     "set": "patta_revathi"
+    },
+    {
+     "text": {
+      "en": "Pay the man by the gate (₹2,000)",
+      "ta": "கேட் பக்கத்து ஆளுக்கு குடுங்க (₹2,000)"
+     },
+     "set": "patta_tout",
+     "pay": 2000
+    }
+   ]
+  },
+  {
+   "do": "note",
+   "when": "patta_online",
+   "text": {
+    "en": "Tamil Nilam application: Pudhur Vayal survey nos. 214–226. Ready in 15 working days.",
+    "ta": "தமிழ் நிலம் விண்ணப்பம்: புதூர் வயல் சர்வே எண் 214–226. 15 வேலை நாள்ல கிடைக்கும்."
+   }
+  },
+  {
+   "do": "talk",
+   "when": "patta_online",
+   "lines": [
+    {
+     "who": "karthik",
+     "en": "(Name, survey numbers, fifty rupees by UPI. Application number TN-NLM-2026-0884213. Fifteen working days.)",
+     "ta": "(பேர், சர்வே நம்பர், UPI-ல அம்பது ரூபாய். விண்ணப்ப எண் TN-NLM-2026-0884213. பதினஞ்சு வேலை நாள்.)"
+    },
+    {
+     "who": "tout",
+     "en": "(The man by the gate shrugs and goes back to his shade.) Your wish, anna.",
+     "ta": "(கேட் பக்கத்து ஆள் தோள குலுக்கிட்டு நிழலுக்கு திரும்பி போறார்.) உங்க இஷ்டம் அண்ணா."
+    }
+   ]
+  },
+  {
+   "do": "talk",
+   "when": "patta_revathi",
+   "lines": [
+    {
+     "who": "karthik",
+     "en": "(I text Priya. 'The patta for Pudhur Vayal. Would the office have a copy? Only if it's safe for Revathi.')",
+     "ta": "(பிரியாவுக்கு மெசேஜ் பண்றேன். 'புதூர் வயல் பட்டா. ஆஃபீஸ்ல நகல் இருக்குமா? ரேவதிக்கு பாதுகாப்பா இருந்தா மட்டும்.')"
+    },
+    {
+     "who": "tout",
+     "en": "Revathi? Office? (He laughs.) Your wish, anna.",
+     "ta": "ரேவதியா? ஆஃபீஸா? (சிரிக்கிறார்.) உங்க இஷ்டம் அண்ணா."
+    }
+   ]
+  },
+  {
+   "do": "talk",
+   "when": "patta_tout",
+   "lines": [
+    {
+     "who": "tout",
+     "en": "Sit at the tea shop. One hour.",
+     "ta": "டீக்கடையில உக்காருங்க. ஒரு மணி நேரம்."
+    },
+    {
+     "who": "karthik",
+     "en": "(Fifty minutes later he's back with a printout, warm, a blue seal on the corner.)",
+     "ta": "(அம்பது நிமிஷம் கழிச்சு ஒரு பிரிண்ட்அவுட்டோட வர்றார், சூடா, மூலையில நீல சீல்.)"
+    }
+   ]
+  },
+  {
+   "do": "give",
+   "when": "patta_tout",
+   "item": {
+    "id": "e16_patta",
+    "kind": "paper",
+    "stamp": true,
+    "title": {
+     "en": "Patta extract: Pudhur Vayal 214–226",
+     "ta": "பட்டா நகல்: புதூர் வயல் 214–226"
+    },
+    "from": {
+     "en": "Revenue Department, Coimbatore district",
+     "ta": "வருவாய் துறை, கோவை மாவட்டம்"
+    },
+    "body": {
+     "en": "Survey nos. 214 to 226, Pudhur Vayal village, 18.4 acres.\n\nRegistered owner: KONGU GREEN ESTATES PVT. LTD.\nDirector: Mrs. S. Lalitha\n\nDate of registration: eight days before Mr. R. Raghavan's death.",
+     "ta": "சர்வே எண் 214 முதல் 226, புதூர் வயல் கிராமம், 18.4 ஏக்கர்.\n\nபதிவு உரிமையாளர்: கொங்கு கிரீன் எஸ்டேட்ஸ் பிரைவேட் லிமிடெட்\nஇயக்குநர்: திருமதி எஸ். லலிதா\n\nபதிவு தேதி: திரு. ரா. ராகவன் இறப்பதற்கு எட்டு நாள் முன்பு."
+    }
+   }
+  },
+  {
+   "do": "evidence",
+   "when": "patta_tout",
+   "speaker": "tout",
+   "tag": "E16",
+   "label": {
+    "en": "Patta (bought from a tout): Kongu Green Estates",
+    "ta": "பட்டா (புரோக்கர் கிட்ட வாங்கினது): கொங்கு கிரீன் எஸ்டேட்ஸ்"
+   },
+   "memory": {
+    "id": "mem_patta",
+    "kind": "card",
+    "title": {
+     "en": "Pudhur Vayal's owner (bought)",
+     "ta": "புதூர் வயல் உரிமையாளர் (வாங்கினது)"
+    },
+    "body": {
+     "en": "Kongu Green Estates, director Mrs. S. Lalitha. Registered 8 days before sir died. Paid a tout ₹2,000 for it.",
+     "ta": "கொங்கு கிரீன் எஸ்டேட்ஸ், இயக்குநர் திருமதி எஸ். லலிதா. சார் சாகறதுக்கு 8 நாள் முன்னாடி பதிவு. புரோக்கருக்கு ₹2,000 குடுத்தேன்."
+    }
+   }
+  },
+  {
+   "do": "talk",
+   "when": "patta_tout",
+   "lines": [
+    {
+     "who": "karthik",
+     "en": "(S. Lalitha. Lalitha... Suresh sir's wife is Lalitha madam.)",
+     "ta": "(எஸ். லலிதா. லலிதா... சுரேஷ் சார் மனைவி லலிதா மேடம்.)"
+    },
+    {
+     "who": "karthik",
+     "en": "(And a man by a gate knows my name and my face now. Sundaram sir said, don't pay anybody.)",
+     "ta": "(இப்போ கேட் பக்கத்து ஒருத்தனுக்கு என் பேரும் மூஞ்சியும் தெரியும். யாருக்கும் குடுக்காதன்னு சுந்தரம் சார் சொன்னாரு.)"
+    }
+   ]
+  },
+  {
+   "do": "drive",
+   "to": "home",
+   "radius": 45,
+   "goal": {
+    "en": "Home",
+    "ta": "வீடு"
+   }
+  },
+  {
+   "do": "home",
+   "room": "home",
+   "at": "home",
+   "start": "door",
+   "cast": {
+    "amma": {
+     "mark": "amma_kitchen"
+    }
+   },
+   "keep": true,
+   "visits": [
+    {
+     "to": "karthik_room",
+     "wait": 0,
+     "until": "17:20",
+     "goal": {
+      "en": "Rest till it's time to sign",
+      "ta": "கையெழுத்து போடற நேரம் வரைக்கும் ஓய்வு"
+     },
+     "prompt": {
+      "en": "sit down",
+      "ta": "உட்காருங்க"
+     }
+    }
+   ]
+  },
+  {
+   "do": "message",
+   "when": "patta_revathi",
+   "from": {
+    "en": "Dr. Priya",
+    "ta": "டாக்டர் பிரியா"
+   },
+   "text": {
+    "en": "Revathi found it in the registration folder, a photocopy. Pudhur Vayal 214–226: KONGU GREEN ESTATES. Director: Mrs. S. Lalitha. That's Lalitha aunty. Suresh uncle's wife. Registered eight days before Appa died. – Priya",
+    "ta": "பதிவு ஃபோல்டர்ல ரேவதி கண்டுபிடிச்சா, ஒரு ஜெராக்ஸ். புதூர் வயல் 214–226: கொங்கு கிரீன் எஸ்டேட்ஸ். இயக்குநர்: திருமதி எஸ். லலிதா. அது லலிதா ஆன்ட்டி. சுரேஷ் அங்கிள் மனைவி. அப்பா சாகறதுக்கு எட்டு நாள் முன்னாடி பதிவு. – பிரியா"
+   }
+  },
+  {
+   "do": "evidence",
+   "when": "patta_revathi",
+   "speaker": "priya",
+   "tag": "E16",
+   "label": {
+    "en": "The office's copy of the patta: Kongu Green Estates",
+    "ta": "ஆஃபீஸ் பட்டா நகல்: கொங்கு கிரீன் எஸ்டேட்ஸ்"
+   },
+   "memory": {
+    "id": "mem_patta",
+    "kind": "card",
+    "title": {
+     "en": "Pudhur Vayal's owner",
+     "ta": "புதூர் வயல் உரிமையாளர்"
+    },
+    "body": {
+     "en": "Kongu Green Estates, director Mrs. S. Lalitha, Suresh's wife. Registered 8 days before sir died. The office's own copy, found by Revathi.",
+     "ta": "கொங்கு கிரீன் எஸ்டேட்ஸ், இயக்குநர் திருமதி எஸ். லலிதா, சுரேஷ் மனைவி. சார் சாகறதுக்கு 8 நாள் முன்னாடி பதிவு. ஆஃபீஸ் நகல், ரேவதி கண்டுபிடிச்சது."
+    }
+   }
+  },
+  {
+   "do": "talk",
+   "when": "patta_revathi",
+   "lines": [
+    {
+     "who": "karthik",
+     "en": "(Suresh sir already owned the land sir refused to sign away. Eight days before.)",
+     "ta": "(சார் கையெழுத்து போட மறுத்த நிலம், எட்டு நாள் முன்னாடியே சுரேஷ் சாருக்கு சொந்தமா இருந்திருக்கு.)"
+    }
+   ]
+  },
+  {
+   "do": "home",
+   "room": "home",
+   "at": "home",
+   "start": "here",
+   "visits": [
+    {
+     "to": "door",
+     "auto": true,
+     "reach": 1.4,
+     "goal": {
+      "en": "Out: the station by seven",
+      "ta": "வெளியே: ஏழு மணிக்குள்ள ஸ்டேஷன்"
+     }
+    }
+   ]
+  },
+  {
+   "do": "drive",
+   "to": "police",
+   "radius": 45,
+   "vehicle": "karthik_scooter",
+   "by": "19:00",
+   "goal": {
+    "en": "Sign at the station by 7 PM",
+    "ta": "7 மணிக்குள்ள ஸ்டேஷன்ல கையெழுத்து"
+   }
+  },
+  {
+   "do": "home",
+   "room": "police",
+   "at": "police",
+   "start": "door",
+   "cast": {
+    "murugesan": {
+     "mark": "inspector",
+     "anim": "Idle"
+    },
+    "selvi": {
+     "mark": "constable",
+     "anim": "Idle"
+    }
+   },
+   "keep": true,
+   "visits": [
+    {
+     "to": "selvi",
+     "task": "sign",
+     "goal": {
+      "en": "Sign the bail register at Selvi's desk",
+      "ta": "செல்வி மேஜையில ஜாமீன் பதிவேட்டுல கையெழுத்து"
+     },
+     "prompt": {
+      "en": "sign the register",
+      "ta": "பதிவேட்டுல கையெழுத்து"
+     },
+     "header": {
+      "en": "Nagar Police Station",
+      "ta": "நகர் காவல் நிலையம்"
+     },
+     "form": {
+      "en": "BAIL ATTENDANCE REGISTER",
+      "ta": "ஜாமீன் வருகை பதிவேடு"
+     },
+     "fields": [
+      [
+       {
+        "en": "Crime No.",
+        "ta": "குற்ற எண்"
+       },
+       "412"
+      ],
+      [
+       {
+        "en": "Name",
+        "ta": "பெயர்"
+       },
+       {
+        "en": "Karthik M.",
+        "ta": "கார்த்திக் ம."
+       }
+      ],
+      [
+       {
+        "en": "Day",
+        "ta": "நாள்"
+       },
+       "8"
+      ]
+     ],
+     "sign_label": {
+      "en": "Signature of the accused",
+      "ta": "குற்றம் சாட்டப்பட்டவர் கையொப்பம்"
+     },
+     "seal": {
+      "en": "STATION SEAL",
+      "ta": "நிலைய முத்திரை"
+     }
+    }
+   ]
+  },
+  {
+   "do": "home",
+   "room": "police",
+   "at": "police",
+   "start": "here",
+   "visits": [
+    {
+     "to": "door",
+     "auto": true,
+     "reach": 1.4,
+     "goal": {
+      "en": "Out",
+      "ta": "வெளியே"
+     }
+    }
+   ]
+  },
+  {
+   "do": "drive",
+   "to": "home",
+   "radius": 45,
+   "goal": {
+    "en": "Home",
+    "ta": "வீடு"
+   }
+  },
+  {
+   "do": "home",
+   "room": "home",
+   "at": "home",
+   "start": "door",
+   "cast": {
+    "amma": {
+     "mark": "amma",
+     "anim": "Sit"
+    }
+   },
+   "keep": true,
+   "visits": [
+    {
+     "to": "karthik_room",
+     "wall": true,
+     "goal": {
+      "en": "Your wall: the land",
+      "ta": "உங்க சுவர்: நிலம்"
+     },
+     "prompt": {
+      "en": "the wall",
+      "ta": "சுவர்"
+     }
+    },
+    {
+     "to": "karthik_room",
+     "sleep_until": "07:00",
+     "goal": {
+      "en": "Sleep",
+      "ta": "தூங்குங்க"
+     },
+     "prompt": {
+      "en": "lie down",
+      "ta": "படுங்க"
+     }
+    }
+   ]
+  },
+  {
+   "do": "message",
+   "from": {
+    "en": "Dr. Priya",
+    "ta": "டாக்டர் பிரியா"
+   },
+   "text": {
+    "en": "Revathi saw Suresh uncle's desk calendar. Day 2: 'Lunch, Siruvani Grand, GV buyers (Chennai).' The day before Appa drew the cash. – Priya",
+    "ta": "சுரேஷ் அங்கிள் டேபிள் காலண்டர ரேவதி பாத்தா. 2ஆம் நாள்: 'மதிய உணவு, சிறுவாணி கிராண்ட், GV வாங்குபவர்கள் (சென்னை).' அப்பா பணம் எடுக்கறதுக்கு முந்தைய நாள். – பிரியா"
+   }
+  },
+  {
+   "do": "talk",
+   "lines": [
+    {
+     "who": "karthik",
+     "en": "(Selling Green Valley to buyers from Chennai, a day before sir even drew the farmers' money.)",
+     "ta": "(விவசாயிங்க பணத்த சார் எடுக்கறதுக்கு ஒரு நாள் முன்னாடியே, சென்னை ஆளுங்களுக்கு கிரீன் வேலிய விக்கறது.)"
+    },
+    {
+     "who": "karthik",
+     "en": "(The Siruvani Grand. I've driven sir there a hundred times. I've never been past the door.)",
+     "ta": "(சிறுவாணி கிராண்ட். நூறு தடவ சார அங்க கூட்டிட்டு போயிருப்பேன். கதவ தாண்டி உள்ள போனதே இல்ல.)"
+    }
+   ]
+  },
+  {
+   "do": "pin",
+   "place": "grand_hotel",
+   "label": {
+    "en": "The Siruvani Grand, Avinashi Road",
+    "ta": "தி சிறுவாணி கிராண்ட், அவிநாசி ரோடு"
+   }
+  },
+  {
+   "do": "home",
+   "room": "home",
+   "at": "home",
+   "start": "here",
+   "visits": [
+    {
+     "to": "door",
+     "auto": true,
+     "reach": 1.4,
+     "goal": {
+      "en": "Out to your scooter",
+      "ta": "வெளியே, ஸ்கூட்டருக்கு"
+     }
+    }
+   ]
+  },
+  {
+   "do": "drive",
+   "to": "grand_hotel",
+   "radius": 55,
+   "vehicle": "karthik_scooter",
+   "goal": {
+    "en": "The Siruvani Grand: the doorman sees everyone who comes for lunch",
+    "ta": "சிறுவாணி கிராண்ட்: மதியம் சாப்பிட வர்ற எல்லாரையும் வாயில்காப்பாளர் பாப்பாரு"
+   }
+  },
+  {
+   "do": "meet",
+   "who": "security",
+   "cast": {
+    "security": {
+     "world": [
+      2932.99,
+      -384.44
+     ],
+     "look_world": [
+      2934.67,
+      -378.17
+     ],
+     "anim": "Idle"
+    },
+    "ganesan": {
+     "world": [
+      2935.8,
+      -385.51
+     ],
+     "look_world": [
+      2937.57,
+      -378.94
+     ],
+     "anim": "Idle"
+    }
+   },
+   "goal": {
+    "en": "The hotel's front door",
+    "ta": "ஹோட்டல் முன் கதவு"
+   }
+  },
+  {
+   "do": "talk",
+   "lines": [
+    {
+     "who": "security",
+     "en": "Sir, deliveries at the back gate. Service lane, on the left.",
+     "ta": "சார், டெலிவரி பின் கேட்ல. இடது பக்கம் சர்வீஸ் லேன்."
+    },
+    {
+     "who": "karthik",
+     "en": "I'm not delivering. I want to have lunch.",
+     "ta": "நான் டெலிவரி பண்ண வரல. சாப்பிட வந்தேன்."
+    },
+    {
+     "who": "security",
+     "en": "(He looks at my rider jacket, my rubber slippers, the scooter.) Back gate, sir.",
+     "ta": "(என் ரைடர் ஜாக்கெட்ட, ரப்பர் செருப்ப, ஸ்கூட்டர பாக்கறார்.) பின் கேட், சார்."
+    }
+   ]
+  },
+  {
+   "do": "choose",
+   "prompt": {
+    "en": "The doorman in the maroon coat watches from the steps.",
+    "ta": "மெரூன் கோட் போட்ட வாயில்காப்பாளர் படிக்கட்டுல இருந்து பாக்கறார்."
+   },
+   "options": [
+    {
+     "text": {
+      "en": "Go to The Noyyal Galleria, buy a proper shirt, come back for lunch (about ₹2,350)",
+      "ta": "நொய்யல் கேலரியா போய், நல்ல சட்ட வாங்கிட்டு, சாப்பிட திரும்ப வாங்க (சுமார் ₹2,350)"
+     },
+     "set": "grand_shirt",
+     "need": 2350
+    },
+    {
+     "text": {
+      "en": "Slip the doorman ₹200 on the steps",
+      "ta": "படிக்கட்டுல வாயில்காப்பாளருக்கு ₹200 குடுங்க"
+     },
+     "set": "grand_tip",
+     "pay": 200
+    },
+    {
+     "text": {
+      "en": "Not today. Come back when there's money",
+      "ta": "இன்னைக்கு வேண்டாம். காசு இருக்கும்போது வாங்க"
+     },
+     "set": "grand_later"
+    }
+   ]
+  },
+  {
+   "do": "talk",
+   "when": "grand_tip",
+   "lines": [
+    {
+     "who": "ganesan",
+     "en": "(The note vanishes into his coat.) Suresh sir? Big man, sir. Comes, goes. I see nothing, sir. Nothing at all.",
+     "ta": "(நோட்டு அவர் கோட்டுக்குள்ள மறைஞ்சிடுது.) சுரேஷ் சாரா? பெரிய ஆளு சார். வருவாரு, போவாரு. நான் எதுவும் பாக்கறதில்ல சார். ஒண்ணுமே இல்ல."
+    },
+    {
+     "who": "karthik",
+     "en": "(Two hundred rupees, for nothing. A man at a gate who's paid says what's safe.)",
+     "ta": "(ரெண்டு நூறு ரூபாய், ஒண்ணுமில்லாததுக்கு. காசு வாங்கின கேட் ஆளு பாதுகாப்பானத தான் சொல்லுவான்.)"
+    }
+   ]
+  },
+  {
+   "do": "talk",
+   "when": "grand_later",
+   "lines": [
+    {
+     "who": "karthik",
+     "en": "(Two thousand three hundred for a shirt and a lunch. A quarter of the rent. Another day, when the app pays.)",
+     "ta": "(ஒரு சட்டைக்கும் ஒரு சாப்பாட்டுக்கும் ரெண்டாயிரத்து முன்னூறு. வாடகையோட கால் பங்கு. ஆப் பணம் வந்ததும், இன்னொரு நாள்.)"
+    }
+   ]
+  },
+  {
+   "do": "drive",
+   "when": "grand_shirt",
+   "to": "galleria",
+   "radius": 60,
+   "goal": {
+    "en": "The Noyyal Galleria: a shirt that gets past a hotel door",
+    "ta": "நொய்யல் கேலரியா: ஹோட்டல் கதவ தாண்டற ஒரு சட்ட"
+   }
+  },
+  {
+   "do": "talk",
+   "when": "grand_shirt",
+   "lines": [
+    {
+     "who": "karthik",
+     "en": "(Second floor, Kovai Cotton House. A white cotton shirt, ₹899. The girl at the counter folds it as if it were worth more.)",
+     "ta": "(ரெண்டாவது மாடி, கோவை காட்டன் ஹவுஸ். வெள்ள காட்டன் சட்ட, ₹899. கவுண்டர் பொண்ணு அத இன்னும் விலை அதிகம் மாதிரி மடிக்கிறா.)",
+     "pay": -899
+    },
+    {
+     "who": "karthik",
+     "en": "(And leather sandals from the rack by the door. I change in the trial room and fold the rider jacket into the bag.)",
+     "ta": "(கதவு பக்கத்து ரேக்ல இருந்து தோல் செருப்பு. ட்ரையல் ரூம்ல மாத்திட்டு, ரைடர் ஜாக்கெட்ட பையில மடிச்சு வைக்கிறேன்.)"
+    }
+   ]
+  },
+  {
+   "do": "drive",
+   "when": "grand_shirt",
+   "to": "grand_hotel",
+   "radius": 55,
+   "goal": {
+    "en": "Back to the Siruvani Grand, for lunch",
+    "ta": "சிறுவாணி கிராண்டுக்கு திரும்ப, சாப்பிட"
+   }
+  },
+  {
+   "do": "meet",
+   "when": "grand_shirt",
+   "who": "security",
+   "cast": {
+    "security": {
+     "world": [
+      2932.99,
+      -384.44
+     ],
+     "look_world": [
+      2934.67,
+      -378.17
+     ],
+     "anim": "Idle"
+    },
+    "ganesan": {
+     "world": [
+      2935.8,
+      -385.51
+     ],
+     "look_world": [
+      2937.57,
+      -378.94
+     ],
+     "anim": "Idle"
+    }
+   },
+   "goal": {
+    "en": "The front door, again",
+    "ta": "முன் கதவு, மறுபடியும்"
+   }
+  },
+  {
+   "do": "talk",
+   "when": "grand_shirt",
+   "lines": [
+    {
+     "who": "security",
+     "en": "Good afternoon, sir. Welcome to the Siruvani Grand.",
+     "ta": "குட் ஆஃப்டர்நூன் சார். சிறுவாணி கிராண்டுக்கு வரவேற்கிறோம்."
+    },
+    {
+     "who": "karthik",
+     "en": "(He doesn't know me. A shirt was all it took.)",
+     "ta": "(அவருக்கு என்ன தெரியல. ஒரு சட்ட போதும் போல.)"
+    }
+   ]
+  },
+  {
+   "do": "eat_out",
+   "when": "grand_shirt",
+   "goal": {
+    "en": "Lunch at the Siruvani Grand's restaurant",
+    "ta": "சிறுவாணி கிராண்ட் உணவகத்துல மதிய சாப்பாடு"
+   },
+   "eateries": [
+    "grand_hotel"
+   ],
+   "minutes": 40,
+   "tip_who": {
+    "en": "The steward",
+    "ta": "ஸ்டீவர்ட்"
+   },
+   "tip": {
+    "en": "The executive lunch, sir. Our South Indian spread.",
+    "ta": "எக்ஸிகியூட்டிவ் லஞ்ச், சார். எங்க தென்னிந்திய விருந்து."
+   },
+   "menus": {
+    "grand_hotel": [
+     {
+      "name": {
+       "en": "Executive lunch",
+       "ta": "எக்ஸிகியூட்டிவ் லஞ்ச்"
+      },
+      "price": 1450,
+      "food": "meals"
+     }
+    ]
+   }
+  },
+  {
+   "do": "meet",
+   "when": "grand_shirt",
+   "who": "ganesan",
+   "cast": {
+    "security": {
+     "world": [
+      2932.99,
+      -384.44
+     ],
+     "look_world": [
+      2934.67,
+      -378.17
+     ],
+     "anim": "Idle"
+    },
+    "ganesan": {
+     "world": [
+      2935.8,
+      -385.51
+     ],
+     "look_world": [
+      2937.57,
+      -378.94
+     ],
+     "anim": "Idle"
+    }
+   },
+   "goal": {
+    "en": "On the way out: the doorman, Ganesan",
+    "ta": "வெளிய போகும்போது: வாயில்காப்பாளர், கணேசன்"
+   }
+  },
+  {
+   "do": "talk",
+   "when": "grand_shirt",
+   "lines": [
+    {
+     "who": "ganesan",
+     "en": "Sir... you're Raghavan sir's driver. Six years you waited outside in the white car. Today you came in by the front door.",
+     "ta": "சார்... நீங்க ராகவன் சாரோட டிரைவர். ஆறு வருஷம் வெள்ள கார்ல வெளிய காத்திருந்தீங்க. இன்னைக்கு முன் கதவால உள்ள வந்தீங்க."
+    },
+    {
+     "who": "karthik",
+     "en": "Anna. Two weeks ago. Suresh sir, lunch, two men from Chennai.",
+     "ta": "அண்ணா. ரெண்டு வாரம் முன்னாடி. சுரேஷ் சார், மதிய சாப்பாடு, சென்னையிலிருந்து ரெண்டு பேர்."
+    }
+   ]
+  },
+  {
+   "do": "talk",
+   "when": "grand_shirt",
+   "lines": [
+    {
+     "who": "karthik",
+     "en": "(My phone. If he says it, I want it said twice.)",
+     "ta": "(என் ஃபோன். அவர் சொன்னா, அத ரெண்டு தடவ கேக்கணும்.)"
+    }
+   ]
+  },
+  {
+   "do": "record",
+   "when": "grand_shirt",
+   "on": true
+  },
+  {
+   "do": "talk",
+   "when": "grand_shirt",
+   "lines": [
+    {
+     "who": "ganesan",
+     "en": "Land people. Files on the table, a map. Suresh sir was turning his ring, the big emerald. He turns it when he's selling. Thirty years I've opened doors, sir. I know a man selling.",
+     "ta": "நில ஆளுங்க. டேபிள்ல ஃபைல், ஒரு வரைபடம். சுரேஷ் சார் மோதிரத்த திருப்பிட்டு இருந்தாரு, பெரிய மரகதம். விக்கும்போது அப்படி திருப்புவாரு. முப்பது வருஷம் கதவு திறந்திருக்கேன் சார். விக்கறவன தெரியும்."
+    },
+    {
+     "who": "ganesan",
+     "en": "When they left, one of them said, 'Once the old man signs, Green Valley is ours.' Then they laughed.",
+     "ta": "போகும்போது ஒருத்தர் சொன்னாரு, 'கிழவர் கையெழுத்து போட்டா, கிரீன் வேலி நம்மளோடது.' அப்புறம் சிரிச்சாங்க."
+    },
+    {
+     "who": "ganesan",
+     "en": "Raghavan sir always gave me a hundred at Pongal. Every year. ...If someone asks me properly, I'll say it.",
+     "ta": "ராகவன் சார் ஒவ்வொரு பொங்கலுக்கும் நூறு ரூபாய் குடுப்பாரு. ஒவ்வொரு வருஷமும். ...யாராவது முறையா கேட்டா, சொல்லுவேன்."
+    }
+   ]
+  },
+  {
+   "do": "record",
+   "when": "grand_shirt",
+   "on": false
+  },
+  {
+   "do": "evidence",
+   "when": "grand_shirt",
+   "speaker": "ganesan",
+   "tag": "E18",
+   "label": {
+    "en": "Ganesan: Suresh selling Green Valley, Day 2",
+    "ta": "கணேசன்: சுரேஷ் கிரீன் வேலிய விக்கறது, 2ஆம் நாள்"
+   },
+   "memory": {
+    "id": "mem_grand",
+    "kind": "card",
+    "title": {
+     "en": "The Siruvani Grand",
+     "ta": "சிறுவாணி கிராண்ட்"
+    },
+    "body": {
+     "en": "Day 2: Suresh with two land buyers from Chennai, turning his emerald ring. 'Once the old man signs, Green Valley is ours.'",
+     "ta": "2ஆம் நாள்: சென்னை நில ஆளுங்க ரெண்டு பேரோட சுரேஷ், மரகத மோதிரத்த திருப்பிட்டு. 'கிழவர் கையெழுத்து போட்டா, கிரீன் வேலி நம்மளோடது.'"
+    }
+   }
+  },
+  {
+   "do": "drive",
+   "to": "home",
+   "radius": 45,
+   "goal": {
+    "en": "Home",
+    "ta": "வீடு"
+   }
+  },
+  {
+   "do": "home",
+   "room": "home",
+   "at": "home",
+   "start": "door",
+   "cast": {
+    "amma": {
+     "mark": "amma_kitchen"
+    }
+   },
+   "keep": true,
+   "visits": [
+    {
+     "to": "karthik_room",
+     "wait": 0,
+     "until": "17:20",
+     "goal": {
+      "en": "Rest till it's time to sign",
+      "ta": "கையெழுத்து போடற நேரம் வரைக்கும் ஓய்வு"
+     },
+     "prompt": {
+      "en": "sit down",
+      "ta": "உட்காருங்க"
+     }
+    }
+   ]
+  },
+  {
+   "do": "home",
+   "room": "home",
+   "at": "home",
+   "start": "here",
+   "visits": [
+    {
+     "to": "door",
+     "auto": true,
+     "reach": 1.4,
+     "goal": {
+      "en": "Out: the station by seven",
+      "ta": "வெளியே: ஏழு மணிக்குள்ள ஸ்டேஷன்"
+     }
+    }
+   ]
+  },
+  {
+   "do": "drive",
+   "to": "police",
+   "radius": 45,
+   "vehicle": "karthik_scooter",
+   "by": "19:00",
+   "goal": {
+    "en": "Sign at the station by 7 PM",
+    "ta": "7 மணிக்குள்ள ஸ்டேஷன்ல கையெழுத்து"
+   }
+  },
+  {
+   "do": "home",
+   "room": "police",
+   "at": "police",
+   "start": "door",
+   "cast": {
+    "murugesan": {
+     "mark": "inspector",
+     "anim": "Idle"
+    },
+    "selvi": {
+     "mark": "constable",
+     "anim": "Idle"
+    }
+   },
+   "keep": true,
+   "visits": [
+    {
+     "to": "selvi",
+     "task": "sign",
+     "goal": {
+      "en": "Sign the bail register at Selvi's desk",
+      "ta": "செல்வி மேஜையில ஜாமீன் பதிவேட்டுல கையெழுத்து"
+     },
+     "prompt": {
+      "en": "sign the register",
+      "ta": "பதிவேட்டுல கையெழுத்து"
+     },
+     "header": {
+      "en": "Nagar Police Station",
+      "ta": "நகர் காவல் நிலையம்"
+     },
+     "form": {
+      "en": "BAIL ATTENDANCE REGISTER",
+      "ta": "ஜாமீன் வருகை பதிவேடு"
+     },
+     "fields": [
+      [
+       {
+        "en": "Crime No.",
+        "ta": "குற்ற எண்"
+       },
+       "412"
+      ],
+      [
+       {
+        "en": "Name",
+        "ta": "பெயர்"
+       },
+       {
+        "en": "Karthik M.",
+        "ta": "கார்த்திக் ம."
+       }
+      ],
+      [
+       {
+        "en": "Day",
+        "ta": "நாள்"
+       },
+       "9"
+      ]
+     ],
+     "sign_label": {
+      "en": "Signature of the accused",
+      "ta": "குற்றம் சாட்டப்பட்டவர் கையொப்பம்"
+     },
+     "seal": {
+      "en": "STATION SEAL",
+      "ta": "நிலைய முத்திரை"
+     }
+    }
+   ]
+  },
+  {
+   "do": "home",
+   "room": "police",
+   "at": "police",
+   "start": "here",
+   "visits": [
+    {
+     "to": "door",
+     "auto": true,
+     "reach": 1.4,
+     "goal": {
+      "en": "Out",
+      "ta": "வெளியே"
+     }
+    }
+   ]
+  },
+  {
+   "do": "drive",
+   "to": "home",
+   "radius": 45,
+   "goal": {
+    "en": "Home",
+    "ta": "வீடு"
+   }
+  },
+  {
+   "do": "home",
+   "room": "home",
+   "at": "home",
+   "start": "door",
+   "cast": {
+    "amma": {
+     "mark": "amma",
+     "anim": "Sit"
+    }
+   },
+   "keep": true,
+   "visits": [
+    {
+     "to": "karthik_room",
+     "wall": true,
+     "goal": {
+      "en": "Your wall: the ring",
+      "ta": "உங்க சுவர்: மோதிரம்"
      },
      "prompt": {
       "en": "the wall",

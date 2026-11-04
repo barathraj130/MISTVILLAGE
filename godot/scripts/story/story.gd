@@ -1168,7 +1168,13 @@ func _choose() -> void:
 ## An option a stressed Karthik can't manage ("max_stress": above it, it's shown greyed with its "shaken" line).
 func _shaken(o: Dictionary) -> bool:
 	var life = city.life if "life" in city else null
-	return life != null and o.has("max_stress") and life.stress > float(o["max_stress"])
+	return (life != null and o.has("max_stress") and life.stress > float(o["max_stress"])) or _short(o)
+
+
+## An option that costs more than is in his wallet ("pay"): shown, but out of reach.
+func _short(o: Dictionary) -> bool:
+	var need := int(o.get("need", o.get("pay", 0)))         # ("need": what it will cost later, a shirt and a lunch)
+	return need > 0 and fines != null and fines.sim.money < need
 
 
 ## On foot up the building's stair: the power fails at Mark_cut; at Mark_landing the talk begins.
@@ -2744,7 +2750,9 @@ func _refresh() -> void:
 			var lines: Array = [tr_(cur["prompt"]), ""]
 			for i in cur["options"].size():
 				var o: Dictionary = cur["options"][i]
-				if _shaken(o):                           # too stressed for this one: shown, but out of reach
+				if _short(o):                            # can't pay for it: shown, but out of reach
+					lines.append("%d   %s   %s" % [i + 1, tr_(o["text"]), "(not enough in your wallet)" if lang == "en" else "(பர்ஸ்ல போதுமான காசு இல்ல)"])
+				elif _shaken(o):                         # too stressed for this one: shown, but out of reach
 					lines.append("%d   %s" % [i + 1, tr_(o.get("shaken", {"en": "(you can't, now)", "ta": "(இப்போ முடியாது)"}))])
 				else:
 					lines.append("%d   %s" % [i + 1, tr_(o["text"])])
