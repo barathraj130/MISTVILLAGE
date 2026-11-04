@@ -258,7 +258,7 @@ func _draw() -> void:
 			draw_string(font, Vector2(r.position.x, y + 10.0 * sc), t_(held.get("title", "")), HORIZONTAL_ALIGNMENT_CENTER, r.size.x, int(26 * sc), INK)
 			draw_line(Vector2(r.position.x + 40.0 * sc, y + 26.0 * sc), Vector2(r.end.x - 40.0 * sc, y + 26.0 * sc), INK, 1.5)
 			draw_multiline_string(font, Vector2(r.position.x + 44.0 * sc, y + 70.0 * sc), t_(held.get("body", "")),
-				HORIZONTAL_ALIGNMENT_LEFT, r.size.x - 88.0 * sc, int(18 * sc), 30, INK)
+				HORIZONTAL_ALIGNMENT_LEFT, r.size.x - 88.0 * sc, int(18 * sc), 30, Color.html(str(held["ink"])) if held.has("ink") else INK)   # (his green ink)
 			if held.get("stamp", false):                # the station's round seal, in violet ink, a little crooked
 				var c := Vector2(r.end.x - 120.0 * sc, r.end.y - 120.0 * sc)
 				draw_arc(c, 62.0 * sc, 0, TAU, 48, Color(0.45, 0.2, 0.6, 0.75), 4.0 * sc)

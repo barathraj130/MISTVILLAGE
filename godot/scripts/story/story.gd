@@ -723,6 +723,8 @@ func _cast(spec: Dictionary) -> void:
 			_to_mark(act, str(d["mark"]))
 			if d.has("turn"):                            # (at the door, facing in: a visitor)
 				act.rotation.y += float(d["turn"])
+		elif d.has("world"):                             # (at a place of its own: the hospital's gate, whatever road he stops on)
+			act.place(Vector3(float(d["world"][0]), 0.0, float(d["world"][1])), Vector3(float(d["look_world"][0]), 0.0, float(d["look_world"][1])))
 		elif d.has("pos"):
 			act.place(_w2(d["pos"]), _w2(d.get("look", [0.0, 0.0])))
 		if d.has("anim"):
