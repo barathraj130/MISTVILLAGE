@@ -409,8 +409,10 @@ func _next() -> void:
 	for k in cur.get("hide", []):                       # (someone gone in: sir into his car, through his gate)
 		if cast.has(k):
 			cast[k].visible = false
-	if cur.has("vehicle") and car.vehicle != str(cur["vehicle"]):     # (the night delivery is on his scooter)
-		car.configure(str(cur["vehicle"]))
+	if cur.has("vehicle"):                              # (the night delivery is on his scooter; taken: Bala's bike)
+		var want := "bike" if str(cur["vehicle"]) == "karthik_scooter" and city.money and city.money.seized else str(cur["vehicle"])
+		if car.vehicle != want:
+			car.configure(want)
 	match str(cur["do"]):
 		"message":                                       # a text arrives (from, en/ta)
 			city.phone.message(cur["from"], cur["text"], str(cur.get("time", "")))

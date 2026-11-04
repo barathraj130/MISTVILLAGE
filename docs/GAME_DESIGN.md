@@ -213,7 +213,7 @@ each with a question. You answer by what you do:
 signs, then the arrest and the table, then the wall, then the rest of the slice redone on these pieces (§8.2 from
 the top). The story's JSON keeps its steps, but "card", "lapse" and filmed "room" steps leave the slice.
 
-## 9. Money after the arrest (2026-11-04, building)
+## 9. Money after the arrest (2026-11-04, built: city/money.gd)
 Asked for: money should be hard to handle, especially after the arrest. Every rupee is cash in his hand, a message on
 his phone or someone at the door; nothing is a number on the screen.
 
@@ -237,6 +237,13 @@ his phone or someone at the door; nothing is a number on the screen.
   a word and pawned at a gold-loan counter (75% of its worth at 12%, the packet sealed in front of him, redeemed later
   or lost); skipping meals (energy); Kathir's ₹5,000 kept, by walking away.
 - **Never game over** (GAME_RULES §1): what isn't paid stays owed and comes back as a person, a cut, a loss.
+- **How the ways out play (built):** Bala is in his contacts from the first bill: tap him and the phone rings out;
+  he lends ₹5,000 the first time, ₹3,000 a week later, and nothing in the same week, and leaves it with Amma (the
+  frozen account). When there's more than ₹5,000 owed and under ₹500 in his wallet, E by Amma is "tell Amma what's
+  owed": she puts her chain in his hands and the co-op bank is pinned; at its counter the jewel-loan form is signed
+  (₹50,000, ₹500 a month, six months, then the auction notice and it's gone). Three missed instalments: the scooter's
+  taken and Bala's old bike is left for him (the story's scooter steps use it too); paying the dues + ₹3,000 to Amma
+  brings the scooter back. Bills are paid to Amma by E in free play; during the story's own home steps they wait.
 
 ## Structure (updated 2026-10-11: the story is the spine)
 

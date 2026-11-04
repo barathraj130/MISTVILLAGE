@@ -18,6 +18,7 @@ signal call_answered
 signal opened_app(app: String)
 signal rider_answer(accepted: bool)            # the delivery app: an order taken (or turned down)
 signal otp_done                                # the delivery app: the customer's code typed in right
+signal dialled(contact: Dictionary)            # a call he made (a contact tapped): it rings out, then they speak
 
 const W := 300.0
 const H := 560.0
@@ -47,6 +48,8 @@ var recording := false
 var taken := false                             # handed over (at the station): P finds an empty pocket
 var unread := 0
 var ringing := {}                              # an incoming call: {"from": {en, ta}}
+var calling := {}                              # a call going out: the contact, until it's picked up
+var _call_t := 0.0
 var rider := {}                                # the delivery app's screen: {"mode": offer | job | otp, "app", "lines", "code",
                                                #  "typed", "decline": label of the turn-down button}
 var _rec: Array = []
@@ -258,6 +261,13 @@ func _process(dt: float) -> void:
 		rider["wrong"] = maxf(float(rider["wrong"]) - dt * 2.0, 0.0)
 	if recording:
 		_rec_t += dt
+	if not calling.is_empty():                     # it rings at their end; then they pick up (the talk is theirs)
+		_call_t -= dt
+		if _call_t <= 0.0:
+			var c := calling
+			calling = {}
+			hold(false)
+			dialled.emit(c)
 	var p := Input.is_key_pressed(KEY_P)
 	if p and not _p_down and not _blocked() and not taken:
 		if app == "camera" and is_open:
@@ -338,6 +348,11 @@ func _gui_input(e: InputEvent) -> void:
 					if _row(i).has_point(q):
 						_view = i
 						messages[i]["read"] = true
+		"contacts":
+			for i in mini(contacts.size(), 6):
+				if _row(i, 70.0).has_point(q):
+					calling = contacts[i]
+					_call_t = 2.5
 		"photos":
 			if _view < 0:
 				for i in mini(photos.size(), 8):
@@ -505,6 +520,13 @@ func _draw() -> void:
 	draw_rect(_back_rect(), Color(0.2, 0.2, 0.23))
 	if not ringing.is_empty():
 		_draw_call(s)
+		return
+	if not calling.is_empty():
+		draw_rect(s, Color(0.1, 0.13, 0.2))
+		var cc := s.get_center() + Vector2(0, -80)
+		draw_circle(cc, 46.0, Color(0.55, 0.57, 0.62))
+		_text(Vector2(s.position.x, cc.y + 90.0), t_(calling["name"]), 22, FG, s.size.x, HORIZONTAL_ALIGNMENT_CENTER)
+		_text(Vector2(s.position.x, cc.y + 120.0), L("Calling…", "அழைக்கிறது…"), 15, DIM, s.size.x, HORIZONTAL_ALIGNMENT_CENTER)
 		return
 	match app:
 		"":

@@ -43,6 +43,7 @@ var _e_down := false
 var _label: Label
 var _home := Vector2(INF, INF)       # where Karthik's house stands (the story's "home" place)
 var _police := Vector2(INF, INF)     # Nagar Police Station (the story's "police" place): its building is the station
+var _bank := Vector2(INF, INF)       # Kovai Nagar Co-op Bank (the story's "bank"): its building is the bank's hall
 
 
 func _ready() -> void:
@@ -55,6 +56,10 @@ func _ready() -> void:
 		var pl = (JSON.parse_string(f.get_as_text()) as Dictionary).get("places", {}).get("police", {})
 		if pl is Dictionary and pl.has("x"):
 			_police = Vector2(float(pl["x"]), float(pl["z"]))
+		f.seek(0)
+		var bk = (JSON.parse_string(f.get_as_text()) as Dictionary).get("places", {}).get("bank", {})
+		if bk is Dictionary and bk.has("x"):
+			_bank = Vector2(float(bk["x"]), float(bk["z"]))
 	for a in OS.get_cmdline_user_args():                # (testing: --doortest=N walks into N buildings near the start,
 		if a.begins_with("--soundtest="):              # (testing: every room sound written as WAVs into the folder)
 			RoomSound.save_all(a.get_slice("=", 1))
@@ -175,7 +180,8 @@ func door_near(p: Vector3) -> Dictionary:
 							nrm = -nrm
 						bd = d
 						best = {"pos": Vector3(q.x, p.y, q.y), "out": Vector3(nrm.x, 0, nrm.y),
-							"room": "home" if centre.distance_to(_home) < 10.0 else ("police" if centre.distance_to(_police) < 25.0 else _room_for(b, s)),
+							"room": "home" if centre.distance_to(_home) < 10.0 else ("police" if centre.distance_to(_police) < 25.0 else
+								("coopbank" if centre.distance_to(_bank) < 25.0 else _room_for(b, s))),
 							"key": "%d,%d" % [roundi(centre.x), roundi(centre.y)]}
 	return best
 

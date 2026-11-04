@@ -10,9 +10,21 @@ extends Node
 ##   unpaid   nothing is taken that he doesn't have; the bill stays owed and comes back each morning as a person:
 ##            the owner at the door, a red slip on the meter, the finance company's calls (three missed instalments:
 ##            the scooter is taken), Divya kept out of her exam.
+##   ways out each one costs something:
+##            Bala   call him (his phone's contacts): he lends without being asked twice, ₹5,000, then ₹3,000 a week
+##                   later, then nothing this week; it can't go to a frozen account, so he leaves it with Amma.
+##                   What's owed to him is kept (Act 5).
+##            the chain  at home, tell Amma what's owed: she takes her gold chain off herself. At the co-op bank's
+##                   counter it's pledged (a jewel loan, the appraiser's form signed): ₹50,000 in his hand, ₹500 a
+##                   month interest, and six months to bring the ₹50,000 back or it goes to auction.
+##            the bike   when the scooter's taken, Bala's old motorbike is left for him; the scooter comes back when
+##                   everything owed on it and ₹3,000 more are paid (to Amma, who takes it to the finance company).
 ## Saved in the save file's "accounts" (fines._save_data), beside bail's ("money" there is the wallet itself).
 
 const Actor := preload("res://scripts/story/actor.gd")
+const Tasks := preload("res://scripts/story/tasks.gd")
+const BALA := {"id": "bala", "name": {"en": "Bala", "ta": "பாலா"}, "number": "94433 •••••",
+	"where": {"en": "Bala's workshop, Ganapathy", "ta": "பாலா வொர்க்ஷாப், கணபதி"}}
 
 var city
 var frozen := false
@@ -21,6 +33,12 @@ var amma_holds := 0                          # the app's pay, in Amma's account,
 var bills: Array = []                        # [{"id", "label": {en, ta}, "amount", "paid", "due" (day), "kind":
                                              #   rent | power | emi | fees | other, "stage": 0.., "missed": 0}]
 var seized := false                          # the scooter, taken for three missed instalments
+var owes_bala := 0                           # lent by Bala (never asked back; Act 5 remembers)
+var bala_loans: Array = []                   # the days he lent
+var bala_left := 0                           # Bala's money, left with Amma, to be handed over
+var chain := ""                              # Amma's gold chain: "" at home | with_him | pledged | redeemed
+var _bike_due := false                       # the scooter's gone: Bala's bike, when he's next on foot
+var _tasks: Control
 var _reminded := {}
 var _morning := -1
 var _amma: Node3D                            # Amma at home in free play
@@ -34,6 +52,19 @@ func _ready() -> void:
 	amma_holds = int(sd.get("amma_holds", 0))
 	bills = sd.get("bills", [])
 	seized = bool(sd.get("seized", false))
+	owes_bala = int(sd.get("owes_bala", 0))
+	bala_loans = sd.get("bala_loans", [])
+	bala_left = int(sd.get("bala_left", 0))
+	chain = str(sd.get("chain", ""))
+	var layer := CanvasLayer.new()
+	layer.layer = 21
+	add_child(layer)
+	_tasks = Tasks.new()
+	_tasks.visible = false
+	_tasks.finished.connect(_pledged)
+	layer.add_child(_tasks)
+	if city.phone:
+		city.phone.dialled.connect(_dialled)
 	for arg in OS.get_cmdline_user_args():
 		if arg.begins_with("--moneytest="):
 			_test.call_deferred(arg.get_slice("=", 1))
@@ -41,7 +72,7 @@ func _ready() -> void:
 
 func _save() -> void:
 	city.fines._save_data["accounts"] = {"frozen": frozen, "bank": bank, "amma_holds": amma_holds, "bills": bills,
-		"seized": seized}
+		"seized": seized, "owes_bala": owes_bala, "bala_loans": bala_loans, "bala_left": bala_left, "chain": chain}
 
 
 func _day() -> int:
@@ -93,6 +124,8 @@ func add_bill(b: Dictionary) -> void:
 	var bill := {"id": str(b["id"]), "label": b["label"], "amount": int(b["amount"]), "paid": 0,
 		"due": _day() + int(b.get("in_days", 7)), "kind": str(b.get("kind", "other")), "stage": 0, "missed": 0}
 	bills.append(bill)
+	if not city.phone.contacts.any(func(c): return str(c.get("id", "")) == "bala"):
+		city.phone.add_contact(BALA)
 	if b.has("text"):
 		city.phone.message(b.get("from", {"en": "Amma", "ta": "அம்மா"}), b["text"])
 	_save()
@@ -130,6 +163,16 @@ func pay_online(amount: int, to: String) -> bool:
 
 ## At home with Amma: what the app paid into her account, counted into his hand.
 func handover() -> bool:
+	if bala_left > 0:                                # Bala's, first: he came by
+		var bl := bala_left
+		bala_left = 0
+		city.fines.sim.money += bl
+		city.hud.say("Amma", ("Bala came. He left this, %s. He said don't argue with him." if _lang() == "en" else
+			"பாலா வந்தான். இத விட்டுட்டு போனான், %s. அவன் கிட்ட சண்டை போடாதேன்னு சொன்னான்.") % _money(bl), 4.5)
+		_save()
+		if amma_holds > 0:
+			get_tree().create_timer(4.8).timeout.connect(handover)
+		return true
 	if amma_holds <= 0:
 		return false
 	var amt := amma_holds
@@ -149,6 +192,12 @@ func _process(_dt: float) -> void:
 	if city == null or city.fines == null:
 		return
 	_amma_at_home()
+	if _bike_due and city.walker != null:            # (gone while he was away from it: Bala's old bike there instead)
+		_bike_due = false
+		city.car.configure("bike" if seized else "karthik_scooter")
+		if seized:
+			city.phone.message({"en": "Bala", "ta": "பாலா"}, {"en": "Heard about the scooter. Take my old bike, da. It pulls left a bit. Don't argue.",
+				"ta": "ஸ்கூட்டர் பத்தி கேள்விப்பட்டேன். என் பழைய பைக்க எடுத்துக்கோ டா. கொஞ்சம் இடது பக்கம் இழுக்கும். சண்டை போடாத."})
 	var d := _day()
 	var m := _min()
 	if m >= 9.0 * 60.0 and _morning != d:            # each morning, what's owed comes back
@@ -202,9 +251,24 @@ func _overdue(b: Dictionary, late: int) -> void:
 						"ta": "தவணை %s நிலுவை (%d தவறியது). மீட்பு நடவடிக்கையை தவிர்க்க உடனே செலுத்தவும்." % [_money(int(b["amount"])), missed]})
 				elif not seized:
 					seized = true
+					_bike_due = true
+					add_bill({"id": "redeem", "kind": "redeem", "amount": missed * int(b["amount"]) + 3000, "in_days": 30,
+						"label": {"en": "the scooter back", "ta": "ஸ்கூட்டர் திரும்ப"}})
 					city.phone.message({"en": "Kongu Two-Wheeler Finance", "ta": "கொங்கு டூ-வீலர் ஃபைனான்ஸ்"},
 						{"en": "Three instalments missed. Your vehicle TN 38 has been taken into recovery. Pay all dues + ₹3,000 to release.",
 						"ta": "மூணு தவணை தவறியது. உங்கள் வாகனம் TN 38 மீட்பு செய்யப்பட்டது. எல்லா நிலுவை + ₹3,000 கட்டி திரும்ப பெறவும்."})
+		"chain":
+			if stage < 1 and late >= 1 and chain == "pledged":
+				b["stage"] = 1
+				city.phone.message({"en": "Kovai Nagar Co-op Bank", "ta": "கோவை நகர் கூட்டுறவு வங்கி"},
+					{"en": "Jewel loan JL-2291 is past its term. Redeem within 15 days or the pledge goes to public auction.",
+					"ta": "நகைக்கடன் JL-2291 காலம் முடிந்தது. 15 நாளில் மீட்கவும், இல்லையெனில் பொது ஏலம்."})
+			elif stage < 2 and late >= 15 and chain == "pledged":
+				b["stage"] = 2
+				chain = "lost"
+				b["paid"] = b["amount"]
+				city.phone.message({"en": "Amma", "ta": "அம்மா"}, {"en": "The bank's letter came. It's gone. It's only gold, kanna. Eat something.",
+					"ta": "வங்கி லெட்டர் வந்துச்சு. போயிடுச்சு. வெறும் தங்கம் தான் கண்ணா. ஏதாவது சாப்பிடு."})
 		"fees":
 			if stage < 1 and late >= 0:
 				b["stage"] = 1
@@ -215,18 +279,38 @@ func _overdue(b: Dictionary, late: int) -> void:
 # ---- paying, at home, to Amma ----
 ## E near Amma at home: the first bill still owed, to hold money out for.
 func offer(room_name: String, room: Node3D, p: Vector3) -> String:
+	if room_name == "coopbank" and room != null and chain == "with_him" and not _tasks.visible:
+		var cm := room.find_child("Mark_clerk", true, false) as Node3D
+		if cm and Vector2(cm.global_position.x - p.x, cm.global_position.z - p.z).length() < 2.4:
+			return "pledge Amma's chain (a jewel loan)" if _lang() == "en" else "அம்மா செயின அடகு வைங்க (நகைக்கடன்)"
+		return ""
 	if room_name != "home" or room == null or _paying != "" or _amma == null:
 		return ""
 	if Vector2(_amma.global_position.x - p.x, _amma.global_position.z - p.z).length() > 2.2:
 		return ""
+	var total := 0
+	for b in bills:
+		total += maxi(int(b["amount"]) - int(b["paid"]), 0)
+	if chain == "" and total > 5000 and city.fines.sim.money < 500:   # owed, and nothing left to give: say so
+		return "tell Amma what's owed (%s)" % _money(total) if _lang() == "en" else "எவ்வளவு நிலுவைன்னு அம்மா கிட்ட சொல்லுங்க (%s)" % _money(total)
 	for b in bills:
 		var left: int = int(b["amount"]) - int(b["paid"])
-		if left > 0:
+		if left > 0 and city.fines.sim.money > 0:
 			return ("give Amma money for %s (%s owed)" if _lang() == "en" else "%s-க்கு அம்மா கிட்ட காசு குடுங்க (%s நிலுவை)") % [_t(b["label"]), _money(left)]
 	return ""
 
 
 func go() -> void:
+	var doors = city.doors
+	if doors and str(doors.inside.get("room", "")) == "coopbank":
+		_pledge()
+		return
+	var total := 0
+	for b in bills:
+		total += maxi(int(b["amount"]) - int(b["paid"]), 0)
+	if chain == "" and total > 5000 and city.fines.sim.money < 500:
+		_the_chain()
+		return
 	for b in bills:
 		if int(b["amount"]) - int(b["paid"]) > 0:
 			_paying = str(b["id"])
@@ -249,6 +333,7 @@ func _note(amount: int) -> void:
 			b["paid"] = int(b["paid"]) + give
 			if int(b["paid"]) >= int(b["amount"]):
 				city.hud.say("Amma", ("That's %s. I'll pay it tomorrow morning." if _lang() == "en" else "%s ஆயிடுச்சு. நாளைக்கு காலையில கட்டிடறேன்.") % _t(b["label"]), 4.0)
+				_paid_off(b)
 				_done()
 			elif city.fines.sim.money > 0:
 				city.hands.give({"id": "wallet", "kind": "wallet", "title": {"en": "Wallet", "ta": "பர்ஸ்"}})
@@ -336,6 +421,50 @@ func _test(dir: String) -> void:
 	print("MONEYTEST rent owed %d, wallet %d" % [owed("rent"), sim.money])
 	city.hands.put_back()
 	_done()
+	_dialled(BALA)                                    # Bala, on the phone
+	await tree.create_timer(10.0).timeout
+	handover()
+	print("MONEYTEST after Bala: wallet %d, owed to Bala %d" % [sim.money, owes_bala])
+	city.hands.put_back()
+	_done()
+	sim.money = 300                                   # (spent: nothing left to give her)
+	print("MONEYTEST offer: '%s'" % offer("home", city.doors._room, w.global_position))
+	go()                                              # tell Amma: the chain
+	await tree.create_timer(1.0).timeout
+	await _shot(dir, "money_4_chain")
+	print("MONEYTEST chain: %s" % chain)
+	city.doors.leave(w)
+	await tree.create_timer(1.0).timeout
+	var bp: Vector2 = city.doors._bank
+	var bd := {}
+	for r in [6.0, 10.0, 14.0, 18.0, 24.0, 30.0]:
+		for k in 12:
+			var a2 := TAU * k / 12.0
+			w.global_position = Vector3(bp.x + cos(a2) * r, w.global_position.y + 30.0, bp.y + sin(a2) * r)
+			w.velocity = Vector3.ZERO
+			await tree.create_timer(0.6).timeout
+			var dd: Dictionary = city.doors.door_near(w.global_position)
+			if not dd.is_empty() and str(dd.get("room", "")) == "coopbank":
+				bd = dd
+				break
+		if not bd.is_empty():
+			break
+	print("MONEYTEST bank door: %s" % str(bd))
+	if not bd.is_empty():
+		city.doors.enter(bd, w)
+		await tree.create_timer(2.5).timeout
+		var cm := city.doors._room.find_child("Mark_clerk", true, false) as Node3D
+		w.global_position = cm.global_position - cm.global_basis.z * 1.3 + Vector3.UP * 0.2
+		await tree.create_timer(1.0).timeout
+		print("MONEYTEST bank offer: '%s'" % offer("coopbank", city.doors._room, w.global_position))
+		go()
+		_tasks.skip = true                            # (after start(), which resets it)
+		await tree.create_timer(0.8).timeout
+		await _shot(dir, "money_5_pledge")
+		await tree.create_timer(4.0).timeout
+		print("MONEYTEST pledged: chain %s, wallet %d" % [chain, sim.money])
+		city.doors.leave(w)
+		await tree.create_timer(1.0).timeout
 	for k in 4:                                       # four mornings unpaid, then two weeks more
 		sim.day += 1
 		sim.minute = 9.0 * 60.0 + 5.0
@@ -350,9 +479,100 @@ func _test(dir: String) -> void:
 		sim.minute = 9.0 * 60.0 + 5.0
 		await tree.create_timer(0.3).timeout
 	print("MONEYTEST after: rent stage %d, emi missed %d, seized %s" % [bills[0]["stage"], bills[1]["missed"], seized])
+	await tree.create_timer(0.5).timeout
+	print("MONEYTEST vehicle while seized: %s" % city.car.vehicle)
+	_paying = "redeem"
+	sim.money += 20000
+	_note(20000)
+	await tree.create_timer(0.5).timeout
+	print("MONEYTEST redeemed: seized %s, vehicle %s, redeem owed %d" % [seized, city.car.vehicle, owed("redeem")])
 	tree.quit()
 
 
 func _shot(dir: String, name: String) -> void:
 	await RenderingServer.frame_post_draw
 	get_viewport().get_texture().get_image().save_jpg("%s/%s.jpg" % [dir, name], 0.85)
+
+
+# ---- the ways out ----
+## A bill paid off: what it ends (the scooter back; the chain home again).
+func _paid_off(b: Dictionary) -> void:
+	match str(b["kind"]):
+		"redeem":
+			seized = false
+			for o in bills:
+				if str(o["kind"]) == "emi":
+					o["paid"] = o["amount"]
+			_bike_due = true
+			city.phone.message({"en": "Kongu Two-Wheeler Finance", "ta": "கொங்கு டூ-வீலர் ஃபைனான்ஸ்"},
+				{"en": "Dues received. Vehicle TN 38 released. Collect from the yard, Avinashi Road.",
+				"ta": "நிலுவை பெறப்பட்டது. வாகனம் TN 38 விடுவிக்கப்பட்டது. அவிநாசி ரோடு யார்டில் பெற்றுக்கொள்ளவும்."})
+		"chain":
+			chain = "redeemed"
+			city.hud.say("Amma", "(She puts it on without a word, and touches it once.)" if _lang() == "en" else "(ஒண்ணும் பேசாம போட்டுக்கறாங்க, ஒரு தடவ தொட்டுப் பாக்கறாங்க.)", 4.0)
+	_save()
+
+
+## He tells Amma what's owed; she takes her chain off herself.
+func _the_chain() -> void:
+	chain = "with_him"
+	city.hud.say("Amma", ("(She listens. Then she takes off her chain and puts it in his hand.) The co-op bank gives on jewels. Go before it closes." if _lang() == "en" else
+		"(கேக்கறாங்க. அப்புறம் தன் செயின கழட்டி அவன் கையில வைக்கறாங்க.) கூட்டுறவு வங்கில நகைக்கு குடுப்பாங்க. மூடறதுக்கு முன்னாடி போ."), 6.0)
+	if city.hands:                                   # (in his hands: he looks at it, then it goes in his pocket)
+		city.hands.give({"id": "chain", "kind": "note", "title": {"en": "Amma's chain", "ta": "அம்மா செயின்"},
+			"body": {"en": "Her gold chain, still warm. Six grams, she said. She has worn it since Appa.", "ta": "அவங்க தங்க செயின், இன்னும் சூடா. ஆறு கிராம்னு சொன்னாங்க. அப்பா காலத்துல இருந்து போட்டிருக்காங்க."}})
+	city.phone.pin("bank", {"en": "Kovai Nagar Co-op Bank: jewel loans", "ta": "கோவை நகர் கூட்டுறவு வங்கி: நகைக்கடன்"})
+	_save()
+
+
+## At the bank's counter: the appraiser's form, signed.
+func _pledge() -> void:
+	_tasks.start("sign", {"header": {"en": "Kovai Nagar Co-operative Bank", "ta": "கோவை நகர் கூட்டுறவு வங்கி"},
+		"form": {"en": "JEWEL LOAN: APPRAISAL AND PLEDGE", "ta": "நகைக்கடன்: மதிப்பீடு மற்றும் அடமானம்"},
+		"fields": [[{"en": "Item", "ta": "பொருள்"}, {"en": "Gold chain, 22 ct", "ta": "தங்க செயின், 22 கேரட்"}],
+			[{"en": "Net weight", "ta": "நிகர எடை"}, "6.1 g"], [{"en": "Loan", "ta": "கடன்"}, "₹50,000"],
+			[{"en": "Interest", "ta": "வட்டி"}, {"en": "12% a year, ₹500 a month", "ta": "ஆண்டுக்கு 12%, மாதம் ₹500"}],
+			[{"en": "Redeem by", "ta": "மீட்க கடைசி"}, {"en": "six months", "ta": "ஆறு மாதம்"}]],
+		"sign_label": {"en": "Signature of the pledger", "ta": "அடமானம் வைப்பவர் கையொப்பம்"},
+		"seal": {"en": "BANK SEAL", "ta": "வங்கி முத்திரை"}}, _lang())
+
+
+func _pledged(_r: Dictionary) -> void:
+	chain = "pledged"
+	if city.hands:
+		city.hands.take("chain")
+	city.fines.sim.money += 50000
+	city.hud.say("Clerk", "Fifty thousand. Count it here, sir, in front of me. The packet stays sealed till you come back." if _lang() == "en" else
+		"ஐம்பதாயிரம். இங்கயே என் முன்னாடி எண்ணுங்க சார். நீங்க திரும்ப வர்ற வரைக்கும் பாக்கெட் சீல்ல இருக்கும்.", 5.0)
+	add_bill({"id": "chain_interest", "kind": "other", "amount": 500, "in_days": 30, "label": {"en": "the chain's interest", "ta": "செயின் வட்டி"}})
+	add_bill({"id": "chain", "kind": "chain", "amount": 50000, "in_days": 180, "label": {"en": "Amma's chain back", "ta": "அம்மா செயின் திரும்ப"}})
+	if city.walker and city.walker.active:
+		Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
+	_save()
+
+
+## A call he made: Bala picks up.
+func _dialled(c: Dictionary) -> void:
+	if str(c.get("id", "")) != "bala":
+		return
+	var d := _day()
+	var amt := 5000 if bala_loans.is_empty() else (3000 if d - int(bala_loans[-1]) >= 7 else 0)
+	var lines: Array
+	if amt == 5000:
+		lines = [["Bala", "Da! ...How much? ...Don't say sorry to me.", "டா! ...எவ்வளவு? ...என் கிட்ட சாரி சொல்லாத."],
+			["Bala", "Your account's frozen, no? I'll give it to Amma tonight. Five thousand. Pay me when this is over. Not before.",
+				"உன் அக்கவுண்ட் முடக்கம் தானே? ராத்திரி அம்மா கிட்ட குடுக்கறேன். அஞ்சாயிரம். இது முடிஞ்சப்புறம் குடு. அதுக்கு முன்னாடி இல்ல."]]
+	elif amt > 0:
+		lines = [["Bala", "Three. That's what I have this week, da. Amma will get it.", "மூணு. இந்த வாரம் என் கிட்ட இருக்கறது அவ்வளவு தான் டா. அம்மா கிட்ட குடுக்கறேன்."]]
+	else:
+		lines = [["Bala", "Da... this week I have nothing. The workshop's rent. Next week, da. Sorry.", "டா... இந்த வாரம் ஒண்ணும் இல்ல. வொர்க்ஷாப் வாடகை. அடுத்த வாரம் டா. சாரி."]]
+	var t := 0.0
+	for ln in lines:
+		get_tree().create_timer(t).timeout.connect(city.hud.say.bind(ln[0], ln[1] if _lang() == "en" else ln[2], 4.5))
+		t += 4.8
+	if amt > 0:
+		bala_loans.append(d)
+		owes_bala += amt
+		bala_left += amt
+	print("MONEY Bala lends %d (owed to him %d)" % [amt, owes_bala])
+	_save()
