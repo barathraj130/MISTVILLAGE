@@ -119,7 +119,9 @@
    "ta": "வார்டர்",
    "colour": "#c8b890",
    "model": "crowd_m2",
-   "hair": "#141110"
+   "hair": "#141110",
+   "top": "#8e7343",
+   "pants": "#7d6540"
   },
   "rasu": {
    "en": "Rasu",

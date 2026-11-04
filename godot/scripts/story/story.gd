@@ -113,6 +113,8 @@ var _visit := 0                       # home: which visit of the house is next
 var _in_task := false                 # home / eat_out: a task is open
 var _ring: MeshInstance3D             # home: the marker on the floor where to go
 var _climb := 0                       # climb: 0 walking up, 1 the power's gone, 3 at the top
+var _f_down := false                  # (F held: Amma's money, once per press)
+var _paid_test := false
 var _climbing := false                # (on foot in a climb's room, until the story leaves it)
 var _torch: SpotLight3D
 var _sfx: AudioStreamPlayer
@@ -668,6 +670,10 @@ func _cast(spec: Dictionary) -> void:
 			var hair_hex: String = str(data["people"].get(key, {}).get("hair", ""))
 			a.setup(str(d.get("model", data["people"].get(key, {}).get("model", "person_man_shirt"))), key,
 				Callable(city.streamer, "height_at"), Color.html(hair_hex) if hair_hex != "" else Color(0, 0, 0, 0))
+			for part in ["top", "pants"]:                # (a uniform on a crowd model: the warder's khaki)
+				var hex: String = str(data["people"].get(key, {}).get(part, ""))
+				if hex != "":
+					a.tint_cloth(part, Color.html(hex))
 			cast[key] = a
 		var act: Node3D = cast[key]
 		act.visible = true
@@ -1324,6 +1330,25 @@ func _home() -> void:
 		_start_visit(v)
 		return
 	var e := Input.is_key_pressed(KEY_E)
+	var pay := ""                                        # (Amma here: F gives her money for what's owed, as in free play)
+	if city.money and str(cur.get("room", "")) == "home" and cast.has("amma") and (cast["amma"] as Node3D).visible:
+		city.money.story_amma = cast["amma"]
+		if _skip and not _paid_test and "--storypay" in OS.get_cmdline_user_args():   # (testing: beside her first)
+			var am: Node3D = cast["amma"]
+			city.walker.global_position = am.global_position - am.global_basis.z * 1.0
+			print("STORY pay test: bills %d, wallet %d" % [city.money.bills.size(), fines.sim.money])
+		pay = city.money.offer("home", room, city.walker.global_position)
+		var f := Input.is_key_pressed(KEY_F)
+		if pay != "" and f and not _f_down:
+			city.money.go()
+		elif pay != "" and _skip and not _paid_test and "--storypay" in OS.get_cmdline_user_args():   # (testing: ₹500 to her once)
+			_paid_test = true
+			print("STORY pay: '%s', wallet %d" % [pay, fines.sim.money])
+			city.money.go()
+			city.money._note(500)
+			city.hands.put_back()
+			print("STORY paid: wallet %d, %s" % [fines.sim.money, str(city.money.bills.map(func(b): return "%s %d/%d" % [b["id"], b["paid"], b["amount"]]))])
+		_f_down = f
 	if _skip and v.get("home_meal", false) and _peek == -1 and t_step > 0.2:   # (testing: walk him up to the meal)
 		_peek = _visit
 		var from: Vector3 = city.walker.global_position
@@ -1346,7 +1371,7 @@ func _home() -> void:
 	_e_down = e
 	_note_t -= get_process_delta_time()
 	goal.text = tr_(v.get("goal", "")) + ("\n" + ("E: " if lang == "en" else "E: ") + tr_(v.get("prompt", {"en": "go", "ta": "போ"})) if near else "") \
-		+ ("\n" + _note if _note_t > 0.0 else "")
+		+ ("\n" + _note if _note_t > 0.0 else "") + ("\nF: " + pay if pay != "" else "")
 
 
 func _start_visit(v: Dictionary) -> void:
@@ -1361,6 +1386,8 @@ func _start_visit(v: Dictionary) -> void:
 		fines.sim.groceries += fines.sim.GROCERY_MEALS
 		_note = ("Groceries finished: this month's bought  −₹%d" if lang == "en" else "மளிகை தீர்ந்துச்சு: இந்த மாச மளிகை  −₹%d") % fines.sim.GROCERY_COST
 		_note_t = 6.0
+	if str(v.get("task", "")) == "sign" and city.bail and fines and fines.sim.minute < city.bail.WINDOW:
+		await _bench_till_six()                          # (before six the register isn't open: the bench first)
 	if fines:
 		spec["wallet"] = fines.sim.money
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
@@ -1406,6 +1433,33 @@ func _box_at_top(on: bool) -> void:
 	box.anchor_bottom = 0.0 if on else 1.0
 	box.offset_top = 20.0 if on else -200.0
 	box.offset_bottom = 150.0 if on else -40.0
+
+
+## Early at the station: Selvi sends him to the visitors' bench on the left wall, and he sits there till six
+## (W gets him up; she says it again when he comes back).
+func _bench_till_six() -> void:
+	city.hud.say("Constable Selvi" if lang == "en" else "கான்ஸ்டபிள் செல்வி",
+		"Six to seven, Karthik. Sit on the bench till six." if lang == "en" else "ஆறு மணியிலிருந்து ஏழு வரைக்கும், கார்த்திக். ஆறு மணி வரைக்கும் பெஞ்சுல உக்காரு.", 4.0)
+	var c := _mark("constable")
+	var seat: Node3D = null
+	if c:
+		seat = Node3D.new()                              # (the bench has no mark: 3.55 m left of her chair, 1.55 m nearer the door)
+		c.get_parent().add_child(seat)
+		seat.position = c.position + Vector3(-3.55, 0.0, 1.55)
+		seat.rotation.y = PI / 2.0                       # facing into the room
+	print("STORY early at the register (%s): on the bench till six" % city.phone._now())
+	if city.life.busy:                                   # (already sitting or sleeping: the minutes just go by)
+		fines.sim.minute = city.bail.WINDOW + 1.0
+	else:
+		if _skip:
+			get_tree().create_timer(1.0).timeout.connect(_shot)   # (testing: the view from the bench)
+		await city.life.sit_wait(seat, city.bail.WINDOW + 1.0, "Sit")
+	if seat:
+		seat.queue_free()
+	if fines.sim.minute < city.bail.WINDOW:              # (he got up early)
+		city.hud.say("Constable Selvi" if lang == "en" else "கான்ஸ்டபிள் செல்வி",
+			"Not yet. Six." if lang == "en" else "இன்னும் இல்ல. ஆறு மணி.", 3.0)
+		await _bench_till_six()
 
 
 ## A visit without a picture task: what he does when he gets there.

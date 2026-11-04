@@ -42,6 +42,7 @@ var _tasks: Control
 var _reminded := {}
 var _morning := -1
 var _amma: Node3D                            # Amma at home in free play
+var story_amma: Node3D                # (Amma in one of the story's own scenes at home: story.gd sets her, F there)
 var _paying := ""                            # the bill whose money he's holding out to her
 
 
@@ -284,9 +285,10 @@ func offer(room_name: String, room: Node3D, p: Vector3) -> String:
 		if cm and Vector2(cm.global_position.x - p.x, cm.global_position.z - p.z).length() < 2.4:
 			return "pledge Amma's chain (a jewel loan)" if _lang() == "en" else "அம்மா செயின அடகு வைங்க (நகைக்கடன்)"
 		return ""
-	if room_name != "home" or room == null or _paying != "" or _amma == null:
+	var am: Node3D = _amma if _amma != null else story_amma
+	if room_name != "home" or room == null or _paying != "" or am == null or not is_instance_valid(am):
 		return ""
-	if Vector2(_amma.global_position.x - p.x, _amma.global_position.z - p.z).length() > 2.2:
+	if Vector2(am.global_position.x - p.x, am.global_position.z - p.z).length() > 2.2:
 		return ""
 	var total := 0
 	for b in bills:

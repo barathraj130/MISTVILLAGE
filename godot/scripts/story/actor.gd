@@ -42,6 +42,19 @@ func setup(person: String, key: String, height_fn: Callable, hair := Color(0, 0,
 	play("Idle")
 
 
+## A garment's colour, the same way (the people's "top"/"pants" in the chapter: the warder's khaki on a crowd
+## model's shirt and trousers): the material whose name starts with "Top "/"Pants " multiplies its texture.
+func tint_cloth(part: String, c: Color) -> void:
+	for mi in model.find_children("*", "MeshInstance3D", true, false) if model else []:
+		var m3 := mi as MeshInstance3D
+		for i in m3.mesh.get_surface_count():
+			var mat := m3.get_active_material(i)
+			if mat is BaseMaterial3D and mat.resource_name.to_lower().begins_with(part + " "):
+				var dup := (mat as BaseMaterial3D).duplicate() as BaseMaterial3D
+				dup.albedo_color = c
+				m3.set_surface_override_material(i, dup)
+
+
 ## The hair's colour (the exported hair texture is a light brown; Blender's tint doesn't survive the export): the
 ## hair material's albedo multiplies its texture.
 func _tint_hair(c: Color) -> void:
