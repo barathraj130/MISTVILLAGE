@@ -224,6 +224,22 @@
    "z": 1469.0,
    "en": "Sekar's tea shop, Thondamuthur road",
    "ta": "சேகர் டீக்கடை, தொண்டாமுத்தூர் ரோடு"
+  },
+  "pudhur_vayal": {
+   "lat": 11.00688,
+   "lon": 76.86007,
+   "x": -11765.9,
+   "z": 1338.6,
+   "en": "Pudhur Vayal, off the Thondamuthur road",
+   "ta": "புதூர் வயல், தொண்டாமுத்தூர் ரோடு"
+  },
+  "perur_temple": {
+   "lat": 10.9757,
+   "lon": 76.9135,
+   "x": -5904.7,
+   "z": 4751.2,
+   "en": "Perur Pateeswarar temple",
+   "ta": "பேரூர் பட்டீஸ்வரர் கோயில்"
   }
  },
  "people": {
@@ -327,6 +343,51 @@
    "colour": "#f0b070",
    "model": "crowd_m6",
    "hair": "#1a1714"
+  },
+  "bala": {
+   "en": "Bala",
+   "ta": "பாலா",
+   "colour": "#ffcf6f",
+   "model": "crowd_m5",
+   "hair": "#0f0c0a"
+  },
+  "ponnusamy": {
+   "en": "Ponnusamy",
+   "ta": "பொன்னுசாமி",
+   "colour": "#d8d0b0",
+   "model": "crowd_m3",
+   "hair": "#c8c4bc",
+   "top": "#e8e4d8"
+  },
+  "farmer1": {
+   "en": "A farmer",
+   "ta": "ஒரு விவசாயி",
+   "colour": "#c8c098",
+   "model": "crowd_m4",
+   "hair": "#1a1714",
+   "top": "#8a9a70"
+  },
+  "farmer2": {
+   "en": "Another farmer",
+   "ta": "இன்னொரு விவசாயி",
+   "colour": "#b8b088",
+   "model": "crowd_m2",
+   "hair": "#2a2622",
+   "top": "#d8d2c0"
+  },
+  "meenakshi": {
+   "en": "Meenakshi amma",
+   "ta": "மீனாட்சி அம்மா",
+   "colour": "#e0d0f0",
+   "model": "crowd_w1",
+   "hair": "#6a655e"
+  },
+  "priya": {
+   "en": "Dr. Priya",
+   "ta": "டாக்டர் பிரியா",
+   "colour": "#ff9f9f",
+   "model": "crowd_w2",
+   "hair": "#0e0b09"
   }
  },
  "spawn": "home",
@@ -4806,6 +4867,1186 @@
      "goal": {
       "en": "Your wall: the road west, and the cap",
       "ta": "உங்க சுவர்: மேற்கு ரோடு, தொப்பி"
+     },
+     "prompt": {
+      "en": "the wall",
+      "ta": "சுவர்"
+     }
+    },
+    {
+     "to": "karthik_room",
+     "sleep_until": "07:00",
+     "goal": {
+      "en": "Sleep",
+      "ta": "தூங்குங்க"
+     },
+     "prompt": {
+      "en": "lie down",
+      "ta": "படுங்க"
+     }
+    }
+   ]
+  },
+  {
+   "do": "home",
+   "room": "home",
+   "at": "home",
+   "start": "here",
+   "knock": 3.0,
+   "cast": {
+    "amma": {
+     "mark": "amma_kitchen"
+    },
+    "bala": {
+     "mark": "door",
+     "anim": "Idle",
+     "turn": 3.14159
+    }
+   },
+   "keep": true,
+   "visits": [
+    {
+     "to": "bala",
+     "reach": 1.8,
+     "goal": {
+      "en": "Someone is knocking at the door",
+      "ta": "யாரோ கதவ தட்டுறாங்க"
+     },
+     "prompt": {
+      "en": "open the door",
+      "ta": "கதவ திறங்க"
+     }
+    }
+   ]
+  },
+  {
+   "do": "talk",
+   "lines": [
+    {
+     "who": "bala",
+     "en": "Da. A week. You think I'd believe the TV over you?",
+     "ta": "டா. ஒரு வாரம். உன்ன விட டிவிய நான் நம்புவேன்னு நினைச்சியா?"
+    },
+    {
+     "who": "karthik",
+     "en": "Bala... the whole lane looks away when I come out now.",
+     "ta": "பாலா... நான் வெளிய வந்தா தெருவே மூஞ்ச திருப்பிக்குது."
+    },
+    {
+     "who": "bala",
+     "en": "Let them. I know you, da. Since sixth standard. You can't lie to your mother about a film.",
+     "ta": "திருப்பிக்கட்டும். எனக்கு உன்ன தெரியும் டா. ஆறாம் கிளாஸ்ல இருந்து. ஒரு படத்த பத்தி கூட உங்க அம்மா கிட்ட பொய் சொல்ல முடியாது உனக்கு."
+    },
+    {
+     "who": "bala",
+     "en": "The workshop's open till nine. A bike, a ride, a meal, anything. And where are you running around these days? Tell me, so I know you're safe.",
+     "ta": "வொர்க்ஷாப் ஒன்பது மணி வரைக்கும் திறந்திருக்கும். பைக், ரைடு, சாப்பாடு, எதுவானாலும். இப்ப எங்கெல்லாம் சுத்திட்டு இருக்க? சொல்லு, நீ பத்திரமா இருக்கியான்னு தெரியணும்."
+    }
+   ]
+  },
+  {
+   "do": "choose",
+   "prompt": {
+    "en": "Bala waits, leaning on the door frame.",
+    "ta": "பாலா கதவு சட்டத்துல சாஞ்சு காத்திருக்கான்."
+   },
+   "options": [
+    {
+     "text": {
+      "en": "Tell him: the doorbell, Sekar's tea shop, Pudhur Vayal today",
+      "ta": "சொல்லுங்க: டோர்பெல், சேகர் டீக்கடை, இன்னைக்கு புதூர் வயல்"
+     },
+     "set": "told_bala"
+    },
+    {
+     "text": {
+      "en": "\"Better you don't know, da. Safer for you.\"",
+      "ta": "\"உனக்கு தெரியாம இருக்கறது தான் நல்லது டா. உனக்கு பாதுகாப்பு.\""
+     },
+     "set": "kept_from_bala"
+    }
+   ]
+  },
+  {
+   "do": "talk",
+   "when": "told_bala",
+   "lines": [
+    {
+     "who": "bala",
+     "en": "Pudhur Vayal? Those farmers are angry, da. Go in daylight. ...And call me after. Promise.",
+     "ta": "புதூர் வயலா? அந்த விவசாயிங்க கோவத்துல இருக்காங்க டா. பகல்ல போ. ...அப்புறம் எனக்கு கூப்பிடு. சத்தியம்."
+    }
+   ]
+  },
+  {
+   "do": "talk",
+   "when": "kept_from_bala",
+   "lines": [
+    {
+     "who": "bala",
+     "en": "Okay, okay, secret agent. Just come back in one piece.",
+     "ta": "சரி சரி, சீக்ரெட் ஏஜென்ட். முழுசா திரும்பி வா, அவ்வளவு தான்."
+    }
+   ]
+  },
+  {
+   "do": "pin",
+   "place": "pudhur_vayal",
+   "label": {
+    "en": "Pudhur Vayal: the land Raghavan sir was buying",
+    "ta": "புதூர் வயல்: ராகவன் சார் வாங்கின நிலம்"
+   }
+  },
+  {
+   "do": "home",
+   "room": "home",
+   "at": "home",
+   "start": "here",
+   "visits": [
+    {
+     "to": "door",
+     "auto": true,
+     "reach": 1.4,
+     "goal": {
+      "en": "Out to your scooter",
+      "ta": "வெளியே, ஸ்கூட்டருக்கு"
+     }
+    }
+   ]
+  },
+  {
+   "do": "drive",
+   "to": "pudhur_vayal",
+   "radius": 45,
+   "vehicle": "karthik_scooter",
+   "goal": {
+    "en": "Pudhur Vayal, past Sekar's tea stall: the farmers Raghavan sir owed",
+    "ta": "புதூர் வயல், சேகர் டீக்கடை தாண்டி: ராகவன் சார் பணம் தர வேண்டிய விவசாயிங்க"
+   }
+  },
+  {
+   "do": "meet",
+   "who": "ponnusamy",
+   "cast": {
+    "ponnusamy": {
+     "pos": [
+      -1.9,
+      2.2
+     ],
+     "look": [
+      0,
+      0
+     ],
+     "anim": "Idle"
+    },
+    "farmer1": {
+     "pos": [
+      1.7,
+      1.6
+     ],
+     "look": [
+      0,
+      0
+     ],
+     "anim": "Idle"
+    },
+    "farmer2": {
+     "pos": [
+      0.6,
+      -2.4
+     ],
+     "look": [
+      0,
+      0
+     ],
+     "anim": "Idle"
+    }
+   },
+   "goal": {
+    "en": "Three men walk out of the field towards your scooter",
+    "ta": "வயல்ல இருந்து மூணு பேர் உங்க ஸ்கூட்டர நோக்கி வர்றாங்க"
+   }
+  },
+  {
+   "do": "talk",
+   "lines": [
+    {
+     "who": "ponnusamy",
+     "en": "Stop. That's Raghavan's driver. The one who carried the money.",
+     "ta": "நில்லு. இவன் தான் ராகவனோட டிரைவர். பணத்த தூக்கிட்டு போனவன்."
+    },
+    {
+     "who": "farmer1",
+     "en": "Four lakhs! Ours! For the land your people took at a fifth of the price!",
+     "ta": "நாலு லட்சம்! எங்களோடது! எங்க நிலத்த அஞ்சுல ஒரு பங்கு விலைக்கு எடுத்துக்கிட்டீங்க!"
+    },
+    {
+     "who": "karthik",
+     "en": "Ayya, I didn't take it. Sir was bringing it to you. He told me himself.",
+     "ta": "ஐயா, நான் எடுக்கல. சார் அத உங்களுக்கு தான் கொண்டு வந்துட்டு இருந்தாரு. அவரே சொன்னாரு."
+    },
+    {
+     "who": "ponnusamy",
+     "en": "Bringing it? Then where is it? Forty families sold on his word. Forty.",
+     "ta": "கொண்டு வந்தாரா? அப்போ எங்க அது? அவர் வார்த்தைய நம்பி நாப்பது குடும்பம் வித்தோம். நாப்பது."
+    },
+    {
+     "who": "farmer2",
+     "en": "Get off the scooter. Get off it.",
+     "ta": "ஸ்கூட்டர்ல இருந்து இறங்கு. இறங்குடா."
+    }
+   ]
+  },
+  {
+   "do": "choose",
+   "prompt": {
+    "en": "They're all around the scooter.",
+    "ta": "ஸ்கூட்டர சுத்தி நிக்கறாங்க."
+   },
+   "options": [
+    {
+     "text": {
+      "en": "Tell them again, slowly, what sir said",
+      "ta": "சார் சொன்னத மெதுவா மறுபடியும் சொல்லுங்க"
+     },
+     "set": "farmers_heard"
+    },
+    {
+     "text": {
+      "en": "Hold out what's in your wallet",
+      "ta": "பர்ஸ்ல இருக்கறத நீட்டுங்க"
+     },
+     "set": "farmers_offered",
+     "stress": 10
+    },
+    {
+     "text": {
+      "en": "Start the scooter and go",
+      "ta": "ஸ்கூட்டர ஸ்டார்ட் பண்ணி கிளம்புங்க"
+     },
+     "set": "farmers_left",
+     "stress": 6
+    }
+   ]
+  },
+  {
+   "do": "talk",
+   "when": "farmers_offered",
+   "lines": [
+    {
+     "who": "ponnusamy",
+     "en": "Money? From you? You think we're beggars at your gate? Put it away before I lose my temper.",
+     "ta": "காசா? உன் கிட்ட இருந்தா? உன் வாசல்ல பிச்சை எடுக்கறவங்கன்னு நினைச்சியா? கோபம் வர்றதுக்குள்ள உள்ள வை."
+    },
+    {
+     "who": "farmer1",
+     "en": "(He knocks the scooter's mirror crooked with the back of his hand.)",
+     "ta": "(கை பின்பக்கத்தால ஸ்கூட்டர் கண்ணாடிய கோணலா தட்டிவிடறான்.)"
+    }
+   ]
+  },
+  {
+   "do": "talk",
+   "when": "farmers_left",
+   "lines": [
+    {
+     "who": "ponnusamy",
+     "en": "Run, then. Run. That's what thieves do.",
+     "ta": "ஓடு அப்போ. ஓடு. திருடங்க அப்படி தான்."
+    },
+    {
+     "who": "karthik",
+     "en": "(I stop at the end of the field. He's still standing in the road. I walk back.)",
+     "ta": "(வயல் முடியற இடத்துல நிறுத்தறேன். அவர் இன்னும் ரோட்டுலயே நிக்கறாரு. திரும்பி நடந்து வர்றேன்.)"
+    }
+   ]
+  },
+  {
+   "do": "talk",
+   "when": "farmers_heard",
+   "lines": [
+    {
+     "who": "ponnusamy",
+     "en": "(He listens to the end. His jaw doesn't move.)",
+     "ta": "(கடைசி வரைக்கும் கேக்கறாரு. தாடை அசையல.)"
+    }
+   ]
+  },
+  {
+   "do": "talk",
+   "lines": [
+    {
+     "who": "ponnusamy",
+     "en": "Words. Everyone brings us words. The broker, the officer, now the driver.",
+     "ta": "வார்த்த. எல்லாரும் வார்த்த தான் கொண்டு வர்றாங்க. புரோக்கர், ஆபீசர், இப்போ டிரைவர்."
+    },
+    {
+     "who": "ponnusamy",
+     "en": "Raghavan wrote everything down, that man. If he meant to pay us, he wrote it. Bring us paper, thambi. Until then, don't show your face in Pudhur.",
+     "ta": "அந்த ராகவன் எல்லாத்தையும் எழுதி வைப்பாரு. எங்களுக்கு குடுக்கணும்னு நினைச்சிருந்தா, அத எழுதியிருப்பாரு. காகிதம் கொண்டு வா, தம்பி. அதுவரைக்கும் புதூர்ல மூஞ்சி காட்டாத."
+    },
+    {
+     "who": "karthik",
+     "en": "(He wrote everything. The Green Valley file. It's in his house now, with his daughter. Priya, who won't look at me.)",
+     "ta": "(அவர் எல்லாத்தையும் எழுதுவாரு. கிரீன் வேலி ஃபைல். அது இப்ப அவர் வீட்டுல, அவர் பொண்ணு கிட்ட. என்ன பாக்கவே மாட்டேங்கற பிரியா கிட்ட.)"
+    }
+   ]
+  },
+  {
+   "do": "evidence",
+   "speaker": "ponnusamy",
+   "tag": "lead_farmers",
+   "label": {
+    "en": "Pudhur Vayal: the farmers",
+    "ta": "புதூர் வயல்: விவசாயிங்க"
+   },
+   "memory": {
+    "id": "mem_farmers",
+    "kind": "card",
+    "title": {
+     "en": "The Pudhur Vayal farmers",
+     "ta": "புதூர் வயல் விவசாயிங்க"
+    },
+    "body": {
+     "en": "Forty families sold on sir's word. They think I stole their money. 'Bring us paper.' The Green Valley file: Priya.",
+     "ta": "சார் வார்த்தைய நம்பி நாப்பது குடும்பம் வித்தாங்க. நான் அவங்க பணத்த திருடினேன்னு நினைக்கறாங்க. 'காகிதம் கொண்டு வா.' கிரீன் வேலி ஃபைல்: பிரியா."
+    }
+   }
+  },
+  {
+   "do": "drive",
+   "to": "home",
+   "radius": 45,
+   "goal": {
+    "en": "Home: Divya's back from college at half past four",
+    "ta": "வீடு: திவ்யா நாலரைக்கு காலேஜ்ல இருந்து வருவா"
+   }
+  },
+  {
+   "do": "home",
+   "room": "home",
+   "at": "home",
+   "start": "door",
+   "cast": {
+    "amma": {
+     "mark": "amma_kitchen"
+    }
+   },
+   "keep": true,
+   "visits": [
+    {
+     "to": "karthik_room",
+     "wait": 0,
+     "until": "16:30",
+     "goal": {
+      "en": "Rest till Divya's back",
+      "ta": "திவ்யா வர்ற வரைக்கும் ஓய்வு"
+     },
+     "prompt": {
+      "en": "sit down",
+      "ta": "உட்காருங்க"
+     }
+    }
+   ]
+  },
+  {
+   "do": "home",
+   "room": "home",
+   "at": "home",
+   "start": "here",
+   "cast": {
+    "divya": {
+     "mark": "divya",
+     "anim": "Sit"
+    }
+   },
+   "keep": true,
+   "visits": [
+    {
+     "to": "divya",
+     "goal": {
+      "en": "Divya's home. She hasn't said a word",
+      "ta": "திவ்யா வந்துட்டா. ஒரு வார்த்த கூட பேசல"
+     },
+     "prompt": {
+      "en": "sit with her",
+      "ta": "அவ பக்கத்துல உக்காருங்க"
+     }
+    }
+   ]
+  },
+  {
+   "do": "talk",
+   "lines": [
+    {
+     "who": "divya",
+     "en": "(She turns her phone face down.) It's nothing.",
+     "ta": "(ஃபோன கவுத்து வைக்கிறா.) ஒண்ணுமில்ல."
+    },
+    {
+     "who": "divya",
+     "en": "...They made a WhatsApp group. 'Murderer's sister.' Thirty-two people. My bench partner is in it. She added the photo from the paper.",
+     "ta": "...ஒரு வாட்ஸ்அப் குரூப் ஆரம்பிச்சிருக்காங்க. 'கொலைகாரன் தங்கச்சி.' முப்பத்திரண்டு பேர். என் பெஞ்ச் பார்ட்னரும் இருக்கா. பேப்பர்ல வந்த போட்டோவ அவ தான் போட்டா."
+    }
+   ]
+  },
+  {
+   "do": "choose",
+   "prompt": {
+    "en": "Divya stares at the floor.",
+    "ta": "திவ்யா தரைய பாத்துட்டு இருக்கா."
+   },
+   "options": [
+    {
+     "text": {
+      "en": "Just sit with her and let her talk",
+      "ta": "அவ பக்கத்துல உக்காந்து அவள பேச விடுங்க"
+     },
+     "set": "divya_heard"
+    },
+    {
+     "text": {
+      "en": "\"I'll go to that college tomorrow and—\"",
+      "ta": "\"நாளைக்கு அந்த காலேஜுக்கு போய்—\""
+     },
+     "set": "divya_angry",
+     "stress": 6
+    },
+    {
+     "text": {
+      "en": "\"Divya. I need someone who knows phones and cameras. Help me prove it.\"",
+      "ta": "\"திவ்யா. ஃபோன், கேமரா தெரிஞ்ச ஒருத்தர் எனக்கு வேணும். இத நிரூபிக்க எனக்கு உதவி பண்ணு.\""
+     },
+     "set": "divya_partner"
+    }
+   ]
+  },
+  {
+   "do": "talk",
+   "when": "divya_heard",
+   "lines": [
+    {
+     "who": "divya",
+     "en": "(For a long time she says nothing. Then all of it: the canteen, the teacher who moved her seat, the boy who laughed.)",
+     "ta": "(ரொம்ப நேரம் எதுவும் பேசல. அப்புறம் எல்லாம்: கேன்டீன், அவ சீட்ட மாத்தின டீச்சர், சிரிச்ச பையன்.)"
+    },
+    {
+     "who": "divya",
+     "en": "...Thanks for not shouting, anna.",
+     "ta": "...கத்தாம இருந்ததுக்கு தேங்க்ஸ் அண்ணா."
+    }
+   ]
+  },
+  {
+   "do": "talk",
+   "when": "divya_angry",
+   "lines": [
+    {
+     "who": "divya",
+     "en": "No! You'll make it worse! You're on bail, anna! One fight and they'll put you back inside, and then what do I tell them?",
+     "ta": "வேண்டாம்! இன்னும் மோசமாக்கிடுவ! நீ பெயில்ல இருக்க அண்ணா! ஒரு சண்ட போட்டா உள்ள தூக்கி போட்டுடுவாங்க, அப்புறம் நான் அவங்க கிட்ட என்ன சொல்வேன்?"
+    }
+   ]
+  },
+  {
+   "do": "talk",
+   "when": "divya_partner",
+   "lines": [
+    {
+     "who": "divya",
+     "en": "(She looks up.) ...The doorbell clip. The lobby camera. You need someone to read them properly.",
+     "ta": "(நிமிர்ந்து பாக்கறா.) ...டோர்பெல் கிளிப். லாபி கேமரா. அத சரியா படிக்க ஒருத்தர் வேணும் உனக்கு."
+    },
+    {
+     "who": "divya",
+     "en": "Okay. But I'm not doing it for you. I'm doing it so I can show that group the truth.",
+     "ta": "சரி. ஆனா உனக்காக இல்ல. அந்த குரூப்புக்கு உண்மைய காட்டறதுக்காக."
+    }
+   ]
+  },
+  {
+   "do": "home",
+   "room": "home",
+   "at": "home",
+   "start": "here",
+   "visits": [
+    {
+     "to": "door",
+     "auto": true,
+     "reach": 1.4,
+     "goal": {
+      "en": "Out: the station by seven",
+      "ta": "வெளியே: ஏழு மணிக்குள்ள ஸ்டேஷன்"
+     }
+    }
+   ]
+  },
+  {
+   "do": "drive",
+   "to": "police",
+   "radius": 45,
+   "vehicle": "karthik_scooter",
+   "by": "19:00",
+   "goal": {
+    "en": "Sign at the station by 7 PM",
+    "ta": "7 மணிக்குள்ள ஸ்டேஷன்ல கையெழுத்து"
+   }
+  },
+  {
+   "do": "home",
+   "room": "police",
+   "at": "police",
+   "start": "door",
+   "cast": {
+    "murugesan": {
+     "mark": "inspector",
+     "anim": "Idle"
+    },
+    "selvi": {
+     "mark": "constable",
+     "anim": "Idle"
+    }
+   },
+   "keep": true,
+   "visits": [
+    {
+     "to": "selvi",
+     "task": "sign",
+     "goal": {
+      "en": "Sign the bail register at Selvi's desk",
+      "ta": "செல்வி மேஜையில ஜாமீன் பதிவேட்டுல கையெழுத்து"
+     },
+     "prompt": {
+      "en": "sign the register",
+      "ta": "பதிவேட்டுல கையெழுத்து"
+     },
+     "header": {
+      "en": "Nagar Police Station",
+      "ta": "நகர் காவல் நிலையம்"
+     },
+     "form": {
+      "en": "BAIL ATTENDANCE REGISTER",
+      "ta": "ஜாமீன் வருகை பதிவேடு"
+     },
+     "fields": [
+      [
+       {
+        "en": "Crime No.",
+        "ta": "குற்ற எண்"
+       },
+       "412"
+      ],
+      [
+       {
+        "en": "Name",
+        "ta": "பெயர்"
+       },
+       {
+        "en": "Karthik M.",
+        "ta": "கார்த்திக் ம."
+       }
+      ],
+      [
+       {
+        "en": "Day",
+        "ta": "நாள்"
+       },
+       "5"
+      ]
+     ],
+     "sign_label": {
+      "en": "Signature of the accused",
+      "ta": "குற்றம் சாட்டப்பட்டவர் கையொப்பம்"
+     },
+     "seal": {
+      "en": "STATION SEAL",
+      "ta": "நிலைய முத்திரை"
+     }
+    }
+   ]
+  },
+  {
+   "do": "home",
+   "room": "police",
+   "at": "police",
+   "start": "here",
+   "visits": [
+    {
+     "to": "door",
+     "auto": true,
+     "reach": 1.4,
+     "goal": {
+      "en": "Out",
+      "ta": "வெளியே"
+     }
+    }
+   ]
+  },
+  {
+   "do": "drive",
+   "to": "home",
+   "radius": 45,
+   "goal": {
+    "en": "Home",
+    "ta": "வீடு"
+   }
+  },
+  {
+   "do": "home",
+   "room": "home",
+   "at": "home",
+   "start": "door",
+   "cast": {
+    "amma": {
+     "mark": "amma",
+     "anim": "Sit"
+    }
+   },
+   "keep": true,
+   "visits": [
+    {
+     "to": "karthik_room",
+     "wall": true,
+     "goal": {
+      "en": "Your wall: the farmers, and the file",
+      "ta": "உங்க சுவர்: விவசாயிங்க, ஃபைல்"
+     },
+     "prompt": {
+      "en": "the wall",
+      "ta": "சுவர்"
+     }
+    },
+    {
+     "to": "karthik_room",
+     "sleep_until": "07:00",
+     "goal": {
+      "en": "Sleep",
+      "ta": "தூங்குங்க"
+     },
+     "prompt": {
+      "en": "lie down",
+      "ta": "படுங்க"
+     }
+    }
+   ]
+  },
+  {
+   "do": "home",
+   "room": "home",
+   "at": "home",
+   "start": "here",
+   "cast": {
+    "amma": {
+     "mark": "amma_kitchen"
+    }
+   },
+   "keep": true,
+   "visits": [
+    {
+     "to": "amma",
+     "goal": {
+      "en": "Amma, in the kitchen",
+      "ta": "அம்மா, சமையல்கட்டுல"
+     },
+     "prompt": {
+      "en": "talk to her",
+      "ta": "அவங்க கிட்ட பேசுங்க"
+     }
+    }
+   ]
+  },
+  {
+   "do": "talk",
+   "lines": [
+    {
+     "who": "karthik",
+     "en": "Amma. The file is with sir's family. Priya won't take my calls.",
+     "ta": "அம்மா. அந்த ஃபைல் சார் குடும்பத்துகிட்ட இருக்கு. பிரியா என் ஃபோன எடுக்க மாட்டேங்கறாங்க."
+    },
+    {
+     "who": "amma",
+     "en": "Meenakshi amma goes to Perur every morning now. To the Pateeswarar temple, for him. The flower-seller told me.",
+     "ta": "மீனாட்சி அம்மா இப்போ தினமும் காலையில பேரூர் போறாங்க. பட்டீஸ்வரர் கோயிலுக்கு, அவருக்காக. பூக்காரம்மா சொன்னாங்க."
+    },
+    {
+     "who": "amma",
+     "en": "Go gently, kanna. She's lost her husband. Don't make her lose her peace there too.",
+     "ta": "மெதுவா போ கண்ணா. அவங்க புருஷன இழந்திருக்காங்க. அங்க அவங்க நிம்மதியையும் இழக்க வைக்காத."
+    }
+   ]
+  },
+  {
+   "do": "pin",
+   "place": "perur_temple",
+   "label": {
+    "en": "Perur Pateeswarar temple",
+    "ta": "பேரூர் பட்டீஸ்வரர் கோயில்"
+   }
+  },
+  {
+   "do": "home",
+   "room": "home",
+   "at": "home",
+   "start": "here",
+   "visits": [
+    {
+     "to": "door",
+     "auto": true,
+     "reach": 1.4,
+     "goal": {
+      "en": "Out to your scooter",
+      "ta": "வெளியே, ஸ்கூட்டருக்கு"
+     }
+    }
+   ]
+  },
+  {
+   "do": "drive",
+   "to": "perur_temple",
+   "radius": 60,
+   "vehicle": "karthik_scooter",
+   "goal": {
+    "en": "Perur Pateeswarar temple, before the morning puja ends",
+    "ta": "பேரூர் பட்டீஸ்வரர் கோயில், காலை பூஜை முடியறதுக்குள்ள"
+   }
+  },
+  {
+   "do": "meet",
+   "who": "meenakshi",
+   "cast": {
+    "meenakshi": {
+     "pos": [
+      -2.4,
+      2.0
+     ],
+     "look": [
+      0,
+      0
+     ],
+     "anim": "Idle"
+    },
+    "priya": {
+     "pos": [
+      -1.1,
+      2.8
+     ],
+     "look": [
+      0,
+      0
+     ],
+     "anim": "Idle"
+    }
+   },
+   "goal": {
+    "en": "Meenakshi amma, coming out of the temple, and Priya",
+    "ta": "கோயில்ல இருந்து வர்ற மீனாட்சி அம்மா, கூட பிரியா"
+   }
+  },
+  {
+   "do": "talk",
+   "lines": [
+    {
+     "who": "priya",
+     "en": "You. Here? At my father's prayers?",
+     "ta": "நீயா. இங்கயா? என் அப்பாவோட பிரார்த்தனையிலயா?"
+    },
+    {
+     "who": "priya",
+     "en": "Get away from my mother, or I call the police right now. You're on bail, aren't you?",
+     "ta": "என் அம்மா கிட்ட இருந்து தள்ளிப் போ, இல்லனா இப்பவே போலீஸ கூப்பிடுவேன். நீ பெயில்ல தானே இருக்க?"
+    },
+    {
+     "who": "karthik",
+     "en": "Madam. Two minutes. Only two.",
+     "ta": "மேடம். ரெண்டு நிமிஷம். ரெண்டே நிமிஷம்."
+    },
+    {
+     "who": "meenakshi",
+     "en": "Priya. Let him speak. Nine days I've listened to everyone. The police, the papers, Suresh. Never to him.",
+     "ta": "பிரியா. பேச விடு. ஒன்பது நாளா எல்லாரையும் கேட்டுட்டேன். போலீஸ், பேப்பர், சுரேஷ். அவன மட்டும் கேக்கல."
+    }
+   ]
+  },
+  {
+   "do": "choose",
+   "prompt": {
+    "en": "Meenakshi amma waits. Priya's hand is on her phone.",
+    "ta": "மீனாட்சி அம்மா காத்திருக்காங்க. பிரியா கை ஃபோன்ல."
+   },
+   "options": [
+    {
+     "text": {
+      "en": "Tell her about the four lakhs, and the farmers sir meant it for",
+      "ta": "நாலு லட்சம் பத்தியும், சார் அத குடுக்க நினைச்ச விவசாயிங்க பத்தியும் சொல்லுங்க"
+     },
+     "set": "meenakshi_money"
+    },
+    {
+     "text": {
+      "en": "Tell her about the man in the cap, and the card that opened the office",
+      "ta": "தொப்பி போட்ட ஆள் பத்தியும், ஆஃபீஸ திறந்த கார்டு பத்தியும் சொல்லுங்க"
+     },
+     "set": "meenakshi_cap"
+    },
+    {
+     "text": {
+      "en": "Say only: \"Amma, I didn't do it.\"",
+      "ta": "இது மட்டும் சொல்லுங்க: \"அம்மா, நான் பண்ணல.\""
+     },
+     "set": "meenakshi_plain"
+    }
+   ]
+  },
+  {
+   "do": "talk",
+   "when": "meenakshi_money",
+   "lines": [
+    {
+     "who": "meenakshi",
+     "en": "He talked about those families at dinner. Every week. He said, 'I won't sleep till they're paid.'",
+     "ta": "சாப்பிடும்போது அந்த குடும்பங்கள பத்தி பேசுவாரு. ஒவ்வொரு வாரமும். 'அவங்களுக்கு குடுக்கற வரைக்கும் தூக்கம் வராது'ன்னு சொல்வாரு."
+    }
+   ]
+  },
+  {
+   "do": "talk",
+   "when": "meenakshi_cap",
+   "lines": [
+    {
+     "who": "priya",
+     "en": "A cap. A card. Anybody can say a man in a cap.",
+     "ta": "தொப்பி. கார்டு. தொப்பி போட்ட ஆள்னு யார் வேணா சொல்லலாம்."
+    },
+    {
+     "who": "meenakshi",
+     "en": "Card seven... Priya, who has the small numbers? The ones from the start of the company?",
+     "ta": "ஏழாம் நம்பர் கார்டு... பிரியா, சின்ன நம்பர் யார் கிட்ட இருக்கு? கம்பெனி ஆரம்பத்துல இருந்து இருக்கறவங்க கிட்ட?"
+    }
+   ]
+  },
+  {
+   "do": "talk",
+   "when": "meenakshi_plain",
+   "lines": [
+    {
+     "who": "meenakshi",
+     "en": "(She looks at me for a long time. The way sir looked at a man before he signed anything.)",
+     "ta": "(ரொம்ப நேரம் என்ன பாக்கறாங்க. எதுலயாவது கையெழுத்து போடறதுக்கு முன்னாடி சார் ஒருத்தர பாக்கற மாதிரி.)"
+    }
+   ]
+  },
+  {
+   "do": "talk",
+   "lines": [
+    {
+     "who": "karthik",
+     "en": "Sir wrote everything down. If the money was for the farmers, he wrote it. In the Green Valley file.",
+     "ta": "சார் எல்லாத்தையும் எழுதி வைப்பாரு. பணம் விவசாயிங்களுக்குன்னா, அத எழுதியிருப்பாரு. கிரீன் வேலி ஃபைல்ல."
+    },
+    {
+     "who": "meenakshi",
+     "en": "Every night. In green ink. He used to laugh that it was the right ink for a green valley.",
+     "ta": "தினமும் ராத்திரி. பச்சை மையில. பச்சை பள்ளத்தாக்குக்கு சரியான மைன்னு சிரிப்பாரு."
+    },
+    {
+     "who": "priya",
+     "en": "Amma, he's playing you. This is what they do.",
+     "ta": "அம்மா, இவன் உன்ன ஏமாத்தறான். இவங்க இப்படி தான்."
+    },
+    {
+     "who": "meenakshi",
+     "en": "Then look in the file, Priya. And show me he's lying.",
+     "ta": "அப்போ ஃபைல பாரு, பிரியா. இவன் பொய் சொல்றான்னு எனக்கு காட்டு."
+    },
+    {
+     "who": "priya",
+     "en": "...Fine. I'll look. So that you stop coming near us. Both of you.",
+     "ta": "...சரி. பாக்கறேன். நீங்க ரெண்டு பேரும் எங்க பக்கம் வராம இருக்கறதுக்காக."
+    }
+   ]
+  },
+  {
+   "do": "evidence",
+   "speaker": "meenakshi",
+   "tag": "lead_file",
+   "label": {
+    "en": "Perur: Meenakshi amma listened",
+    "ta": "பேரூர்: மீனாட்சி அம்மா கேட்டாங்க"
+   },
+   "memory": {
+    "id": "mem_meenakshi",
+    "kind": "card",
+    "title": {
+     "en": "Meenakshi amma",
+     "ta": "மீனாட்சி அம்மா"
+    },
+    "body": {
+     "en": "She let me speak. Sir wrote every night, in green ink. Priya will look in the Green Valley file.",
+     "ta": "என்ன பேச விட்டாங்க. சார் தினமும் ராத்திரி பச்சை மையில எழுதுவாரு. பிரியா கிரீன் வேலி ஃபைல பாப்பாங்க."
+    }
+   }
+  },
+  {
+   "do": "drive",
+   "to": "home",
+   "radius": 45,
+   "goal": {
+    "en": "Home",
+    "ta": "வீடு"
+   }
+  },
+  {
+   "do": "home",
+   "room": "home",
+   "at": "home",
+   "start": "door",
+   "cast": {
+    "amma": {
+     "mark": "amma",
+     "anim": "Sit"
+    }
+   },
+   "keep": true,
+   "visits": [
+    {
+     "to": "amma",
+     "goal": {
+      "en": "Amma's waiting for you",
+      "ta": "அம்மா உங்களுக்காக காத்திருக்காங்க"
+     },
+     "prompt": {
+      "en": "sit with her",
+      "ta": "அவங்க பக்கத்துல உக்காருங்க"
+     }
+    }
+   ]
+  },
+  {
+   "do": "talk",
+   "when": "told_bala",
+   "lines": [
+    {
+     "who": "amma",
+     "en": "Suresh sir came this afternoon. With a box of Mysore pak, for Divya. So kind.",
+     "ta": "சுரேஷ் சார் மதியம் வந்திருந்தாரு. திவ்யாவுக்கு ஒரு பெட்டி மைசூர் பாக்கோட. எவ்வளவு நல்ல மனுஷன்."
+    },
+    {
+     "who": "amma",
+     "en": "He asked where you've been going. The doorbell, the tea shop... I said, he's only trying, sir.",
+     "ta": "நீ எங்கெல்லாம் போறன்னு கேட்டாரு. டோர்பெல், டீக்கடை... அவன் முயற்சி பண்றான் சார்னு சொன்னேன்."
+    },
+    {
+     "who": "karthik",
+     "en": "(The doorbell. The tea shop. I told only one person that.)",
+     "ta": "(டோர்பெல். டீக்கடை. அத நான் ஒருத்தர் கிட்ட மட்டும் தான் சொன்னேன்.)"
+    }
+   ]
+  },
+  {
+   "do": "talk",
+   "unless": "told_bala",
+   "lines": [
+    {
+     "who": "amma",
+     "en": "Suresh sir came this afternoon. With a box of Mysore pak, for Divya. He asked where you've been going.",
+     "ta": "சுரேஷ் சார் மதியம் வந்திருந்தாரு. திவ்யாவுக்கு ஒரு பெட்டி மைசூர் பாக்கோட. நீ எங்கெல்லாம் போறன்னு கேட்டாரு."
+    },
+    {
+     "who": "amma",
+     "en": "I said I don't know. And I don't, do I?",
+     "ta": "எனக்கு தெரியாதுன்னு சொன்னேன். உண்மையிலயே தெரியாது, இல்லையா?"
+    },
+    {
+     "who": "karthik",
+     "en": "(Why would Suresh sir want to know?)",
+     "ta": "(சுரேஷ் சாருக்கு அது எதுக்கு தெரியணும்?)"
+    }
+   ]
+  },
+  {
+   "do": "home",
+   "room": "home",
+   "at": "home",
+   "start": "here",
+   "cast": {
+    "amma": {
+     "mark": "amma_kitchen"
+    }
+   },
+   "keep": true,
+   "visits": [
+    {
+     "to": "karthik_room",
+     "wait": 0,
+     "until": "17:20",
+     "goal": {
+      "en": "Rest till it's time to sign",
+      "ta": "கையெழுத்து போடற நேரம் வரைக்கும் ஓய்வு"
+     },
+     "prompt": {
+      "en": "sit down",
+      "ta": "உட்காருங்க"
+     }
+    }
+   ]
+  },
+  {
+   "do": "home",
+   "room": "home",
+   "at": "home",
+   "start": "here",
+   "visits": [
+    {
+     "to": "door",
+     "auto": true,
+     "reach": 1.4,
+     "goal": {
+      "en": "Out: the station by seven",
+      "ta": "வெளியே: ஏழு மணிக்குள்ள ஸ்டேஷன்"
+     }
+    }
+   ]
+  },
+  {
+   "do": "drive",
+   "to": "police",
+   "radius": 45,
+   "vehicle": "karthik_scooter",
+   "by": "19:00",
+   "goal": {
+    "en": "Sign at the station by 7 PM",
+    "ta": "7 மணிக்குள்ள ஸ்டேஷன்ல கையெழுத்து"
+   }
+  },
+  {
+   "do": "home",
+   "room": "police",
+   "at": "police",
+   "start": "door",
+   "cast": {
+    "murugesan": {
+     "mark": "inspector",
+     "anim": "Idle"
+    },
+    "selvi": {
+     "mark": "constable",
+     "anim": "Idle"
+    }
+   },
+   "keep": true,
+   "visits": [
+    {
+     "to": "selvi",
+     "task": "sign",
+     "goal": {
+      "en": "Sign the bail register at Selvi's desk",
+      "ta": "செல்வி மேஜையில ஜாமீன் பதிவேட்டுல கையெழுத்து"
+     },
+     "prompt": {
+      "en": "sign the register",
+      "ta": "பதிவேட்டுல கையெழுத்து"
+     },
+     "header": {
+      "en": "Nagar Police Station",
+      "ta": "நகர் காவல் நிலையம்"
+     },
+     "form": {
+      "en": "BAIL ATTENDANCE REGISTER",
+      "ta": "ஜாமீன் வருகை பதிவேடு"
+     },
+     "fields": [
+      [
+       {
+        "en": "Crime No.",
+        "ta": "குற்ற எண்"
+       },
+       "412"
+      ],
+      [
+       {
+        "en": "Name",
+        "ta": "பெயர்"
+       },
+       {
+        "en": "Karthik M.",
+        "ta": "கார்த்திக் ம."
+       }
+      ],
+      [
+       {
+        "en": "Day",
+        "ta": "நாள்"
+       },
+       "6"
+      ]
+     ],
+     "sign_label": {
+      "en": "Signature of the accused",
+      "ta": "குற்றம் சாட்டப்பட்டவர் கையொப்பம்"
+     },
+     "seal": {
+      "en": "STATION SEAL",
+      "ta": "நிலைய முத்திரை"
+     }
+    }
+   ]
+  },
+  {
+   "do": "home",
+   "room": "police",
+   "at": "police",
+   "start": "here",
+   "visits": [
+    {
+     "to": "door",
+     "auto": true,
+     "reach": 1.4,
+     "goal": {
+      "en": "Out",
+      "ta": "வெளியே"
+     }
+    }
+   ]
+  },
+  {
+   "do": "drive",
+   "to": "home",
+   "radius": 45,
+   "goal": {
+    "en": "Home",
+    "ta": "வீடு"
+   }
+  },
+  {
+   "do": "message",
+   "from": {
+    "en": "Dr. Priya",
+    "ta": "டாக்டர் பிரியா"
+   },
+   "text": {
+    "en": "The Green Valley file isn't at home. It's in his cabinet at the office. Revathi says Suresh uncle has the keys now. – Priya",
+    "ta": "கிரீன் வேலி ஃபைல் வீட்டுல இல்ல. ஆஃபீஸ்ல அவர் கேபினெட்ல இருக்கு. சாவி இப்போ சுரேஷ் அங்கிள் கிட்ட இருக்குன்னு ரேவதி சொல்றா. – பிரியா"
+   }
+  },
+  {
+   "do": "home",
+   "room": "home",
+   "at": "home",
+   "start": "door",
+   "cast": {
+    "amma": {
+     "mark": "amma",
+     "anim": "Sit"
+    }
+   },
+   "keep": true,
+   "visits": [
+    {
+     "to": "karthik_room",
+     "wall": true,
+     "goal": {
+      "en": "Your wall: the file, and the keys",
+      "ta": "உங்க சுவர்: ஃபைல், சாவி"
      },
      "prompt": {
       "en": "the wall",

@@ -710,7 +710,7 @@ func _cast(spec: Dictionary) -> void:
 			var a := Actor.new()
 			add_child(a)
 			var hair_hex: String = str(data["people"].get(key, {}).get("hair", ""))
-			a.setup(str(d.get("model", data["people"].get(key, {}).get("model", "person_man_shirt"))), key,
+			a.setup(str(d.get("model", data["people"].get(key, {}).get("model", "crowd_m2"))), key,
 				Callable(city.streamer, "height_at"), Color.html(hair_hex) if hair_hex != "" else Color(0, 0, 0, 0))
 			for part in ["top", "pants"]:                # (a uniform on a crowd model: the warder's khaki)
 				var hex: String = str(data["people"].get(key, {}).get(part, ""))
@@ -721,6 +721,8 @@ func _cast(spec: Dictionary) -> void:
 		act.visible = true
 		if d.has("mark") and room != null:
 			_to_mark(act, str(d["mark"]))
+			if d.has("turn"):                            # (at the door, facing in: a visitor)
+				act.rotation.y += float(d["turn"])
 		elif d.has("pos"):
 			act.place(_w2(d["pos"]), _w2(d.get("look", [0.0, 0.0])))
 		if d.has("anim"):
