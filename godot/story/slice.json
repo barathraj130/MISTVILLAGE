@@ -2783,6 +2783,157 @@
    "do": "bail"
   },
   {
+   "do": "talk",
+   "lines": [
+    {
+     "who": "amma",
+     "en": "They bring sir home from the hospital this afternoon. The funeral is at four, at the Race Course house. ...Don't go, kanna. Not today.",
+     "ta": "மதியம் சார ஆஸ்பத்திரியில இருந்து வீட்டுக்கு கொண்டு வர்றாங்க. நாலு மணிக்கு ரேஸ் கோர்ஸ் வீட்டுல அடக்கம். ...போகாத கண்ணா. இன்னைக்கு வேண்டாம்."
+    }
+   ]
+  },
+  {
+   "do": "choose",
+   "prompt": {
+    "en": "Six years you drove him.",
+    "ta": "ஆறு வருஷம் அவர ஓட்டினீங்க."
+   },
+   "options": [
+    {
+     "text": {
+      "en": "Go. Stand at the gate, at least",
+      "ta": "போங்க. கேட்லயாவது நில்லுங்க"
+     },
+     "set": "funeral_went"
+    },
+    {
+     "text": {
+      "en": "Stay home, as Amma says",
+      "ta": "அம்மா சொல்ற மாதிரி வீட்டுலயே இருங்க"
+     },
+     "set": "funeral_stayed"
+    }
+   ]
+  },
+  {
+   "do": "home",
+   "when": "funeral_went",
+   "room": "home",
+   "at": "home",
+   "start": "here",
+   "visits": [
+    {
+     "to": "door",
+     "auto": true,
+     "reach": 1.4,
+     "goal": {
+      "en": "Out to your scooter",
+      "ta": "வெளியே, ஸ்கூட்டருக்கு"
+     }
+    }
+   ]
+  },
+  {
+   "do": "drive",
+   "when": "funeral_went",
+   "to": "raghavan_house",
+   "radius": 45,
+   "vehicle": "karthik_scooter",
+   "goal": {
+    "en": "Race Course: sir's house. The funeral",
+    "ta": "ரேஸ் கோர்ஸ்: சார் வீடு. அடக்கம்"
+   }
+  },
+  {
+   "do": "meet",
+   "when": "funeral_went",
+   "who": "priya",
+   "cast": {
+    "priya": {
+     "pos": [
+      -2.4,
+      2.0
+     ],
+     "look": [
+      0,
+      0
+     ],
+     "anim": "Idle"
+    },
+    "meenakshi": {
+     "pos": [
+      -4.2,
+      3.6
+     ],
+     "look": [
+      0,
+      0
+     ],
+     "anim": "Idle"
+    },
+    "suresh": {
+     "pos": [
+      -4.9,
+      3.0
+     ],
+     "look": [
+      0,
+      0
+     ],
+     "anim": "Idle"
+    }
+   },
+   "goal": {
+    "en": "The gate, full of people in white",
+    "ta": "வெள்ள உடை போட்ட ஆளுங்களால நிறைஞ்ச கேட்"
+   }
+  },
+  {
+   "do": "talk",
+   "when": "funeral_went",
+   "life_add": {
+    "stress": 12
+   },
+   "lines": [
+    {
+     "who": "karthik",
+     "en": "(White veshtis, white saris, a shamiana over the drive. Jasmine and camphor. The car I washed every morning, parked under the neem.)",
+     "ta": "(வெள்ள வேஷ்டி, வெள்ள புடவை, டிரைவ்வே மேல பந்தல். மல்லிகையும் கற்பூரமும். தினமும் காலையில நான் கழுவின கார், வேப்ப மரத்துக்கு கீழ.)"
+    },
+    {
+     "who": "priya",
+     "en": "You. YOU. At my father's gate? Today?",
+     "ta": "நீ. நீயா. என் அப்பா கேட்லயா? இன்னைக்கா?"
+    },
+    {
+     "who": "karthik",
+     "en": "(She slaps me. In front of everyone. Nobody says a word.)",
+     "ta": "(என்ன அறையறாங்க. எல்லார் முன்னாடியும். யாரும் ஒரு வார்த்தை பேசல.)"
+    },
+    {
+     "who": "suresh",
+     "en": "Priya, ma, enough, enough. ...Karthik. Go home, boss. Not today.",
+     "ta": "பிரியா மா, போதும், போதும். ...கார்த்திக். வீட்டுக்கு போ, பாஸ். இன்னைக்கு வேண்டாம்."
+    },
+    {
+     "who": "karthik",
+     "en": "(Meenakshi amma doesn't look at me. Suresh sir holds her up by the shoulders, and over her head he nods at me. Kindly.)",
+     "ta": "(மீனாட்சி அம்மா என்ன பாக்கல. சுரேஷ் சார் அவங்க தோள புடிச்சு தாங்கறாரு, அவங்க தலைக்கு மேல என்ன பாத்து தலையாட்டறாரு. அன்பா.)"
+    }
+   ]
+  },
+  {
+   "do": "talk",
+   "when": "funeral_stayed",
+   "lines": [
+    {
+     "who": "karthik",
+     "en": "(At four the temple bell down the road rings for a long time. I sit on the step and count it.)",
+     "ta": "(நாலு மணிக்கு ரோட்டு கோயில் மணி ரொம்ப நேரம் அடிக்குது. படியில உக்காந்து எண்ணறேன்.)"
+    }
+   ]
+  },
+  {
    "do": "drive",
    "to": "police",
    "radius": 45,
@@ -11155,12 +11306,29 @@
   },
   {
    "do": "talk",
+   "when": "funeral_went",
+   "lines": [
+    {
+     "who": "priya",
+     "en": "Karthik. I slapped you at my father's gate, in front of everyone. ...I'm sorry. I was wrong about you. So I'm saying this in front of everyone too.",
+     "ta": "கார்த்திக். என் அப்பா கேட்ல, எல்லார் முன்னாடியும் உன்ன அறைஞ்சேன். ...மன்னிச்சுக்கோ. உன்ன பத்தி தப்பா நினைச்சேன். அதனால இதையும் எல்லார் முன்னாடியும் சொல்றேன்."
+    }
+   ]
+  },
+  {
+   "do": "talk",
+   "unless": "funeral_went",
    "lines": [
     {
      "who": "priya",
      "en": "(Behind her mother, on the step.) Karthik. At the temple I said I'd call the police on you, in front of my mother. ...I'm sorry. I was wrong about you, and I said it in front of people. So I'm saying this in front of people too.",
      "ta": "(அம்மா பின்னாடி, படியில.) கார்த்திக். கோயில்ல, என் அம்மா முன்னாடி, உன் மேல போலீஸ கூப்பிடுவேன்னு சொன்னேன். ...மன்னிச்சுக்கோ. உன்ன பத்தி தப்பா நினைச்சேன், ஆளுங்க முன்னாடி சொன்னேன். அதனால இதையும் ஆளுங்க முன்னாடி சொல்றேன்."
-    },
+    }
+   ]
+  },
+  {
+   "do": "talk",
+   "lines": [
     {
      "who": "meenakshi",
      "en": "(She puts a bunch of keys and a thick envelope in Amma's hands.) The Mist Village. Up in the hills, past Kotagiri. He was going to give it to the boy who drove him for six years without one complaint.",
