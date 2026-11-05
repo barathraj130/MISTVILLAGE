@@ -114,6 +114,9 @@ func message(from, text, time := "") -> void:
 
 
 func add_contact(c: Dictionary) -> void:
+	for k in contacts:                           # (once: Bala's number may be there already, from the bills)
+		if c.has("id") and str(k.get("id", "")) == str(c["id"]):
+			return
 	contacts.append(c)
 	_arrive()
 

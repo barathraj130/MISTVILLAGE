@@ -272,6 +272,14 @@
    "z": 2400.0,
    "en": "Coimbatore Medical College Hospital",
    "ta": "கோயம்புத்தூர் அரசு மருத்துவக் கல்லூரி மருத்துவமனை"
+  },
+  "bala_motors": {
+   "lat": 11.03745,
+   "lon": 76.97607,
+   "x": 890.0,
+   "z": -2124.0,
+   "en": "Bala Motors, Ganapathy",
+   "ta": "பாலா மோட்டார்ஸ், கணபதி"
   }
  },
  "people": {
@@ -461,6 +469,28 @@
    "model": "crowd_m6",
    "hair": "#3a3530",
    "top": "#8a9a8a"
+  },
+  "keycut1": {
+   "en": "The key-cutter",
+   "ta": "சாவி செய்பவர்",
+   "colour": "#d0c0a0",
+   "model": "crowd_m3",
+   "hair": "#8a857c",
+   "top": "#6a5a40"
+  },
+  "keycut2": {
+   "en": "The key shop owner",
+   "ta": "சாவி கடைக்காரர்",
+   "colour": "#c0d0e0",
+   "model": "crowd_m1",
+   "hair": "#141110",
+   "top": "#506070"
+  },
+  "suresh_phone": {
+   "en": "Suresh sir (on the phone)",
+   "ta": "சுரேஷ் சார் (ஃபோன்ல)",
+   "colour": "#c9a0ff",
+   "model": "story_suresh"
   }
  },
  "spawn": "home",
@@ -8332,6 +8362,984 @@
       "ta": "சுவர்"
      }
     },
+    {
+     "to": "karthik_room",
+     "sleep_until": "07:00",
+     "goal": {
+      "en": "Sleep",
+      "ta": "தூங்குங்க"
+     },
+     "prompt": {
+      "en": "lie down",
+      "ta": "படுங்க"
+     }
+    }
+   ]
+  },
+  {
+   "do": "home",
+   "room": "home",
+   "at": "home",
+   "start": "here",
+   "cast": {
+    "amma": {
+     "mark": "amma_kitchen"
+    }
+   },
+   "keep": true,
+   "visits": [
+    {
+     "to": "karthik_room",
+     "wall": true,
+     "goal": {
+      "en": "Your wall: who drove sir's SUV?",
+      "ta": "உங்க சுவர்: சார் எஸ்யூவிய யார் ஓட்டினது?"
+     },
+     "prompt": {
+      "en": "the wall",
+      "ta": "சுவர்"
+     }
+    }
+   ]
+  },
+  {
+   "do": "talk",
+   "lines": [
+    {
+     "who": "karthik",
+     "en": "(Sir's white SUV was locked in his garage that night, the police said. Both keys in the house. Then who drove it to Pudhur?)",
+     "ta": "(அன்னைக்கு ராத்திரி சார் வெள்ள எஸ்யூவி அவர் கேரேஜ்ல பூட்டியிருந்துச்சுன்னு போலீஸ் சொன்னாங்க. ரெண்டு சாவியும் வீட்டுல. அப்போ அத புதூருக்கு யார் ஓட்டினது?)"
+    },
+    {
+     "who": "karthik",
+     "en": "(Somebody had a third key.)",
+     "ta": "(யார் கிட்டயோ மூணாவது சாவி இருந்திருக்கு.)"
+    }
+   ]
+  },
+  {
+   "do": "message",
+   "from": {
+    "en": "Sundaram sir",
+    "ta": "சுந்தரம் சார்"
+   },
+   "text": {
+    "en": "The SUV's dealer says two keys were sold with it, both with the family. A third means a transponder copy: a chip key, cut and programmed. Not every key-cutter can. Find who can. – Sundaram",
+    "ta": "எஸ்யூவி கூட ரெண்டு சாவி தான் விக்கப்பட்டதுன்னு டீலர் சொல்றாங்க, ரெண்டும் குடும்பத்துகிட்ட. மூணாவதுன்னா டிரான்ஸ்பாண்டர் நகல்: சிப் சாவி, வெட்டி புரோகிராம் பண்ணது. எல்லா சாவிக்காரராலயும் முடியாது. யாரால முடியும்னு கண்டுபிடி. – சுந்தரம்"
+   }
+  },
+  {
+   "do": "pin",
+   "place": "drop_town_hall",
+   "label": {
+    "en": "The key-cutters by Town Hall",
+    "ta": "டவுன் ஹால் பக்கத்து சாவிக்காரர்கள்"
+   }
+  },
+  {
+   "do": "home",
+   "room": "home",
+   "at": "home",
+   "start": "here",
+   "visits": [
+    {
+     "to": "door",
+     "auto": true,
+     "reach": 1.4,
+     "goal": {
+      "en": "Out to your scooter",
+      "ta": "வெளியே, ஸ்கூட்டருக்கு"
+     }
+    }
+   ]
+  },
+  {
+   "do": "drive",
+   "to": "drop_town_hall",
+   "radius": 55,
+   "vehicle": "karthik_scooter",
+   "goal": {
+    "en": "Town Hall: the key-cutters on the pavement",
+    "ta": "டவுன் ஹால்: நடைபாதை சாவிக்காரர்கள்"
+   }
+  },
+  {
+   "do": "meet",
+   "who": "keycut1",
+   "cast": {
+    "keycut1": {
+     "pos": [
+      -3.0,
+      2.4
+     ],
+     "look": [
+      0,
+      0
+     ],
+     "anim": "Idle"
+    }
+   },
+   "goal": {
+    "en": "The key-cutter under the umbrella",
+    "ta": "குடை கீழ சாவிக்காரர்"
+   }
+  },
+  {
+   "do": "talk",
+   "lines": [
+    {
+     "who": "karthik",
+     "en": "Anna. A car key. A big white SUV, the kind with a chip in it. Has anyone asked you for one?",
+     "ta": "அண்ணா. கார் சாவி. பெரிய வெள்ள எஸ்யூவி, சிப் வச்சது. யாராவது உங்க கிட்ட கேட்டாங்களா?"
+    },
+    {
+     "who": "keycut1",
+     "en": "Chip key? (He laughs and holds up his file.) Thambi, I cut almirah keys and padlocks. For chip keys you need a machine and a computer. Try R.S. Puram, the shop by the flyover.",
+     "ta": "சிப் சாவியா? (சிரிச்சிட்டு அரத்த தூக்கி காட்டறார்.) தம்பி, நான் பீரோ சாவி, பூட்டு சாவி வெட்டறவன். சிப் சாவிக்கு மெஷினும் கம்ப்யூட்டரும் வேணும். ஆர்.எஸ். புரம், ஃப்ளைஓவர் பக்கத்து கடைய பாருங்க."
+    }
+   ]
+  },
+  {
+   "do": "drive",
+   "to": "drop_rs_puram",
+   "radius": 55,
+   "goal": {
+    "en": "R.S. Puram: the key shop by the flyover",
+    "ta": "ஆர்.எஸ். புரம்: ஃப்ளைஓவர் பக்கத்து சாவி கடை"
+   }
+  },
+  {
+   "do": "meet",
+   "who": "keycut2",
+   "cast": {
+    "keycut2": {
+     "pos": [
+      -3.0,
+      2.4
+     ],
+     "look": [
+      0,
+      0
+     ],
+     "anim": "Idle"
+    }
+   },
+   "goal": {
+    "en": "The key shop",
+    "ta": "சாவி கடை"
+   }
+  },
+  {
+   "do": "talk",
+   "lines": [
+    {
+     "who": "keycut2",
+     "en": "A transponder for that SUV? Not from me, not this year. I'd need the car itself here, on my machine, an hour.",
+     "ta": "அந்த எஸ்யூவிக்கு டிரான்ஸ்பாண்டரா? என் கிட்ட இல்ல, இந்த வருஷம். காரே இங்க வேணும், என் மெஷின்ல, ஒரு மணி நேரம்."
+    },
+    {
+     "who": "keycut2",
+     "en": "In this city, the dealer, and three or four workshops with the programmer. The good one's in Ganapathy. Bala Motors. That boy can do anything with a car.",
+     "ta": "இந்த ஊர்ல, டீலர், அப்புறம் புரோகிராமர் வச்ச மூணு நாலு வொர்க்ஷாப். நல்லது கணபதியில. பாலா மோட்டார்ஸ். அந்த பையன் காருக்கு என்ன வேணா பண்ணுவான்."
+    },
+    {
+     "who": "karthik",
+     "en": "(Bala Motors. Two streets from our house.)",
+     "ta": "(பாலா மோட்டார்ஸ். எங்க வீட்டுல இருந்து ரெண்டு தெரு.)"
+    },
+    {
+     "who": "karthik",
+     "en": "(No. Bala would have told me.)",
+     "ta": "(இல்ல. பாலா என் கிட்ட சொல்லியிருப்பான்.)"
+    }
+   ]
+  },
+  {
+   "do": "drive",
+   "to": "home",
+   "radius": 45,
+   "goal": {
+    "en": "Home",
+    "ta": "வீடு"
+   }
+  },
+  {
+   "do": "home",
+   "room": "home",
+   "at": "home",
+   "start": "door",
+   "cast": {
+    "amma": {
+     "mark": "amma_kitchen"
+    }
+   },
+   "keep": true,
+   "life_add": {
+    "stress": 6
+   },
+   "visits": [
+    {
+     "to": "karthik_room",
+     "wait": 0,
+     "until": "17:20",
+     "goal": {
+      "en": "Wait till it's time to sign. Your phone is in your hand",
+      "ta": "கையெழுத்து போடற நேரம் வரைக்கும் காத்திருங்க. ஃபோன் கையில"
+     },
+     "prompt": {
+      "en": "sit down",
+      "ta": "உட்காருங்க"
+     }
+    }
+   ]
+  },
+  {
+   "do": "home",
+   "room": "home",
+   "at": "home",
+   "start": "here",
+   "visits": [
+    {
+     "to": "door",
+     "auto": true,
+     "reach": 1.4,
+     "goal": {
+      "en": "Out: the station by seven",
+      "ta": "வெளியே: ஏழு மணிக்குள்ள ஸ்டேஷன்"
+     }
+    }
+   ]
+  },
+  {
+   "do": "drive",
+   "to": "police",
+   "radius": 45,
+   "vehicle": "karthik_scooter",
+   "by": "19:00",
+   "goal": {
+    "en": "Sign at the station by 7 PM",
+    "ta": "7 மணிக்குள்ள ஸ்டேஷன்ல கையெழுத்து"
+   }
+  },
+  {
+   "do": "home",
+   "room": "police",
+   "at": "police",
+   "start": "door",
+   "cast": {
+    "murugesan": {
+     "mark": "inspector",
+     "anim": "Idle"
+    },
+    "selvi": {
+     "mark": "constable",
+     "anim": "Idle"
+    }
+   },
+   "keep": true,
+   "visits": [
+    {
+     "to": "selvi",
+     "task": "sign",
+     "goal": {
+      "en": "Sign the bail register at Selvi's desk",
+      "ta": "செல்வி மேஜையில ஜாமீன் பதிவேட்டுல கையெழுத்து"
+     },
+     "prompt": {
+      "en": "sign the register",
+      "ta": "பதிவேட்டுல கையெழுத்து"
+     },
+     "header": {
+      "en": "Nagar Police Station",
+      "ta": "நகர் காவல் நிலையம்"
+     },
+     "form": {
+      "en": "BAIL ATTENDANCE REGISTER",
+      "ta": "ஜாமீன் வருகை பதிவேடு"
+     },
+     "fields": [
+      [
+       {
+        "en": "Crime No.",
+        "ta": "குற்ற எண்"
+       },
+       "412"
+      ],
+      [
+       {
+        "en": "Name",
+        "ta": "பெயர்"
+       },
+       {
+        "en": "Karthik M.",
+        "ta": "கார்த்திக் ம."
+       }
+      ],
+      [
+       {
+        "en": "Day",
+        "ta": "நாள்"
+       },
+       "11"
+      ]
+     ],
+     "sign_label": {
+      "en": "Signature of the accused",
+      "ta": "குற்றம் சாட்டப்பட்டவர் கையொப்பம்"
+     },
+     "seal": {
+      "en": "STATION SEAL",
+      "ta": "நிலைய முத்திரை"
+     }
+    }
+   ]
+  },
+  {
+   "do": "home",
+   "room": "police",
+   "at": "police",
+   "start": "here",
+   "visits": [
+    {
+     "to": "door",
+     "auto": true,
+     "reach": 1.4,
+     "goal": {
+      "en": "Out",
+      "ta": "வெளியே"
+     }
+    }
+   ]
+  },
+  {
+   "do": "drive",
+   "to": "bala_motors",
+   "radius": 45,
+   "goal": {
+    "en": "Bala Motors, two streets from home",
+    "ta": "பாலா மோட்டார்ஸ், வீட்டுல இருந்து ரெண்டு தெரு"
+   }
+  },
+  {
+   "do": "talk",
+   "lines": [
+    {
+     "who": "karthik",
+     "en": "(The shutter's down. The board says BALA MOTORS, 9 AM TO 9 PM. It's past nine.)",
+     "ta": "(ஷட்டர் இறக்கியிருக்கு. போர்டுல BALA MOTORS, காலை 9 முதல் இரவு 9. ஒன்பது தாண்டிடுச்சு.)"
+    }
+   ]
+  },
+  {
+   "do": "contact",
+   "contact": {
+    "id": "bala",
+    "name": {
+     "en": "Bala",
+     "ta": "பாலா"
+    },
+    "number": "94433 •••••",
+    "where": {
+     "en": "Bala Motors, Ganapathy",
+     "ta": "பாலா மோட்டார்ஸ், கணபதி"
+    }
+   }
+  },
+  {
+   "do": "dial",
+   "who": "bala",
+   "goal": {
+    "en": "Call Bala: your phone, Contacts",
+    "ta": "பாலாவுக்கு கூப்பிடுங்க: உங்க ஃபோன், தொடர்புகள்"
+   }
+  },
+  {
+   "do": "talk",
+   "lines": [
+    {
+     "who": "karthik",
+     "en": "(It rings, and rings. He always picks up. Always.)",
+     "ta": "(அடிக்குது, அடிக்குது. அவன் எப்பவும் எடுப்பான். எப்பவும்.)"
+    },
+    {
+     "who": "karthik",
+     "en": "(Morning, then.)",
+     "ta": "(அப்போ காலையில.)"
+    }
+   ]
+  },
+  {
+   "do": "drive",
+   "to": "home",
+   "radius": 45,
+   "goal": {
+    "en": "Home",
+    "ta": "வீடு"
+   }
+  },
+  {
+   "do": "home",
+   "room": "home",
+   "at": "home",
+   "start": "door",
+   "cast": {
+    "amma": {
+     "mark": "amma",
+     "anim": "Sit"
+    }
+   },
+   "keep": true,
+   "life_add": {
+    "stress": 8
+   },
+   "visits": [
+    {
+     "to": "karthik_room",
+     "sleep_until": "07:30",
+     "goal": {
+      "en": "Try to sleep",
+      "ta": "தூங்க முயற்சி பண்ணுங்க"
+     },
+     "prompt": {
+      "en": "lie down",
+      "ta": "படுங்க"
+     }
+    }
+   ]
+  },
+  {
+   "do": "home",
+   "room": "home",
+   "at": "home",
+   "start": "here",
+   "visits": [
+    {
+     "to": "door",
+     "auto": true,
+     "reach": 1.4,
+     "goal": {
+      "en": "Out to your scooter",
+      "ta": "வெளியே, ஸ்கூட்டருக்கு"
+     }
+    }
+   ]
+  },
+  {
+   "do": "drive",
+   "to": "bala_motors",
+   "radius": 45,
+   "vehicle": "karthik_scooter",
+   "goal": {
+    "en": "Bala Motors. The shutter's up",
+    "ta": "பாலா மோட்டார்ஸ். ஷட்டர் திறந்திருக்கு"
+   }
+  },
+  {
+   "do": "meet",
+   "who": "bala",
+   "cast": {
+    "bala": {
+     "pos": [
+      -2.6,
+      2.0
+     ],
+     "look": [
+      0,
+      0
+     ],
+     "anim": "Idle"
+    }
+   },
+   "props": [
+    {
+     "scene": "res://assets/vehicles/luxury_suv.glb",
+     "pos": [
+      -6.0,
+      5.5
+     ],
+     "look": [
+      -6.0,
+      15.0
+     ]
+    },
+    {
+     "scene": "res://assets/city_props/life_drums.glb",
+     "pos": [
+      -4.4,
+      -1.2
+     ],
+     "look": [
+      0,
+      0
+     ]
+    },
+    {
+     "scene": "res://assets/city_props/life_goods.glb",
+     "pos": [
+      -5.0,
+      1.0
+     ],
+     "look": [
+      0,
+      0
+     ]
+    }
+   ],
+   "goal": {
+    "en": "Bala, at his workbench",
+    "ta": "வேலை மேசையில பாலா"
+   }
+  },
+  {
+   "do": "talk",
+   "lines": [
+    {
+     "who": "bala",
+     "en": "Da! This early? Coffee? Sorry I didn't pick up last night, the phone was in the car I was—",
+     "ta": "டா! இவ்வளவு சீக்கிரமா? காபி? நேத்து ராத்திரி எடுக்கல சாரி, ஃபோன் கார்ல இருந்துச்சு, நான்—"
+    },
+    {
+     "who": "karthik",
+     "en": "Bala. A month ago. Did Suresh sir bring Raghavan sir's white SUV here?",
+     "ta": "பாலா. ஒரு மாசம் முன்னாடி. ராகவன் சார் வெள்ள எஸ்யூவிய சுரேஷ் சார் இங்க கொண்டு வந்தாரா?"
+    },
+    {
+     "who": "bala",
+     "en": "Yes, for service. Oil, front brake pads. Why?",
+     "ta": "ஆமா, சர்வீஸுக்கு. ஆயில், முன் பிரேக் பேட். ஏன்?"
+    },
+    {
+     "who": "karthik",
+     "en": "And a key?",
+     "ta": "அப்புறம் ஒரு சாவி?"
+    },
+    {
+     "who": "bala",
+     "en": "(He stops wiping his hands.) A spare. For the office, he said. Sir's partner, da. Why would I ask?",
+     "ta": "(கைய துடைக்கறத நிறுத்தறான்.) ஒரு ஸ்பேர். ஆஃபீஸுக்குன்னு சொன்னாரு. சாரோட பார்ட்னர் டா. நான் ஏன் கேக்க போறேன்?"
+    },
+    {
+     "who": "karthik",
+     "en": "Show me the job card.",
+     "ta": "ஜாப் கார்ட காட்டு."
+    }
+   ]
+  },
+  {
+   "do": "give",
+   "item": {
+    "id": "e11_jobcard",
+    "kind": "paper",
+    "title": {
+     "en": "Bala Motors, job card #1184",
+     "ta": "பாலா மோட்டார்ஸ், ஜாப் கார்டு #1184"
+    },
+    "from": {
+     "en": "Bala Motors, Ganapathy",
+     "ta": "பாலா மோட்டார்ஸ், கணபதி"
+    },
+    "body": {
+     "en": "Vehicle: white SUV, Raghavan Developers.\nWork: engine oil and filter; front brake pads; SPARE KEY (transponder), cut and programmed.\nOrdered by: Suresh sir.\nPaid: cash, ₹6,800.\nDate: two weeks before Day 1.\n\n– Bala (signed)",
+     "ta": "வாகனம்: வெள்ள எஸ்யூவி, ராகவன் டெவலப்பர்ஸ்.\nவேலை: எஞ்சின் ஆயில், ஃபில்டர்; முன் பிரேக் பேட்; ஸ்பேர் சாவி (டிரான்ஸ்பாண்டர்), வெட்டி புரோகிராம் பண்ணது.\nஆர்டர் செய்தவர்: சுரேஷ் சார்.\nகட்டணம்: ரொக்கம், ₹6,800.\nதேதி: 1ஆம் நாளுக்கு ரெண்டு வாரம் முன்பு.\n\n– பாலா (கையெழுத்து)"
+    }
+   }
+  },
+  {
+   "do": "talk",
+   "lines": [
+    {
+     "who": "karthik",
+     "en": "That key opened sir's car the night he died, Bala.",
+     "ta": "சார் இறந்த ராத்திரி அந்த சாவி தான் அவர் கார திறந்துச்சு, பாலா."
+    },
+    {
+     "who": "bala",
+     "en": "(For a long time he doesn't say anything. A radio is playing somewhere in the back.)",
+     "ta": "(ரொம்ப நேரம் எதுவும் பேசல. பின்னாடி எங்கயோ ரேடியோ ஓடுது.)"
+    },
+    {
+     "who": "bala",
+     "en": "He's been coming for tea. Nearly every evening, since. 'How's our Karthik? Where's he going these days?' I thought he cared about you, da. I thought he was helping.",
+     "ta": "அப்போல இருந்து டீ குடிக்க வர்றாரு. கிட்டத்தட்ட தினமும் சாயங்காலம். 'நம்ம கார்த்திக் எப்படி இருக்கான்? இப்போ எங்க போறான்?' உன் மேல அக்கறைன்னு நினைச்சேன் டா. உதவி பண்றாருன்னு நினைச்சேன்."
+    }
+   ]
+  },
+  {
+   "do": "talk",
+   "when": "told_bala",
+   "lines": [
+    {
+     "who": "bala",
+     "en": "I told him. The doorbell. Sekar's shop. Pudhur Vayal. Everything you told me at your door. And then that black car behind you... Da, that was me. I did that.",
+     "ta": "நான் சொன்னேன். டோர்பெல். சேகர் கடை. புதூர் வயல். உன் வாசல்ல நீ சொன்னது எல்லாம். அப்புறம் உன் பின்னாடி அந்த கருப்பு கார்... டா, அது நான் தான். நான் தான் பண்ணேன்."
+    }
+   ]
+  },
+  {
+   "do": "talk",
+   "unless": "told_bala",
+   "lines": [
+    {
+     "who": "bala",
+     "en": "And before. Before that night. 'Where's Karthik taking sir tomorrow? What time does he finish? Does he take his own phone home?' I told him. Every time. Like it was nothing.",
+     "ta": "அப்புறம் அதுக்கு முன்னாடி. அந்த ராத்திரிக்கு முன்னாடி. 'கார்த்திக் நாளைக்கு சார எங்க கூட்டிட்டு போறான்? எத்தன மணிக்கு முடிப்பான்? அவன் ஃபோன வீட்டுக்கு எடுத்துட்டு போவானா?' சொன்னேன். ஒவ்வொரு தடவையும். ஒண்ணுமே இல்லாத மாதிரி."
+    }
+   ]
+  },
+  {
+   "do": "give",
+   "item": {
+    "id": "e12_chats",
+    "kind": "paper",
+    "title": {
+     "en": "Bala's phone: chats with Suresh sir",
+     "ta": "பாலா ஃபோன்: சுரேஷ் சாருடன் சாட்"
+    },
+    "from": {
+     "en": "(screenshots Bala sends you, his hands shaking)",
+     "ta": "(நடுங்கற கையோட பாலா அனுப்பின ஸ்கிரீன்ஷாட்)"
+    },
+    "body": {
+     "en": "Suresh sir: Bala, tomorrow our Karthik takes sir to the bank?\nBala: Yes sir, morning. Then office.\nSuresh sir: And night? He goes home on time?\nBala: He does deliveries after 9 now sir, for extra.\nSuresh sir: Good boy. Hardworking. 👍\n\n(Two days before Day 1.)",
+     "ta": "சுரேஷ் சார்: பாலா, நாளைக்கு நம்ம கார்த்திக் சார பேங்குக்கு கூட்டிட்டு போறானா?\nபாலா: ஆமா சார், காலையில. அப்புறம் ஆஃபீஸ்.\nசுரேஷ் சார்: ராத்திரி? நேரத்துக்கு வீட்டுக்கு போவானா?\nபாலா: இப்போ 9 மணிக்கு அப்புறம் டெலிவரி பண்றான் சார், எக்ஸ்ட்ராவுக்கு.\nசுரேஷ் சார்: நல்ல பையன். உழைப்பாளி. 👍\n\n(1ஆம் நாளுக்கு ரெண்டு நாள் முன்பு.)"
+    }
+   }
+  },
+  {
+   "do": "evidence",
+   "speaker": "bala",
+   "tag": "E11",
+   "label": {
+    "en": "Bala's job card: the spare key, Suresh's order",
+    "ta": "பாலா ஜாப் கார்டு: ஸ்பேர் சாவி, சுரேஷ் ஆர்டர்"
+   },
+   "memory": {
+    "id": "mem_key",
+    "kind": "card",
+    "title": {
+     "en": "The third key (E11)",
+     "ta": "மூணாவது சாவி (E11)"
+    },
+    "body": {
+     "en": "Job card #1184: a transponder spare key for sir's SUV, ordered and paid in cash by Suresh, two weeks before.",
+     "ta": "ஜாப் கார்டு #1184: சார் எஸ்யூவிக்கு டிரான்ஸ்பாண்டர் ஸ்பேர் சாவி, சுரேஷ் ஆர்டர், ரொக்கம், ரெண்டு வாரம் முன்னாடி."
+    }
+   }
+  },
+  {
+   "do": "evidence",
+   "speaker": "bala",
+   "tag": "E12",
+   "label": {
+    "en": "Bala's chats: Suresh asking about my day",
+    "ta": "பாலா சாட்: என் நாள பத்தி சுரேஷ் கேட்டது"
+   },
+   "memory": {
+    "id": "mem_leak",
+    "kind": "card",
+    "title": {
+     "en": "How he knew (E12)",
+     "ta": "அவருக்கு எப்படி தெரிஞ்சது (E12)"
+    },
+    "body": {
+     "en": "Suresh learnt my day from Bala over tea: the bank, the office, deliveries after nine, my phone. Bala never knew.",
+     "ta": "டீ குடிக்கும்போது பாலா கிட்ட இருந்து சுரேஷ் என் நாள தெரிஞ்சுகிட்டாரு: பேங்க், ஆஃபீஸ், ஒன்பதுக்கு அப்புறம் டெலிவரி, என் ஃபோன். பாலாவுக்கு தெரியவே இல்ல."
+    }
+   }
+  },
+  {
+   "do": "choose",
+   "prompt": {
+    "en": "Bala is crying. He doesn't wipe it away.",
+    "ta": "பாலா அழறான். துடைக்கல."
+   },
+   "options": [
+    {
+     "text": {
+      "en": "Put a hand on his shoulder. \"You didn't know, da.\"",
+      "ta": "அவன் தோள்ல கை வைங்க. \"உனக்கு தெரியாது டா.\""
+     },
+     "set": "bala_forgiven"
+    },
+    {
+     "text": {
+      "en": "Walk out. He can come to you when he's ready",
+      "ta": "வெளிய நடங்க. அவன் தயாரானதும் உன் கிட்ட வரட்டும்"
+     },
+     "set": "bala_walked",
+     "stress": 8
+    }
+   ]
+  },
+  {
+   "do": "talk",
+   "when": "bala_forgiven",
+   "lines": [
+    {
+     "who": "karthik",
+     "en": "You didn't know, da. He used you like he used me. Now we tell Sundaram sir. Together.",
+     "ta": "உனக்கு தெரியாது டா. என்ன பயன்படுத்தின மாதிரியே உன்னையும் பயன்படுத்தினாரு. இப்போ சுந்தரம் சார் கிட்ட சொல்லுவோம். சேர்ந்து."
+    },
+    {
+     "who": "bala",
+     "en": "(He nods, and nods, and can't stop.) Whatever you need. The court, a car, anything. Anything, da.",
+     "ta": "(தலைய ஆட்டறான், ஆட்டிட்டே இருக்கான்.) உனக்கு என்ன வேணுமோ. கோர்ட், கார், எதுவானாலும். எதுவானாலும் டா."
+    }
+   ]
+  },
+  {
+   "do": "talk",
+   "when": "bala_walked",
+   "lines": [
+    {
+     "who": "karthik",
+     "en": "(I put the job card in my pocket and walk out into the sun. Behind me he says my name once. I don't turn round.)",
+     "ta": "(ஜாப் கார்ட பாக்கெட்ல வச்சுட்டு வெயில்ல நடக்கறேன். பின்னாடி ஒரு தடவ என் பேர சொல்றான். நான் திரும்பல.)"
+    }
+   ]
+  },
+  {
+   "do": "message",
+   "when": "bala_walked",
+   "from": {
+    "en": "Bala",
+    "ta": "பாலா"
+   },
+   "text": {
+    "en": "Da. I went to Sundaram sir myself. I gave him everything, the card, the chats. I'll say it in court. You don't have to talk to me. – Bala",
+    "ta": "டா. நானே சுந்தரம் சார் கிட்ட போனேன். எல்லாத்தையும் குடுத்தேன், கார்டு, சாட். கோர்ட்ல சொல்லுவேன். நீ என் கிட்ட பேச வேண்டாம். – பாலா"
+   }
+  },
+  {
+   "do": "drive",
+   "to": "home",
+   "radius": 45,
+   "goal": {
+    "en": "Home",
+    "ta": "வீடு"
+   }
+  },
+  {
+   "do": "home",
+   "room": "home",
+   "at": "home",
+   "start": "door",
+   "cast": {
+    "amma": {
+     "mark": "amma_kitchen"
+    }
+   },
+   "keep": true,
+   "visits": [
+    {
+     "to": "karthik_room",
+     "wait": 0,
+     "until": "17:20",
+     "goal": {
+      "en": "Rest till it's time to sign",
+      "ta": "கையெழுத்து போடற நேரம் வரைக்கும் ஓய்வு"
+     },
+     "prompt": {
+      "en": "sit down",
+      "ta": "உட்காருங்க"
+     }
+    }
+   ]
+  },
+  {
+   "do": "home",
+   "room": "home",
+   "at": "home",
+   "start": "here",
+   "visits": [
+    {
+     "to": "door",
+     "auto": true,
+     "reach": 1.4,
+     "goal": {
+      "en": "Out: the station by seven",
+      "ta": "வெளியே: ஏழு மணிக்குள்ள ஸ்டேஷன்"
+     }
+    }
+   ]
+  },
+  {
+   "do": "drive",
+   "to": "police",
+   "radius": 45,
+   "vehicle": "karthik_scooter",
+   "by": "19:00",
+   "goal": {
+    "en": "Sign at the station by 7 PM",
+    "ta": "7 மணிக்குள்ள ஸ்டேஷன்ல கையெழுத்து"
+   }
+  },
+  {
+   "do": "home",
+   "room": "police",
+   "at": "police",
+   "start": "door",
+   "cast": {
+    "murugesan": {
+     "mark": "inspector",
+     "anim": "Idle"
+    },
+    "selvi": {
+     "mark": "constable",
+     "anim": "Idle"
+    }
+   },
+   "keep": true,
+   "visits": [
+    {
+     "to": "selvi",
+     "task": "sign",
+     "goal": {
+      "en": "Sign the bail register at Selvi's desk",
+      "ta": "செல்வி மேஜையில ஜாமீன் பதிவேட்டுல கையெழுத்து"
+     },
+     "prompt": {
+      "en": "sign the register",
+      "ta": "பதிவேட்டுல கையெழுத்து"
+     },
+     "header": {
+      "en": "Nagar Police Station",
+      "ta": "நகர் காவல் நிலையம்"
+     },
+     "form": {
+      "en": "BAIL ATTENDANCE REGISTER",
+      "ta": "ஜாமீன் வருகை பதிவேடு"
+     },
+     "fields": [
+      [
+       {
+        "en": "Crime No.",
+        "ta": "குற்ற எண்"
+       },
+       "412"
+      ],
+      [
+       {
+        "en": "Name",
+        "ta": "பெயர்"
+       },
+       {
+        "en": "Karthik M.",
+        "ta": "கார்த்திக் ம."
+       }
+      ],
+      [
+       {
+        "en": "Day",
+        "ta": "நாள்"
+       },
+       "12"
+      ]
+     ],
+     "sign_label": {
+      "en": "Signature of the accused",
+      "ta": "குற்றம் சாட்டப்பட்டவர் கையொப்பம்"
+     },
+     "seal": {
+      "en": "STATION SEAL",
+      "ta": "நிலைய முத்திரை"
+     }
+    }
+   ]
+  },
+  {
+   "do": "home",
+   "room": "police",
+   "at": "police",
+   "start": "here",
+   "visits": [
+    {
+     "to": "door",
+     "auto": true,
+     "reach": 1.4,
+     "goal": {
+      "en": "Out",
+      "ta": "வெளியே"
+     }
+    }
+   ]
+  },
+  {
+   "do": "drive",
+   "to": "home",
+   "radius": 45,
+   "goal": {
+    "en": "Home",
+    "ta": "வீடு"
+   }
+  },
+  {
+   "do": "home",
+   "room": "home",
+   "at": "home",
+   "start": "door",
+   "cast": {
+    "amma": {
+     "mark": "amma",
+     "anim": "Sit"
+    }
+   },
+   "keep": true,
+   "visits": [
+    {
+     "to": "karthik_room",
+     "wall": true,
+     "goal": {
+      "en": "Your wall: the key, and who told him",
+      "ta": "உங்க சுவர்: சாவி, யார் சொன்னது"
+     },
+     "prompt": {
+      "en": "the wall",
+      "ta": "சுவர்"
+     }
+    }
+   ]
+  },
+  {
+   "do": "call",
+   "from": {
+    "en": "Suresh sir",
+    "ta": "சுரேஷ் சார்"
+   }
+  },
+  {
+   "do": "talk",
+   "lines": [
+    {
+     "who": "suresh_phone",
+     "en": "Boss! Karthik. How are you, how's Amma, how's Divya's college?",
+     "ta": "பாஸ்! கார்த்திக். எப்படி இருக்க, அம்மா எப்படி இருக்காங்க, திவ்யா காலேஜ் எப்படி?"
+    },
+    {
+     "who": "suresh_phone",
+     "en": "Listen. You've been busy, I hear. Let's talk. Just us. You and me, like the old days. Tomorrow night. I'll send you the place.",
+     "ta": "கேளு. ரொம்ப பிஸியா இருக்கன்னு கேள்விப்பட்டேன். பேசலாம். நாம மட்டும். நீயும் நானும், பழைய மாதிரி. நாளைக்கு ராத்திரி. இடத்த அனுப்பறேன்."
+    },
+    {
+     "who": "karthik",
+     "en": "(His voice is warm. It always was.)",
+     "ta": "(அவர் குரல் அன்பா இருக்கு. எப்பவும் அப்படி தான்.)"
+    }
+   ]
+  },
+  {
+   "do": "home",
+   "room": "home",
+   "at": "home",
+   "start": "here",
+   "cast": {
+    "amma": {
+     "mark": "amma",
+     "anim": "Sit"
+    }
+   },
+   "keep": true,
+   "visits": [
     {
      "to": "karthik_room",
      "sleep_until": "07:00",

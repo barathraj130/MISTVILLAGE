@@ -557,6 +557,8 @@ func _pledged(_r: Dictionary) -> void:
 func _dialled(c: Dictionary) -> void:
 	if str(c.get("id", "")) != "bala":
 		return
+	if city.story and str(city.story.cur.get("do", "")) == "dial":   # (the story's own call: it rings out, no loan)
+		return
 	var d := _day()
 	var amt := 5000 if bala_loans.is_empty() else (3000 if d - int(bala_loans[-1]) >= 7 else 0)
 	var lines: Array
