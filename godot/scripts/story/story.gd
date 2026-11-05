@@ -478,7 +478,9 @@ func _next() -> void:
 			_next()
 			return
 		"bail":                                          # bail begins: the evenings at the station (city/bail.gd)
-			if city.bail and cur.get("restore", false):  # (out of jail: bail granted again)
+			if city.bail and cur.has("strike"):          # (a breach the inspector saw himself: a strike, its warning)
+				city.bail._strike(cur["strike"])
+			elif city.bail and cur.get("restore", false):  # (out of jail: bail granted again)
 				city.bail.restore()
 			elif city.bail:
 				city.bail.start()
@@ -629,6 +631,8 @@ func _next() -> void:
 				var lk := _w2(pr.get("look", [0.0, 0.0]))
 				pn.global_position = at
 				pn.rotation.y = atan2(lk.x - at.x, lk.z - at.z) + float(pr.get("turn", 0.0))
+				if pr.has("paint"):                          # (a car's body colour: Suresh's black sedan)
+					_paint(pn, Color.html(str(pr["paint"])))
 				_props.append(pn)
 			var a: Node3D = cast.get(cur["who"])
 			if a:
@@ -1906,19 +1910,24 @@ func _tail_start(spec: Dictionary) -> void:
 	_tail = ps.instantiate() as Node3D
 	add_child(_tail)
 	_tail_gap = float(spec.get("gap", 24.0))
+	_paint(_tail, Color(0.03, 0.03, 0.035))
+	var back: Vector3 = car.global_position - car.forward() * _tail_gap
+	_crumbs = [back, car.global_position]
+	_tail_tick()
+
+
+## A car's "Paint" surfaces in one colour, glossy.
+func _paint(n: Node3D, c: Color) -> void:
 	var paint := StandardMaterial3D.new()
-	paint.albedo_color = Color(0.03, 0.03, 0.035)
+	paint.albedo_color = c
 	paint.metallic = 0.6
 	paint.roughness = 0.25
-	for mi in _tail.find_children("*", "MeshInstance3D", true, false):
+	for mi in n.find_children("*", "MeshInstance3D", true, false):
 		var m3 := mi as MeshInstance3D
 		for i in m3.mesh.get_surface_count():
 			var mat := m3.get_active_material(i)
 			if mat and mat.resource_name == "Paint":
 				m3.set_surface_override_material(i, paint)
-	var back: Vector3 = car.global_position - car.forward() * _tail_gap
-	_crumbs = [back, car.global_position]
-	_tail_tick()
 
 
 func _tail_tick() -> void:
