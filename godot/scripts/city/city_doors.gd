@@ -140,6 +140,8 @@ func _story_busy() -> bool:
 		return false
 	if st.room != null:
 		return true
+	if st.box and st.box.visible:                       # (someone is talking: their words, not a door's)
+		return true
 	return st.has_method("claims_e") and st.claims_e(city.walker.global_position)
 
 

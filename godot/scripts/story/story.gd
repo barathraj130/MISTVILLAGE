@@ -56,6 +56,7 @@ const Table := preload("res://scripts/story/table.gd")
 const Wall := preload("res://scripts/story/wall.gd")
 const Dvr := preload("res://scripts/story/dvr.gd")
 const Doorbell := preload("res://scripts/story/doorbell.gd")
+const Court := preload("res://scripts/story/court.gd")
 const Actor := preload("res://scripts/story/actor.gd")
 const Walker := preload("res://scripts/player.gd")
 const RoomSound := preload("res://scripts/city/room_sound.gd")
@@ -92,12 +93,14 @@ var _gig_earned := 0                 # and what they paid
 var _q_down := false
 var _peek := -1                     # (testing) the house visit the walker was set down near
 var _beam: MeshInstance3D
+var evidence := {}                  # tag → {title, body, paid}: what he can put before the court (court.gd)
 var flags := {}                     # what the player did in tasks (short_found, signed, ...)
 var _paid := {}                     # lines that already paid (step:line)
 var tasks: Control
 var table: Control                    # the questioning (table.gd)
 var wall: Control                     # the wall in his room (wall.gd)
 var dvr: Control                      # a camera recorder's footage on someone's monitor (dvr.gd)
+var court: Control                    # the trial: the prosecution's points, his evidence, the night on the map (court.gd)
 var doorbell: Control                 # Ashwin's doorbell camera: it records him that night, plays on a tablet later (doorbell.gd)
 var _park := ""                       # a place the car is being set down at, out of sight (after a ride)
 var cast := {}                      # story people in the world: key → Actor
@@ -478,7 +481,11 @@ func _next() -> void:
 			_next()
 			return
 		"bail":                                          # bail begins: the evenings at the station (city/bail.gd)
-			if city.bail and cur.has("strike"):          # (a breach the inspector saw himself: a strike, its warning)
+			if city.bail and cur.get("end", false):      # (acquitted: no more evenings at the station, no border)
+				city.bail.active = false
+				city.bail._save()
+				print("STORY bail ended")
+			elif city.bail and cur.has("strike"):          # (a breach the inspector saw himself: a strike, its warning)
 				city.bail._strike(cur["strike"])
 			elif city.bail and cur.get("restore", false):  # (out of jail: bail granted again)
 				city.bail.restore()
@@ -526,6 +533,25 @@ func _next() -> void:
 		"snapshot":
 			_snap_ready = false
 			_snapshot()
+		"court":
+			if city.walker:
+				city.walker.active = false
+			_in_task = true
+			var ev: Dictionary = evidence.duplicate()
+			ev["E04"] = {"title": {"en": "The rider app (E04)", "ta": "ரைடர் ஆப் (E04)"}, "body": {"en": "Pickup at the hotel 9:50 PM; Saravanampatti 10:20, with the OTP.", "ta": "ஹோட்டல்ல பிக்கப் இரவு 9:50; சரவணம்பட்டி 10:20, OTP-யோட."}, "paid": false}
+			if flags.get("dvr_photo", false):           # (the lobby camera: bought from Kathir, or on Sundaram's letter)
+				ev["E07"] = {"title": {"en": "The lobby camera (E07)", "ta": "லாபி கேமரா (E07)"}, "body": {"en": "9:39 the cap man in; card #07 at the office door 9:40; out 9:58.", "ta": "9:39 தொப்பி ஆள் உள்ள; ஆஃபீஸ் கதவுல கார்டு #07 9:40; 9:58 வெளியே."}, "paid": flags.get("kathir_paid", false) and not flags.get("kathir_walked", false)}
+			if _skip and "--courtall" in OS.get_cmdline_user_args():   # (testing from here: everything he could have found)
+				for c in cur["claims"]:
+					for tg in c["answers"]:
+						if not ev.has(tg):
+							ev[tg] = {"title": {"en": tg}, "body": {"en": ""}, "paid": false}
+			court.places = data["places"]
+			court.map_segs = map.all_segs
+			court.start(cur, ev, lang, _skip)
+			if _skip:                                    # (testing: the court, mid-case and the night on the map)
+				for t in [2.0, 9.5, 12.0]:
+					get_tree().create_timer(t).timeout.connect(_shot)
 		"dial":
 			if not city.phone.dialled.is_connected(_on_dial):
 				city.phone.dialled.connect(_on_dial)
@@ -727,6 +753,8 @@ func _cast(spec: Dictionary) -> void:
 				if hex != "":
 					a.tint_cloth(part, Color.html(hex))
 			cast[key] = a
+			if d.get("cap", data["people"].get(key, {}).get("cap", false)):   # (Pandi's dark cotton cap, as in the lobby footage)
+				dvr._cap(a)
 		var act: Node3D = cast[key]
 		act.visible = true
 		if d.has("mark") and room != null:
@@ -1870,6 +1898,10 @@ func _evidence() -> void:
 				break
 	if cur.has("memory"):
 		wall.add(cur["memory"])
+	var paid: bool = flags.get(str(cur.get("paid", "-")), false)   # (what was bought walks on one leg: court.gd)
+	flags["ev_" + str(cur["tag"])] = "paid" if paid else "yes"
+	var m: Dictionary = cur.get("memory", {})
+	evidence[str(cur["tag"])] = {"title": m.get("title", cur.get("label", {})), "body": m.get("body", {}), "paid": paid}
 
 
 ## "dvr": someone's monitor with a recorder's footage on it (dvr.gd), worked by him: he steps up to it with E, plays
@@ -2076,6 +2108,16 @@ func _doorbell_closed() -> void:
 	if city.walker:
 		city.walker.active = true
 		Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
+	_next()
+
+
+func _court_done(result: Dictionary) -> void:
+	if str(cur.get("do", "")) != "court":
+		return
+	_in_task = false
+	flags["court_points"] = int(result["won"])
+	flags["court_won"] = int(result["won"]) * 2 > int(result["of"])
+	print("STORY court: %d of %d points" % [result["won"], result["of"]])
 	_next()
 
 
@@ -2737,6 +2779,10 @@ func _build_ui() -> void:
 	dvr.visible = false
 	dvr.closed.connect(_dvr_closed)
 	ui.add_child(dvr)
+	court = Court.new()
+	court.visible = false
+	court.finished.connect(_court_done)
+	ui.add_child(court)
 	doorbell = Doorbell.new()
 	doorbell.visible = false
 	doorbell.closed.connect(_doorbell_closed)

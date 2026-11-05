@@ -233,7 +233,7 @@ Advocate Sundaram), or **disputed** when a source contradicts it. Each item has 
 | E16 | Land records: Pudhur Vayal plots registered to "Kongu Green Estates", a firm of Suresh's wife, a week before the murder | District Collectorate, patta counter | Suresh already owned the deal Raghavan refused to sign | Motive (with E09, E15) | Act 4 |
 | E17 | Post-mortem: death between 22:40 and 23:10 | Government Hospital, through Priya | When he died | Karthik was home or on the road from Saravanampatti then (E05) | Act 4 |
 | E18 | The Siruvani Grand: Suresh lunching with two land buyers, Day 2; the doorman remembers his ring | the hotel's doorman, Ganesan | Suresh was selling Green Valley before it was signed | Motive, and a witness who saw Suresh's ring tell | Act 4 |
-| E19 | Gandhipuram bus stand CCTV: Pandi buying a ticket to Salem, Day 22 | the stand's office (via Selvi) | Pandi is running | Leads to his arrest and confession (E13) | Act 6 |
+| E19 | Gandhipuram bus stand CCTV: Pandi buying a ticket to Salem, Day 22 | the stand's office (via Selvi) | Pandi is running | Leads to his arrest and confession (E13) | Act 6 (slice: Day 17; keep him in sight and call Selvi, block the bus door, or grab him: a strike) |
 
 **Journey reconstruction (a gameplay tool):** the player drives a route on the real roads at the right time of day.
 The game records the real-world travel time and attaches it to the board as evidence for or against a timeline. For
@@ -297,6 +297,7 @@ The days are game days, at 48 real minutes each (GAME_RULES.md §1).
 - **End hook:** Suresh calls Karthik for the first time: "Boss. Let's talk. Just us."
 
 ### Act 6, The truth (Days 21–25)
+(Built in the slice as Days 16–20: the trap, the court orders and Pandi, Joseph, the trial (court.gd: the prosecution's six points answered with the evidence he found, bought evidence objected to, then the night replayed on the map), the keys of The Mist Village, and the Kotagiri road at dawn.)
 - **Story:**
   - The meeting with Suresh is a trap. The player must stay lawful: don't take the bait, and call Sundaram.
   - Sundaram files for E10 and E13. Pandi tries to leave town from the Gandhipuram bus stand (E19) and is held; cornered,

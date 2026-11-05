@@ -280,6 +280,38 @@
    "z": -2124.0,
    "en": "Bala Motors, Ganapathy",
    "ta": "பாலா மோட்டார்ஸ், கணபதி"
+  },
+  "bus_stand": {
+   "lat": 11.01472,
+   "lon": 76.9671,
+   "x": -73.9,
+   "z": 397.0,
+   "en": "Gandhipuram Central Bus Stand",
+   "ta": "காந்திபுரம் மத்திய பேருந்து நிலையம்"
+  },
+  "codissia": {
+   "lat": 11.04124,
+   "lon": 77.02569,
+   "x": 6309.7,
+   "z": -2580.0,
+   "en": "CODISSIA Trade Fair Complex",
+   "ta": "கொடிசியா வர்த்தக கண்காட்சி வளாகம்"
+  },
+  "kotagiri_check": {
+   "lat": 11.31369,
+   "lon": 76.93174,
+   "x": -4154.9,
+   "z": -32653.7,
+   "en": "The Kotagiri ghat checkpost",
+   "ta": "கோத்தகிரி மலைப்பாதை சோதனைச் சாவடி"
+  },
+  "court": {
+   "lat": 10.99983,
+   "lon": 76.96694,
+   "x": -80.4,
+   "z": 2044.3,
+   "en": "Combined Court Complex, Coimbatore",
+   "ta": "ஒருங்கிணைந்த நீதிமன்ற வளாகம், கோவை"
   }
  },
  "people": {
@@ -491,6 +523,30 @@
    "ta": "சுரேஷ் சார் (ஃபோன்ல)",
    "colour": "#c9a0ff",
    "model": "story_suresh"
+  },
+  "pandi": {
+   "en": "The man in the cap",
+   "ta": "தொப்பி போட்ட ஆள்",
+   "colour": "#9a9a9a",
+   "model": "crowd_m4",
+   "hair": "#0f0c0a",
+   "top": "#1c1f26",
+   "pants": "#2a2a30",
+   "cap": true
+  },
+  "joseph": {
+   "en": "Joseph (accounts)",
+   "ta": "ஜோசப் (கணக்கு)",
+   "colour": "#e0d8a0",
+   "model": "crowd_m2",
+   "hair": "#8a857c",
+   "top": "#d8c8a0"
+  },
+  "judge": {
+   "en": "The judge",
+   "ta": "நீதிபதி",
+   "colour": "#f0e0c0",
+   "model": "crowd_m3"
   }
  },
  "spawn": "home",
@@ -6959,7 +7015,8 @@
      "en": "Kongu Green Estates, director Mrs. S. Lalitha. Registered 8 days before sir died. Paid a tout ₹2,000 for it.",
      "ta": "கொங்கு கிரீன் எஸ்டேட்ஸ், இயக்குநர் திருமதி எஸ். லலிதா. சார் சாகறதுக்கு 8 நாள் முன்னாடி பதிவு. புரோக்கருக்கு ₹2,000 குடுத்தேன்."
     }
-   }
+   },
+   "paid": "patta_tout"
   },
   {
    "do": "talk",
@@ -9814,14 +9871,1391 @@
    ]
   },
   {
+   "do": "message",
+   "from": {
+    "en": "Sundaram sir",
+    "ta": "சுந்தரம் சார்"
+   },
+   "text": {
+    "en": "The court granted both. His account: on Day 5, ₹4,00,000 in cash paid into 'Om Sakthi Traders', a money-lender in Ukkadam (E10). And Pandi, the lender's driver, lent to Suresh: his phone was at Pudhur Vayal from 10:30 to 11:00 that night (E13). The police must pick him up now. – Sundaram",
+    "ta": "கோர்ட் ரெண்டையும் அனுமதிச்சது. அவர் அக்கவுண்ட்: 5ஆம் நாள், ₹4,00,000 ரொக்கம் 'ஓம் சக்தி டிரேடர்ஸ்'-க்கு கட்டியிருக்கு, உக்கடத்துல ஒரு வட்டிக்காரர் (E10). அப்புறம் பாண்டி, வட்டிக்காரரோட டிரைவர், சுரேஷுக்கு குடுத்தது: அன்னைக்கு ராத்திரி 10:30 முதல் 11:00 வரை அவன் ஃபோன் புதூர் வயல்ல இருந்துச்சு (E13). போலீஸ் இப்போ அவன பிடிக்கணும். – சுந்தரம்"
+   }
+  },
+  {
+   "do": "evidence",
+   "speaker": "sundaram",
+   "tag": "E10",
+   "label": {
+    "en": "Court order: ₹4 L into Om Sakthi Traders",
+    "ta": "கோர்ட் உத்தரவு: ஓம் சக்தி டிரேடர்ஸுக்கு ₹4 லட்சம்"
+   },
+   "memory": {
+    "id": "mem_e10",
+    "kind": "card",
+    "title": {
+     "en": "The money (E10)",
+     "ta": "பணம் (E10)"
+    },
+    "body": {
+     "en": "Day 5: ₹4,00,000 cash from Suresh's account into Om Sakthi Traders, a money-lender in Ukkadam.",
+     "ta": "5ஆம் நாள்: சுரேஷ் அக்கவுண்ட்ல இருந்து ₹4,00,000 ரொக்கம், உக்கடம் வட்டிக்காரர் ஓம் சக்தி டிரேடர்ஸுக்கு."
+    }
+   }
+  },
+  {
+   "do": "evidence",
+   "speaker": "sundaram",
+   "tag": "E13",
+   "label": {
+    "en": "Court order: Pandi's phone at the site",
+    "ta": "கோர்ட் உத்தரவு: சைட்ல பாண்டி ஃபோன்"
+   },
+   "memory": {
+    "id": "mem_e13",
+    "kind": "card",
+    "title": {
+     "en": "Pandi (E13)",
+     "ta": "பாண்டி (E13)"
+    },
+    "body": {
+     "en": "The lender's driver, lent to Suresh. Built like me. His phone at Pudhur Vayal, 10:30 to 11:00 PM that night.",
+     "ta": "வட்டிக்காரரோட டிரைவர், சுரேஷுக்கு குடுத்தது. என் உடம்பு மாதிரியே. அன்னைக்கு ராத்திரி 10:30 முதல் 11:00 வரை புதூர் வயல்ல அவன் ஃபோன்."
+    }
+   }
+  },
+  {
+   "do": "home",
+   "room": "home",
+   "at": "home",
+   "start": "here",
+   "cast": {
+    "amma": {
+     "mark": "amma_kitchen"
+    }
+   },
+   "keep": true,
+   "visits": [
+    {
+     "to": "karthik_room",
+     "wait": 0,
+     "until": "11:20",
+     "goal": {
+      "en": "Wait. Something will happen today",
+      "ta": "காத்திருங்க. இன்னைக்கு ஏதோ நடக்கும்"
+     },
+     "prompt": {
+      "en": "sit down",
+      "ta": "உட்காருங்க"
+     }
+    }
+   ]
+  },
+  {
+   "do": "call",
+   "from": {
+    "en": "Constable Selvi",
+    "ta": "கான்ஸ்டபிள் செல்வி"
+   }
+  },
+  {
+   "do": "talk",
+   "lines": [
+    {
+     "who": "selvi",
+     "en": "(on the phone, low) Karthik. The stand office called the station. A man matching Pandi is at Gandhipuram bus stand, at the Salem counter. The inspector is in court. I can't leave the desk.",
+     "ta": "(ஃபோன்ல, மெதுவா) கார்த்திக். ஸ்டாண்ட் ஆபீஸ்ல இருந்து ஸ்டேஷனுக்கு கூப்பிட்டாங்க. பாண்டி மாதிரி ஒருத்தன் காந்திபுரம் பஸ் ஸ்டாண்ட்ல, சேலம் கவுண்டர்ல. இன்ஸ்பெக்டர் கோர்ட்ல. நான் மேஜைய விட்டு போக முடியாது."
+    },
+    {
+     "who": "selvi",
+     "en": "Don't touch him. Don't speak to him. Keep him in sight and call me. A patrol is ten minutes away.",
+     "ta": "அவன தொடாத. பேசாத. கண்ணுல வச்சுக்கோ, எனக்கு கூப்பிடு. ஒரு பேட்ரோல் பத்து நிமிஷத்துல வரும்."
+    }
+   ]
+  },
+  {
+   "do": "contact",
+   "contact": {
+    "id": "selvi",
+    "name": {
+     "en": "Constable Selvi",
+     "ta": "கான்ஸ்டபிள் செல்வி"
+    },
+    "number": "94890 •••••",
+    "where": {
+     "en": "Nagar Police Station",
+     "ta": "நகர் காவல் நிலையம்"
+    }
+   }
+  },
+  {
+   "do": "pin",
+   "place": "bus_stand",
+   "label": {
+    "en": "Gandhipuram bus stand: the Salem counter",
+    "ta": "காந்திபுரம் பஸ் ஸ்டாண்ட்: சேலம் கவுண்டர்"
+   }
+  },
+  {
+   "do": "home",
+   "room": "home",
+   "at": "home",
+   "start": "here",
+   "visits": [
+    {
+     "to": "door",
+     "auto": true,
+     "reach": 1.4,
+     "goal": {
+      "en": "Out. Fast",
+      "ta": "வெளியே. சீக்கிரம்"
+     }
+    }
+   ]
+  },
+  {
+   "do": "drive",
+   "to": "bus_stand",
+   "radius": 60,
+   "vehicle": "karthik_scooter",
+   "goal": {
+    "en": "Gandhipuram Central Bus Stand, before the Salem bus leaves",
+    "ta": "காந்திபுரம் மத்திய பேருந்து நிலையம், சேலம் பஸ் கிளம்பறதுக்குள்ள"
+   }
+  },
+  {
+   "do": "meet",
+   "who": "pandi",
+   "cast": {
+    "pandi": {
+     "world": [
+      -71.47,
+      411.82
+     ],
+     "look_world": [
+      -82.95,
+      412.48
+     ],
+     "anim": "Idle"
+    }
+   },
+   "goal": {
+    "en": "The man in the cap, by the Salem counter",
+    "ta": "சேலம் கவுண்டர் பக்கத்துல தொப்பி போட்ட ஆள்"
+   }
+  },
+  {
+   "do": "talk",
+   "lines": [
+    {
+     "who": "karthik",
+     "en": "(Cap, dark jacket. My height, my build. From behind, at night, sir would have got into the car.)",
+     "ta": "(தொப்பி, கருப்பு ஜாக்கெட். என் உயரம், என் உடம்பு. ராத்திரி, பின்னாடி இருந்து பாத்தா, சார் கார்ல ஏறியிருப்பாரு.)"
+    },
+    {
+     "who": "pandi",
+     "en": "(He sees me. He knows me. His hand goes to the ticket in his pocket.)",
+     "ta": "(என்ன பாக்கறான். அவனுக்கு என்ன தெரியும். அவன் கை பாக்கெட்ல டிக்கெட்டுக்கு போகுது.)"
+    }
+   ]
+  },
+  {
+   "do": "choose",
+   "prompt": {
+    "en": "The Salem bus is pulling into the bay.",
+    "ta": "சேலம் பஸ் பிளாட்ஃபார்முக்கு வருது."
+   },
+   "options": [
+    {
+     "text": {
+      "en": "Call Selvi and keep him in sight",
+      "ta": "செல்விக்கு கூப்பிட்டு, அவன கண்ணுல வச்சுக்கோங்க"
+     },
+     "set": "pandi_called"
+    },
+    {
+     "text": {
+      "en": "Stand in the bus door so he can't get on",
+      "ta": "அவன் ஏற முடியாம பஸ் கதவுல நில்லுங்க"
+     },
+     "set": "pandi_blocked",
+     "stress": 6
+    },
+    {
+     "text": {
+      "en": "Grab him",
+      "ta": "அவன பிடிங்க"
+     },
+     "set": "pandi_grabbed",
+     "stress": 12
+    }
+   ]
+  },
+  {
+   "do": "talk",
+   "when": "pandi_called",
+   "lines": [
+    {
+     "who": "karthik",
+     "en": "(Selvi, on the phone: 'Stay where you are.' He boards. I stand by the bus, where he can see me through the glass, and I don't move. The driver honks. Nobody moves.)",
+     "ta": "(செல்வி, ஃபோன்ல: 'அங்கயே இரு.' அவன் ஏறறான். கண்ணாடி வழியா அவன் பாக்கற மாதிரி பஸ் பக்கத்துல நிக்கறேன், அசையல. டிரைவர் ஹாரன் அடிக்கிறார். யாரும் அசையல.)"
+    }
+   ]
+  },
+  {
+   "do": "talk",
+   "when": "pandi_blocked",
+   "lines": [
+    {
+     "who": "karthik",
+     "en": "(I stand in the door. He tries the back door. The conductor shouts at both of us. Three minutes of shouting is three minutes.)",
+     "ta": "(கதவுல நிக்கறேன். பின் கதவ முயற்சி பண்றான். கண்டக்டர் ரெண்டு பேரையும் திட்டறார். மூணு நிமிஷ சத்தம் மூணு நிமிஷம் தான்.)"
+    }
+   ]
+  },
+  {
+   "do": "talk",
+   "when": "pandi_grabbed",
+   "lines": [
+    {
+     "who": "karthik",
+     "en": "(I have his jacket. He swings, I hold on, we go down on the platform. A crowd. Someone films it on a phone.)",
+     "ta": "(அவன் ஜாக்கெட்ட பிடிச்சிட்டேன். அவன் அடிக்கிறான், நான் விடல, ரெண்டு பேரும் பிளாட்ஃபார்ம்ல விழறோம். கூட்டம். யாரோ ஃபோன்ல வீடியோ எடுக்கறாங்க.)"
+    }
+   ]
+  },
+  {
+   "do": "talk",
+   "lines": [
+    {
+     "who": "karthik",
+     "en": "(A siren. Two constables push through the crowd. Then the inspector, still in his court shoes.)",
+     "ta": "(சைரன். ரெண்டு கான்ஸ்டபிள் கூட்டத்த தள்ளிட்டு வர்றாங்க. அப்புறம் இன்ஸ்பெக்டர், இன்னும் கோர்ட் ஷூவோட.)"
+    },
+    {
+     "who": "murugesan",
+     "en": "Pandi. Om Sakthi Traders' driver. Your phone was at Pudhur Vayal the night Raghavan died. Get in the jeep.",
+     "ta": "பாண்டி. ஓம் சக்தி டிரேடர்ஸ் டிரைவர். ராகவன் இறந்த ராத்திரி உன் ஃபோன் புதூர் வயல்ல இருந்துச்சு. ஜீப்ல ஏறு."
+    },
+    {
+     "who": "pandi",
+     "en": "(In the jeep, before the door shuts:) He promised me two lakhs. He gave me forty thousand. I'm not going down for him alone. I'll tell everything.",
+     "ta": "(ஜீப்ல, கதவு மூடறதுக்கு முன்னாடி:) ரெண்டு லட்சம்னு சொன்னாரு. நாப்பதாயிரம் தான் குடுத்தாரு. அவருக்காக நான் மட்டும் உள்ள போக மாட்டேன். எல்லாத்தையும் சொல்றேன்."
+    }
+   ]
+  },
+  {
+   "do": "talk",
+   "when": "pandi_grabbed",
+   "lines": [
+    {
+     "who": "murugesan",
+     "en": "And you. A fight in a bus stand, on bail, on camera. Rules are rules, Karthik.",
+     "ta": "அப்புறம் நீ. பெயில்ல இருந்துட்டு, பஸ் ஸ்டாண்ட்ல சண்டை, கேமராவுல. சட்டம் சட்டம் தான், கார்த்திக்."
+    }
+   ]
+  },
+  {
+   "do": "bail",
+   "when": "pandi_grabbed",
+   "strike": {
+    "en": "A fight at the bus stand, on camera. That is a breach of your bail. – Selvi",
+    "ta": "பஸ் ஸ்டாண்ட்ல சண்டை, கேமராவுல. இது உன் பெயில் மீறல். – செல்வி"
+   }
+  },
+  {
+   "do": "talk",
+   "unless": "pandi_grabbed",
+   "lines": [
+    {
+     "who": "murugesan",
+     "en": "(He looks at me for a long moment. For the first time, not like a man looking at a file.) ...Sign this evening anyway. Rules are rules. And Karthik. Sit, when you come. Have tea.",
+     "ta": "(ரொம்ப நேரம் என்ன பாக்கறாரு. முதல் தடவையா, ஃபைல பாக்கற மாதிரி இல்ல.) ...இன்னைக்கு சாயங்காலம் கையெழுத்து போடு. சட்டம் சட்டம் தான். அப்புறம் கார்த்திக். வரும்போது உக்காரு. டீ குடி."
+    }
+   ]
+  },
+  {
+   "do": "evidence",
+   "speaker": "murugesan",
+   "tag": "E19",
+   "label": {
+    "en": "Bus stand: Pandi buying a ticket to Salem",
+    "ta": "பஸ் ஸ்டாண்ட்: சேலம் டிக்கெட் வாங்கின பாண்டி"
+   },
+   "memory": {
+    "id": "mem_e19",
+    "kind": "card",
+    "title": {
+     "en": "Pandi, held (E19)",
+     "ta": "பாண்டி பிடிபட்டான் (E19)"
+    },
+    "body": {
+     "en": "Caught at the Salem counter, on the stand's camera. Promised two lakhs, paid forty thousand. He'll turn approver.",
+     "ta": "சேலம் கவுண்டர்ல பிடிபட்டான், ஸ்டாண்ட் கேமராவுல. ரெண்டு லட்சம் வாக்கு, நாப்பதாயிரம் தான். அப்ரூவர் ஆவான்."
+    }
+   }
+  },
+  {
+   "do": "drive",
+   "to": "home",
+   "radius": 45,
+   "goal": {
+    "en": "Home",
+    "ta": "வீடு"
+   }
+  },
+  {
+   "do": "home",
+   "room": "home",
+   "at": "home",
+   "start": "door",
+   "cast": {
+    "amma": {
+     "mark": "amma_kitchen"
+    }
+   },
+   "keep": true,
+   "visits": [
+    {
+     "to": "karthik_room",
+     "wait": 0,
+     "until": "17:20",
+     "goal": {
+      "en": "Rest till it's time to sign",
+      "ta": "கையெழுத்து போடற நேரம் வரைக்கும் ஓய்வு"
+     },
+     "prompt": {
+      "en": "sit down",
+      "ta": "உட்காருங்க"
+     }
+    },
+    {
+     "to": "door",
+     "auto": true,
+     "reach": 1.4,
+     "goal": {
+      "en": "Out: the station by seven",
+      "ta": "வெளியே: ஏழு மணிக்குள்ள ஸ்டேஷன்"
+     }
+    }
+   ]
+  },
+  {
+   "do": "drive",
+   "to": "police",
+   "radius": 45,
+   "vehicle": "karthik_scooter",
+   "by": "19:00",
+   "goal": {
+    "en": "Sign at the station by 7 PM",
+    "ta": "7 மணிக்குள்ள ஸ்டேஷன்ல கையெழுத்து"
+   }
+  },
+  {
+   "do": "home",
+   "room": "police",
+   "at": "police",
+   "start": "door",
+   "cast": {
+    "murugesan": {
+     "mark": "inspector",
+     "anim": "Idle"
+    },
+    "selvi": {
+     "mark": "constable",
+     "anim": "Idle"
+    }
+   },
+   "keep": true,
+   "visits": [
+    {
+     "to": "selvi",
+     "task": "sign",
+     "goal": {
+      "en": "Sign the bail register at Selvi's desk",
+      "ta": "செல்வி மேஜையில ஜாமீன் பதிவேட்டுல கையெழுத்து"
+     },
+     "prompt": {
+      "en": "sign the register",
+      "ta": "பதிவேட்டுல கையெழுத்து"
+     },
+     "header": {
+      "en": "Nagar Police Station",
+      "ta": "நகர் காவல் நிலையம்"
+     },
+     "form": {
+      "en": "BAIL ATTENDANCE REGISTER",
+      "ta": "ஜாமீன் வருகை பதிவேடு"
+     },
+     "fields": [
+      [
+       {
+        "en": "Crime No.",
+        "ta": "குற்ற எண்"
+       },
+       "412"
+      ],
+      [
+       {
+        "en": "Name",
+        "ta": "பெயர்"
+       },
+       {
+        "en": "Karthik M.",
+        "ta": "கார்த்திக் ம."
+       }
+      ],
+      [
+       {
+        "en": "Day",
+        "ta": "நாள்"
+       },
+       "14"
+      ]
+     ],
+     "sign_label": {
+      "en": "Signature of the accused",
+      "ta": "குற்றம் சாட்டப்பட்டவர் கையொப்பம்"
+     },
+     "seal": {
+      "en": "STATION SEAL",
+      "ta": "நிலைய முத்திரை"
+     }
+    }
+   ]
+  },
+  {
+   "do": "home",
+   "room": "police",
+   "at": "police",
+   "start": "here",
+   "visits": [
+    {
+     "to": "door",
+     "auto": true,
+     "reach": 1.4,
+     "goal": {
+      "en": "Out",
+      "ta": "வெளியே"
+     }
+    }
+   ]
+  },
+  {
+   "do": "drive",
+   "to": "home",
+   "radius": 45,
+   "goal": {
+    "en": "Home",
+    "ta": "வீடு"
+   }
+  },
+  {
+   "do": "home",
+   "room": "home",
+   "at": "home",
+   "start": "door",
+   "cast": {
+    "amma": {
+     "mark": "amma",
+     "anim": "Sit"
+    }
+   },
+   "keep": true,
+   "visits": [
+    {
+     "to": "karthik_room",
+     "wall": true,
+     "goal": {
+      "en": "Your wall: the man in the cap",
+      "ta": "உங்க சுவர்: தொப்பி போட்ட ஆள்"
+     },
+     "prompt": {
+      "en": "the wall",
+      "ta": "சுவர்"
+     }
+    },
+    {
+     "to": "karthik_room",
+     "sleep_until": "07:00",
+     "goal": {
+      "en": "Sleep",
+      "ta": "தூங்குங்க"
+     },
+     "prompt": {
+      "en": "lie down",
+      "ta": "படுங்க"
+     }
+    }
+   ]
+  },
+  {
+   "do": "message",
+   "from": {
+    "en": "Unknown number",
+    "ta": "தெரியாத நம்பர்"
+   },
+   "text": {
+    "en": "Karthik? Joseph, accounts, Raghavan Developers. I can't be seen near the office or your house. The agri-machinery fair is on at CODISSIA. Hall B, the tractor stalls, 2 PM. Come alone. – Joseph",
+    "ta": "கார்த்திக்? ஜோசப், கணக்கு, ராகவன் டெவலப்பர்ஸ். ஆஃபீஸ் பக்கமோ உன் வீட்டு பக்கமோ என்ன பாக்கக் கூடாது. கொடிசியாவுல விவசாய இயந்திர கண்காட்சி நடக்குது. ஹால் B, டிராக்டர் ஸ்டால், மதியம் 2. தனியா வா. – ஜோசப்"
+   }
+  },
+  {
+   "do": "talk",
+   "lines": [
+    {
+     "who": "karthik",
+     "en": "('Come alone.' The last man who said that had five lakhs on his bonnet.)",
+     "ta": "('தனியா வா.' கடைசியா அப்படி சொன்னவர் பானெட் மேல அஞ்சு லட்சம் வச்சிருந்தாரு.)"
+    }
+   ]
+  },
+  {
+   "do": "choose",
+   "prompt": {
+    "en": "Joseph has worked for sir for twenty years.",
+    "ta": "ஜோசப் இருபது வருஷமா சார் கிட்ட வேலை பாக்கறாரு."
+   },
+   "options": [
+    {
+     "text": {
+      "en": "Call Sundaram sir first",
+      "ta": "முதல்ல சுந்தரம் சாருக்கு கூப்பிடுங்க"
+     },
+     "set": "joseph_checked"
+    },
+    {
+     "text": {
+      "en": "Just go",
+      "ta": "போயிடுங்க"
+     },
+     "set": "joseph_straight"
+    }
+   ]
+  },
+  {
+   "do": "dial",
+   "when": "joseph_checked",
+   "who": "sundaram",
+   "goal": {
+    "en": "Call Sundaram sir",
+    "ta": "சுந்தரம் சாருக்கு கூப்பிடுங்க"
+   }
+  },
+  {
+   "do": "talk",
+   "when": "joseph_checked",
+   "lines": [
+    {
+     "who": "sundaram",
+     "en": "(on the phone) Joseph? A good man, and a frightened one. A trade fair at two in the afternoon: a thousand people around you. Go. Record him. And come straight back.",
+     "ta": "(ஃபோன்ல) ஜோசப்பா? நல்ல மனுஷன், பயந்த மனுஷன். மதியம் ரெண்டு மணிக்கு கண்காட்சி: உன்ன சுத்தி ஆயிரம் பேர். போ. ரெக்கார்டு பண்ணு. நேரா திரும்பி வா."
+    }
+   ]
+  },
+  {
+   "do": "home",
+   "room": "home",
+   "at": "home",
+   "start": "here",
+   "cast": {
+    "amma": {
+     "mark": "amma_kitchen"
+    }
+   },
+   "keep": true,
+   "visits": [
+    {
+     "to": "karthik_room",
+     "wait": 0,
+     "until": "13:10",
+     "goal": {
+      "en": "Wait till it's time to go",
+      "ta": "கிளம்பற நேரம் வரைக்கும் காத்திருங்க"
+     },
+     "prompt": {
+      "en": "sit down",
+      "ta": "உட்காருங்க"
+     }
+    },
+    {
+     "to": "door",
+     "auto": true,
+     "reach": 1.4,
+     "goal": {
+      "en": "Out to your scooter",
+      "ta": "வெளியே, ஸ்கூட்டருக்கு"
+     }
+    }
+   ]
+  },
+  {
+   "do": "pin",
+   "place": "codissia",
+   "label": {
+    "en": "CODISSIA: Hall B, 2 PM",
+    "ta": "கொடிசியா: ஹால் B, மதியம் 2"
+   }
+  },
+  {
+   "do": "drive",
+   "to": "codissia",
+   "radius": 70,
+   "vehicle": "karthik_scooter",
+   "by": "14:00",
+   "goal": {
+    "en": "CODISSIA Trade Fair Complex, Hall B, by 2 PM",
+    "ta": "கொடிசியா வர்த்தக கண்காட்சி வளாகம், ஹால் B, மதியம் 2-க்குள்ள"
+   }
+  },
+  {
+   "do": "meet",
+   "who": "joseph",
+   "cast": {
+    "joseph": {
+     "pos": [
+      -2.6,
+      2.4
+     ],
+     "look": [
+      0,
+      0
+     ],
+     "anim": "Idle"
+    }
+   },
+   "goal": {
+    "en": "Joseph, pretending to look at a tractor",
+    "ta": "டிராக்டர பாக்கற மாதிரி நிக்கற ஜோசப்"
+   }
+  },
+  {
+   "do": "talk",
+   "lines": [
+    {
+     "who": "joseph",
+     "en": "Don't look at me. Look at the tractor. ...Twenty years I kept sir's books. These last two years, the books didn't add up.",
+     "ta": "என்ன பாக்காத. டிராக்டர பாரு. ...இருபது வருஷம் சார் கணக்க பாத்தேன். கடைசி ரெண்டு வருஷம், கணக்கு சரியா வரல."
+    }
+   ]
+  },
+  {
+   "do": "talk",
+   "lines": [
+    {
+     "who": "karthik",
+     "en": "(My phone. If he says it, I want it said twice.)",
+     "ta": "(என் ஃபோன். அவர் சொன்னா, அத ரெண்டு தடவ கேக்கணும்.)"
+    }
+   ]
+  },
+  {
+   "do": "record",
+   "on": true
+  },
+  {
+   "do": "talk",
+   "lines": [
+    {
+     "who": "joseph",
+     "en": "Suresh borrowed one crore eighty lakhs from Om Sakthi Traders. Three percent a month. For Green Valley, in his wife's company's name. Sir never knew.",
+     "ta": "ஓம் சக்தி டிரேடர்ஸ் கிட்ட சுரேஷ் ஒரு கோடியே எண்பது லட்சம் கடன் வாங்கினாரு. மாசம் மூணு சதவீதம். கிரீன் வேலிக்காக, அவர் மனைவி கம்பெனி பேர்ல. சாருக்கு தெரியவே தெரியாது."
+    },
+    {
+     "who": "joseph",
+     "en": "If sir paid the farmers a fair price, Green Valley was worth nothing to him. And the lender doesn't wait. You've met his driver.",
+     "ta": "சார் விவசாயிங்களுக்கு நியாய விலை குடுத்திருந்தா, கிரீன் வேலியால சுரேஷுக்கு ஒண்ணுமே கிடைச்சிருக்காது. வட்டிக்காரர் காத்திருக்க மாட்டார். அவர் டிரைவர நீ பாத்திருக்க."
+    },
+    {
+     "who": "joseph",
+     "en": "(He drops a folded sheaf into the tractor's seat, as if he's left a brochure.)",
+     "ta": "(மடிச்ச காகிதங்கள டிராக்டர் சீட்ல போடறார், ஒரு பிரசுரத்த விட்டுட்ட மாதிரி.)"
+    }
+   ]
+  },
+  {
+   "do": "record",
+   "on": false
+  },
+  {
+   "do": "give",
+   "item": {
+    "id": "e15_ledger",
+    "kind": "paper",
+    "title": {
+     "en": "Joseph's ledger pages",
+     "ta": "ஜோசப் கணக்கு பக்கங்கள்"
+    },
+    "from": {
+     "en": "Raghavan Developers, private accounts",
+     "ta": "ராகவன் டெவலப்பர்ஸ், தனிக் கணக்கு"
+    },
+    "body": {
+     "en": "Loan from Om Sakthi Traders, Ukkadam: ₹1,80,00,000 at 3% per month, against Kongu Green Estates.\nInterest owing: ₹16,20,000 (three months unpaid).\nNote in Joseph's hand: 'S. says GV sale will clear it. R. not told.'\n\nDay 5: ₹4,00,000 cash paid to Om Sakthi Traders.",
+     "ta": "ஓம் சக்தி டிரேடர்ஸ், உக்கடம் கடன்: ₹1,80,00,000, மாசம் 3%, கொங்கு கிரீன் எஸ்டேட்ஸ் மேல.\nவட்டி நிலுவை: ₹16,20,000 (மூணு மாசம் கட்டல).\nஜோசப் கையெழுத்துல குறிப்பு: 'GV விற்பனை இத அடைக்கும்னு S. சொல்றார். R.-க்கு சொல்லல.'\n\n5ஆம் நாள்: ₹4,00,000 ரொக்கம் ஓம் சக்தி டிரேடர்ஸுக்கு."
+    }
+   }
+  },
+  {
+   "do": "evidence",
+   "speaker": "joseph",
+   "tag": "E15",
+   "label": {
+    "en": "Joseph: Suresh's debts to the lender",
+    "ta": "ஜோசப்: வட்டிக்காரர் கிட்ட சுரேஷ் கடன்"
+   },
+   "memory": {
+    "id": "mem_e15",
+    "kind": "card",
+    "title": {
+     "en": "Suresh's debt (E15)",
+     "ta": "சுரேஷ் கடன் (E15)"
+    },
+    "body": {
+     "en": "₹1.8 crore from Om Sakthi Traders at 3% a month, for Green Valley. A fair price for the farmers would have sunk him.",
+     "ta": "கிரீன் வேலிக்காக ஓம் சக்தி டிரேடர்ஸ் கிட்ட மாசம் 3%-க்கு ₹1.8 கோடி. விவசாயிங்களுக்கு நியாய விலை குடுத்திருந்தா அவர் மூழ்கியிருப்பாரு."
+    }
+   }
+  },
+  {
+   "do": "talk",
+   "lines": [
+    {
+     "who": "joseph",
+     "en": "I kept quiet two weeks. I have two daughters too, thambi. ...If the court calls me, I'll say it. Now walk away. Slowly. Look at the harvesters.",
+     "ta": "ரெண்டு வாரம் பேசாம இருந்தேன். எனக்கும் ரெண்டு பொண்ணு இருக்காங்க, தம்பி. ...கோர்ட் கூப்பிட்டா, சொல்லுவேன். இப்போ மெதுவா நடந்து போ. அறுவடை இயந்திரங்கள பாரு."
+    }
+   ]
+  },
+  {
+   "do": "message",
+   "from": {
+    "en": "Sundaram sir",
+    "ta": "சுந்தரம் சார்"
+   },
+   "text": {
+    "en": "The Sessions Court sits day after tomorrow, 10:30 AM. The prosecution will put the night to you minute by minute. So will we. Bring your wall, thambi. All of it. – Sundaram",
+    "ta": "நாளை மறுநாள் காலை 10:30-க்கு செஷன்ஸ் கோர்ட். அன்னைக்கு ராத்திரிய நிமிஷம் நிமிஷமா அரசு தரப்பு உன் முன்னாடி வைக்கும். நாமளும். உன் சுவர கொண்டு வா, தம்பி. எல்லாத்தையும். – சுந்தரம்"
+   }
+  },
+  {
+   "do": "drive",
+   "to": "home",
+   "radius": 45,
+   "goal": {
+    "en": "Home",
+    "ta": "வீடு"
+   }
+  },
+  {
+   "do": "home",
+   "room": "home",
+   "at": "home",
+   "start": "door",
+   "cast": {
+    "amma": {
+     "mark": "amma_kitchen"
+    }
+   },
+   "keep": true,
+   "visits": [
+    {
+     "to": "karthik_room",
+     "wait": 0,
+     "until": "17:20",
+     "goal": {
+      "en": "Rest till it's time to sign",
+      "ta": "கையெழுத்து போடற நேரம் வரைக்கும் ஓய்வு"
+     },
+     "prompt": {
+      "en": "sit down",
+      "ta": "உட்காருங்க"
+     }
+    },
+    {
+     "to": "door",
+     "auto": true,
+     "reach": 1.4,
+     "goal": {
+      "en": "Out: the station by seven",
+      "ta": "வெளியே: ஏழு மணிக்குள்ள ஸ்டேஷன்"
+     }
+    }
+   ]
+  },
+  {
+   "do": "drive",
+   "to": "police",
+   "radius": 45,
+   "vehicle": "karthik_scooter",
+   "by": "19:00",
+   "goal": {
+    "en": "Sign at the station by 7 PM",
+    "ta": "7 மணிக்குள்ள ஸ்டேஷன்ல கையெழுத்து"
+   }
+  },
+  {
+   "do": "home",
+   "room": "police",
+   "at": "police",
+   "start": "door",
+   "cast": {
+    "murugesan": {
+     "mark": "inspector",
+     "anim": "Idle"
+    },
+    "selvi": {
+     "mark": "constable",
+     "anim": "Idle"
+    }
+   },
+   "keep": true,
+   "visits": [
+    {
+     "to": "selvi",
+     "task": "sign",
+     "goal": {
+      "en": "Sign the bail register at Selvi's desk",
+      "ta": "செல்வி மேஜையில ஜாமீன் பதிவேட்டுல கையெழுத்து"
+     },
+     "prompt": {
+      "en": "sign the register",
+      "ta": "பதிவேட்டுல கையெழுத்து"
+     },
+     "header": {
+      "en": "Nagar Police Station",
+      "ta": "நகர் காவல் நிலையம்"
+     },
+     "form": {
+      "en": "BAIL ATTENDANCE REGISTER",
+      "ta": "ஜாமீன் வருகை பதிவேடு"
+     },
+     "fields": [
+      [
+       {
+        "en": "Crime No.",
+        "ta": "குற்ற எண்"
+       },
+       "412"
+      ],
+      [
+       {
+        "en": "Name",
+        "ta": "பெயர்"
+       },
+       {
+        "en": "Karthik M.",
+        "ta": "கார்த்திக் ம."
+       }
+      ],
+      [
+       {
+        "en": "Day",
+        "ta": "நாள்"
+       },
+       "15"
+      ]
+     ],
+     "sign_label": {
+      "en": "Signature of the accused",
+      "ta": "குற்றம் சாட்டப்பட்டவர் கையொப்பம்"
+     },
+     "seal": {
+      "en": "STATION SEAL",
+      "ta": "நிலைய முத்திரை"
+     }
+    }
+   ]
+  },
+  {
+   "do": "home",
+   "room": "police",
+   "at": "police",
+   "start": "here",
+   "visits": [
+    {
+     "to": "door",
+     "auto": true,
+     "reach": 1.4,
+     "goal": {
+      "en": "Out",
+      "ta": "வெளியே"
+     }
+    }
+   ]
+  },
+  {
+   "do": "drive",
+   "to": "home",
+   "radius": 45,
+   "goal": {
+    "en": "Home",
+    "ta": "வீடு"
+   }
+  },
+  {
+   "do": "home",
+   "room": "home",
+   "at": "home",
+   "start": "door",
+   "cast": {
+    "amma": {
+     "mark": "amma",
+     "anim": "Sit"
+    }
+   },
+   "keep": true,
+   "visits": [
+    {
+     "to": "karthik_room",
+     "wall": true,
+     "goal": {
+      "en": "Your wall: the whole night, minute by minute",
+      "ta": "உங்க சுவர்: முழு ராத்திரி, நிமிஷம் நிமிஷமா"
+     },
+     "prompt": {
+      "en": "the wall",
+      "ta": "சுவர்"
+     }
+    },
+    {
+     "to": "karthik_room",
+     "sleep_until": "07:00",
+     "goal": {
+      "en": "Sleep",
+      "ta": "தூங்குங்க"
+     },
+     "prompt": {
+      "en": "lie down",
+      "ta": "படுங்க"
+     }
+    }
+   ]
+  },
+  {
+   "do": "home",
+   "room": "home",
+   "at": "home",
+   "start": "here",
+   "cast": {
+    "amma": {
+     "mark": "amma_kitchen"
+    },
+    "divya": {
+     "mark": "divya",
+     "anim": "Idle"
+    }
+   },
+   "keep": true,
+   "visits": [
+    {
+     "to": "amma",
+     "goal": {
+      "en": "Amma has ironed your white shirt",
+      "ta": "அம்மா உங்க வெள்ள சட்டைய அயர்ன் பண்ணி வச்சிருக்காங்க"
+     },
+     "prompt": {
+      "en": "take it",
+      "ta": "எடுத்துக்கோங்க"
+     }
+    }
+   ]
+  },
+  {
+   "do": "talk",
+   "lines": [
+    {
+     "who": "amma",
+     "en": "Your appa's shirt. I kept it for your wedding. ...Wear it today.",
+     "ta": "உங்க அப்பா சட்ட. உன் கல்யாணத்துக்கு வச்சிருந்தேன். ...இன்னைக்கு போட்டுக்கோ."
+    },
+    {
+     "who": "divya",
+     "en": "I made a timeline, anna. On my laptop. Every minute. Sundaram sir has it.",
+     "ta": "நான் ஒரு டைம்லைன் பண்ணியிருக்கேன் அண்ணா. லேப்டாப்ல. ஒவ்வொரு நிமிஷமும். சுந்தரம் சார் கிட்ட இருக்கு."
+    }
+   ]
+  },
+  {
+   "do": "talk",
+   "when": "bala_forgiven",
+   "lines": [
+    {
+     "who": "bala",
+     "en": "(At the door, in his best shirt, the workshop car washed.) Get in, da. Court.",
+     "ta": "(வாசல்ல, நல்ல சட்டையோட, வொர்க்ஷாப் கார கழுவி வச்சிருக்கான்.) ஏறு டா. கோர்ட்."
+    }
+   ]
+  },
+  {
+   "do": "home",
+   "room": "home",
+   "at": "home",
+   "start": "here",
+   "visits": [
+    {
+     "to": "door",
+     "auto": true,
+     "reach": 1.4,
+     "goal": {
+      "en": "Out",
+      "ta": "வெளியே"
+     }
+    }
+   ]
+  },
+  {
+   "do": "drive",
+   "to": "court",
+   "radius": 70,
+   "vehicle": "karthik_scooter",
+   "goal": {
+    "en": "The Combined Court Complex, by 10:30",
+    "ta": "ஒருங்கிணைந்த நீதிமன்ற வளாகம், 10:30-க்குள்ள"
+   }
+  },
+  {
    "do": "card",
    "big": {
-    "en": "To be continued",
-    "ta": "தொடரும்"
+    "en": "The trial",
+    "ta": "விசாரணை"
    },
    "small": {
-    "en": "",
-    "ta": ""
+    "en": "Principal Sessions Court, Coimbatore",
+    "ta": "முதன்மை அமர்வு நீதிமன்றம், கோவை"
+   }
+  },
+  {
+   "do": "talk",
+   "backdrop": true,
+   "lines": [
+    {
+     "who": "karthik",
+     "en": "(Ceiling fans, files tied with red tape, the smell of old paper. Amma and Divya on the bench behind me. On the other side, Meenakshi amma and Priya.)",
+     "ta": "(சீலிங் ஃபேன், சிவப்பு நாடா கட்டின ஃபைல்கள், பழைய காகித வாசனை. என் பின்னாடி பெஞ்சுல அம்மாவும் திவ்யாவும். அந்த பக்கம், மீனாட்சி அம்மாவும் பிரியாவும்.)"
+    },
+    {
+     "who": "karthik",
+     "en": "(And Suresh sir, in a cream shirt, three rows back, turning his ring.)",
+     "ta": "(மூணு வரிசை பின்னாடி, கிரீம் சட்டையில, மோதிரத்த திருப்பிட்டு, சுரேஷ் சார்.)"
+    },
+    {
+     "who": "sundaram",
+     "en": "(Low, beside me.) They'll say it point by point, thambi. We answer point by point. Only what's true. Only what walks on two legs.",
+     "ta": "(என் பக்கத்துல, மெதுவா.) அவங்க ஒவ்வொரு விஷயமா சொல்லுவாங்க, தம்பி. நாம ஒவ்வொன்னா பதில் சொல்லுவோம். உண்மைய மட்டும். ரெண்டு கால்ல நடக்கறத மட்டும்."
+    }
+   ]
+  },
+  {
+   "do": "court",
+   "claims": [
+    {
+     "claim": {
+      "en": "At 9:52 PM a message lured Mr. Raghavan out of his house: 'Ponnusamy wants to meet tonight at the site.' It was sent from the accused's own phone.",
+      "ta": "இரவு 9:52-க்கு ஒரு மெசேஜ் திரு. ராகவன வீட்டுல இருந்து வெளிய வர வச்சது: 'பொன்னுசாமி இன்னைக்கு ராத்திரி சைட்ல பாக்கணும்.' அது குற்றம் சாட்டப்பட்டவரோட சொந்த ஃபோன்ல இருந்து அனுப்பப்பட்டது."
+     },
+     "answers": [
+      "E07",
+      "E06"
+     ],
+     "answer": {
+      "en": "His phone was charging on his office desk, where Suresh told him to leave it. At 9:40 a man in a cap walked into that building with card number seven. The building's own camera, your honour.",
+      "ta": "அவர் ஃபோன் ஆஃபீஸ் மேஜையில சார்ஜ்ல இருந்துச்சு, சுரேஷ் விட்டுட்டு போக சொன்ன இடத்துல. 9:40-க்கு தொப்பி போட்ட ஒருத்தர் ஏழாம் நம்பர் கார்டோட அந்த கட்டிடத்துக்குள்ள போனார். கட்டிடத்தோட சொந்த கேமரா, மாண்புமிகு நீதிபதி அவர்களே."
+     }
+    },
+    {
+     "claim": {
+      "en": "At 10:12 the Lawley Road camera saw the victim's SUV, driven by a man of the accused's height and build.",
+      "ta": "10:12-க்கு லாலி ரோடு கேமரா, குற்றம் சாட்டப்பட்டவர் உயரம், உடம்பு உள்ள ஒருத்தர் ஓட்டின பாதிக்கப்பட்டவரோட எஸ்யூவிய பாத்துச்சு."
+     },
+     "answers": [
+      "E14",
+      "E19",
+      "E13"
+     ],
+     "answer": {
+      "en": "A man in a cap. My client has never worn a cap in his life: fifteen years of his mother's albums. The man who wore one is in police custody. Pandi, whose phone was at the site.",
+      "ta": "தொப்பி போட்ட ஒருத்தர். என் கட்சிக்காரர் வாழ்க்கையில தொப்பி போட்டதே இல்ல: அவர் அம்மாவோட பதினஞ்சு வருஷ ஆல்பம். தொப்பி போட்டவர் போலீஸ் காவல்ல இருக்கார். பாண்டி, அவர் ஃபோன் சைட்ல இருந்துச்சு."
+     }
+    },
+    {
+     "claim": {
+      "en": "Only the accused drove that car. Only he knew where its key hung.",
+      "ta": "அந்த கார குற்றம் சாட்டப்பட்டவர் மட்டும் தான் ஓட்டினார். அதோட சாவி எங்க தொங்குதுன்னு அவருக்கு மட்டும் தான் தெரியும்."
+     },
+     "answers": [
+      "E11",
+      "E12"
+     ],
+     "answer": {
+      "en": "There was a third key, cut on Suresh Kumar's order and paid in cash, at Bala Motors, two weeks before. And Suresh knew my client's every move: he asked his best friend over tea.",
+      "ta": "மூணாவது சாவி இருந்துச்சு, சுரேஷ் குமார் ஆர்டர்ல, ரொக்கமா, பாலா மோட்டார்ஸ்ல, ரெண்டு வாரம் முன்னாடி. என் கட்சிக்காரரோட ஒவ்வொரு அசைவும் சுரேஷுக்கு தெரியும்: அவர் நண்பர் கிட்ட டீ குடிக்கும்போது கேட்டார்."
+     }
+    },
+    {
+     "claim": {
+      "en": "That day the accused himself withdrew four lakhs in cash. The money has vanished.",
+      "ta": "அன்னைக்கு குற்றம் சாட்டப்பட்டவரே நாலு லட்சம் ரொக்கம் எடுத்தார். அந்த பணம் காணாம போயிடுச்சு."
+     },
+     "answers": [
+      "E09",
+      "E10"
+     ],
+     "answer": {
+      "en": "On his employer's written order, for the farmers: Mr. Raghavan's own note, in his own green ink. And two days later four lakhs in cash went into Om Sakthi Traders, from Suresh Kumar's account.",
+      "ta": "முதலாளி எழுத்து உத்தரவுல, விவசாயிங்களுக்காக: திரு. ராகவனோட சொந்த குறிப்பு, அவரோட பச்ச மையில. ரெண்டு நாள் கழிச்சு நாலு லட்சம் ரொக்கம் சுரேஷ் குமார் அக்கவுண்ட்ல இருந்து ஓம் சக்தி டிரேடர்ஸுக்கு போச்சு."
+     }
+    },
+    {
+     "claim": {
+      "en": "The accused needed money. Forty-two thousand rupees for his sister's fees, and he had asked for an advance.",
+      "ta": "குற்றம் சாட்டப்பட்டவருக்கு பணம் தேவைப்பட்டது. தங்கச்சி ஃபீஸுக்கு நாப்பத்திரண்டாயிரம், அட்வான்ஸ் கேட்டிருந்தார்."
+     },
+     "answers": [
+      "E15",
+      "E16",
+      "E18"
+     ],
+     "answer": {
+      "en": "The man who needed money owed one crore eighty lakhs at three percent a month, had bought the land through his wife's company, and was selling it at the Siruvani Grand before the victim would sign. Forty-two thousand is a motive, your honour. One crore eighty is a reason.",
+      "ta": "பணம் தேவைப்பட்டவர் மாசம் மூணு சதவீதத்துக்கு ஒரு கோடியே எண்பது லட்சம் கடன் பட்டிருந்தார், மனைவி கம்பெனி பேர்ல நிலத்த வாங்கியிருந்தார், பாதிக்கப்பட்டவர் கையெழுத்து போடறதுக்கு முன்னாடியே சிறுவாணி கிராண்ட்ல விக்கிட்டு இருந்தார். நாப்பத்திரண்டாயிரம் ஒரு காரணம், நீதிபதி அவர்களே. ஒரு கோடியே எண்பது ஒரு நோக்கம்."
+     }
+    },
+    {
+     "claim": {
+      "en": "His alibi is his own delivery app. A phone can be carried by anyone.",
+      "ta": "அவரோட அலிபை அவரோட சொந்த டெலிவரி ஆப். ஃபோன யார் வேணா எடுத்துட்டு போகலாம்."
+     },
+     "answers": [
+      "E05",
+      "E17",
+      "E04"
+     ],
+     "answer": {
+      "en": "Not a phone: his face, on a doorbell at Saravanampatti at 10:20, sent by the owner from her own account. And the post-mortem puts death after 10:40. Twelve kilometres away.",
+      "ta": "ஃபோன் இல்ல: அவர் முகம், சரவணம்பட்டியில ஒரு டோர்பெல்ல, 10:20-க்கு, ஓனரோட சொந்த அக்கவுண்ட்ல இருந்து அனுப்பப்பட்டது. போஸ்ட்மார்ட்டம் 10:40-க்கு அப்புறம் தான் இறப்புன்னு சொல்லுது. பன்னிரண்டு கிலோமீட்டர் தள்ளி."
+     }
+    }
+   ]
+  },
+  {
+   "do": "talk",
+   "backdrop": true,
+   "lines": [
+    {
+     "who": "sundaram",
+     "en": "Your honour, the prosecution's own approver. Pandi.",
+     "ta": "மாண்புமிகு நீதிபதி அவர்களே, அரசு தரப்போட சொந்த அப்ரூவர். பாண்டி."
+    },
+    {
+     "who": "pandi",
+     "en": "Suresh sir gave me the key and the card. I sent the message from the boy's phone. I drove. At the site Suresh sir was waiting with the money-lender's men. I stayed in the car. I heard it. ...He promised me two lakhs.",
+     "ta": "சுரேஷ் சார் தான் சாவியையும் கார்டையும் குடுத்தார். பையன் ஃபோன்ல இருந்து நான் தான் மெசேஜ் அனுப்பினேன். நான் தான் ஓட்டினேன். சைட்ல சுரேஷ் சார் வட்டிக்காரர் ஆளுங்களோட காத்திருந்தார். நான் கார்லயே இருந்தேன். கேட்டேன். ...ரெண்டு லட்சம்னு சொன்னாரு."
+    },
+    {
+     "who": "karthik",
+     "en": "(Three rows back, the ring stops turning.)",
+     "ta": "(மூணு வரிசை பின்னாடி, மோதிரம் திரும்பறது நிக்குது.)"
+    }
+   ]
+  },
+  {
+   "do": "talk",
+   "backdrop": true,
+   "when": "court_won",
+   "lines": [
+    {
+     "who": "murugesan",
+     "en": "(He stands up from the police bench, cap under his arm.) Your honour. On the evidence before this court, the police seek leave to arrest Suresh Kumar for the murder of R. Raghavan. Now. In this room.",
+     "ta": "(போலீஸ் பெஞ்சுல இருந்து எழுந்திருக்கார், தொப்பி கையில.) மாண்புமிகு நீதிபதி அவர்களே. இந்த நீதிமன்றத்து முன்னாடி இருக்கற சாட்சியங்கள வச்சு, ரா. ராகவன் கொலைக்காக சுரேஷ் குமார கைது பண்ண போலீஸ் அனுமதி கேக்குது. இப்பவே. இந்த அறையிலேயே."
+    },
+    {
+     "who": "murugesan",
+     "en": "(To me, as Selvi puts the cuffs on Suresh:) I wrote your lie in the file, Karthik. I'll write this in it too.",
+     "ta": "(செல்வி சுரேஷுக்கு விலங்கு போடும்போது, என் கிட்ட:) உன் பொய்ய ஃபைல்ல எழுதினேன், கார்த்திக். இதையும் அதுல எழுதுவேன்."
+    }
+   ]
+  },
+  {
+   "do": "talk",
+   "backdrop": true,
+   "unless": "court_won",
+   "lines": [
+    {
+     "who": "sundaram",
+     "en": "(Whispering.) Pandi carried it, thambi. Not us. Too many of our legs were bought.",
+     "ta": "(கிசுகிசுப்பா.) பாண்டி தான் இத தூக்கினான், தம்பி. நாம இல்ல. நம்ம கால்கள்ல நிறைய காசு குடுத்து வாங்கினது."
+    },
+    {
+     "who": "murugesan",
+     "en": "(Standing, slowly.) Your honour. On the approver's statement, the police seek leave to arrest Suresh Kumar.",
+     "ta": "(மெதுவா எழுந்து.) மாண்புமிகு நீதிபதி அவர்களே. அப்ரூவர் வாக்குமூலத்த வச்சு, சுரேஷ் குமார கைது பண்ண போலீஸ் அனுமதி கேக்குது."
+    }
+   ]
+  },
+  {
+   "do": "talk",
+   "backdrop": true,
+   "lines": [
+    {
+     "who": "judge",
+     "en": "The accused Karthik M. is discharged. His bail conditions are vacated. ...Young man, you may go home.",
+     "ta": "குற்றம் சாட்டப்பட்ட கார்த்திக் ம. விடுவிக்கப்படுகிறார். அவரோட பெயில் நிபந்தனைகள் ரத்து. ...தம்பி, நீங்க வீட்டுக்கு போகலாம்."
+    }
+   ]
+  },
+  {
+   "do": "bail",
+   "end": true
+  },
+  {
+   "do": "drive",
+   "to": "home",
+   "radius": 45,
+   "goal": {
+    "en": "Home. No station tonight",
+    "ta": "வீடு. இன்னைக்கு ஸ்டேஷன் இல்ல"
+   }
+  },
+  {
+   "do": "home",
+   "room": "home",
+   "at": "home",
+   "start": "door",
+   "knock": 3.0,
+   "cast": {
+    "amma": {
+     "mark": "amma",
+     "anim": "Idle"
+    },
+    "divya": {
+     "mark": "divya",
+     "anim": "Idle"
+    },
+    "meenakshi": {
+     "mark": "door",
+     "anim": "Idle",
+     "turn": 3.14159
+    }
+   },
+   "keep": true,
+   "visits": [
+    {
+     "to": "meenakshi",
+     "reach": 1.8,
+     "goal": {
+      "en": "Evening. Someone at the door",
+      "ta": "சாயங்காலம். வாசல்ல யாரோ"
+     },
+     "prompt": {
+      "en": "open the door",
+      "ta": "கதவ திறங்க"
+     }
+    }
+   ]
+  },
+  {
+   "do": "talk",
+   "lines": [
+    {
+     "who": "priya",
+     "en": "(Behind her mother, on the step.) Karthik. At the temple I said I'd call the police on you, in front of my mother. ...I'm sorry. I was wrong about you, and I said it in front of people. So I'm saying this in front of people too.",
+     "ta": "(அம்மா பின்னாடி, படியில.) கார்த்திக். கோயில்ல, என் அம்மா முன்னாடி, உன் மேல போலீஸ கூப்பிடுவேன்னு சொன்னேன். ...மன்னிச்சுக்கோ. உன்ன பத்தி தப்பா நினைச்சேன், ஆளுங்க முன்னாடி சொன்னேன். அதனால இதையும் ஆளுங்க முன்னாடி சொல்றேன்."
+    },
+    {
+     "who": "meenakshi",
+     "en": "(She puts a bunch of keys and a thick envelope in Amma's hands.) The Mist Village. Up in the hills, past Kotagiri. He was going to give it to the boy who drove him for six years without one complaint.",
+     "ta": "(அம்மா கையில ஒரு கொத்து சாவியையும் ஒரு தடிமனான கவரையும் வைக்கிறாங்க.) தி மிஸ்ட் வில்லேஜ். மலை மேல, கோத்தகிரி தாண்டி. ஆறு வருஷம் ஒரு குறை கூட சொல்லாம அவர ஓட்டின பையனுக்கு குடுக்கணும்னு இருந்தாரு."
+    },
+    {
+     "who": "meenakshi",
+     "en": "He trusted you. He'd want it to be yours.",
+     "ta": "அவர் உன்ன நம்பினாரு. அது உன்னுடையதா இருக்கணும்னு அவர் நினைப்பாரு."
+    },
+    {
+     "who": "amma",
+     "en": "(She can't speak. She holds the keys against her chest.)",
+     "ta": "(பேச முடியல. சாவிய நெஞ்சோட அணைச்சுக்கறாங்க.)"
+    }
+   ]
+  },
+  {
+   "do": "home",
+   "room": "home",
+   "at": "home",
+   "start": "here",
+   "cast": {
+    "amma": {
+     "mark": "amma",
+     "anim": "Sit"
+    }
+   },
+   "keep": true,
+   "visits": [
+    {
+     "to": "karthik_room",
+     "sleep_until": "05:30",
+     "goal": {
+      "en": "Sleep. Tomorrow, the hills",
+      "ta": "தூங்குங்க. நாளைக்கு, மலை"
+     },
+     "prompt": {
+      "en": "lie down",
+      "ta": "படுங்க"
+     }
+    }
+   ]
+  },
+  {
+   "do": "home",
+   "room": "home",
+   "at": "home",
+   "start": "here",
+   "visits": [
+    {
+     "to": "door",
+     "auto": true,
+     "reach": 1.4,
+     "goal": {
+      "en": "Dawn. Out to the road",
+      "ta": "விடியற்காலை. ரோட்டுக்கு"
+     }
+    }
+   ]
+  },
+  {
+   "do": "drive",
+   "to": "kotagiri_check",
+   "radius": 60,
+   "vehicle": "karthik_scooter",
+   "goal": {
+    "en": "North, through Mettupalayam, to the Kotagiri ghat",
+    "ta": "வடக்கே, மேட்டுப்பாளையம் வழியா, கோத்தகிரி மலைப்பாதைக்கு"
+   }
+  },
+  {
+   "do": "talk",
+   "lines": [
+    {
+     "who": "karthik",
+     "en": "(The checkpost. The same constable who turned me back once. He looks at his list, and at me, and lifts the barrier.)",
+     "ta": "(சோதனைச் சாவடி. ஒரு தடவ என்ன திருப்பி அனுப்பின அதே கான்ஸ்டபிள். லிஸ்ட பாக்கறாரு, என்ன பாக்கறாரு, தடுப்ப தூக்கறாரு.)"
+    },
+    {
+     "who": "karthik",
+     "en": "(The road climbs into the mist.)",
+     "ta": "(ரோடு பனிக்குள்ள ஏறுது.)"
+    }
+   ]
+  },
+  {
+   "do": "card",
+   "big": {
+    "en": "Part 1: The Wrong Accusation",
+    "ta": "பகுதி 1: தவறான குற்றச்சாட்டு"
+   },
+   "small": {
+    "en": "Part 2: The Mist Village",
+    "ta": "பகுதி 2: தி மிஸ்ட் வில்லேஜ்"
    }
   },
   {
