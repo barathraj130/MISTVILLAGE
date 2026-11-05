@@ -35,13 +35,21 @@ var _e_down := false
 
 
 func _ready() -> void:
-	var sd: Dictionary = city.fines._save_data.get("bail", {})
+	load_state(city.fines._save_data.get("bail", {}))
+	_build()
+
+
+## What the save (or the story's own save, story.gd) says: the evenings signed, the lates, the strikes.
+func load_state(sd: Dictionary) -> void:
 	active = bool(sd.get("active", false))
 	signed_day = int(sd.get("signed_day", -1))
 	lates = int(sd.get("lates", 0))
 	strikes = sd.get("strikes", [])
 	suspicion = float(sd.get("suspicion", 30.0))
 	border_tries = int(sd.get("border", 0))
+
+
+func _build() -> void:
 	var layer := CanvasLayer.new()
 	layer.layer = 21
 	add_child(layer)

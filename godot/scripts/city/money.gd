@@ -47,7 +47,12 @@ var _paying := ""                            # the bill whose money he's holding
 
 
 func _ready() -> void:
-	var sd: Dictionary = city.fines._save_data.get("accounts", {})
+	load_state(city.fines._save_data.get("accounts", {}))
+	_build()
+
+
+## What the save (or the story's own save, story.gd) says: the account, the bills, the loans, the chain.
+func load_state(sd: Dictionary) -> void:
 	frozen = bool(sd.get("frozen", false))
 	bank = int(sd.get("bank", 0))
 	amma_holds = int(sd.get("amma_holds", 0))
@@ -57,6 +62,9 @@ func _ready() -> void:
 	bala_loans = sd.get("bala_loans", [])
 	bala_left = int(sd.get("bala_left", 0))
 	chain = str(sd.get("chain", ""))
+
+
+func _build() -> void:
 	var layer := CanvasLayer.new()
 	layer.layer = 21
 	add_child(layer)

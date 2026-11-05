@@ -93,6 +93,8 @@ var _gig_earned := 0                 # and what they paid
 var _q_down := false
 var _peek := -1                     # (testing) the house visit the walker was set down near
 var _beam: MeshInstance3D
+const SAVE := "user://story_save.json"   # the story's own save: each morning (menu: Continue the story)
+var _slept := false                  # (a night's sleep just ended: the next step is a morning, saved)
 var evidence := {}                  # tag → {title, body, paid}: what he can put before the court (court.gd)
 var flags := {}                     # what the player did in tasks (short_found, signed, ...)
 var _paid := {}                     # lines that already paid (step:line)
@@ -399,6 +401,9 @@ func _next() -> void:
 						city.money.freeze(23400)
 			elif a.begins_with("--storymoney=") and fines:
 				fines.sim.money = int(a.get_slice("=", 1))
+		if Engine.has_meta("story_continue") or "--storycontinue" in OS.get_cmdline_user_args():   # (the menu's Continue)
+			Engine.remove_meta("story_continue")
+			_story_load()
 		for a in OS.get_cmdline_user_args():          # (testing: --storyfrom=N starts the chapter at step N)
 			if a.begins_with("--storyfrom="):
 				step = int(a.get_slice("=", 1)) - 1
@@ -416,6 +421,9 @@ func _next() -> void:
 		if step >= data["steps"].size():
 			return
 		cur = data["steps"][step]
+	if _slept and _chapters == 0:
+		_slept = false
+		_story_save()
 	if cur.has("clock") and fines:
 		var hm: PackedStringArray = str(cur["clock"]).split(":")
 		var to := float(hm[0]) * 60.0 + float(hm[1])
@@ -1571,6 +1579,7 @@ func _visit_do(v: Dictionary) -> void:
 		var m0: float = fines.sim.minute
 		await life._pass(mins, "night's sleep", null, {"sleep": true, "stress": -8.0, "food": 0.0})
 		life.tiredness = 0.0
+		_slept = true
 		print("STORY slept %.0f min: %.0f → day %d %.0f" % [mins, m0, fines.sim.day, fines.sim.minute])
 	elif v.has("wait") and life:
 		var m := _mark(str(v["to"]))
@@ -2109,6 +2118,72 @@ func _doorbell_closed() -> void:
 		city.walker.active = true
 		Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
 	_next()
+
+
+## The story's own save, each morning: where it is, what he found, his money and his bail (story mode doesn't touch
+## the free roam's save file).
+func _story_save() -> void:
+	if _skip and not "--storysave" in OS.get_cmdline_user_args():
+		return
+	if city.money:
+		city.money._save()
+	if city.bail:
+		city.bail._save()
+	var strip := func(arr: Array) -> Array:             # (pictures don't go in a text file; their tags do)
+		var out := []
+		for it in arr:
+			var c: Dictionary = (it as Dictionary).duplicate()
+			c.erase("tex")
+			out.append(c)
+		return out
+	var pins := {}
+	for k in wall.state["pins"]:
+		var v: Vector2 = wall.state["pins"][k]
+		pins[k] = [v.x, v.y]
+	var d := {"step": step, "day": fines.sim.day, "minute": fines.sim.minute, "money": fines.sim.money, "lang": lang,
+		"flags": flags, "evidence": evidence, "accounts": city.fines._save_data.get("accounts", {}),
+		"bail": city.fines._save_data.get("bail", {}), "stress": city.life.stress if city.life else 0.0,
+		"contacts": city.phone.contacts, "pins": city.phone.pins, "notes": city.phone.notes,
+		"items": strip.call(city.hands.items), "wall": strip.call(wall.pool), "wall_pins": pins, "threads": wall.state["threads"]}
+	var f := FileAccess.open(SAVE, FileAccess.WRITE)
+	if f:
+		f.store_string(JSON.stringify(d))
+		print("STORY saved at step %d (day %d)" % [step, fines.sim.day])
+
+
+func _story_load() -> void:
+	if not FileAccess.file_exists(SAVE):
+		return
+	var d = JSON.parse_string(FileAccess.get_file_as_string(SAVE))
+	if not d is Dictionary:
+		return
+	step = int(d["step"]) - 1
+	fines.sim.day = int(d.get("day", 1))
+	fines.sim.minute = float(d.get("minute", 420.0))
+	fines.sim.money = int(d.get("money", 0))
+	lang = str(d.get("lang", lang))
+	flags = d.get("flags", {})
+	evidence = d.get("evidence", {})
+	if city.money:
+		city.money.load_state(d.get("accounts", {}))
+	if city.bail:
+		city.bail.load_state(d.get("bail", {}))
+	if city.life:
+		city.life.stress = float(d.get("stress", 0.0))
+	for c in d.get("contacts", []):
+		city.phone.add_contact(c)
+	for pn in d.get("pins", []):
+		city.phone.pin(str(pn["place"]), pn.get("label", {}))
+	city.phone.notes = d.get("notes", [])
+	for it in d.get("items", []):
+		city.hands.items.append(it)
+	for it in d.get("wall", []):
+		wall.add(it)
+	for k in d.get("wall_pins", {}):
+		var v: Array = d["wall_pins"][k]
+		wall.state["pins"][k] = Vector2(float(v[0]), float(v[1]))
+	wall.state["threads"] = d.get("threads", [])
+	print("STORY continued at step %d (day %d)" % [int(d["step"]), fines.sim.day])
 
 
 func _court_done(result: Dictionary) -> void:

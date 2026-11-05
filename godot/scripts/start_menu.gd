@@ -51,7 +51,13 @@ func _ready() -> void:
 			func():
 				Engine.set_meta("continue_game", true)
 				_go(DRIVE_SCENE))
-	_button(box, "Story", "The first scenes in Coimbatore (preview). Enter: next line, T: English / தமிழ்",
+	if FileAccess.file_exists("user://story_save.json"):
+		_button(box, "Continue the story", "From the morning it was last saved (every morning, after a night's sleep)",
+			func():
+				Engine.set_meta("story", true)
+				Engine.set_meta("story_continue", true)
+				_go("res://scenes/city_test.tscn"))
+	_button(box, "Story", "Part 1, The Wrong Accusation, from the beginning. Enter: next line, T: English / தமிழ்",
 		func():
 			Engine.set_meta("story", true)
 			_go("res://scenes/city_test.tscn"))
