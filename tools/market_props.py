@@ -122,6 +122,11 @@ def make_textures():
     T["jute"] = _save("jute", np.array([0.55, 0.43, 0.28]) * (0.75 + 0.3 * w[:, :, None]) * (0.85 + 0.25 * _fbm(n, 100, 8)[:, :, None]))
     # coconut husk: brown fibre streaks
     husk = np.sin((x * 40 + _fbm(n, 110, 6) * 6) * math.pi) * 0.5 + 0.5
+    grime = np.array([0.66, 0.63, 0.55]) * (0.82 + 0.25 * _fbm(n, 120, 3)[:, :, None])
+    grime = grime * (1 - 0.35 * np.clip((y - 0.55) * 2.2, 0, 1)[:, :, None] * _fbm(n, 121, 8)[:, :, None])   # oily up from the floor
+    hand = (_fbm(n, 122, 14) > 0.72) & (y > 0.35) & (y < 0.6)                    # handprints by the bench
+    grime[hand] *= 0.55
+    T["grime"] = _save("grime", grime)
     T["husk"] = _save("husk", np.array([0.42, 0.27, 0.13]) * (0.7 + 0.45 * husk[:, :, None]))
     # skins, on a UV sphere's map (the top rows are the top of the fruit)
     m = 256
@@ -217,7 +222,11 @@ def variants(name, colour, spread=0.12, k=4, rough=0.45):
 M = {}
 
 
+T_ALL = {}
+
+
 def mats(T):
+    T_ALL.update(T)
     M.update({
         "wood": tmat("mk_wood", T["wood"], 0.85), "iron": tmat("mk_iron", T["iron"], 0.6, 0.4),
         "tarp_blue": tmat("mk_tarp_blue", T["tarp_blue"], 0.6), "tarp_orange": tmat("mk_tarp_orange", T["tarp_orange"], 0.65),
@@ -837,8 +846,102 @@ def teakadai():
     return c
 
 
+def workshop():
+    """Bala Motors, Ganapathy (Act 5): an open-fronted workshop under a corrugated roof. The back wall: a pegboard of
+    spanners and screwdrivers, the board BALA MOTORS (two-wheeler and car service, key programming), a calendar;
+    the workbench with a vice, a toolbox, a rag, the job-card book, and the key programmer (a small grey box with a
+    lead and a chip key in it: E11); stacked tyres, an oil drum, oil cans, a compressor, a trolley jack, a stool."""
+    c = new_coll("bala_workshop")
+    W, D, H = 6.0, 4.0, 3.2
+    concrete = mat("mk_concrete", (0.55, 0.54, 0.5), 0.9)
+    oil = mat("mk_oil_floor", (0.22, 0.21, 0.2), 0.25)
+    box(c, (0, 0, 0.02), (W, D, 0.04), concrete)                             # the floor, oil-stained
+    for k in range(5):
+        cyl(c, (R.uniform(-2, 2), R.uniform(-1.2, 1.2), 0.042), R.uniform(0.25, 0.6), 0.002, oil, verts=16, smooth=False).scale = (1, R.uniform(0.5, 1), 1)
+    wall = tmat("mk_wall_workshop", T_ALL["grime"], 0.9)
+    box(c, (0, D / 2, H / 2), (W, 0.15, H), wall)                            # the back wall and the sides
+    for x in (-W / 2, W / 2):
+        box(c, (x, 0, H / 2), (0.15, D, H), wall)
+    sheet(c, 0, 0, H + 0.1, W + 0.6, D + 0.8, M["iron"], 0.03, 0.01, 0.2)     # the corrugated roof, rusted
+    for k in range(14):                                                      # (its ridges)
+        box(c, (-W / 2 - 0.2 + k * 0.48, 0, H + 0.09), (0.04, D + 0.8, 0.03), M["iron"], rot=(0.05, 0, 0))
+    # the board over the opening
+    red = mat("mk_board_red", (0.7, 0.08, 0.06), 0.55)
+    white = mat("mk_letters_white", (0.95, 0.95, 0.93), 0.5)
+    yellow = mat("mk_letters_yellow", (0.98, 0.82, 0.2), 0.5)
+    box(c, (0, -D / 2 - 0.1, H - 0.25), (W, 0.05, 0.55), red)
+    text(c, "BALA MOTORS", (0, -D / 2 - 0.13, H - 0.17), 0.28, white)
+    text(c, "TWO WHEELER & CAR SERVICE  ·  KEY PROGRAMMING", (0, -D / 2 - 0.13, H - 0.4), 0.09, yellow)
+    # the pegboard of tools on the back wall
+    peg = mat("mk_pegboard", (0.55, 0.45, 0.3), 0.85)
+    steel = M["steel"]
+    box(c, (-1.2, D / 2 - 0.09, 1.7), (2.2, 0.02, 1.0), peg)
+    for k in range(12):                                                      # spanners, small to big
+        x = -2.15 + k * 0.17
+        ln = 0.12 + k * 0.012
+        box(c, (x, D / 2 - 0.11, 1.95 - ln / 2), (0.022, 0.01, ln), steel)
+        cyl(c, (x, D / 2 - 0.11, 1.96), 0.022, 0.01, steel, rot=(math.pi / 2, 0, 0), verts=8)
+    for k in range(8):                                                       # screwdrivers
+        x = -2.1 + k * 0.12
+        box(c, (x, D / 2 - 0.11, 1.42), (0.01, 0.01, 0.14), steel)
+        box(c, (x, D / 2 - 0.12, 1.53), (0.025, 0.025, 0.09), mat("mk_handle_%d" % (k % 3), ((0.8, 0.1, 0.05), (0.1, 0.3, 0.7), (0.9, 0.7, 0.1))[k % 3], 0.4))
+    box(c, (0.4, D / 2 - 0.08, 0.9 + 0.95), (0.4, 0.01, 0.55), mat("mk_calendar_ws", (0.9, 0.4, 0.15), 0.7))   # the calendar
+    # the workbench: a vice, a toolbox, a rag, the job-card book, the key programmer
+    box(c, (-1.2, D / 2 - 0.45, 0.88), (2.4, 0.7, 0.06), M["wood"])
+    for x in (-2.3, -0.1):
+        for y in (D / 2 - 0.75, D / 2 - 0.15):
+            box(c, (x, y, 0.43), (0.06, 0.06, 0.86), M["iron"])
+    box(c, (-0.3, D / 2 - 0.5, 0.98), (0.14, 0.2, 0.14), M["iron"])          # the vice
+    cyl(c, (-0.3, D / 2 - 0.62, 1.0), 0.012, 0.24, steel, rot=(0, math.pi / 2, 0), verts=8)
+    box(c, (-2.0, D / 2 - 0.45, 1.0), (0.5, 0.25, 0.2), red)                 # the toolbox
+    blob(c, (-1.55, D / 2 - 0.6, 0.93), 0.1, mat("mk_rag", (0.55, 0.45, 0.35), 0.95), (1.4, 1, 0.3), seg=8)
+    box(c, (-1.15, D / 2 - 0.55, 0.925), (0.22, 0.3, 0.025), mat("mk_jobbook", (0.15, 0.3, 0.55), 0.7))    # the job-card book
+    box(c, (-1.15, D / 2 - 0.55, 0.94), (0.2, 0.28, 0.005), mat("mk_jobpage", (0.95, 0.93, 0.85), 0.8))
+    box(c, (-0.75, D / 2 - 0.4, 0.97), (0.24, 0.16, 0.1), mat("mk_programmer", (0.4, 0.42, 0.45), 0.4))   # the key programmer
+    box(c, (-0.75, D / 2 - 0.48, 1.0), (0.12, 0.005, 0.05), mat("mk_screen", (0.1, 0.35, 0.25), 0.2))
+    line(c, (-0.65, D / 2 - 0.4, 0.95), (-0.45, D / 2 - 0.65, 0.92), 0.006, mat("mk_cable", (0.05, 0.05, 0.05), 0.5))
+    box(c, (-0.42, D / 2 - 0.66, 0.925), (0.06, 0.03, 0.015), mat("mk_key", (0.08, 0.08, 0.09), 0.4))      # a chip key
+    # tyres stacked, an oil drum and cans, a compressor, a trolley jack, a stool
+    rubber = mat("mk_tyre", (0.05, 0.05, 0.05), 0.85)
+    for k in range(5):
+        bpy.ops.mesh.primitive_torus_add(major_radius=0.3, minor_radius=0.1, location=(2.3, D / 2 - 0.5, 0.1 + k * 0.2),
+                                         major_segments=20, minor_segments=8)
+        _put(bpy.context.object, rubber, c)
+    bpy.ops.mesh.primitive_torus_add(major_radius=0.3, minor_radius=0.1, location=(2.7, 0.6, 0.38), rotation=(math.pi / 2, 0, 0.3),
+                                     major_segments=20, minor_segments=8)
+    _put(bpy.context.object, rubber, c)
+    cyl(c, (1.5, D / 2 - 0.4, 0.45), 0.3, 0.9, mat("mk_drum_blue", (0.1, 0.25, 0.55), 0.5), verts=20)
+    for k in range(4):
+        box(c, (1.0 + k * 0.16, D / 2 - 0.3, 0.12), (0.12, 0.08, 0.22), mat("mk_can_%d" % (k % 2), ((0.75, 0.65, 0.1), (0.15, 0.35, 0.15))[k % 2], 0.4))
+    cyl(c, (-2.5, 0.3, 0.35), 0.22, 0.6, red, rot=(0, math.pi / 2, 0), verts=16)   # the compressor tank
+    box(c, (-2.5, 0.3, 0.75), (0.3, 0.25, 0.2), M["iron"])
+    box(c, (0.6, -0.3, 0.12), (0.9, 0.3, 0.12), red)                         # the trolley jack
+    line(c, (0.15, -0.3, 0.15), (-0.45, -0.3, 0.85), 0.02, M["iron"])
+    box(c, (-1.0, D / 2 - 1.2, 0.3), (0.3, 0.3, 0.04), M["wood"])            # his stool
+    for dx in (-0.12, 0.12):
+        for dy in (-0.12, 0.12):
+            cyl(c, (-1.0 + dx, D / 2 - 1.2 + dy, 0.15), 0.015, 0.3, M["iron"], verts=6)
+    # shelves of parts on the left wall, a hanging tube and a chain, an air hose coiled, a tube light
+    for k in range(3):
+        box(c, (-W / 2 + 0.3, 0.2, 0.7 + k * 0.6), (0.45, 2.0, 0.03), M["wood"])
+        for j in range(6):
+            box(c, (-W / 2 + 0.3, -0.6 + j * 0.32, 0.8 + k * 0.6), (0.3, 0.25, 0.18),
+                mat("mk_partbox_%d" % ((j + k) % 4), ((0.75, 0.6, 0.35), (0.2, 0.35, 0.6), (0.8, 0.75, 0.7), (0.6, 0.15, 0.1))[(j + k) % 4], 0.7))
+    bpy.ops.mesh.primitive_torus_add(major_radius=0.32, minor_radius=0.03, location=(1.0, D / 2 - 0.1, 2.2), rotation=(math.pi / 2, 0, 0))
+    _put(bpy.context.object, rubber, c)                                      # an inner tube on a nail
+    for k in range(14):
+        cyl(c, (1.6, D / 2 - 0.15, 2.4 - k * 0.04), 0.012, 0.035, M["iron"], rot=(0, (k % 2) * math.pi / 2, 0), verts=6)   # a chain
+    for k in range(4):
+        bpy.ops.mesh.primitive_torus_add(major_radius=0.25 - k * 0.02, minor_radius=0.012, location=(-2.5, 0.3, 1.05 + k * 0.02))
+        _put(bpy.context.object, mat("mk_hose", (0.7, 0.15, 0.08), 0.5), c)
+    box(c, (0, 0, H - 0.08), (1.2, 0.08, 0.05), mat("mk_tube_light", (1, 1, 0.95), 0.2))
+    box(c, (2.2, D / 2 - 0.08, 2.1), (0.5, 0.01, 0.7), mat("mk_poster", (0.85, 0.75, 0.55), 0.8))   # an old poster, torn
+    scatter(c, 0, -1.0, 0.04, 4.0, 1.5, 0, 6, 0)
+    return c
+
+
 BUILD = {"market_vegcart": vegcart, "market_groundstall": groundstall, "market_banana": banana, "market_crates": crates,
-         "market_teakadai": teakadai}
+         "market_teakadai": teakadai, "bala_workshop": workshop}
 
 
 def join(coll, name):
@@ -870,7 +973,7 @@ def preview(out_dir, obs):
     sc.render.engine = 'BLENDER_EEVEE_NEXT' if 'BLENDER_EEVEE_NEXT' in engines else 'BLENDER_EEVEE'
     sc.render.resolution_x, sc.render.resolution_y = 1280, 720
     sc.view_settings.view_transform = 'Standard'          # (the colours as they are, as Godot shows them)
-    for ob, x in zip(obs, (-4.6, -1.2, 1.9, 4.4, 9.0)):
+    for ob, x in zip(obs, (-4.6, -1.2, 1.9, 4.4, 9.0, 16.0)):
         ob.location = (x, 0, 0)
     bpy.ops.mesh.primitive_plane_add(size=40, location=(0, 0, 0))
     bpy.context.object.data.materials.append(mat("ground_dust", (0.5, 0.42, 0.33), 0.95))
@@ -888,7 +991,9 @@ def preview(out_dir, obs):
     sc.camera = cam
     for name, loc, look in (("market_props", (0, -12.5, 4.6), (0, 0, 0.8)), ("market_cart_close", (-4.6, -2.3, 2.0), (-4.6, 0, 0.9)),
                             ("market_ground_close", (-1.2, -2.6, 1.6), (-1.2, 0.1, 0.2)),
-                            ("market_teakadai", (10.2, -5.6, 2.1), (9.0, 0.0, 1.35))):
+                            ("market_teakadai", (10.2, -5.6, 2.1), (9.0, 0.0, 1.35)),
+                            ("bala_workshop", (17.2, -8.5, 2.2), (16.0, 0.5, 1.6)),
+                            ("bala_workshop_in", (16.6, -3.0, 1.7), (15.6, 1.5, 1.1))):
         cam.location = loc
         d = Vector(look) - Vector(loc)
         cam.rotation_euler = d.to_track_quat('-Z', 'Y').to_euler()

@@ -9505,8 +9505,8 @@
    "cast": {
     "bala": {
      "pos": [
-      -2.6,
-      2.0
+      -3.0,
+      2.6
      ],
      "look": [
       0,
@@ -9517,36 +9517,25 @@
    },
    "props": [
     {
+     "scene": "res://assets/city_props/bala_workshop.glb",
+     "pos": [
+      -6.8,
+      3.5
+     ],
+     "look": [
+      0,
+      3.5
+     ]
+    },
+    {
      "scene": "res://assets/vehicles/luxury_suv.glb",
      "pos": [
-      -6.0,
-      5.5
+      -5.6,
+      6.0
      ],
      "look": [
-      -6.0,
-      15.0
-     ]
-    },
-    {
-     "scene": "res://assets/city_props/life_drums.glb",
-     "pos": [
-      -4.4,
-      -1.2
-     ],
-     "look": [
-      0,
-      0
-     ]
-    },
-    {
-     "scene": "res://assets/city_props/life_goods.glb",
-     "pos": [
-      -5.0,
-      1.0
-     ],
-     "look": [
-      0,
-      0
+      -5.6,
+      16.0
      ]
     }
    ],
