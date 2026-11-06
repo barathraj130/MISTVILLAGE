@@ -4797,8 +4797,8 @@
    "cast": {
     "sekar": {
      "pos": [
-      -3.0,
-      2.6
+      -3.4,
+      2.4
      ],
      "look": [
       0,
@@ -4809,14 +4809,14 @@
    },
    "props": [
     {
-     "scene": "res://assets/city_props/life_stall0.glb",
+     "scene": "res://assets/city_props/market_teakadai.glb",
      "pos": [
-      -4.3,
-      3.4
+      -5.6,
+      3.2
      ],
      "look": [
       0,
-      0
+      3.2
      ]
     }
    ],

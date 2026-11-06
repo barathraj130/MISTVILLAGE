@@ -172,7 +172,7 @@ def make_textures():
 
 
 # ---- materials ----
-def mat(name, colour, rough=0.6, metal=0.0):
+def mat(name, colour, rough=0.6, metal=0.0, alpha=1.0):
     m = bpy.data.materials.get(name)
     if m:
         return m
@@ -182,6 +182,9 @@ def mat(name, colour, rough=0.6, metal=0.0):
     b.inputs["Base Color"].default_value = (*colour, 1.0)
     b.inputs["Roughness"].default_value = rough
     b.inputs["Metallic"].default_value = metal
+    if alpha < 1.0:                                                           # (glass: the jars show what's in them)
+        b.inputs["Alpha"].default_value = alpha
+        m.surface_render_method = 'BLENDED'
     return m
 
 
@@ -745,7 +748,97 @@ def crates():
     return c
 
 
-BUILD = {"market_vegcart": vegcart, "market_groundstall": groundstall, "market_banana": banana, "market_crates": crates}
+FONT = "/System/Library/Fonts/Supplemental/Arial Bold.ttf"
+
+
+def text(c, s, loc, size, m, rot=(math.pi / 2, 0, 0)):
+    cu = bpy.data.curves.new("Text", 'FONT')
+    cu.body = s
+    cu.size = size
+    cu.extrude = 0.003
+    cu.align_x, cu.align_y = 'CENTER', 'CENTER'
+    if os.path.exists(FONT):
+        cu.font = bpy.data.fonts.load(FONT, check_existing=True)
+    ob = bpy.data.objects.new("Text", cu)
+    c.objects.link(ob)
+    ob.location = loc
+    ob.rotation_euler = rot
+    bpy.context.view_layer.objects.active = ob
+    bpy.ops.object.select_all(action='DESELECT')
+    ob.select_set(True)
+    bpy.ops.object.convert(target='MESH')
+    ob.data.materials.clear()
+    ob.data.materials.append(m)
+    return ob
+
+
+def teakadai():
+    """Sekar's tea stall at the Pudhur Vayal turn (Murugan Tea Stall): a timber counter under a tin roof on poles, its
+    board painted yellow; on the counter the big steel tea kettle and the milk vessel on their stove, steel tumblers
+    and glasses upside down on a tray, glass jars of biscuits, murukku and buns, a bunch of bananas hanging from the
+    roof bar, a calendar picture on the post; a long bench in front with the day's newspaper on it, a water drum."""
+    c = new_coll("market_teakadai")
+    W, D, H = 2.6, 1.0, 1.0
+    box(c, (0, 0, H / 2), (W, D, H), M["wood"])                              # the counter
+    box(c, (0, 0, H + 0.02), (W + 0.06, D + 0.06, 0.04), mat("mk_counter_top", (0.2, 0.2, 0.22), 0.4, 0.3))
+    for x in (-W / 2 - 0.1, W / 2 + 0.1):                                    # the roof posts (behind and in front)
+        for y in (-D / 2 - 0.35, D / 2 + 0.4):
+            box(c, (x, y, 1.25), (0.08, 0.08, 2.5), M["wood"])
+    sheet(c, 0, 0.0, 2.55, W + 0.7, D + 1.4, M["iron"], 0.04, 0.012, 0.18)  # the tin roof, rusted, sloping forward
+    yellow = mat("mk_board_yellow", (0.92, 0.75, 0.12), 0.6)
+    blue = mat("mk_letters_blue", (0.08, 0.15, 0.5), 0.5)
+    red = mat("mk_letters_red", (0.65, 0.07, 0.05), 0.5)
+    box(c, (0, -D / 2 - 0.4, 2.25), (W + 0.4, 0.04, 0.42), yellow)            # the board
+    text(c, "MURUGAN TEA STALL", (0, -D / 2 - 0.43, 2.3), 0.2, blue)
+    text(c, "TEA  ·  COFFEE  ·  SNACKS", (0, -D / 2 - 0.43, 2.11), 0.08, red)
+    # the stove: the kettle and the milk vessel, steaming
+    box(c, (0.7, 0.15, H + 0.12), (0.5, 0.36, 0.2), M["iron"])
+    cyl(c, (0.58, 0.15, H + 0.42), 0.13, 0.38, M["steel"], verts=20)           # the tea kettle (the big samovar)
+    cyl(c, (0.58, 0.15, H + 0.64), 0.07, 0.06, M["steel"], verts=16, r2=0.03)
+    cyl(c, (0.58, 0.02, H + 0.36), 0.015, 0.12, M["steel"], rot=(0.9, 0, 0), verts=8)   # its tap
+    cyl(c, (0.85, 0.15, H + 0.32), 0.12, 0.18, mat("mk_aluminium", (0.68, 0.68, 0.66), 0.35, 0.8), verts=20)   # the milk pan
+    cyl(c, (0.85, 0.15, H + 0.405), 0.105, 0.01, mat("mk_milk", (0.95, 0.93, 0.86), 0.3), verts=20)
+    # glasses and tumblers on a tray
+    box(c, (0.05, -0.15, H + 0.045), (0.5, 0.32, 0.01), M["steel"])
+    for i in range(4):
+        for j in range(3):
+            cyl(c, (-0.13 + i * 0.12, -0.25 + j * 0.1, H + 0.1), 0.03, 0.1, mat("mk_glass", (0.75, 0.82, 0.8), 0.05, 0.0, 0.35), verts=10, r2=0.034)
+    for k in range(5):
+        cyl(c, (0.36, -0.3, H + 0.08 + 0.035 * k), 0.036, 0.06, M["steel"], verts=12, r2=0.032)   # tumblers, stacked
+    # the glass jars of snacks, in a row at the front edge
+    jar = mat("mk_jar_glass", (0.85, 0.9, 0.88), 0.05, 0.0, 0.22)
+    lid = mat("mk_jar_lid", (0.75, 0.12, 0.1), 0.4)
+    fills = [mat("mk_biscuit", (0.8, 0.6, 0.3), 0.7), mat("mk_murukku", (0.75, 0.5, 0.2), 0.8), mat("mk_bun", (0.85, 0.65, 0.4), 0.7),
+             mat("mk_rusk", (0.7, 0.45, 0.2), 0.8), mat("mk_peanut", (0.8, 0.6, 0.35), 0.8)]
+    for k in range(5):
+        x = -1.05 + k * 0.24
+        cyl(c, (x, -D / 2 + 0.15, H + 0.16), 0.09, 0.24, jar, verts=16)
+        cyl(c, (x, -D / 2 + 0.15, H + 0.12), 0.085, 0.16, fills[k], verts=16)
+        cyl(c, (x, -D / 2 + 0.15, H + 0.3), 0.07, 0.04, lid, verts=16)
+    # bananas hanging from the front roof bar, a calendar on the post
+    line(c, (-W / 2 - 0.1, -D / 2 - 0.35, 2.05), (W / 2 + 0.1, -D / 2 - 0.35, 2.05), 0.025, M["wood"], 8)
+    for k in range(2):
+        x = -0.9 + k * 0.25
+        line(c, (x, -D / 2 - 0.35, 2.04), (x, -D / 2 - 0.35, 1.85), 0.004, M["string"])
+        for tier in range(4):
+            for j in range(7):
+                a = j * 2 * math.pi / 7 + tier * 0.4
+                ob = cyl(c, (x + 0.06 * math.cos(a), -D / 2 - 0.35 + 0.06 * math.sin(a), 1.78 - tier * 0.07), 0.016, 0.13,
+                         M["banana_y"], verts=6, r2=0.008)
+                ob.rotation_euler = (0.95 * math.sin(a) + 0.2, -0.95 * math.cos(a), 0)
+    box(c, (W / 2 + 0.06, -D / 2 - 0.35, 1.5), (0.01, 0.3, 0.42), mat("mk_calendar", (0.9, 0.45, 0.15), 0.7))
+    # the bench in front, the newspaper on it; a water drum at the side
+    box(c, (0, -D / 2 - 1.1, 0.42), (2.2, 0.35, 0.05), M["wood"])
+    for x in (-0.9, 0.0, 0.9):
+        box(c, (x, -D / 2 - 1.1, 0.2), (0.06, 0.3, 0.4), M["wood"])
+    box(c, (0.4, -D / 2 - 1.1, 0.455), (0.4, 0.3, 0.012), mat("mk_newspaper", (0.85, 0.83, 0.78), 0.9), rot=(0, 0, 0.15))
+    cyl(c, (-W / 2 - 0.45, 0.2, 0.42), 0.28, 0.84, M["bucket"], verts=20)
+    scatter(c, 0, -D / 2 - 1.0, 0.0, 3.0, 1.2, 6, 8, 1)
+    return c
+
+
+BUILD = {"market_vegcart": vegcart, "market_groundstall": groundstall, "market_banana": banana, "market_crates": crates,
+         "market_teakadai": teakadai}
 
 
 def join(coll, name):
@@ -777,7 +870,7 @@ def preview(out_dir, obs):
     sc.render.engine = 'BLENDER_EEVEE_NEXT' if 'BLENDER_EEVEE_NEXT' in engines else 'BLENDER_EEVEE'
     sc.render.resolution_x, sc.render.resolution_y = 1280, 720
     sc.view_settings.view_transform = 'Standard'          # (the colours as they are, as Godot shows them)
-    for ob, x in zip(obs, (-4.6, -1.2, 1.9, 4.4)):
+    for ob, x in zip(obs, (-4.6, -1.2, 1.9, 4.4, 9.0)):
         ob.location = (x, 0, 0)
     bpy.ops.mesh.primitive_plane_add(size=40, location=(0, 0, 0))
     bpy.context.object.data.materials.append(mat("ground_dust", (0.5, 0.42, 0.33), 0.95))
@@ -794,7 +887,8 @@ def preview(out_dir, obs):
     sc.collection.objects.link(cam)
     sc.camera = cam
     for name, loc, look in (("market_props", (0, -12.5, 4.6), (0, 0, 0.8)), ("market_cart_close", (-4.6, -2.3, 2.0), (-4.6, 0, 0.9)),
-                            ("market_ground_close", (-1.2, -2.6, 1.6), (-1.2, 0.1, 0.2))):
+                            ("market_ground_close", (-1.2, -2.6, 1.6), (-1.2, 0.1, 0.2)),
+                            ("market_teakadai", (10.2, -5.6, 2.1), (9.0, 0.0, 1.35))):
         cam.location = loc
         d = Vector(look) - Vector(loc)
         cam.rotation_euler = d.to_track_quat('-Z', 'Y').to_euler()
