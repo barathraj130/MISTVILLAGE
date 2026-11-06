@@ -573,6 +573,44 @@
    "colour": "#e8d0a0",
    "model": "crowd_w3",
    "hair": "#8a857c"
+  },
+  "shopper1": {
+   "en": "",
+   "ta": "",
+   "colour": "#cccccc",
+   "model": "crowd_w4"
+  },
+  "shopper2": {
+   "en": "",
+   "ta": "",
+   "colour": "#cccccc",
+   "model": "crowd_w1"
+  },
+  "shopper3": {
+   "en": "",
+   "ta": "",
+   "colour": "#cccccc",
+   "model": "crowd_m6",
+   "top": "#7a5a3a"
+  },
+  "shopper4": {
+   "en": "",
+   "ta": "",
+   "colour": "#cccccc",
+   "model": "crowd_w5"
+  },
+  "vendor3": {
+   "en": "",
+   "ta": "",
+   "colour": "#cccccc",
+   "model": "crowd_m3",
+   "top": "#d8d0c0"
+  },
+  "vendor4": {
+   "en": "",
+   "ta": "",
+   "colour": "#cccccc",
+   "model": "crowd_w2"
   }
  },
  "spawn": "home",
@@ -6311,6 +6349,72 @@
       0
      ],
      "anim": "Idle"
+    },
+    "shopper1": {
+     "pos": [
+      -2.2,
+      4.6
+     ],
+     "look": [
+      -4.0,
+      4.6
+     ],
+     "anim": "Idle"
+    },
+    "shopper2": {
+     "pos": [
+      -2.0,
+      9.8
+     ],
+     "look": [
+      -4.4,
+      9.8
+     ],
+     "anim": "Idle"
+    },
+    "shopper3": {
+     "pos": [
+      -1.8,
+      -1.6
+     ],
+     "look": [
+      -4.2,
+      -2.2
+     ],
+     "anim": "Idle"
+    },
+    "shopper4": {
+     "pos": [
+      2.6,
+      5.4
+     ],
+     "look": [
+      4.2,
+      5.0
+     ],
+     "anim": "Idle"
+    },
+    "vendor3": {
+     "pos": [
+      -5.4,
+      11.8
+     ],
+     "look": [
+      0,
+      11.8
+     ],
+     "anim": "Idle"
+    },
+    "vendor4": {
+     "pos": [
+      5.4,
+      5.2
+     ],
+     "look": [
+      0,
+      5.2
+     ],
+     "anim": "Idle"
     }
    },
    "props": [
@@ -6334,6 +6438,105 @@
      "look": [
       0,
       0
+     ]
+    },
+    {
+     "scene": "res://assets/city_props/life_cart.glb",
+     "pos": [
+      -4.2,
+      -2.2
+     ],
+     "look": [
+      0,
+      -2.2
+     ]
+    },
+    {
+     "scene": "res://assets/city_props/life_cart.glb",
+     "pos": [
+      -4.4,
+      11.5
+     ],
+     "look": [
+      0,
+      11.5
+     ]
+    },
+    {
+     "scene": "res://assets/city_props/life_shade0.glb",
+     "pos": [
+      -5.6,
+      15.5
+     ],
+     "look": [
+      0,
+      15.5
+     ]
+    },
+    {
+     "scene": "res://assets/city_props/life_shade1.glb",
+     "pos": [
+      -5.6,
+      -6.5
+     ],
+     "look": [
+      0,
+      -6.5
+     ]
+    },
+    {
+     "scene": "res://assets/city_props/life_goods.glb",
+     "pos": [
+      -3.6,
+      4.8
+     ],
+     "look": [
+      0,
+      4.8
+     ]
+    },
+    {
+     "scene": "res://assets/city_props/life_goods.glb",
+     "pos": [
+      -3.8,
+      9.2
+     ],
+     "look": [
+      0,
+      9.2
+     ]
+    },
+    {
+     "scene": "res://assets/city_props/life_flowers.glb",
+     "pos": [
+      -3.8,
+      -0.2
+     ],
+     "look": [
+      0,
+      0
+     ]
+    },
+    {
+     "scene": "res://assets/city_props/life_cart.glb",
+     "pos": [
+      4.2,
+      5.0
+     ],
+     "look": [
+      0,
+      5.0
+     ]
+    },
+    {
+     "scene": "res://assets/city_props/life_shade2.glb",
+     "pos": [
+      5.6,
+      9.5
+     ],
+     "look": [
+      0,
+      9.5
      ]
     }
    ],
