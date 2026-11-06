@@ -559,6 +559,20 @@
    "hair": "#141110",
    "top": "#111114",
    "pants": "#1a1a1e"
+  },
+  "vendor1": {
+   "en": "The vegetable woman",
+   "ta": "காய்கறிக்காரம்மா",
+   "colour": "#e0b0c0",
+   "model": "crowd_w6",
+   "hair": "#0e0b09"
+  },
+  "vendor2": {
+   "en": "An old vendor",
+   "ta": "வயசான காய்கறிக்காரம்மா",
+   "colour": "#e8d0a0",
+   "model": "crowd_w3",
+   "hair": "#8a857c"
   }
  },
  "spawn": "home",
@@ -6182,6 +6196,217 @@
      "who": "karthik",
      "en": "(Why would Suresh sir want to know?)",
      "ta": "(சுரேஷ் சாருக்கு அது எதுக்கு தெரியணும்?)"
+    }
+   ]
+  },
+  {
+   "do": "talk",
+   "lines": [
+    {
+     "who": "amma",
+     "en": "And kanna... I didn't go to the market today. Kamala akka turned her back on me at the vegetable cart. In front of everyone.",
+     "ta": "அப்புறம் கண்ணா... இன்னைக்கு மார்க்கெட் போகல. காய்கறி வண்டி கிட்ட கமலா அக்கா என்ன பாத்து முதுகு திருப்பிட்டாங்க. எல்லார் முன்னாடியும்."
+    },
+    {
+     "who": "amma",
+     "en": "There's nothing for tonight but rice and rasam.",
+     "ta": "இன்னைக்கு ராத்திரிக்கு சாதமும் ரசமும் தான்."
+    }
+   ]
+  },
+  {
+   "do": "choose",
+   "prompt": {
+    "en": "Amma is looking at her hands.",
+    "ta": "அம்மா கைய பாத்துட்டு இருக்காங்க."
+   },
+   "options": [
+    {
+     "text": {
+      "en": "\"I'll go to the market myself.\"",
+      "ta": "\"நானே மார்க்கெட் போறேன்.\""
+     },
+     "set": "market_went"
+    },
+    {
+     "text": {
+      "en": "Ask Divya to order vegetables on the app (₹180)",
+      "ta": "ஆப்ல காய்கறி ஆர்டர் பண்ண திவ்யா கிட்ட சொல்லுங்க (₹180)"
+     },
+     "set": "market_app",
+     "pay": 180
+    },
+    {
+     "text": {
+      "en": "\"Rice and rasam is enough, Amma.\"",
+      "ta": "\"சாதமும் ரசமும் போதும் அம்மா.\""
+     },
+     "set": "market_none"
+    }
+   ]
+  },
+  {
+   "do": "talk",
+   "when": "market_app",
+   "lines": [
+    {
+     "who": "divya",
+     "en": "Done. Forty minutes. The delivery boy won't know who we are.",
+     "ta": "ஆச்சு. நாப்பது நிமிஷம். டெலிவரி பையனுக்கு நாம யாருன்னு தெரியாது."
+    }
+   ]
+  },
+  {
+   "do": "home",
+   "when": "market_went",
+   "room": "home",
+   "at": "home",
+   "start": "here",
+   "visits": [
+    {
+     "to": "door",
+     "auto": true,
+     "reach": 1.4,
+     "goal": {
+      "en": "Out to the market",
+      "ta": "மார்க்கெட்டுக்கு"
+     }
+    }
+   ]
+  },
+  {
+   "do": "drive",
+   "when": "market_went",
+   "to": "drop_ganapathy",
+   "radius": 50,
+   "vehicle": "karthik_scooter",
+   "goal": {
+    "en": "Ganapathy market, the vegetable carts",
+    "ta": "கணபதி மார்க்கெட், காய்கறி வண்டிகள்"
+   }
+  },
+  {
+   "do": "meet",
+   "when": "market_went",
+   "who": "vendor1",
+   "cast": {
+    "vendor1": {
+     "pos": [
+      -2.6,
+      2.0
+     ],
+     "look": [
+      0,
+      0
+     ],
+     "anim": "Idle"
+    },
+    "vendor2": {
+     "pos": [
+      -3.4,
+      6.5
+     ],
+     "look": [
+      0,
+      0
+     ],
+     "anim": "Idle"
+    }
+   },
+   "props": [
+    {
+     "scene": "res://assets/city_props/life_cart.glb",
+     "pos": [
+      -4.0,
+      2.6
+     ],
+     "look": [
+      0,
+      0
+     ]
+    },
+    {
+     "scene": "res://assets/city_props/life_cart.glb",
+     "pos": [
+      -4.6,
+      7.0
+     ],
+     "look": [
+      0,
+      0
+     ]
+    }
+   ],
+   "goal": {
+    "en": "The vegetable carts",
+    "ta": "காய்கறி வண்டிகள்"
+   }
+  },
+  {
+   "do": "talk",
+   "when": "market_went",
+   "lines": [
+    {
+     "who": "karthik",
+     "en": "Akka, half a kilo of beans, onions, a bunch of coriander—",
+     "ta": "அக்கா, அரை கிலோ பீன்ஸ், வெங்காயம், ஒரு கட்டு கொத்தமல்லி—"
+    },
+    {
+     "who": "vendor1",
+     "en": "(She doesn't look up.) Not for you. Go somewhere else.",
+     "ta": "(நிமிர்ந்து பாக்கல.) உனக்கு இல்ல. வேற எங்கயாவது போ."
+    },
+    {
+     "who": "vendor2",
+     "en": "(From the next cart, an old woman's voice.) Thambi. Come here. Come.",
+     "ta": "(பக்கத்து வண்டியில இருந்து, ஒரு வயசான குரல்.) தம்பி. இங்க வா. வா."
+    }
+   ]
+  },
+  {
+   "do": "meet",
+   "when": "market_went",
+   "who": "vendor2",
+   "goal": {
+    "en": "The old woman at the next cart",
+    "ta": "பக்கத்து வண்டியில வயசான அம்மா"
+   }
+  },
+  {
+   "do": "talk",
+   "when": "market_went",
+   "lines": [
+    {
+     "who": "vendor2",
+     "en": "My son was inside two years for a theft he didn't do. The whole street turned its back. I know that walk you're walking.",
+     "ta": "என் பையன் செய்யாத திருட்டுக்கு ரெண்டு வருஷம் உள்ள இருந்தான். தெரு முழுக்க முதுகு காட்டுச்சு. நீ நடக்கற அந்த நடை எனக்கு தெரியும்."
+    },
+    {
+     "who": "vendor2",
+     "en": "Beans, onions, coriander, and a few green chillies for your Amma. Sixty rupees. Tell her Valliammai sent them.",
+     "ta": "பீன்ஸ், வெங்காயம், கொத்தமல்லி, உங்க அம்மாவுக்கு கொஞ்சம் பச்ச மிளகாய். அறுபது ரூபாய். வள்ளியம்மை குடுத்தாங்கன்னு சொல்லு.",
+     "pay": -60
+    }
+   ]
+  },
+  {
+   "do": "drive",
+   "when": "market_went",
+   "to": "home",
+   "radius": 45,
+   "goal": {
+    "en": "Home, with the vegetables",
+    "ta": "வீடு, காய்கறியோட"
+   }
+  },
+  {
+   "do": "talk",
+   "when": "market_went",
+   "lines": [
+    {
+     "who": "amma",
+     "en": "Valliammai? ...She came to your appa's funeral. Nobody else from that market did. (She takes the bag in both hands.)",
+     "ta": "வள்ளியம்மையா? ...உங்க அப்பா சாவுக்கு வந்தாங்க. அந்த மார்க்கெட்ல இருந்து வேற யாரும் வரல. (பைய ரெண்டு கையாலயும் வாங்கறாங்க.)"
     }
    ]
   },

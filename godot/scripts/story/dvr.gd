@@ -228,7 +228,7 @@ func _cap(a: Node3D) -> void:
 	var cap := Node3D.new()
 	ba.add_child(cap)
 	var rest := s.get_bone_global_rest(head)
-	cap.transform = Transform3D(rest.basis.inverse(), Vector3.ZERO) * Transform3D(Basis(), Vector3(0, 0.13, -0.005))
+	cap.transform = Transform3D(rest.basis.inverse(), Vector3.ZERO) * Transform3D(Basis(), Vector3(0, 0.095, -0.005))
 	var cloth := StandardMaterial3D.new()
 	cloth.albedo_color = Color(0.07, 0.08, 0.1)
 	cloth.roughness = 0.9

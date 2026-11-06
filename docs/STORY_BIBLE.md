@@ -351,6 +351,31 @@ his torch and tells him what he saw.
 
 ---
 
+## 8a. Part 1 as built (story/slice.json, played in scenes/city_test.tscn; saved every morning)
+The slice grew into the whole of Part 1. Day by day, as it plays now:
+
+| Day | What happens | Evidence |
+|---|---|---|
+| 1 | Morning at home; Raghavan to the office; the promotion; the bank and the four lakhs; the refused file; the phone left at the office; the night delivery to Ashwin (the doorbell records the minute he really arrives) | E03, E04 |
+| 2 | The knock; the station and the case file; Sundaram; bail (sign 6–7 PM every evening, no leaving the district); the account frozen, the bills | E01, E02 |
+| 2 (aft.) | The funeral at the Race Course gate (go: Priya slaps him; or stay home) | |
+| 3–4 | Selvi's note, the watchman (three nights of tea, or ₹500), the dark stair; the calls at midnight | E06 |
+| 5 | Kathir's shop and the lobby camera (pay ₹5,000, or Sundaram's letter after Divya reads the recorder's ID) | E07 |
+| 6 | The doorbell clip, a day before it deletes itself: Ashwin, then Lakshmi aunty, who gives it only to his advocate | E05 |
+| 7 | Sekar's tea stall at the Pudhur Vayal turn; Amma's albums: never a cap | E08, E14 |
+| 8 | Bala at the door (tell him the leads, or don't); the farmers ("Bring us paper"); Divya bullied | |
+| 9 | Perur temple: Meenakshi lets him speak; Suresh's visit to Amma; the market (Valliammai sells to him) | |
+| 10 | Priya and Revathi find the green-ink note; the farmers will testify | E09 |
+| 11 | The Collectorate: apply online, Revathi's office copy, or the tout's ₹2,000 | E16 |
+| 12 | The Siruvani Grand: a ₹899 shirt and the ₹1,450 lunch, and the doorman Ganesan | E18 |
+| 13 | The mortuary ("a copy" for ₹3,000 is fake) and the post-mortem through Priya; the black sedan in the mirror | E17 |
+| 14–15 | The key-cutters, Bala Motors' job card, Bala's chats (forgive him, or walk out); Suresh calls | E11, E12 |
+| 16 | The trap at the site at 6:40 (call Sundaram, or go: walk away or grab his collar) | |
+| 17 | The court orders; Pandi at the Gandhipuram bus stand | E10, E13, E19 |
+| 18 | Joseph at the CODISSIA fair | E15 |
+| 19 | The trial in the Principal Sessions Court: the prosecution's six points answered with the evidence found (bought evidence objected to), the night replayed on the map; Pandi's testimony; Suresh arrested; Karthik discharged | |
+| 20 | Meenakshi and Priya at the door: the keys of The Mist Village; the Kotagiri road at dawn | |
+
 ## 8. The vertical slice (20–30 minutes of play)
 The slice compresses Act 1 into one day and night, then plays the accusation morning and the first lead. It's built
 in the city scene (`scenes/city_test.tscn`), in the real streamed Coimbatore.
