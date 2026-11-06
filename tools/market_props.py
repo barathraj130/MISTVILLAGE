@@ -846,6 +846,25 @@ def teakadai():
     return c
 
 
+def workshop_closed():
+    """Bala Motors at night: the same workshop, its rolling shutter pulled down and padlocked, the board unlit, a
+    single bulb over it still on."""
+    c = workshop()
+    c.name = "bala_workshop_closed"
+    W, D, H = 6.0, 4.0, 3.2
+    shutter = mat("mk_shutter", (0.34, 0.35, 0.36), 0.7, 0.15)
+    for k in range(int((H - 0.55) / 0.08)):                                  # the shutter's slats
+        box(c, (0, -D / 2 + 0.02, 0.04 + k * 0.08), (W - 0.2, 0.03, 0.075), shutter)
+    box(c, (0, -D / 2 - 0.01, 0.06), (W - 0.2, 0.05, 0.1), M["iron"])          # its bottom bar, the padlock
+    box(c, (0.4, -D / 2 - 0.06, 0.12), (0.06, 0.03, 0.08), M["brass"])
+    blob(c, (0, -D / 2 - 0.25, H - 0.6), 0.05, mat("mk_bulb", (1.0, 0.92, 0.7), 0.2), seg=8)
+    paint = mat("mk_paint_red", (0.72, 0.08, 0.06), 0.6)                     # painted on the shutter
+    text(c, "BALA MOTORS", (0, -D / 2 - 0.005, 1.55), 0.32, paint)
+    text(c, "9 AM - 9 PM", (0, -D / 2 - 0.005, 1.15), 0.2, paint)
+    text(c, "Ph: 94433 *****", (0, -D / 2 - 0.005, 0.85), 0.14, paint)
+    return c                                                                 # (its light: the story's lamp, story.gd)
+
+
 def workshop():
     """Bala Motors, Ganapathy (Act 5): an open-fronted workshop under a corrugated roof. The back wall: a pegboard of
     spanners and screwdrivers, the board BALA MOTORS (two-wheeler and car service, key programming), a calendar;
@@ -941,7 +960,7 @@ def workshop():
 
 
 BUILD = {"market_vegcart": vegcart, "market_groundstall": groundstall, "market_banana": banana, "market_crates": crates,
-         "market_teakadai": teakadai, "bala_workshop": workshop}
+         "market_teakadai": teakadai, "bala_workshop": workshop, "bala_workshop_closed": workshop_closed}
 
 
 def join(coll, name):

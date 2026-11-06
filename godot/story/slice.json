@@ -9386,12 +9386,46 @@
    }
   },
   {
-   "do": "talk",
-   "lines": [
+   "do": "scene",
+   "props": [
     {
-     "who": "karthik",
-     "en": "(The shutter's down. The board says BALA MOTORS, 9 AM TO 9 PM. It's past nine.)",
-     "ta": "(ஷட்டர் இறக்கியிருக்கு. போர்டுல BALA MOTORS, காலை 9 முதல் இரவு 9. ஒன்பது தாண்டிடுச்சு.)"
+     "scene": "res://assets/city_props/bala_workshop_closed.glb",
+     "pos": [
+      -6.8,
+      3.5
+     ],
+     "look": [
+      0,
+      3.5
+     ],
+     "lamp": [
+      0.0,
+      2.5,
+      2.4
+     ],
+     "lamp_energy": 1.6,
+     "lamp_range": 8.0
+    }
+   ],
+   "shots": [
+    {
+     "cam": [
+      -1.6,
+      1.65,
+      -0.6
+     ],
+     "look": [
+      -6.8,
+      1.4,
+      3.5
+     ],
+     "fixed_cam": true,
+     "dur": 5.0,
+     "line": {
+      "who": "karthik",
+      "en": "(The shutter's down. BALA MOTORS, 9 AM TO 9 PM, painted on it. It's not even eight. Bala never closes early.)",
+      "ta": "(ஷட்டர் இறக்கியிருக்கு. அது மேல BALA MOTORS, காலை 9 முதல் இரவு 9ன்னு எழுதியிருக்கு. இன்னும் எட்டு கூட ஆகல. பாலா சீக்கிரம் மூடவே மாட்டான்.)"
+     }
     }
    ]
   },

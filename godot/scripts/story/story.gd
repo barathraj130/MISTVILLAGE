@@ -631,6 +631,7 @@ func _next() -> void:
 			_speak_tip.call_deferred(cur)
 		"scene":
 			_anchor()
+			_set_props(cur.get("props", []))
 			_cast(cur.get("cast", {}))
 			if cur.get("hide_car", false):
 				car.visible = false
@@ -657,21 +658,7 @@ func _next() -> void:
 		"meet":
 			_anchor()
 			_cast(cur.get("cast", {}))
-			for pr in cur.get("props", []):              # (a tea stall at the roadside: city_props, in the car's frame)
-				var ps := load(str(pr["scene"])) as PackedScene
-				if ps == null:
-					continue
-				var pn := ps.instantiate() as Node3D
-				add_child(pn)
-				var at := _w2(pr["pos"])
-				var gy: float = city.streamer.height_at(at.x, at.z)
-				at.y = gy if not is_nan(gy) else at.y
-				var lk := _w2(pr.get("look", [0.0, 0.0]))
-				pn.global_position = at
-				pn.rotation.y = atan2(lk.x - at.x, lk.z - at.z) + float(pr.get("turn", 0.0))
-				if pr.has("paint"):                          # (a car's body colour: Suresh's black sedan)
-					_paint(pn, Color.html(str(pr["paint"])))
-				_props.append(pn)
+			_set_props(cur.get("props", []))
 			var a: Node3D = cast.get(cur["who"])
 			if a:
 				map.pin = Vector2(a.global_position.x, a.global_position.z)
@@ -691,6 +678,9 @@ func _next() -> void:
 			else:
 				_walk_in(str(cur.get("start", "karthik_room")))
 		"talk":
+			if cur.has("props"):                        # (on arrival: the place as it is, the shutter down)
+				_anchor()
+				_set_props(cur["props"])
 			if cur.has("cast"):                         # (someone comes in: Sundaram at the door)
 				_cast(cur["cast"])
 			if city.walker and not cur.get("backdrop", false):
@@ -1959,6 +1949,32 @@ func _tail_start(spec: Dictionary) -> void:
 	var back: Vector3 = car.global_position - car.forward() * _tail_gap
 	_crumbs = [back, car.global_position]
 	_tail_tick()
+
+
+## Things set out at a place for a scene (a tea stall, a workshop: city_props, in the car's frame), until the next drive.
+func _set_props(list: Array) -> void:
+	for pr in list:
+		var ps := load(str(pr["scene"])) as PackedScene
+		if ps == null:
+			continue
+		var pn := ps.instantiate() as Node3D
+		add_child(pn)
+		var at := _w2(pr["pos"])
+		var gy: float = city.streamer.height_at(at.x, at.z)
+		at.y = gy if not is_nan(gy) else at.y
+		var lk := _w2(pr.get("look", [0.0, 0.0]))
+		pn.global_position = at
+		pn.rotation.y = atan2(lk.x - at.x, lk.z - at.z) + float(pr.get("turn", 0.0))
+		if pr.has("paint"):                              # (a car's body colour: Suresh's black sedan)
+			_paint(pn, Color.html(str(pr["paint"])))
+		if pr.has("lamp"):                               # (a bulb that is lit: [x, y, z] in the prop, warm)
+			var lamp := OmniLight3D.new()
+			lamp.position = Vector3(float(pr["lamp"][0]), float(pr["lamp"][1]), float(pr["lamp"][2]))
+			lamp.light_color = Color(1.0, 0.78, 0.5)
+			lamp.light_energy = float(pr.get("lamp_energy", 2.5))
+			lamp.omni_range = float(pr.get("lamp_range", 9.0))
+			pn.add_child(lamp)
+		_props.append(pn)
 
 
 ## A car's "Paint" surfaces in one colour, glossy.
