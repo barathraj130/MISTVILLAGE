@@ -154,7 +154,7 @@ func _process(dt: float) -> void:
 			_warn.erase("wheel")
 			_pass(SLEEP_MIN_HOURS * 60.0, "He pulls over, puts the seat back and is asleep at once.", null,
 				{"sleep": true, "stress": 6.0, "rough": true})
-		elif driving:
+		elif driving and not _story_busy():
 			body.lids_hold = 0.45 + 0.35 * sin(Time.get_ticks_msec() / 400.0)   # his eyes closing at the wheel
 			if not _warn.has("wheel"):
 				_warn["wheel"] = 0.0
@@ -172,6 +172,8 @@ func _nag(dt: float, key: String, on: bool, text: String) -> void:
 
 func _story_busy() -> bool:
 	var st = city.story if "story" in city else null
+	if st != null and st.has_method("playing") and st.playing() and str(st.cur.get("do", "")) != "free":
+		return true                                     # (a chapter playing: its nights are its own, he sleeps when it says)
 	return st != null and (st.room != null or (st.has_method("claims_e") and city.walker and st.claims_e(city.walker.global_position)))
 
 
