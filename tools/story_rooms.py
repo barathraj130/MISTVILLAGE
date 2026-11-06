@@ -462,8 +462,8 @@ def empty(name, loc, yaw=0.0):
     return _link(e)
 
 
-def mark(name, x, y, yaw):
-    empty("Mark_" + name, (x, y, 0), yaw)
+def mark(name, x, y, yaw, z=0.0):
+    empty("Mark_" + name, (x, y, z), yaw)          # (z: a raised floor, the judge's dais, a witness box)
 
 
 def shot(name, cam, look):
@@ -1950,11 +1950,147 @@ def police_detail(T):
 
 
 DETAIL = {"home": home_detail, "dev_office": office_detail, "coopbank": bank_detail, "mess": mess_detail,
-          "police": police_detail, "fine_dining": fine_dining_detail, "cctv_shop": lambda T: None, "prison": lambda T: None}
+          "police": police_detail, "fine_dining": fine_dining_detail, "cctv_shop": lambda T: None, "prison": lambda T: None,
+          "court": lambda T: None}
+
+
+def court(T):
+    """The Principal Sessions Court, Coimbatore (the Combined Court Complex, a public place): a tall old hall, cream
+    lime walls over a teak dado, high windows down the left wall, six ceiling fans on long rods. At the back the
+    judge's dais (raised, a long teak bench under a green cloth, the high-backed chair, the brass bell, the court's
+    name board above), the bench clerk's and the stenographer's tables below it; the witness box on the right, the
+    dock on the left; the counsel's tables facing the dais, files tied in red tape, and behind them the advocates'
+    long bench; a teak railing with a swing gate between the well of the court and the public, eight rows of public
+    benches, the police bench along the right wall; by the door the advocates' coat hooks with black coats, racks of
+    case bundles along the back corners, a wall clock and a calendar."""
+    W, D, h = 16.0, 20.0, 6.0
+    floor = mat("red_oxide", (1, 1, 1), 0.22, tex=T["red_oxide"], scale=2.5)
+    wall = mat("wall_court", (0.9, 0.86, 0.74), 0.92, normal=os.path.join(DTEX, "plaster_normal.jpg"), scale=2.5)
+    teak = mat("teak", (0.62, 0.4, 0.24), 0.45, tex=os.path.join(GTEX, "warm_natural_timber_base.jpg"), scale=1.0)
+    dark = mat("teak_dark", (0.36, 0.22, 0.13), 0.4, tex=os.path.join(GTEX, "warm_natural_timber_base.jpg"), scale=1.0)
+    shell(W, D, h, floor, wall, mat("ceiling_white", (0.93, 0.93, 0.9), 0.95), dark, 1.6, door_w=2.0, door_x=5.5,
+          windows=[("L", y, 1.4, 2.3, 2.6) for y in (-7.0, -3.5, 0.0, 3.5)] + [("R", y, 1.2, 2.6, 2.2) for y in (-6.0, 6.0)])
+    green = mat("baize_green", (0.12, 0.3, 0.16), 0.9)
+    red = mat("red_tape", (0.75, 0.06, 0.05), 0.55)
+    paper = mat("file_buff", (0.78, 0.66, 0.42), 0.85)
+    white = mat("paper_white", (0.92, 0.9, 0.85), 0.85)
+    brass = mat("brass", (0.78, 0.62, 0.3), 0.3, 0.8)
+    black = mat("coat_black", (0.04, 0.04, 0.045), 0.9)
+    gold = mat("letters_gold", (0.95, 0.78, 0.35), 0.35, 0.6)
+
+    def files(x, y, z, n, turn=False):                   # a stack of case files, each tied with red tape
+        for k in range(n):
+            sz = (0.26, 0.36, 0.035) if not turn else (0.36, 0.26, 0.035)
+            box((x + 0.01 * (k % 2), y, z + 0.035 * k + 0.018), sz, paper if k % 3 else white, 0.003)
+        box((x, y, z + 0.035 * n / 2), (0.02 if not turn else 0.37, 0.37 if not turn else 0.02, 0.035 * n + 0.006), red)
+        box((x, y, z + 0.035 * n / 2), (0.27 if not turn else 0.02, 0.02 if not turn else 0.27, 0.035 * n + 0.006), red)
+
+    by = D / 2 - 1.8                                          # the dais, along the back wall
+    box((0, by, 0.35), (9.0, 3.0, 0.7), dark, 0.01)
+    box((0, by - 1.6, 0.17), (2.6, 0.4, 0.34), dark, 0.005)   # its step
+    box((0, by - 0.7, 1.2), (5.8, 0.75, 1.0), teak, 0.01)     # the judge's bench, panelled front
+    box((0, by - 0.7, 1.72), (6.0, 0.85, 0.05), green, 0.005)
+    for k in range(-2, 3):
+        box((k * 1.1, by - 1.08, 1.2), (0.9, 0.02, 0.76), dark, 0.004)
+    box((0, by + 0.4, 2.15), (0.9, 0.14, 2.3), dark, 0.03)    # the high-backed chair, its cushion maroon
+    box((0, by + 0.32, 2.0), (0.7, 0.04, 1.2), mat("cushion_maroon", (0.42, 0.06, 0.08), 0.8), 0.02)
+    box((0, by + 0.05, 1.18), (0.85, 0.65, 0.1), dark, 0.01)
+    cyl((-1.4, by - 0.7, 1.78), 0.05, 0.06, brass, 16)          # the bell
+    files(1.6, by - 0.6, 1.75, 6)
+    files(2.1, by - 0.6, 1.75, 4)
+    box((-0.6, by - 0.65, 1.76), (0.5, 0.36, 0.02), white, 0.002)
+    sign("PRINCIPAL SESSIONS COURT, COIMBATORE", (0, D / 2 - 0.06, 4.2), 6.4, 0.7, dark, gold, "-y", 0.32)
+    cyl((0, D / 2 - 0.08, 5.15), 0.38, 0.04, brass, 32, rot=(math.pi / 2, 0, 0))   # the brass seal over it
+    wall_clock(-W / 2 + 0.05, 1.5, 3.6, "+x")
+    box((W / 2 - 0.03, 2.8, 2.2), (0.03, 0.5, 0.7), mat("calendar", (1, 1, 1), 0.8, tex=T["calendar"]))
+    # the bench clerk and the stenographer, below the dais
+    table(-2.0, by - 2.8, 2.0, 0.85, 0.78, teak, dark)
+    table(2.0, by - 2.8, 1.5, 0.75, 0.72, teak, dark)
+    chair_poly(-2.0, by - 2.15, math.pi, (0.35, 0.22, 0.14))
+    chair_poly(2.0, by - 2.2, math.pi, (0.35, 0.22, 0.14))
+    box((2.0, by - 2.8, 0.82), (0.45, 0.3, 0.08), mat("typewriter", (0.15, 0.15, 0.16), 0.4, 0.3), 0.01)
+    files(-2.6, by - 2.8, 0.8, 7)
+    files(-2.2, by - 2.8, 0.8, 5)
+    files(-1.6, by - 2.8, 0.8, 8)
+    # the witness box (right) and the dock (left): raised, railed
+    for x, w in ((5.2, 1.5), (-5.2, 2.0)):
+        y0 = 1.6
+        box((x, y0, 0.17), (w, 1.4, 0.34), dark, 0.01)
+        for dx in (-w / 2, w / 2):
+            box((x + dx, y0, 0.8), (0.06, 1.4, 1.05), teak)
+        box((x, y0 - 0.7, 0.8), (w, 0.06, 1.05), teak)
+        box((x, y0 - 0.7, 1.34), (w + 0.1, 0.12, 0.04), dark)
+    # counsel's tables facing the dais (the prosecution left, the defence right) and the advocates' bench behind
+    for x in (-3.0, 3.0):
+        table(x, 0.0, 3.0, 0.95, 0.78, teak, dark)
+        for k in range(4):
+            files(x - 1.1 + k * 0.6, 0.0, 0.8, 3 + k % 3)
+        for dx in (-0.9, 0.0, 0.9):
+            chair_poly(x + dx, -0.75, 0.0, (0.35, 0.22, 0.14))
+    box((0, -1.9, 0.45), (11.0, 0.45, 0.05), teak, 0.01)       # the advocates' long bench
+    box((0, -2.13, 0.85), (11.0, 0.05, 0.7), teak, 0.01)
+    # the railing between the well and the public, a swing gate in the middle
+    ry = -2.9
+    for x0, x1 in ((-W / 2 + 0.3, -0.7), (0.7, W / 2 - 0.3)):
+        box(((x0 + x1) / 2, ry, 0.95), (x1 - x0, 0.1, 0.06), dark, 0.01)
+        box(((x0 + x1) / 2, ry, 0.08), (x1 - x0, 0.1, 0.16), dark)
+        n = int((x1 - x0) / 0.25)
+        for k in range(n + 1):
+            box((x0 + k * (x1 - x0) / n, ry, 0.5), (0.04, 0.04, 0.85), teak)
+    box((-0.35, ry - 0.2, 0.55), (0.65, 0.05, 0.8), teak, 0.01)   # the gate, half open
+    # the public benches: eight rows, an aisle down the middle
+    for r in range(8):
+        y = -3.9 - r * 0.95
+        for x in (-3.8, 3.8):
+            box((x, y, 0.45), (5.6, 0.42, 0.05), teak, 0.01)
+            box((x, y - 0.22, 0.8), (5.6, 0.05, 0.6), teak, 0.01)
+            for dx in (-2.6, 0.0, 2.6):
+                box((x + dx, y, 0.22), (0.06, 0.4, 0.44), dark)
+    # the police bench along the right wall
+    box((W / 2 - 0.5, -0.6, 0.45), (0.45, 3.4, 0.05), teak, 0.01)
+    for dy in (-1.5, 0.0, 1.5):
+        box((W / 2 - 0.5, -0.6 + dy, 0.22), (0.4, 0.05, 0.44), dark)
+    # by the door: the advocates' coat hooks, black coats on them
+    hx = W / 2 - 0.08
+    box((hx, -D / 2 + 3.2, 2.0), (0.06, 2.6, 0.1), dark, 0.005)
+    for k in range(6):
+        y = -D / 2 + 2.1 + k * 0.44
+        cyl((hx - 0.08, y, 2.0), 0.015, 0.12, brass, 8, rot=(0, math.pi / 2, 0))
+        if k != 3:
+            box((hx - 0.14, y, 1.55), (0.12, 0.42, 0.85), black, 0.03)
+            box((hx - 0.15, y, 1.95), (0.1, 0.25, 0.08), black, 0.02)
+    # racks of case bundles in the back corners, and bundles stacked on the floor
+    box_files(-W / 2 + 0.4, -W / 2 + 3.2, D / 2 - 0.3, 0.0, 4)
+    box_files(W / 2 - 3.2, W / 2 - 0.4, D / 2 - 0.3, 0.0, 4)
+    for k in range(5):
+        files(-W / 2 + 0.6 + k * 0.4, 4.2, 0.0, 6 + k % 4, True)
+    for k, (x, y) in enumerate(((-4.0, 5.0), (4.0, 5.0), (-4.0, 0.0), (4.0, 0.0), (-4.0, -5.5), (4.0, -5.5))):
+        ceiling_fan(x, y, h)
+        tube_light(x, y + 1.8, 4.0, True, k)
+    mark("judge", 0.0, by + 0.05, math.pi, 0.7)
+    mark("clerk", -2.0, by - 2.15, math.pi)
+    mark("witness", 5.2, 1.7, math.pi / 2, 0.34)
+    mark("karthik", -5.2, 1.7, -math.pi / 2, 0.34)
+    mark("prosecutor", -3.0, -0.7, 0.0)
+    mark("sundaram", 3.0, -0.7, 0.0)
+    mark("amma", -1.6, -3.9, 0.0)
+    mark("divya", -2.4, -3.9, 0.0)
+    mark("meenakshi", 1.6, -3.9, 0.0)
+    mark("priya", 2.4, -3.9, 0.0)
+    mark("suresh", 2.6, -5.8, 0.0)
+    mark("bala", -2.8, -4.85, 0.0)
+    mark("murugesan", W / 2 - 0.5, 0.4, math.pi / 2)
+    mark("selvi", W / 2 - 0.5, -1.6, math.pi / 2)
+    mark("door", 5.5, -D / 2 + 0.6, 0.0)
+    shot("wide", (0.0, -9.0, 3.0), (0.0, 4.0, 1.5))
+    shot("judge", (0.0, by - 3.0, 2.15), (0.0, by + 0.05, 1.85))
+    shot("witness", (3.2, 2.5, 2.05), (5.2, 1.7, 1.95))
+    shot("dock", (-3.2, 2.5, 2.05), (-5.2, 1.7, 1.95))
+    shot("gallery", (0.0, 1.5, 2.4), (0.0, -6.0, 1.0))
 
 
 ROOMS = {"home": home, "dev_office": dev_office, "coopbank": coopbank, "mess": mess, "police": police,
-         "fine_dining": fine_dining, "cctv_shop": cctv_shop, "prison": prison}
+         "fine_dining": fine_dining, "cctv_shop": cctv_shop, "prison": prison, "court": court}
 
 
 def reset():

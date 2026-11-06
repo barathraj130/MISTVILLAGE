@@ -493,6 +493,10 @@ func _next() -> void:
 				city.bail.active = false
 				city.bail._save()
 				print("STORY bail ended")
+			elif city.bail and cur.has("suspicion"):     # (something the inspector hears of: a bribe in a tout's book)
+				city.bail.suspicion = clampf(city.bail.suspicion + float(cur["suspicion"]), 0.0, 100.0)
+				city.bail._save()
+				print("STORY suspicion now %.0f" % city.bail.suspicion)
 			elif city.bail and cur.has("strike"):          # (a breach the inspector saw himself: a strike, its warning)
 				city.bail._strike(cur["strike"])
 			elif city.bail and cur.get("restore", false):  # (out of jail: bail granted again)

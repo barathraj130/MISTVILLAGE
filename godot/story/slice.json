@@ -546,7 +546,19 @@
    "en": "The judge",
    "ta": "நீதிபதி",
    "colour": "#f0e0c0",
-   "model": "crowd_m3"
+   "model": "crowd_m3",
+   "top": "#0e0e10",
+   "pants": "#1a1a1e",
+   "hair": "#9a958c"
+  },
+  "prosecutor": {
+   "en": "Public Prosecutor",
+   "ta": "அரசு வழக்கறிஞர்",
+   "colour": "#d0d0e0",
+   "model": "crowd_m1",
+   "hair": "#141110",
+   "top": "#111114",
+   "pants": "#1a1a1e"
   }
  },
  "spawn": "home",
@@ -8585,6 +8597,34 @@
    ]
   },
   {
+   "do": "message",
+   "when": "patta_tout",
+   "from": {
+    "en": "Constable Selvi",
+    "ta": "கான்ஸ்டபிள் செல்வி"
+   },
+   "text": {
+    "en": "The tout at the Collectorate gate was arrested this morning. His notebook has your name: '₹2,000, Pudhur Vayal patta, the accused in 412.' The inspector has seen it. – Selvi",
+    "ta": "கலெக்டர் ஆஃபீஸ் கேட் புரோக்கர இன்னைக்கு காலையில கைது பண்ணாங்க. அவன் நோட்டுல உன் பேரு: '₹2,000, புதூர் வயல் பட்டா, 412 குற்றவாளி.' இன்ஸ்பெக்டர் பாத்துட்டாரு. – செல்வி"
+   }
+  },
+  {
+   "do": "bail",
+   "when": "patta_tout",
+   "suspicion": 15
+  },
+  {
+   "do": "talk",
+   "when": "patta_tout",
+   "lines": [
+    {
+     "who": "karthik",
+     "en": "(Two thousand rupees, and now my name is in a tout's book, in the inspector's hand. Sundaram sir said: don't pay anybody.)",
+     "ta": "(ரெண்டாயிரம் ரூபாய், இப்போ என் பேரு ஒரு புரோக்கர் நோட்டுல, இன்ஸ்பெக்டர் கையில. யாருக்கும் குடுக்காதன்னு சுந்தரம் சார் சொன்னாரு.)"
+    }
+   ]
+  },
+  {
    "do": "home",
    "room": "home",
    "at": "home",
@@ -11076,23 +11116,85 @@
    }
   },
   {
-   "do": "talk",
-   "backdrop": true,
-   "lines": [
+   "do": "room",
+   "room": "court",
+   "at": "court",
+   "cast": {
+    "judge": {
+     "mark": "judge",
+     "anim": "Sit"
+    },
+    "sundaram": {
+     "mark": "sundaram",
+     "anim": "Idle"
+    },
+    "prosecutor": {
+     "mark": "prosecutor",
+     "anim": "Idle"
+    },
+    "karthik": {
+     "mark": "karthik",
+     "anim": "Idle"
+    },
+    "amma": {
+     "mark": "amma",
+     "anim": "Sit"
+    },
+    "divya": {
+     "mark": "divya",
+     "anim": "Sit"
+    },
+    "meenakshi": {
+     "mark": "meenakshi",
+     "anim": "Sit"
+    },
+    "priya": {
+     "mark": "priya",
+     "anim": "Sit"
+    },
+    "suresh": {
+     "mark": "suresh",
+     "anim": "Sit"
+    },
+    "murugesan": {
+     "mark": "murugesan",
+     "anim": "Sit"
+    },
+    "selvi": {
+     "mark": "selvi",
+     "anim": "Idle"
+    },
+    "bala": {
+     "mark": "bala",
+     "anim": "Sit"
+    }
+   },
+   "keep_room": true,
+   "shots": [
     {
-     "who": "karthik",
-     "en": "(Ceiling fans, files tied with red tape, the smell of old paper. Amma and Divya on the bench behind me. On the other side, Meenakshi amma and Priya.)",
-     "ta": "(சீலிங் ஃபேன், சிவப்பு நாடா கட்டின ஃபைல்கள், பழைய காகித வாசனை. என் பின்னாடி பெஞ்சுல அம்மாவும் திவ்யாவும். அந்த பக்கம், மீனாட்சி அம்மாவும் பிரியாவும்.)"
+     "line": {
+      "who": "karthik",
+      "en": "(Ceiling fans, files tied with red tape, the smell of old paper. Amma and Divya on the bench behind me. On the other side, Meenakshi amma and Priya.)",
+      "ta": "(சீலிங் ஃபேன், சிவப்பு நாடா கட்டின ஃபைல்கள், பழைய காகித வாசனை. என் பின்னாடி பெஞ்சுல அம்மாவும் திவ்யாவும். அந்த பக்கம், மீனாட்சி அம்மாவும் பிரியாவும்.)"
+     },
+     "cam": "wide",
+     "fixed_cam": true
     },
     {
-     "who": "karthik",
-     "en": "(And Suresh sir, in a cream shirt, three rows back, turning his ring.)",
-     "ta": "(மூணு வரிசை பின்னாடி, கிரீம் சட்டையில, மோதிரத்த திருப்பிட்டு, சுரேஷ் சார்.)"
+     "line": {
+      "who": "karthik",
+      "en": "(And Suresh sir, in a cream shirt, three rows back, turning his ring.)",
+      "ta": "(மூணு வரிசை பின்னாடி, கிரீம் சட்டையில, மோதிரத்த திருப்பிட்டு, சுரேஷ் சார்.)"
+     },
+     "cam": "gallery",
+     "fixed_cam": true
     },
     {
-     "who": "sundaram",
-     "en": "(Low, beside me.) They'll say it point by point, thambi. We answer point by point. Only what's true. Only what walks on two legs.",
-     "ta": "(என் பக்கத்துல, மெதுவா.) அவங்க ஒவ்வொரு விஷயமா சொல்லுவாங்க, தம்பி. நாம ஒவ்வொன்னா பதில் சொல்லுவோம். உண்மைய மட்டும். ரெண்டு கால்ல நடக்கறத மட்டும்."
+     "line": {
+      "who": "sundaram",
+      "en": "(Low, beside me.) They'll say it point by point, thambi. We answer point by point. Only what's true. Only what walks on two legs.",
+      "ta": "(என் பக்கத்துல, மெதுவா.) அவங்க ஒவ்வொரு விஷயமா சொல்லுவாங்க, தம்பி. நாம ஒவ்வொன்னா பதில் சொல்லுவோம். உண்மைய மட்டும். ரெண்டு கால்ல நடக்கறத மட்டும்."
+     }
     }
    ]
   },
@@ -11189,68 +11291,308 @@
    ]
   },
   {
-   "do": "talk",
-   "backdrop": true,
-   "lines": [
+   "do": "room",
+   "room": "court",
+   "at": "court",
+   "cast": {
+    "judge": {
+     "mark": "judge",
+     "anim": "Sit"
+    },
+    "sundaram": {
+     "mark": "sundaram",
+     "anim": "Idle"
+    },
+    "prosecutor": {
+     "mark": "prosecutor",
+     "anim": "Idle"
+    },
+    "karthik": {
+     "mark": "karthik",
+     "anim": "Idle"
+    },
+    "amma": {
+     "mark": "amma",
+     "anim": "Sit"
+    },
+    "divya": {
+     "mark": "divya",
+     "anim": "Sit"
+    },
+    "meenakshi": {
+     "mark": "meenakshi",
+     "anim": "Sit"
+    },
+    "priya": {
+     "mark": "priya",
+     "anim": "Sit"
+    },
+    "suresh": {
+     "mark": "suresh",
+     "anim": "Sit"
+    },
+    "murugesan": {
+     "mark": "murugesan",
+     "anim": "Sit"
+    },
+    "selvi": {
+     "mark": "selvi",
+     "anim": "Idle"
+    },
+    "bala": {
+     "mark": "bala",
+     "anim": "Sit"
+    },
+    "pandi": {
+     "mark": "witness",
+     "anim": "Idle"
+    }
+   },
+   "keep_room": true,
+   "shots": [
     {
-     "who": "sundaram",
-     "en": "Your honour, the prosecution's own approver. Pandi.",
-     "ta": "மாண்புமிகு நீதிபதி அவர்களே, அரசு தரப்போட சொந்த அப்ரூவர். பாண்டி."
+     "line": {
+      "who": "sundaram",
+      "en": "Your honour, the prosecution's own approver. Pandi.",
+      "ta": "மாண்புமிகு நீதிபதி அவர்களே, அரசு தரப்போட சொந்த அப்ரூவர். பாண்டி."
+     }
     },
     {
-     "who": "pandi",
-     "en": "Suresh sir gave me the key and the card. I sent the message from the boy's phone. I drove. At the site Suresh sir was waiting with the money-lender's men. I stayed in the car. I heard it. ...He promised me two lakhs.",
-     "ta": "சுரேஷ் சார் தான் சாவியையும் கார்டையும் குடுத்தார். பையன் ஃபோன்ல இருந்து நான் தான் மெசேஜ் அனுப்பினேன். நான் தான் ஓட்டினேன். சைட்ல சுரேஷ் சார் வட்டிக்காரர் ஆளுங்களோட காத்திருந்தார். நான் கார்லயே இருந்தேன். கேட்டேன். ...ரெண்டு லட்சம்னு சொன்னாரு."
+     "line": {
+      "who": "pandi",
+      "en": "Suresh sir gave me the key and the card. I sent the message from the boy's phone. I drove. At the site Suresh sir was waiting with the money-lender's men. I stayed in the car. I heard it. ...He promised me two lakhs.",
+      "ta": "சுரேஷ் சார் தான் சாவியையும் கார்டையும் குடுத்தார். பையன் ஃபோன்ல இருந்து நான் தான் மெசேஜ் அனுப்பினேன். நான் தான் ஓட்டினேன். சைட்ல சுரேஷ் சார் வட்டிக்காரர் ஆளுங்களோட காத்திருந்தார். நான் கார்லயே இருந்தேன். கேட்டேன். ...ரெண்டு லட்சம்னு சொன்னாரு."
+     },
+     "cam": "witness",
+     "fixed_cam": true
     },
     {
-     "who": "karthik",
-     "en": "(Three rows back, the ring stops turning.)",
-     "ta": "(மூணு வரிசை பின்னாடி, மோதிரம் திரும்பறது நிக்குது.)"
+     "line": {
+      "who": "karthik",
+      "en": "(Three rows back, the ring stops turning.)",
+      "ta": "(மூணு வரிசை பின்னாடி, மோதிரம் திரும்பறது நிக்குது.)"
+     },
+     "cam": "gallery",
+     "fixed_cam": true
     }
    ]
   },
   {
-   "do": "talk",
-   "backdrop": true,
-   "when": "court_won",
-   "lines": [
+   "do": "room",
+   "room": "court",
+   "at": "court",
+   "cast": {
+    "judge": {
+     "mark": "judge",
+     "anim": "Sit"
+    },
+    "sundaram": {
+     "mark": "sundaram",
+     "anim": "Idle"
+    },
+    "prosecutor": {
+     "mark": "prosecutor",
+     "anim": "Idle"
+    },
+    "karthik": {
+     "mark": "karthik",
+     "anim": "Idle"
+    },
+    "amma": {
+     "mark": "amma",
+     "anim": "Sit"
+    },
+    "divya": {
+     "mark": "divya",
+     "anim": "Sit"
+    },
+    "meenakshi": {
+     "mark": "meenakshi",
+     "anim": "Sit"
+    },
+    "priya": {
+     "mark": "priya",
+     "anim": "Sit"
+    },
+    "suresh": {
+     "mark": "suresh",
+     "anim": "Sit"
+    },
+    "murugesan": {
+     "mark": "murugesan",
+     "anim": "Idle"
+    },
+    "selvi": {
+     "mark": "selvi",
+     "anim": "Idle"
+    },
+    "bala": {
+     "mark": "bala",
+     "anim": "Sit"
+    }
+   },
+   "keep_room": true,
+   "shots": [
     {
-     "who": "murugesan",
-     "en": "(He stands up from the police bench, cap under his arm.) Your honour. On the evidence before this court, the police seek leave to arrest Suresh Kumar for the murder of R. Raghavan. Now. In this room.",
-     "ta": "(போலீஸ் பெஞ்சுல இருந்து எழுந்திருக்கார், தொப்பி கையில.) மாண்புமிகு நீதிபதி அவர்களே. இந்த நீதிமன்றத்து முன்னாடி இருக்கற சாட்சியங்கள வச்சு, ரா. ராகவன் கொலைக்காக சுரேஷ் குமார கைது பண்ண போலீஸ் அனுமதி கேக்குது. இப்பவே. இந்த அறையிலேயே."
+     "line": {
+      "who": "murugesan",
+      "en": "(He stands up from the police bench, cap under his arm.) Your honour. On the evidence before this court, the police seek leave to arrest Suresh Kumar for the murder of R. Raghavan. Now. In this room.",
+      "ta": "(போலீஸ் பெஞ்சுல இருந்து எழுந்திருக்கார், தொப்பி கையில.) மாண்புமிகு நீதிபதி அவர்களே. இந்த நீதிமன்றத்து முன்னாடி இருக்கற சாட்சியங்கள வச்சு, ரா. ராகவன் கொலைக்காக சுரேஷ் குமார கைது பண்ண போலீஸ் அனுமதி கேக்குது. இப்பவே. இந்த அறையிலேயே."
+     },
+     "cam": "wide",
+     "fixed_cam": true
     },
     {
-     "who": "murugesan",
-     "en": "(To me, as Selvi puts the cuffs on Suresh:) I wrote your lie in the file, Karthik. I'll write this in it too.",
-     "ta": "(செல்வி சுரேஷுக்கு விலங்கு போடும்போது, என் கிட்ட:) உன் பொய்ய ஃபைல்ல எழுதினேன், கார்த்திக். இதையும் அதுல எழுதுவேன்."
+     "line": {
+      "who": "murugesan",
+      "en": "(To me, as Selvi puts the cuffs on Suresh:) I wrote your lie in the file, Karthik. I'll write this in it too.",
+      "ta": "(செல்வி சுரேஷுக்கு விலங்கு போடும்போது, என் கிட்ட:) உன் பொய்ய ஃபைல்ல எழுதினேன், கார்த்திக். இதையும் அதுல எழுதுவேன்."
+     },
+     "cam": "wide",
+     "fixed_cam": true
     }
-   ]
+   ],
+   "when": "court_won"
   },
   {
-   "do": "talk",
-   "backdrop": true,
-   "unless": "court_won",
-   "lines": [
+   "do": "room",
+   "room": "court",
+   "at": "court",
+   "cast": {
+    "judge": {
+     "mark": "judge",
+     "anim": "Sit"
+    },
+    "sundaram": {
+     "mark": "sundaram",
+     "anim": "Idle"
+    },
+    "prosecutor": {
+     "mark": "prosecutor",
+     "anim": "Idle"
+    },
+    "karthik": {
+     "mark": "karthik",
+     "anim": "Idle"
+    },
+    "amma": {
+     "mark": "amma",
+     "anim": "Sit"
+    },
+    "divya": {
+     "mark": "divya",
+     "anim": "Sit"
+    },
+    "meenakshi": {
+     "mark": "meenakshi",
+     "anim": "Sit"
+    },
+    "priya": {
+     "mark": "priya",
+     "anim": "Sit"
+    },
+    "suresh": {
+     "mark": "suresh",
+     "anim": "Sit"
+    },
+    "murugesan": {
+     "mark": "murugesan",
+     "anim": "Sit"
+    },
+    "selvi": {
+     "mark": "selvi",
+     "anim": "Idle"
+    },
+    "bala": {
+     "mark": "bala",
+     "anim": "Sit"
+    }
+   },
+   "keep_room": true,
+   "shots": [
     {
-     "who": "sundaram",
-     "en": "(Whispering.) Pandi carried it, thambi. Not us. Too many of our legs were bought.",
-     "ta": "(கிசுகிசுப்பா.) பாண்டி தான் இத தூக்கினான், தம்பி. நாம இல்ல. நம்ம கால்கள்ல நிறைய காசு குடுத்து வாங்கினது."
+     "line": {
+      "who": "sundaram",
+      "en": "(Whispering.) Pandi carried it, thambi. Not us. Too many of our legs were bought.",
+      "ta": "(கிசுகிசுப்பா.) பாண்டி தான் இத தூக்கினான், தம்பி. நாம இல்ல. நம்ம கால்கள்ல நிறைய காசு குடுத்து வாங்கினது."
+     }
     },
     {
-     "who": "murugesan",
-     "en": "(Standing, slowly.) Your honour. On the approver's statement, the police seek leave to arrest Suresh Kumar.",
-     "ta": "(மெதுவா எழுந்து.) மாண்புமிகு நீதிபதி அவர்களே. அப்ரூவர் வாக்குமூலத்த வச்சு, சுரேஷ் குமார கைது பண்ண போலீஸ் அனுமதி கேக்குது."
+     "line": {
+      "who": "murugesan",
+      "en": "(Standing, slowly.) Your honour. On the approver's statement, the police seek leave to arrest Suresh Kumar.",
+      "ta": "(மெதுவா எழுந்து.) மாண்புமிகு நீதிபதி அவர்களே. அப்ரூவர் வாக்குமூலத்த வச்சு, சுரேஷ் குமார கைது பண்ண போலீஸ் அனுமதி கேக்குது."
+     },
+     "cam": "wide",
+     "fixed_cam": true
     }
-   ]
+   ],
+   "unless": "court_won"
   },
   {
-   "do": "talk",
-   "backdrop": true,
-   "lines": [
+   "do": "room",
+   "room": "court",
+   "at": "court",
+   "cast": {
+    "judge": {
+     "mark": "judge",
+     "anim": "Sit"
+    },
+    "sundaram": {
+     "mark": "sundaram",
+     "anim": "Idle"
+    },
+    "prosecutor": {
+     "mark": "prosecutor",
+     "anim": "Idle"
+    },
+    "karthik": {
+     "mark": "karthik",
+     "anim": "Idle"
+    },
+    "amma": {
+     "mark": "amma",
+     "anim": "Sit"
+    },
+    "divya": {
+     "mark": "divya",
+     "anim": "Sit"
+    },
+    "meenakshi": {
+     "mark": "meenakshi",
+     "anim": "Sit"
+    },
+    "priya": {
+     "mark": "priya",
+     "anim": "Sit"
+    },
+    "suresh": {
+     "mark": "suresh",
+     "anim": "Sit"
+    },
+    "murugesan": {
+     "mark": "murugesan",
+     "anim": "Sit"
+    },
+    "selvi": {
+     "mark": "selvi",
+     "anim": "Idle"
+    },
+    "bala": {
+     "mark": "bala",
+     "anim": "Sit"
+    }
+   },
+   "keep_room": true,
+   "shots": [
     {
-     "who": "judge",
-     "en": "The accused Karthik M. is discharged. His bail conditions are vacated. ...Young man, you may go home.",
-     "ta": "குற்றம் சாட்டப்பட்ட கார்த்திக் ம. விடுவிக்கப்படுகிறார். அவரோட பெயில் நிபந்தனைகள் ரத்து. ...தம்பி, நீங்க வீட்டுக்கு போகலாம்."
+     "line": {
+      "who": "judge",
+      "en": "The accused Karthik M. is discharged. His bail conditions are vacated. ...Young man, you may go home.",
+      "ta": "குற்றம் சாட்டப்பட்ட கார்த்திக் ம. விடுவிக்கப்படுகிறார். அவரோட பெயில் நிபந்தனைகள் ரத்து. ...தம்பி, நீங்க வீட்டுக்கு போகலாம்."
+     },
+     "cam": "judge",
+     "fixed_cam": true
     }
    ]
   },
