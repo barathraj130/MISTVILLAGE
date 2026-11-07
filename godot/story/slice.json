@@ -9663,6 +9663,153 @@
    "lines": [
     {
      "who": "karthik",
+     "en": "(A spare, the card says. Bala's machine would say exactly when.) Your key programmer keeps a log, doesn't it? Open it.",
+     "ta": "(ஸ்பேர்னு கார்டு சொல்லுது. எப்போன்னு சரியா பாலா மெஷின் சொல்லும்.) உன் கீ புரோகிராமர்ல லாக் இருக்கும்ல? திற."
+    },
+    {
+     "who": "bala",
+     "en": "It's locked, da. I put a PIN on it after the break-in last year. My head's gone, I can't... I wrote it down somewhere so I'd never forget. It's here somewhere. Look, if you want.",
+     "ta": "லாக் ஆயிருக்கு டா. போன வருஷம் திருட்டு நடந்ததுக்கு அப்புறம் PIN போட்டேன். என் தலையே வேலை செய்யல... மறக்கக்கூடாதுன்னு எங்கயோ எழுதி வச்சேன். இங்க தான் எங்கயோ. பாரு, வேணும்னா."
+    }
+   ]
+  },
+  {
+   "do": "keypad",
+   "prop": "bala_workshop",
+   "device": [
+    -0.75,
+    1.6,
+    0.97
+   ],
+   "device_name": {
+    "en": "the key programmer",
+    "ta": "கீ புரோகிராமர்"
+   },
+   "code": "9172",
+   "goal": {
+    "en": "Find the PIN for Bala's key programmer, and open its log",
+    "ta": "பாலாவோட கீ புரோகிராமர் PIN-அ கண்டுபிடி, அதோட லாக்க திற"
+   },
+   "clues": [
+    {
+     "at": [
+      -0.75,
+      1.6,
+      1.03
+     ],
+     "title": {
+      "en": "a yellow sticky note on the programmer",
+      "ta": "புரோகிராமர் மேல மஞ்சள் ஸ்டிக்கி நோட்"
+     },
+     "text": {
+      "en": "In Bala's capitals:\n\n   PIN = MY FIRST BIKE.  LAST 4.  BACKWARDS!!   – B\n\n(Of course. He wrote it on the machine itself.)",
+      "ta": "பாலாவோட பெரிய எழுத்துல:\n\n   PIN = என் முதல் பைக்.  கடைசி 4.  தலைகீழா!!   – B\n\n(அதானே. மெஷின் மேலயே எழுதி வச்சிருக்கான்.)"
+     }
+    },
+    {
+     "at": [
+      1.4,
+      1.91,
+      1.65
+     ],
+     "title": {
+      "en": "a framed photo on the wall",
+      "ta": "சுவர்ல ஃப்ரேம் போட்ட ஃபோட்டோ"
+     },
+     "text": {
+      "en": "Bala at seventeen, all teeth, on a red bike with a dented tank. The school wall behind him, his mother's hand on the seat.\n\nThe number plate:  TN 37 K 2719",
+      "ta": "பதினேழு வயசு பாலா, முழு பல்லும் தெரிய சிரிச்சுகிட்டு, தொட்டி நசுங்கின ஒரு சிவப்பு பைக்ல. பின்னாடி ஸ்கூல் சுவர், சீட்ல அவங்க அம்மா கை.\n\nநம்பர் பிளேட்:  TN 37 K 2719"
+     }
+    },
+    {
+     "at": [
+      0.4,
+      1.92,
+      1.85
+     ],
+     "title": {
+      "en": "the calendar",
+      "ta": "காலண்டர்"
+     },
+     "text": {
+      "en": "A temple calendar from the spare-parts dealer. Pencilled along the bottom:\n\n   Ramesh – Activa – 1184 – paid?\n   Amma hospital Thurs\n\n(The job card's number. Not a PIN.)",
+      "ta": "ஸ்பேர் பார்ட்ஸ் கடைக்காரர் குடுத்த கோயில் காலண்டர். கீழ பென்சில்ல:\n\n   ரமேஷ் – ஆக்டிவா – 1184 – பணம்?\n   அம்மா ஆஸ்பத்திரி வியாழன்\n\n(ஜாப் கார்டு நம்பர். PIN இல்ல.)"
+     }
+    }
+   ],
+   "nudge": {
+    "en": "(Bala writes everything down. Somewhere near the machine.)",
+    "ta": "(பாலா எல்லாத்தையும் எழுதி வைப்பான். மெஷின் பக்கத்துலயே எங்கயோ.)"
+   },
+   "log": [
+    {
+     "en": "02-10  10:14   Innova  TN 38  — key 2 of 2   cust 94433 1•••••",
+     "ta": "02-10  10:14   இன்னோவா  TN 38  — சாவி 2/2   வாடிக்கையாளர் 94433 1•••••"
+    },
+    {
+     "en": "07-10  16:40   Splendor  TN 37  — key 2 of 2",
+     "ta": "07-10  16:40   ஸ்பிளெண்டர்  TN 37  — சாவி 2/2"
+    },
+    {
+     "en": "12-10  19:52   SUV  Raghavan Developers  — KEY 3 of 3 ADDED   cust 98430 41772",
+     "ta": "12-10  19:52   எஸ்யூவி  ராகவன் டெவலப்பர்ஸ்  — சாவி 3/3 சேர்த்தது   வாடிக்கையாளர் 98430 41772"
+    },
+    {
+     "en": "12-10  19:58   SUV  Raghavan Developers  — key 3 TEST: OK",
+     "ta": "12-10  19:58   எஸ்யூவி  ராகவன் டெவலப்பர்ஸ்  — சாவி 3 சோதனை: சரி"
+    }
+   ],
+   "flag": "prog_log"
+  },
+  {
+   "do": "evidence",
+   "when": "prog_log",
+   "speaker": "bala",
+   "tag": "E11L",
+   "label": {
+    "en": "The key programmer's log: key 3, Suresh's number",
+    "ta": "கீ புரோகிராமர் லாக்: சாவி 3, சுரேஷ் நம்பர்"
+   },
+   "memory": {
+    "id": "mem_keylog",
+    "kind": "card",
+    "title": {
+     "en": "The machine's log (E11L)",
+     "ta": "மெஷின் லாக் (E11L)"
+    },
+    "body": {
+     "en": "Bala's programmer: a third key added to sir's SUV, 7:52 PM, two weeks before. The customer's mobile on it is Suresh's. A machine can't be written last night.",
+     "ta": "பாலா புரோகிராமர்: சார் எஸ்யூவிக்கு மூணாவது சாவி, ராத்திரி 7:52, ரெண்டு வாரம் முன்னாடி. அதுல வாடிக்கையாளர் மொபைல் சுரேஷோடது. மெஷின நேத்து ராத்திரி எழுத முடியாது."
+    }
+   }
+  },
+  {
+   "do": "talk",
+   "when": "prog_log",
+   "lines": [
+    {
+     "who": "karthik",
+     "en": "(Key 3 of 3. 7:52 PM. And the customer's mobile... I know that number. Suresh sir's.) A machine doesn't forget, Bala.",
+     "ta": "(சாவி 3/3. ராத்திரி 7:52. வாடிக்கையாளர் மொபைல்... இந்த நம்பர் எனக்கு தெரியும். சுரேஷ் சாரோடது.) மெஷின் மறக்காது, பாலா."
+    }
+   ]
+  },
+  {
+   "do": "talk",
+   "unless": "prog_log",
+   "lines": [
+    {
+     "who": "karthik",
+     "en": "(Locked. The job card will have to do. Their lawyer will say Bala wrote it last night.)",
+     "ta": "(லாக் ஆயிருக்கு. ஜாப் கார்டு போதும்னு வச்சுக்கணும். பாலா நேத்து ராத்திரி எழுதினான்னு அவங்க வக்கீல் சொல்லுவாரு.)"
+    }
+   ]
+  },
+  {
+   "do": "talk",
+   "lines": [
+    {
+     "who": "karthik",
      "en": "That key opened sir's car the night he died, Bala.",
      "ta": "சார் இறந்த ராத்திரி அந்த சாவி தான் அவர் கார திறந்துச்சு, பாலா."
     },
@@ -9738,7 +9885,14 @@
      "en": "Job card #1184: a transponder spare key for sir's SUV, ordered and paid in cash by Suresh, two weeks before.",
      "ta": "ஜாப் கார்டு #1184: சார் எஸ்யூவிக்கு டிரான்ஸ்பாண்டர் ஸ்பேர் சாவி, சுரேஷ் ஆர்டர், ரொக்கம், ரெண்டு வாரம் முன்னாடி."
     }
-   }
+   },
+   "doubt": {
+    "en": "Objection! A handwritten card, from the accused's childhood friend, produced after the arrest. Written last night, for all this court knows.",
+    "ta": "ஆட்சேபனை! கையால எழுதின கார்டு, குற்றம் சாட்டப்பட்டவரோட சின்ன வயசு நண்பர் கிட்ட இருந்து, கைதுக்கு அப்புறம். நேத்து ராத்திரி எழுதினதா இருக்கலாம்."
+   },
+   "doubt_unless": [
+    "E11L"
+   ]
   },
   {
    "do": "evidence",
@@ -11302,38 +11456,59 @@
    "lines": [
     {
      "who": "joseph",
-     "en": "Don't look at me. Look at the tractor. ...Twenty years I kept sir's books. These last two years, the books didn't add up.",
-     "ta": "என்ன பாக்காத. டிராக்டர பாரு. ...இருபது வருஷம் சார் கணக்க பாத்தேன். கடைசி ரெண்டு வருஷம், கணக்கு சரியா வரல."
-    }
-   ]
-  },
-  {
-   "do": "talk",
-   "lines": [
+     "en": "Don't look at me. Look at the tractor. Stand at it like you're reading the price.",
+     "ta": "என்ன பாக்காத. டிராக்டர பாரு. விலைய படிக்கற மாதிரி அது பக்கத்துல நில்லு."
+    },
     {
      "who": "karthik",
-     "en": "(My phone. If he says it, I want it said twice.)",
-     "ta": "(என் ஃபோன். அவர் சொன்னா, அத ரெண்டு தடவ கேக்கணும்.)"
+     "en": "(My phone. The recorder. If he says it, I want it on tape.)",
+     "ta": "(என் ஃபோன். ரெக்கார்டர். அவர் சொன்னா, அது பதிவாகணும்.)"
     }
    ]
   },
   {
-   "do": "record",
-   "on": true
+   "do": "covert",
+   "who": "joseph",
+   "spot": [
+    6263.6,
+    -2580.6
+   ],
+   "hear": 3.2,
+   "goal": {
+    "en": "At the tractor: record Joseph on your phone, and keep your eyes on the tractor",
+    "ta": "டிராக்டர் பக்கத்துல: ஜோசப்ப ஃபோன்ல பதிவு பண்ணு, கண்ணு டிராக்டர் மேலயே இருக்கட்டும்"
+   },
+   "lines": [
+    {
+     "en": "Twenty years I kept sir's books. These last two years, the books didn't add up.",
+     "ta": "இருபது வருஷம் சார் கணக்க பாத்தேன். கடைசி ரெண்டு வருஷம், கணக்கு சரியா வரல."
+    },
+    {
+     "en": "Suresh borrowed one crore eighty lakhs from Om Sakthi Traders. Three percent a month. For Green Valley, in his wife's company's name. Sir never knew.",
+     "ta": "ஓம் சக்தி டிரேடர்ஸ் கிட்ட சுரேஷ் ஒரு கோடியே எண்பது லட்சம் கடன் வாங்கினாரு. மாசம் மூணு சதவீதம். கிரீன் வேலிக்காக, அவர் மனைவி கம்பெனி பேர்ல. சாருக்கு தெரியவே தெரியாது.",
+     "key": true
+    },
+    {
+     "en": "If sir paid the farmers a fair price, Green Valley was worth nothing to him. And the lender doesn't wait. You've met his driver.",
+     "ta": "சார் விவசாயிங்களுக்கு நியாய விலை குடுத்திருந்தா, கிரீன் வேலியால சுரேஷுக்கு ஒண்ணுமே கிடைச்சிருக்காது. வட்டிக்காரர் காத்திருக்க மாட்டார். அவர் டிரைவர நீ பாத்திருக்க.",
+     "key": true
+    }
+   ],
+   "warn": {
+    "en": "(Low, not turning.) Don't look at me, thambi. The tractor.",
+    "ta": "(மெதுவா, திரும்பாம.) என்ன பாக்காத, தம்பி. டிராக்டர."
+   },
+   "spooked": {
+    "en": "Not here. Too many eyes. (He walks off towards the harvesters.)",
+    "ta": "இங்க வேண்டாம். நிறைய கண்ணு. (அறுவடை இயந்திரங்க பக்கம் நடந்து போறார்.)"
+   },
+   "flag": "joseph_taped",
+   "fail": "joseph_spooked"
   },
   {
    "do": "talk",
+   "unless": "joseph_spooked",
    "lines": [
-    {
-     "who": "joseph",
-     "en": "Suresh borrowed one crore eighty lakhs from Om Sakthi Traders. Three percent a month. For Green Valley, in his wife's company's name. Sir never knew.",
-     "ta": "ஓம் சக்தி டிரேடர்ஸ் கிட்ட சுரேஷ் ஒரு கோடியே எண்பது லட்சம் கடன் வாங்கினாரு. மாசம் மூணு சதவீதம். கிரீன் வேலிக்காக, அவர் மனைவி கம்பெனி பேர்ல. சாருக்கு தெரியவே தெரியாது."
-    },
-    {
-     "who": "joseph",
-     "en": "If sir paid the farmers a fair price, Green Valley was worth nothing to him. And the lender doesn't wait. You've met his driver.",
-     "ta": "சார் விவசாயிங்களுக்கு நியாய விலை குடுத்திருந்தா, கிரீன் வேலியால சுரேஷுக்கு ஒண்ணுமே கிடைச்சிருக்காது. வட்டிக்காரர் காத்திருக்க மாட்டார். அவர் டிரைவர நீ பாத்திருக்க."
-    },
     {
      "who": "joseph",
      "en": "(He drops a folded sheaf into the tractor's seat, as if he's left a brochure.)",
@@ -11342,8 +11517,15 @@
    ]
   },
   {
-   "do": "record",
-   "on": false
+   "do": "talk",
+   "when": "joseph_spooked",
+   "lines": [
+    {
+     "who": "karthik",
+     "en": "(He's gone. But as he went, he dropped something on the tractor's seat. Folded pages.)",
+     "ta": "(போயிட்டார். ஆனா போகும்போது டிராக்டர் சீட்ல எதையோ போட்டுட்டு போனார். மடிச்ச காகிதங்கள்.)"
+    }
+   ]
   },
   {
    "do": "give",
@@ -11383,7 +11565,8 @@
      "en": "₹1.8 crore from Om Sakthi Traders at 3% a month, for Green Valley. A fair price for the farmers would have sunk him.",
      "ta": "கிரீன் வேலிக்காக ஓம் சக்தி டிரேடர்ஸ் கிட்ட மாசம் 3%-க்கு ₹1.8 கோடி. விவசாயிங்களுக்கு நியாய விலை குடுத்திருந்தா அவர் மூழ்கியிருப்பாரு."
     }
-   }
+   },
+   "when": "joseph_taped"
   },
   {
    "do": "talk",
@@ -11392,6 +11575,18 @@
      "who": "joseph",
      "en": "I kept quiet two weeks. I have two daughters too, thambi. ...If the court calls me, I'll say it. Now walk away. Slowly. Look at the harvesters.",
      "ta": "ரெண்டு வாரம் பேசாம இருந்தேன். எனக்கும் ரெண்டு பொண்ணு இருக்காங்க, தம்பி. ...கோர்ட் கூப்பிட்டா, சொல்லுவேன். இப்போ மெதுவா நடந்து போ. அறுவடை இயந்திரங்கள பாரு."
+    }
+   ],
+   "when": "joseph_taped"
+  },
+  {
+   "do": "talk",
+   "unless": "joseph_taped",
+   "lines": [
+    {
+     "who": "karthik",
+     "en": "(His pages, but not his voice. Pages anyone could have typed. A lawyer will say so.)",
+     "ta": "(அவர் காகிதம் இருக்கு, அவர் குரல் இல்ல. யார் வேணாலும் டைப் பண்ணியிருக்கலாம்னு வக்கீல் சொல்லுவாரு.)"
     }
    ]
   },
@@ -11815,6 +12010,7 @@
      },
      "answers": [
       "E11",
+      "E11L",
       "E12"
      ],
      "answer": {

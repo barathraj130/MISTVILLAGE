@@ -124,11 +124,24 @@ func _present(tag: String) -> void:
 	_given.append(tag)
 	var honest := 0
 	var bought := 0
+	var doubt := {}
 	for tg in _given:
-		if bool(evidence.get(tg, {}).get("paid", false)):
+		var ev: Dictionary = evidence.get(tg, {})
+		var backed := false                             # (a doubtful card stands if what backs it is in evidence)
+		for u in ev.get("doubt_unless", []):
+			backed = backed or evidence.has(u)
+		if bool(ev.get("paid", false)):
 			bought += 1
+		elif not (ev.get("doubt", {}) as Dictionary).is_empty() and not backed:
+			bought += 1
+			doubt = ev["doubt"]
 		else:
 			honest += 1
+	if honest == 0 and not doubt.is_empty():            # only a card they can pick at: their objection
+		_say_who = L({"en": "Public Prosecutor", "ta": "அரசு வழக்கறிஞர்"})
+		_say = L(doubt)
+		print("COURT %d: %s objected (doubt)" % [_i, tag])
+		return
 	if honest == 0:                                     # only bought: the defence of the other side
 		_say_who = L({"en": "Public Prosecutor", "ta": "அரசு வழக்கறிஞர்"})
 		_say = L({"en": "Objection! The accused paid for this. A fact bought at a gate walks on one leg.", "ta": "ஆட்சேபனை! இதுக்கு குற்றம் சாட்டப்பட்டவர் காசு குடுத்திருக்கார். கேட்ல வாங்கின உண்மை ஒரு கால்ல தான் நடக்கும்."})

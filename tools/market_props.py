@@ -1181,6 +1181,22 @@ def workshop():
     box(c, (-0.75, D / 2 - 0.48, 1.0), (0.12, 0.005, 0.05), mat("mk_screen", (0.1, 0.35, 0.25), 0.2))
     line(c, (-0.65, D / 2 - 0.4, 0.95), (-0.45, D / 2 - 0.65, 0.92), 0.006, mat("mk_cable", (0.05, 0.05, 0.05), 0.5))
     box(c, (-0.42, D / 2 - 0.66, 0.925), (0.06, 0.03, 0.015), mat("mk_key", (0.08, 0.08, 0.09), 0.4))      # a chip key
+    # the PIN's clues (the story's keypad step): a yellow sticky note on the programmer; on the wall, young Bala on his
+    # first bike in a frame, its number plate readable up close
+    box(c, (-0.75, D / 2 - 0.4, 1.023), (0.075, 0.075, 0.003), mat("mk_sticky", (0.98, 0.88, 0.25), 0.7), rot=(0, 0, 0.2))
+    fx, fy, fz = 1.4, D / 2 - 0.09, 1.65
+    box(c, (fx, fy, fz), (0.46, 0.025, 0.36), mat("mk_frame_wood", (0.25, 0.14, 0.07), 0.5))
+    box(c, (fx, fy - 0.014, fz), (0.4, 0.005, 0.3), mat("mk_photo_wall", (0.78, 0.74, 0.62), 0.7))       # the school wall
+    box(c, (fx, fy - 0.016, fz - 0.11), (0.4, 0.004, 0.08), mat("mk_photo_road", (0.42, 0.4, 0.38), 0.8))
+    bike = mat("mk_photo_bike", (0.75, 0.1, 0.08), 0.5)
+    for dx in (-0.08, 0.08):                                                  # the bike, side on: wheels, tank, seat
+        cyl(c, (fx + dx, fy - 0.02, fz - 0.07), 0.04, 0.004, M["phone"], rot=(math.pi / 2, 0, 0), verts=14)
+    box(c, (fx, fy - 0.02, fz - 0.03), (0.13, 0.004, 0.035), bike)
+    box(c, (fx - 0.04, fy - 0.02, fz - 0.01), (0.07, 0.004, 0.015), M["phone"])
+    box(c, (fx - 0.03, fy - 0.021, fz + 0.04), (0.04, 0.004, 0.08), mat("mk_photo_shirt", (0.92, 0.92, 0.95), 0.6))   # Bala
+    blob(c, (fx - 0.03, fy - 0.021, fz + 0.1), 0.02, mat("mk_photo_skin", (0.45, 0.3, 0.2), 0.6), (1, 0.2, 1.1), seg=8)
+    box(c, (fx + 0.1, fy - 0.022, fz - 0.06), (0.06, 0.003, 0.022), M["plastic_white"])                # the plate
+    text(c, "TN 37 K 2719", (fx + 0.1, fy - 0.025, fz - 0.06), 0.0085, M["phone"])
     # tyres stacked, an oil drum and cans, a compressor, a trolley jack, a stool
     rubber = mat("mk_tyre", (0.05, 0.05, 0.05), 0.85)
     for k in range(5):

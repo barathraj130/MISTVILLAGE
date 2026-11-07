@@ -369,11 +369,11 @@ The slice grew into the whole of Part 1. Day by day, as it plays now:
 | 11 | The Collectorate: apply online, Revathi's office copy, or the tout's ₹2,000 | E16 |
 | 12 | The Siruvani Grand: a ₹899 shirt and the ₹1,450 lunch, and the doorman Ganesan | E18 |
 | 13 | The mortuary ("a copy" for ₹3,000 is fake) and the post-mortem through Priya; the black sedan in the mirror | E17 |
-| 14–15 | The key-cutters, Bala Motors' job card, Bala's chats (forgive him, or walk out); Suresh calls | E11, E12 |
+| 14–15 | The key-cutters, Bala Motors' job card; the key programmer's PIN, found in the workshop (the sticky note, his first bike's plate in a photo, a decoy on the calendar) opens its log; Bala's chats (forgive him, or walk out); Suresh calls | E11, E11L, E12 |
 | 16 | The trap at the site at 6:40 (call Sundaram, or go: walk away or grab his collar) | |
 | 17 | The court orders; Pandi at the Gandhipuram bus stand | E10, E13, E19 |
-| 18 | Joseph at the CODISSIA fair | E15 |
-| 19 | The trial in the Principal Sessions Court: the prosecution's six points answered with the evidence found (bought evidence objected to), the night replayed on the map; Pandi's testimony; Suresh arrested; Karthik discharged | |
+| 18 | Joseph at the CODISSIA fair (the Kovai Agri Expo): record him on the phone at the red tractor without looking at him; stare and he walks off, leaving only his pages | E15 |
+| 19 | The trial in the Principal Sessions Court: the prosecution's six points answered with the evidence found (bought evidence objected to, and the job card too unless the programmer's log backs it), the night replayed on the map; Pandi's testimony; Suresh arrested; Karthik discharged | |
 | 20 | Meenakshi and Priya at the door: the keys of The Mist Village; the Kotagiri road at dawn | |
 
 ## 8. The vertical slice (20–30 minutes of play)

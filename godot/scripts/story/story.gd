@@ -22,6 +22,8 @@ extends Node
 ##             for the tasks and talk that follow, until a drive or a jump
 ##   lapse     time passing on screen: the camera holds on the street while the clock and the sky run to "to"
 ##   meet      someone standing at the place: get out (F), walk up and press E to talk
+##   covert    on foot, he hears what he mustn't be seen hearing ("who" at the tractor "spot"): stand near, eyes off
+##             them, phone recorder on (P); looking at them frays their nerves until they walk away (see _covert)
 ##   home      walk the house yourself (the room, "room"/"at"): "visits" in order, each a place in it ("to": its
 ##             mark) where E does that place's task (the bathroom: brush and bathe; the kitchen: a meal from the
 ##             month's groceries...); a marker shows where to go next
@@ -56,6 +58,7 @@ const Table := preload("res://scripts/story/table.gd")
 const Wall := preload("res://scripts/story/wall.gd")
 const Dvr := preload("res://scripts/story/dvr.gd")
 const Doorbell := preload("res://scripts/story/doorbell.gd")
+const Keypad := preload("res://scripts/story/keypad.gd")
 const Court := preload("res://scripts/story/court.gd")
 const Actor := preload("res://scripts/story/actor.gd")
 const Walker := preload("res://scripts/player.gd")
@@ -103,6 +106,8 @@ var table: Control                    # the questioning (table.gd)
 var wall: Control                     # the wall in his room (wall.gd)
 var dvr: Control                      # a camera recorder's footage on someone's monitor (dvr.gd)
 var court: Control                    # the trial: the prosecution's points, his evidence, the night on the map (court.gd)
+var keypad: Control                   # a thing with a PIN, worked up close: Bala's key programmer (keypad.gd)
+var _kp := {}                          # a "keypad" step as it goes: tries, opened, the skip's own steps
 var doorbell: Control                 # Ashwin's doorbell camera: it records him that night, plays on a tablet later (doorbell.gd)
 var _park := ""                       # a place the car is being set down at, out of sight (after a ride)
 var cast := {}                      # story people in the world: key → Actor
@@ -116,6 +121,9 @@ var shot_t := 0.0
 var _dur := 3.0
 var _lapse := Vector2.ZERO          # (from, to) minutes
 var _e_down := false
+var _cv := {}                            # a "covert" step as it goes: the line, its time, his nerves, what the phone caught
+var _sub: Label                          # what is said low, under the play (a covert step: he talks, you play on)
+var _status: Label                       # a covert step's own small line at the top: the recorder's light, his nerves
 var _visit := 0                       # home: which visit of the house is next
 var _in_task := false                 # home / eat_out: a task is open
 var _ring: MeshInstance3D             # home: the marker on the floor where to go
@@ -267,6 +275,10 @@ func _process(dt: float) -> void:
 				_next()
 		"meet":
 			_meet()
+		"covert":
+			_covert(dt)
+		"keypad":
+			_keypad_step()
 		"choose":
 			_choose()
 		"climb":
@@ -655,6 +667,10 @@ func _next() -> void:
 			var hm: PackedStringArray = str(cur["to"]).split(":")
 			var to := float(hm[0]) * 60.0 + float(hm[1])
 			_lapse = Vector2(fines.sim.minute, to if to > fines.sim.minute else to + 1440.0)
+		"covert":
+			_covert_start()
+		"keypad":
+			_kp = {"tries": 0, "open": false, "seen": {}}
 		"meet":
 			_anchor()
 			_cast(cur.get("cast", {}))
@@ -1133,6 +1149,286 @@ func _meet() -> void:
 	elif near:
 		hint = "E: talk" if lang == "en" else "E: பேசுங்க"
 	goal.text = tr_(cur["goal"]) + ("\n" + hint if hint != "" else "")
+
+
+## "covert": someone tells him something he mustn't be seen hearing (Joseph at the tractor). It plays on foot, in his
+## own view: the lines come low, under the play, only while he stands within "hear" metres of them with his eyes
+## off them (on the tractor, "spot"); every line that ends while his phone's recorder runs is on the recording.
+## Looking at them for long frays their nerves (a meter in the goal): a word first ("warn"), then they walk away
+## ("spooked", the "fail" flag). At the end "flag" is set if the recording has every line marked "key".
+## Testing: --storystare looks at him the whole time (and so fails).
+func _covert_start() -> void:
+	_cv = {"i": 0, "t": 0.0, "sus": 0.0, "warned": false, "got": [], "gone": -1.0, "nudge": 0}
+	if _sub == null:
+		_sub = _label(22, Color(0.95, 0.95, 0.95))
+		_sub.anchor_left = 0.5
+		_sub.anchor_right = 0.5
+		_sub.anchor_top = 1.0
+		_sub.anchor_bottom = 1.0
+		_sub.offset_left = -520
+		_sub.offset_right = 520
+		_sub.offset_top = -150
+		_sub.offset_bottom = -60
+		_sub.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		_sub.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		ui.add_child(_sub)
+	_sub.text = ""
+	_sub.visible = true
+	if _status == null:
+		_status = _label(18, Color(1, 1, 1, 0.92))
+		_status.anchor_left = 0.5
+		_status.anchor_right = 0.5
+		_status.offset_left = -300
+		_status.offset_right = 300
+		_status.offset_top = 132                          # (under the walking keys' banner)
+		_status.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		ui.add_child(_status)
+	_status.visible = true
+	var a: Node3D = cast.get(cur["who"])
+	if a:
+		a.face(_cv_spot())
+	if _skip and city.walker:                            # (testing: at the tractor, the recorder on, eyes on it)
+		var sp := _cv_spot()
+		var aw: Vector3 = a.global_position if a else sp
+		var stand := sp + (Vector3(aw.x - sp.x, 0.0, aw.z - sp.z).normalized() * 1.2) if a else sp
+		city.walker.global_position = stand + Vector3.UP * 0.1
+		if not city.phone.recording:
+			city.phone._toggle_rec()
+
+
+func _cv_spot() -> Vector3:
+	var g: float = city.streamer.height_at(float(cur["spot"][0]), float(cur["spot"][1]))
+	return Vector3(float(cur["spot"][0]), (g if not is_nan(g) else _o.y) + 1.0, float(cur["spot"][1]))
+
+
+func _covert(dt: float) -> void:
+	var a: Node3D = cast.get(cur["who"])
+	var w: Node3D = city.walker
+	if a == null:
+		_covert_end()
+		return
+	var lines: Array = cur["lines"]
+	var name := tr_(data["people"].get(str(cur["who"]), {}))
+	if _cv["gone"] >= 0.0:                               # walking off: a few seconds, then it's over
+		_cv["gone"] += dt
+		if _cv["gone"] > (1.5 if _skip else 4.0):
+			_covert_end()
+		return
+	if w == null:
+		goal.text = tr_(cur["goal"]) + "\n" + _off_key()
+		return
+	var eye: Vector3 = w.camera.global_position
+	var fwd: Vector3 = -w.camera.global_basis.z
+	var to_him := a.global_position + Vector3.UP * 1.4 - eye
+	var d := Vector2(w.global_position.x - a.global_position.x, w.global_position.z - a.global_position.z).length()
+	var looking := d < 9.0 and Vector2(fwd.x, fwd.z).normalized().dot(Vector2(to_him.x, to_him.z).normalized()) > 0.93
+	if _skip:
+		looking = "--storystare" in OS.get_cmdline_user_args()
+	var near := d <= float(cur.get("hear", 3.2))
+	if looking:
+		_cv["sus"] = minf(1.0, _cv["sus"] + dt / (1.2 if _skip else 2.6))
+	else:
+		_cv["sus"] = maxf(0.0, _cv["sus"] - dt * 0.1)
+	if _cv["sus"] >= 1.0:                                 # too many eyes: he goes
+		_cv_say(name, tr_(cur["spooked"]))
+		a.play("Walk")
+		var away: Vector3 = a.global_position + (a.global_position - w.global_position).normalized() * 12.0
+		a.walk_to(Vector3(away.x, a.global_position.y, away.z), 1.3)
+		flags[str(cur.get("fail", "covert_failed"))] = true
+		_cv["gone"] = 0.0
+		_shot()
+		return
+	var rec_txt: String
+	if city.phone.recording:
+		rec_txt = "● REC" if lang == "en" else "● பதிவு"
+	else:
+		rec_txt = "Recorder off: P, then Recorder" if lang == "en" else "ரெக்கார்டர் ஆஃப்: P, அப்புறம் ரெக்கார்டர்"
+	var nb := int(round(_cv["sus"] * 8.0))
+	var nerves := ("His nerves " if lang == "en" else "அவர் பதட்டம் ") + "●".repeat(nb) + "○".repeat(8 - nb)
+	var hint := ""
+	if not near:
+		hint = "(Closer, by the tractor. He won't raise his voice.)" if lang == "en" else "(டிராக்டர் பக்கத்துல போ. அவர் சத்தமா பேச மாட்டார்.)"
+	elif looking:
+		hint = "(Don't look at him. Look at the tractor.)" if lang == "en" else "(அவர பாக்காத. டிராக்டர பாரு.)"
+	goal.text = tr_(cur["goal"])                       # (on his phone's Notes; the light and his nerves on the screen)
+	_status.text = rec_txt + "      " + nerves
+	_status.add_theme_color_override("font_color", Color(1.0, 0.45, 0.4) if city.phone.recording else Color(1, 1, 1, 0.92))
+	if hint != "" and int(_cv.get("shown", -1)) < 0:
+		_sub.text = hint
+	if looking and _cv["sus"] > 0.35 and not _cv["warned"]:   # a word first
+		_cv["warned"] = true
+		_cv_say(name, tr_(cur["warn"]))
+		_cv["shown"] = -1
+		a.play("Idle")
+		_shot()
+		return
+	if not near or looking:                              # he waits: not a word while he's watched, or too far
+		a.play("Idle")
+		_cv["shown"] = -1                                # (the line again, when he goes on)
+		return
+	if _cv["i"] >= lines.size():
+		_covert_end()
+		return
+	var ln: Dictionary = lines[_cv["i"]]
+	if _cv.get("shown", -1) != _cv["i"]:
+		_cv["shown"] = _cv["i"]
+		_cv_say(name, tr_(ln))
+		a.face(_cv_spot())
+		a.play("Talk")
+		_shot()
+	_cv["t"] += dt
+	if _cv["t"] >= clampf(str(tr_(ln)).length() / 13.0, 3.0, 9.0) * (0.25 if _skip else 1.0):
+		if city.phone.recording:                          # the whole line, said while the recorder ran
+			city.phone.heard(name, tr_(ln))
+			_cv["got"].append(_cv["i"])
+		_cv["i"] += 1
+		_cv["t"] = 0.0
+
+
+func _cv_say(name: String, text: String) -> void:
+	_sub.text = name + ":  " + text
+	_sub.visible = true
+
+
+func _covert_end() -> void:
+	var lines: Array = cur["lines"]
+	var ok: bool = float(_cv.get("gone", -1.0)) < 0.0
+	for k in lines.size():
+		if lines[k].get("key", false) and not _cv.get("got", []).has(k):
+			ok = false
+	if ok:
+		flags[str(cur["flag"])] = true
+	print("STORY covert %s: %d of %d lines on the recording%s" % [str(cur["who"]), _cv.get("got", []).size(), lines.size(), " (taped)" if ok else ""])
+	if city.phone.recording:                             # (the recording kept: what he caught)
+		city.phone._toggle_rec()
+	if _sub:
+		_sub.visible = false
+	if _status:
+		_status.visible = false
+	var a: Node3D = cast.get(cur["who"])
+	if a and _cv.get("gone", -1.0) < 0.0:
+		a.play("Idle")
+	_cv = {}
+	_next()
+
+
+## "keypad": a thing locked with a PIN at the place (a prop's "device", [x, y, z] in that prop as Blender has it), and
+## "clues" about it there (each "at", a "title" and what he sees, "text"). On foot he walks up to each, E looks; E at
+## the device opens its pad (keypad.gd): the "code" opens its "log" and sets "flag". After two wrong tries his
+## "nudge" thought shows; Q leaves it locked. Testing: looks at each clue, then types the code.
+func _prop_point(scene: String, v: Array) -> Vector3:
+	for pr in _props:
+		if is_instance_valid(pr) and pr.scene_file_path.get_file().get_basename() == scene:
+			return pr.global_transform * Vector3(float(v[0]), float(v[2]), -float(v[1]))
+	return Vector3.INF
+
+
+func _keypad_step() -> void:
+	if keypad.visible:
+		return
+	var w: Node3D = city.walker
+	if w == null:
+		goal.text = tr_(cur["goal"]) + "\n" + _off_key()
+		return
+	var spots := [{"kind": "device", "at": _prop_point(str(cur["prop"]), cur["device"]), "title": cur["device_name"]}]
+	for cl in cur.get("clues", []):
+		spots.append({"kind": "clue", "at": _prop_point(str(cur["prop"]), cl["at"]), "title": cl["title"], "text": cl["text"]})
+	if _skip and t_step > 1.0:                          # (testing: each clue, then the pad, the code typed)
+		_kp["skip_i"] = int(_kp.get("skip_i", 0))
+		var k: int = _kp["skip_i"]
+		if k < spots.size() - 1:
+			_kp["skip_i"] = k + 1
+			t_step = 0.2
+			_keypad_open(spots[k + 1])
+			get_tree().create_timer(0.6).timeout.connect(_shot)
+			get_tree().create_timer(1.0).timeout.connect(keypad.close)
+		elif not _kp["open"]:
+			t_step = 0.0
+			_keypad_open(spots[0])
+			for ch in str(cur["code"]):
+				keypad.press(ch)
+			keypad.press("ok")
+			get_tree().create_timer(1.6).timeout.connect(_shot)
+			get_tree().create_timer(2.2).timeout.connect(keypad.close)
+		return
+	var best := {}
+	var bd := 1.6
+	for sp in spots:
+		var at: Vector3 = sp["at"]
+		if at == Vector3.INF:
+			continue
+		var dd := Vector2(w.global_position.x - at.x, w.global_position.z - at.z).length()
+		if dd < bd:
+			bd = dd
+			best = sp
+	var hint := ""
+	if not best.is_empty():
+		hint = ("E: " + ("look at " if lang == "en" else "பாரு: ") + tr_(best["title"])) if best["kind"] == "clue" else ("E: " + tr_(best["title"]))
+	if int(_kp["tries"]) >= 2 and cur.has("nudge"):     # (his thought, low on the screen)
+		if _sub == null:
+			_sub = _label(22, Color(0.95, 0.95, 0.95))
+			_sub.anchor_left = 0.5
+			_sub.anchor_right = 0.5
+			_sub.anchor_top = 1.0
+			_sub.anchor_bottom = 1.0
+			_sub.offset_left = -520
+			_sub.offset_right = 520
+			_sub.offset_top = -150
+			_sub.offset_bottom = -60
+			_sub.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+			_sub.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+			ui.add_child(_sub)
+		_sub.text = tr_(cur["nudge"])
+		_sub.visible = true
+	hint += ("\n" if hint != "" else "") + ("Q: leave it" if lang == "en" else "Q: விட்டுடு")
+	goal.text = tr_(cur["goal"]) + "\n" + hint
+	goal.visible = true
+	var e := Input.is_key_pressed(KEY_E)
+	if e and not _e_down and not best.is_empty():
+		_keypad_open(best)
+	_e_down = e
+	if Input.is_key_pressed(KEY_Q):
+		print("STORY keypad: left it locked")
+		if _sub:
+			_sub.visible = false
+		_next()
+
+
+func _keypad_open(sp: Dictionary) -> void:
+	if city.walker:
+		city.walker.active = false
+	keypad.lang = lang
+	if sp["kind"] == "clue":
+		_kp["seen"][tr_(sp["title"])] = true
+		keypad.show_clue(tr_(sp["title"]), tr_(sp["text"]))
+	else:
+		var lines: Array = []
+		for ln in cur.get("log", []):
+			lines.append(tr_(ln))
+		keypad.show_device(tr_(cur["device_name"]), str(cur["code"]), lines, bool(_kp.get("open", false)))
+	_shot()
+
+
+func _keypad_tried(ok: bool) -> void:
+	if str(cur.get("do", "")) != "keypad":
+		return
+	if ok:
+		_kp["open"] = true
+		flags[str(cur["flag"])] = true
+		print("STORY keypad: opened after %d wrong" % int(_kp["tries"]))
+	else:
+		_kp["tries"] = int(_kp["tries"]) + 1
+
+
+func _keypad_closed() -> void:
+	if str(cur.get("do", "")) != "keypad":
+		return
+	if city.walker:
+		city.walker.active = true
+	if _kp.get("open", false):
+		if _sub:
+			_sub.visible = false
+		_next()
 
 
 ## Talking on foot: the view becomes Karthik's own eyes on the person he's talking to, close, their face and
@@ -1912,7 +2208,8 @@ func _evidence() -> void:
 	var paid: bool = flags.get(str(cur.get("paid", "-")), false)   # (what was bought walks on one leg: court.gd)
 	flags["ev_" + str(cur["tag"])] = "paid" if paid else "yes"
 	var m: Dictionary = cur.get("memory", {})
-	evidence[str(cur["tag"])] = {"title": m.get("title", cur.get("label", {})), "body": m.get("body", {}), "paid": paid}
+	evidence[str(cur["tag"])] = {"title": m.get("title", cur.get("label", {})), "body": m.get("body", {}), "paid": paid,
+		"doubt": cur.get("doubt", {}), "doubt_unless": cur.get("doubt_unless", [])}   # (a card the other side can pick at, unless backed)
 
 
 ## "dvr": someone's monitor with a recorder's footage on it (dvr.gd), worked by him: he steps up to it with E, plays
@@ -2887,6 +3184,10 @@ func _build_ui() -> void:
 	court.visible = false
 	court.finished.connect(_court_done)
 	ui.add_child(court)
+	keypad = Keypad.new()
+	keypad.closed.connect(_keypad_closed)
+	keypad.tried.connect(_keypad_tried)
+	ui.add_child(keypad)
 	doorbell = Doorbell.new()
 	doorbell.visible = false
 	doorbell.closed.connect(_doorbell_closed)
@@ -2947,7 +3248,7 @@ func _refresh() -> void:
 	big.visible = kind in ["card", "jump"]
 	small.visible = kind in ["card", "jump"]
 	box.visible = false
-	goal.visible = kind in ["drive", "free", "meet", "home", "eat_out", "gigs", "climb"]
+	goal.visible = kind in ["drive", "free", "meet", "home", "eat_out", "gigs", "climb", "covert", "keypad"]
 	clock.visible = kind in ["drive", "free", "talk", "comfort_verdict", "deliver_verdict", "task", "lapse", "meet", "home", "eat_out", "gigs", "climb", "choose"]
 	if step < 0:
 		big.visible = false                          # (no title shown: the story's name would give it away)
