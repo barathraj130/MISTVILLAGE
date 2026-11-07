@@ -108,6 +108,7 @@ var dvr: Control                      # a camera recorder's footage on someone's
 var court: Control                    # the trial: the prosecution's points, his evidence, the night on the map (court.gd)
 var keypad: Control                   # a thing with a PIN, worked up close: Bala's key programmer (keypad.gd)
 var _kp := {}                          # a "keypad" step as it goes: tries, opened, the skip's own steps
+var _act := {}                         # an "act" step as it goes: which way he went, the skip's time
 var _prov := {}                        # a "provoke" step as it goes: his line, its time, Karthik's anger, what he has seen
 var _spot := {}                        # a "spot" step as it goes: the time left, who he has already pointed at
 var _ask := {}                         # an "ask" step as it goes: how often each was asked, the skip's turn, the line's time
@@ -290,6 +291,8 @@ func _process(dt: float) -> void:
 			_spot_step(dt)
 		"provoke":
 			_provoke_step(dt)
+		"act":
+			_act_step()
 		"choose":
 			_choose()
 		"climb":
@@ -686,6 +689,19 @@ func _next() -> void:
 			_covert_start()
 		"keypad":
 			_kp = {"tries": 0, "open": false, "seen": {}}
+		"act":
+			_anchor()
+			_cast(cur.get("cast", {}))
+			_act = {}
+			var ways: Dictionary = cur["ways"]
+			if ways.has("nilam"):                           # (his phone's land-records app, open for this)
+				city.phone.enable_nilam(ways["nilam"]["want"])
+				if not city.phone.nilam_done.is_connected(_act_nilam):
+					city.phone.nilam_done.connect(_act_nilam)
+			if ways.has("call"):
+				city.phone.add_contact(ways["call"]["contact"])
+				if not city.phone.dialled.is_connected(_act_dial):
+					city.phone.dialled.connect(_act_dial)
 		"provoke":
 			if _f2f:
 				_f2f_off()
@@ -1665,6 +1681,85 @@ func _provoke_step(dt: float) -> void:
 		elif d < 2.2:
 			_provoke_end("grab")
 	_e_down = e
+
+
+## "act": a choice made by doing, not from a list ("ways", whichever he does first): "nilam" (an application on
+## his phone's land-records app that finds the land: "want"), "call" (ringing a "contact" from his phone), "pay"
+## (E at someone, "who", for "amount" from the wallet). Each sets its "flag". Testing: --storychoose=1/2/3, in that order.
+func _act_step() -> void:
+	var ways: Dictionary = cur["ways"]
+	if _skip and t_step > 1.5 and not _act.has("done"):
+		var pick := 1
+		for arg in OS.get_cmdline_user_args():
+			if arg.begins_with("--storychoose="):
+				pick = int(arg.get_slice("=", 1))
+		var order := ["nilam", "call", "pay"]
+		var way: String = order[clampi(pick - 1, 0, 2)]
+		if way == "nilam":
+			var want: Dictionary = ways["nilam"]["want"]
+			city.phone.hold(true)
+			city.phone._open_app("nilam")
+			city.phone.nilam["taluk"] = city.phone.TALUKS.find(str(want["taluk"]))
+			city.phone.nilam["village"] = city.phone._nilam_villages().find(str(want["village"]))
+			city.phone.nilam["from"] = str(want["from"])
+			city.phone.nilam["to"] = str(want["to"])
+			_act["done_soon"] = true
+			t_step = -100.0                              # (the phone up, the form, the fee, the receipt: pictures of each)
+			await get_tree().create_timer(1.0).timeout
+			_shot()
+			city.phone._nilam_tap("submit")
+			await get_tree().create_timer(0.6).timeout
+			_shot()
+			city.phone._nilam_tap("submit")
+			await get_tree().create_timer(0.6).timeout
+			_shot()
+			city.phone.hold(false)
+		elif way == "call":
+			_act_dial(ways["call"]["contact"])
+		else:
+			_act_pay()
+		return
+	var hint := ""
+	if ways.has("pay") and city.walker:
+		var a: Node3D = cast.get(str(ways["pay"]["who"]))
+		if a and Vector2(city.walker.global_position.x - a.global_position.x, city.walker.global_position.z - a.global_position.z).length() < 2.2:
+			hint = ("E: pay him ₹%s" if lang == "en" else "E: அவருக்கு ₹%s குடு") % str(ways["pay"]["amount"])
+			var e := Input.is_key_pressed(KEY_E)
+			if e and not _e_down:
+				_act_pay()
+			_e_down = e
+	goal.text = tr_(cur["goal"]) + ("\n" + hint if hint != "" else "")
+
+
+func _act_done(way: String) -> void:
+	if str(cur.get("do", "")) != "act" or _act.has("done"):
+		return
+	_act["done"] = way
+	flags[str(cur["ways"][way]["flag"])] = true
+	print("STORY act: %s" % way)
+	_next()
+
+
+func _act_nilam(ok: bool, _form: Dictionary) -> void:
+	if ok:
+		_act_done("nilam")
+
+
+func _act_dial(c: Dictionary) -> void:
+	if str(cur.get("do", "")) == "act" and str(c.get("id", "")) == str(cur["ways"]["call"]["contact"].get("id", "")):
+		_act_done("call")
+
+
+func _act_pay() -> void:
+	var amt := int(cur["ways"]["pay"]["amount"])
+	if fines and fines.sim.money < amt:
+		_ensure_lines()
+		_sub.text = "(I don't have ₹%d.)" % amt if lang == "en" else "(என் கிட்ட ₹%d இல்ல.)" % amt
+		_sub.visible = true
+		return
+	if fines:
+		fines.sim.money -= amt
+	_act_done("pay")
 
 
 func _provoke_end(what: String) -> void:
@@ -3630,7 +3725,7 @@ func _refresh() -> void:
 	big.visible = kind in ["card", "jump"]
 	small.visible = kind in ["card", "jump"]
 	box.visible = false
-	goal.visible = kind in ["drive", "free", "meet", "home", "eat_out", "gigs", "climb", "covert", "keypad", "ask", "spot", "provoke"]
+	goal.visible = kind in ["drive", "free", "meet", "home", "eat_out", "gigs", "climb", "covert", "keypad", "ask", "spot", "provoke", "act"]
 	clock.visible = kind in ["drive", "free", "talk", "comfort_verdict", "deliver_verdict", "task", "lapse", "meet", "home", "eat_out", "gigs", "climb", "choose"]
 	if step < 0:
 		big.visible = false                          # (no title shown: the story's name would give it away)

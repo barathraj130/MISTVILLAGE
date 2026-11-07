@@ -9,6 +9,8 @@ extends Control
 ##              a node, a tag) are recognised when they're in the middle of the picture and near enough
 ##   Recorder   records what people say while it runs (story.gd hands it every line); a recording is evidence
 ##   Photos     the photos and recordings, to look at again
+##   Tamil Nilam  the state's land-records service (when the story gives it him: enable_nilam): an application for a
+##              patta extract, district, taluk and village from its lists, the survey numbers typed in, ₹50 by UPI
 ## A buzz and a dot on the phone's corner when something new arrives; a ringing call slides it up by itself
 ## (Enter or Answer). Nothing on the phone is narration: it is what is on the phone.
 
@@ -19,16 +21,17 @@ signal opened_app(app: String)
 signal rider_answer(accepted: bool)            # the delivery app: an order taken (or turned down)
 signal otp_done                                # the delivery app: the customer's code typed in right
 signal dialled(contact: Dictionary)            # a call he made (a contact tapped): it rings out, then they speak
+signal nilam_done(ok: bool, form: Dictionary)  # a Tamil Nilam application paid for (ok: the land is where he said)
 
 const W := 300.0
 const H := 560.0
-const APPS := ["notes", "messages", "contacts", "map", "camera", "recorder", "photos", "rider"]
+var APPS := ["notes", "messages", "contacts", "map", "camera", "recorder", "photos", "rider"]
 const APP_NAME := {"notes": ["Notes", "குறிப்பு"], "messages": ["Messages", "மெசேஜ்"], "contacts": ["Contacts", "தொடர்புகள்"],
 	"map": ["Map", "மேப்"], "camera": ["Camera", "கேமரா"], "recorder": ["Recorder", "ரெக்கார்டர்"], "photos": ["Photos", "படங்கள்"],
-	"rider": ["QuickBite", "குவிக்பைட்"]}
+	"rider": ["QuickBite", "குவிக்பைட்"], "nilam": ["Tamil Nilam", "தமிழ் நிலம்"]}
 const APP_COL := {"notes": Color(0.95, 0.75, 0.2), "messages": Color(0.25, 0.7, 0.35), "contacts": Color(0.3, 0.55, 0.9),
 	"map": Color(0.2, 0.65, 0.6), "camera": Color(0.35, 0.35, 0.4), "recorder": Color(0.85, 0.25, 0.25),
-	"photos": Color(0.75, 0.4, 0.8), "rider": Color(0.9, 0.35, 0.1)}
+	"photos": Color(0.75, 0.4, 0.8), "rider": Color(0.9, 0.35, 0.1), "nilam": Color(0.1, 0.45, 0.3)}
 const BG := Color(0.07, 0.08, 0.1)
 const FG := Color(0.95, 0.95, 0.97)
 const DIM := Color(0.6, 0.62, 0.68)
@@ -52,6 +55,11 @@ var calling := {}                              # a call going out: the contact, 
 var _call_t := 0.0
 var rider := {}                                # the delivery app's screen: {"mode": offer | job | otp, "app", "lines", "code",
                                                #  "typed", "decline": label of the turn-down button}
+var nilam := {}                                # the land-records form: taluk, village, survey numbers, the field typed in, its stage
+const TALUKS := ["Coimbatore North", "Coimbatore South", "Perur", "Madukkarai", "Sulur", "Pollachi"]
+const VILLAGES := {"Coimbatore North": ["Ganapathy", "Saravanampatti", "Thudiyalur"], "Coimbatore South": ["Ukkadam", "Selvapuram", "Kuniyamuthur"],
+	"Perur": ["Perur", "Theethipalayam", "Pudhur Vayal", "Alandurai", "Madampatti"], "Madukkarai": ["Madukkarai", "Myleripalayam", "Chettipalayam"],
+	"Sulur": ["Sulur", "Kannampalayam", "Irugur"], "Pollachi": ["Pollachi", "Kinathukadavu", "Zaminkaliyapuram"]}
 var _rec: Array = []
 var _rec_t := 0.0
 var _view := -1                                # Photos / Messages: the one open (-1: the list)
@@ -189,6 +197,93 @@ func _rider_keys() -> Array:
 func _rider_btn(i: int) -> Rect2:
 	var s := _screen()
 	return Rect2(s.position.x + 12.0 + i * (s.size.x * 0.5 - 6.0), s.end.y - 80.0, s.size.x * 0.5 - 18.0, 56.0)
+
+
+## The land-records app on his phone, for an application: "want" is what the land really is ({taluk, village,
+## from, to}); what he fills in decides whether it's found.
+func enable_nilam(want: Dictionary) -> void:
+	if not "nilam" in APPS:
+		APPS.append("nilam")
+	nilam = {"want": want, "taluk": 0, "village": 0, "from": "", "to": "", "field": "from", "stage": "form", "msg": ""}
+	_ping()
+
+
+func _nilam_villages() -> Array:
+	return VILLAGES[TALUKS[int(nilam["taluk"])]]
+
+
+func _nilam_key(k: String) -> void:
+	if str(nilam.get("stage", "")) != "form":
+		return
+	var f := str(nilam["field"])
+	var t := str(nilam[f])
+	if k == "⌫":
+		t = t.left(maxi(t.length() - 1, 0))
+	elif t.length() < 3:
+		t += k
+	nilam[f] = t
+	if f == "from" and t.length() == 3:
+		nilam["field"] = "to"
+
+
+## Its rows: [rect, what] for the form's taps (the taluk's and village's arrows, the two numbers, the keys, submit).
+func _nilam_rects() -> Array:
+	var s := _screen()
+	var x0 := s.position.x + 10.0
+	var w := s.size.x - 20.0
+	var out: Array = []
+	out.append([Rect2(x0, s.position.y + 112.0, 36.0, 34.0), "taluk-"])
+	out.append([Rect2(x0 + w - 36.0, s.position.y + 112.0, 36.0, 34.0), "taluk+"])
+	out.append([Rect2(x0, s.position.y + 168.0, 36.0, 34.0), "village-"])
+	out.append([Rect2(x0 + w - 36.0, s.position.y + 168.0, 36.0, 34.0), "village+"])
+	out.append([Rect2(x0, s.position.y + 226.0, w * 0.5 - 6.0, 34.0), "from"])
+	out.append([Rect2(x0 + w * 0.5 + 6.0, s.position.y + 226.0, w * 0.5 - 6.0, 34.0), "to"])
+	var kw := (w - 16.0) / 3.0
+	var labels := ["1", "2", "3", "4", "5", "6", "7", "8", "9", "", "0", "⌫"]
+	for i in 12:
+		if labels[i] != "":
+			out.append([Rect2(x0 + (i % 3) * (kw + 8.0), s.position.y + 272.0 + floori(i / 3.0) * 40.0, kw, 34.0), labels[i]])
+	out.append([Rect2(x0, s.end.y - 50.0, w, 40.0), "submit"])
+	return out
+
+
+func _nilam_tap(what: String) -> void:
+	match str(nilam.get("stage", "")):
+		"form":
+			match what:
+				"taluk-", "taluk+":
+					nilam["taluk"] = (int(nilam["taluk"]) + (1 if what == "taluk+" else -1) + TALUKS.size()) % TALUKS.size()
+					nilam["village"] = 0
+				"village-", "village+":
+					var n := _nilam_villages().size()
+					nilam["village"] = (int(nilam["village"]) + (1 if what == "village+" else -1) + n) % n
+				"from", "to":
+					nilam["field"] = what
+				"submit":
+					if str(nilam["from"]).length() < 3 or str(nilam["to"]).length() < 3:
+						nilam["msg"] = L("Enter the survey numbers.", "சர்வே எண்கள போடுங்க.")
+						return
+					nilam["stage"] = "pay"
+					nilam["msg"] = ""
+				_:
+					_nilam_key(what)
+		"pay":
+			if what == "submit":
+				var want: Dictionary = nilam["want"]
+				var ok: bool = TALUKS[int(nilam["taluk"])] == str(want["taluk"]) and _nilam_villages()[int(nilam["village"])] == str(want["village"]) \
+					and str(nilam["from"]) == str(want["from"]) and str(nilam["to"]) == str(want["to"])
+				if city and city.fines:
+					city.fines.sim.money -= 50
+				var form := {"taluk": TALUKS[int(nilam["taluk"])], "village": _nilam_villages()[int(nilam["village"])], "from": nilam["from"], "to": nilam["to"]}
+				if ok:
+					nilam["stage"] = "done"
+					nilam["msg"] = L("Application no. TN-NLM-2026-0884213\nPatta extract: ready in 15 working days.\nYou will get an SMS.",
+						"விண்ணப்ப எண் TN-NLM-2026-0884213\nபட்டா நகல்: 15 வேலை நாள்ல கிடைக்கும்.\nSMS வரும்.")
+				else:
+					nilam["stage"] = "form"
+					nilam["msg"] = L("No records found for survey nos. %s–%s in %s village. (₹50 not refunded.)" % [form["from"], form["to"], form["village"]],
+						"%s கிராமத்துல சர்வே எண் %s–%s பதிவு இல்ல. (₹50 திரும்ப வராது.)" % [form["village"], form["from"], form["to"]])
+				nilam_done.emit(ok, form)
 
 
 func call_from(from) -> void:
@@ -367,6 +462,11 @@ func _gui_input(e: InputEvent) -> void:
 			var s := _screen()
 			if Rect2(s.get_center() - Vector2(60, 60), Vector2(120, 120)).has_point(q):
 				_toggle_rec()
+		"nilam":
+			for r in _nilam_rects():
+				if (r[0] as Rect2).has_point(q):
+					_nilam_tap(str(r[1]))
+					break
 		"rider":
 			match str(rider.get("mode", "")):
 				"offer":
@@ -388,6 +488,12 @@ func _unhandled_key_input(e: InputEvent) -> void:
 		get_viewport().set_input_as_handled()
 	elif app == "rider" and str(rider.get("mode", "")) == "otp" and (e.keycode >= KEY_0 and e.keycode <= KEY_9 or e.keycode == KEY_BACKSPACE):
 		_rider_key("⌫" if e.keycode == KEY_BACKSPACE else str(e.keycode - KEY_0))
+		get_viewport().set_input_as_handled()
+	elif app == "nilam" and str(nilam.get("stage", "")) == "form" and (e.keycode >= KEY_0 and e.keycode <= KEY_9 or e.keycode == KEY_BACKSPACE):
+		_nilam_key("⌫" if e.keycode == KEY_BACKSPACE else str(e.keycode - KEY_0))
+		get_viewport().set_input_as_handled()
+	elif app == "nilam" and (e.keycode == KEY_ENTER or e.keycode == KEY_KP_ENTER):
+		_nilam_tap("submit")
 		get_viewport().set_input_as_handled()
 	elif app == "rider" and str(rider.get("mode", "")) == "offer" and (e.keycode == KEY_ENTER or e.keycode == KEY_KP_ENTER):
 		_rider_take(true)
@@ -599,6 +705,8 @@ func _draw() -> void:
 				draw_circle(c, 30.0, Color(0.95, 0.25, 0.25))
 		"rider":
 			_draw_rider(s)
+		"nilam":
+			_draw_nilam(s)
 		"photos":
 			_title(s, APP_NAME["photos"])
 			if _view >= 0 and _view < photos.size():
@@ -624,6 +732,54 @@ func _draw() -> void:
 						draw_circle(tr.get_center(), 14.0, Color(0.95, 0.3, 0.3))
 	if _flash > 0.0:
 		draw_rect(s, Color(1, 1, 1, _flash))
+
+
+func _draw_nilam(s: Rect2) -> void:
+	draw_rect(s, Color(0.97, 0.97, 0.95))
+	draw_rect(Rect2(s.position, Vector2(s.size.x, 52)), APP_COL["nilam"])
+	_text(s.position + Vector2(12, 24), L("Tamil Nilam · e-Services", "தமிழ் நிலம் · இ-சேவைகள்"), 15, Color.WHITE)
+	_text(s.position + Vector2(12, 43), L("Revenue Dept., Govt. of Tamil Nadu", "வருவாய் துறை, தமிழ்நாடு அரசு"), 11, Color(0.85, 0.95, 0.88))
+	var ink := Color(0.1, 0.1, 0.12)
+	var dim := Color(0.4, 0.42, 0.45)
+	var x0 := s.position.x + 10.0
+	var w := s.size.x - 20.0
+	var stage := str(nilam.get("stage", ""))
+	if stage == "":
+		_text(Vector2(x0, s.position.y + 84.0), L("No application open.", "விண்ணப்பம் எதுவும் இல்ல."), 14, dim)
+		return
+	_text(Vector2(x0, s.position.y + 72.0), L("Patta extract: application", "பட்டா நகல்: விண்ணப்பம்"), 15, ink)
+	_text(Vector2(x0, s.position.y + 92.0), L("District: Coimbatore", "மாவட்டம்: கோயம்புத்தூர்"), 13, dim)
+	if stage == "done":
+		_wrap(Vector2(x0, s.position.y + 130.0), str(nilam["msg"]), 15, Color(0.1, 0.45, 0.25), w, 8)
+		return
+	var vill: Array = _nilam_villages()
+	for row in [[112.0, L("Taluk", "வட்டம்"), TALUKS[int(nilam["taluk"])]], [168.0, L("Village", "கிராமம்"), vill[int(nilam["village"])]]]:
+		_text(Vector2(x0, s.position.y + row[0] - 4.0), row[1], 11, dim)
+		draw_rect(Rect2(x0, s.position.y + row[0], w, 34.0), Color(0.9, 0.92, 0.9))
+		_text(Vector2(x0, s.position.y + row[0] + 23.0), str(row[2]), 15, ink, w, HORIZONTAL_ALIGNMENT_CENTER)
+		_text(Vector2(x0 + 10.0, s.position.y + row[0] + 24.0), "‹", 22, APP_COL["nilam"])
+		_text(Vector2(x0 + w - 22.0, s.position.y + row[0] + 24.0), "›", 22, APP_COL["nilam"])
+	_text(Vector2(x0, s.position.y + 222.0), L("Survey no.   from            to", "சர்வே எண்   முதல்            வரை"), 11, dim)
+	for f in ["from", "to"]:
+		var r := Rect2(x0 + (0.0 if f == "from" else w * 0.5 + 6.0), s.position.y + 226.0, w * 0.5 - 6.0, 34.0)
+		draw_rect(r, Color(0.9, 0.92, 0.9))
+		if str(nilam["field"]) == f and stage == "form":
+			draw_rect(r, APP_COL["nilam"], false, 2.0)
+		_text(r.position + Vector2(0, 24), str(nilam[f]) + ("_" if str(nilam["field"]) == f and stage == "form" and fmod(_t, 1.0) < 0.5 else ""), 17, ink, r.size.x, HORIZONTAL_ALIGNMENT_CENTER)
+	if stage == "pay":
+		_text(Vector2(x0, s.position.y + 296.0), L("Fee: ₹50", "கட்டணம்: ₹50"), 17, ink)
+		_wrap(Vector2(x0, s.position.y + 322.0), L("Pay by UPI from your account. Then the application is sent.", "உங்க கணக்குல இருந்து UPI-ல கட்டுங்க. அப்புறம் விண்ணப்பம் போகும்."), 13, dim, w, 4)
+	else:
+		for r in _nilam_rects():
+			var k := str(r[1])
+			if k.length() == 1 or k == "⌫":
+				draw_rect(r[0], Color(0.86, 0.87, 0.88))
+				_text((r[0] as Rect2).position + Vector2(0, 25), k, 17, ink, (r[0] as Rect2).size.x, HORIZONTAL_ALIGNMENT_CENTER)
+	if str(nilam.get("msg", "")) != "":
+		_wrap(Vector2(x0, s.end.y - 92.0), str(nilam["msg"]), 12, Color(0.75, 0.15, 0.1), w, 3)
+	var sb := Rect2(x0, s.end.y - 50.0, w, 40.0)
+	draw_rect(sb, APP_COL["nilam"])
+	_text(sb.position + Vector2(0, 27), L("Pay ₹50 by UPI", "UPI-ல ₹50 கட்டு") if stage == "pay" else L("Submit", "சமர்ப்பி"), 16, Color.WHITE, sb.size.x, HORIZONTAL_ALIGNMENT_CENTER)
 
 
 func _draw_rider(s: Rect2) -> void:
@@ -727,6 +883,10 @@ func _glyph(a: String, r: Rect2) -> void:
 	var c := r.get_center()
 	var w := Color(1, 1, 1, 0.92)
 	match a:
+		"nilam":                                         # a field's boundary stones on a plot
+			draw_rect(Rect2(c - Vector2(16, 12), Vector2(32, 24)), w, false, 2.0)
+			draw_line(c + Vector2(-16, 0), c + Vector2(16, 0), w, 1.5)
+			draw_line(c + Vector2(0, -12), c + Vector2(0, 12), w, 1.5)
 		"notes":
 			for k in 3:
 				draw_line(c + Vector2(-16, -10 + k * 10), c + Vector2(16, -10 + k * 10), w, 3.0)

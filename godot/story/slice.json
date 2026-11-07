@@ -7595,8 +7595,8 @@
     },
     {
      "who": "clerk_patta",
-     "en": "Apply online. Tamil Nilam. Fifteen working days. Next!",
-     "ta": "ஆன்லைன்ல அப்ளை பண்ணுங்க. தமிழ் நிலம். பதினஞ்சு வேலை நாள். அடுத்து!"
+     "en": "Apply online. Tamil Nilam. Pudhur Vayal is Perur taluk. Fifteen working days. Next!",
+     "ta": "ஆன்லைன்ல அப்ளை பண்ணுங்க. தமிழ் நிலம். புதூர் வயல் பேரூர் வட்டம். பதினஞ்சு வேலை நாள். அடுத்து!"
     },
     {
      "who": "karthik",
@@ -7621,35 +7621,42 @@
    ]
   },
   {
-   "do": "choose",
-   "prompt": {
-    "en": "Fifteen working days. Or two thousand rupees, now.",
-    "ta": "பதினஞ்சு வேலை நாள். இல்லனா ரெண்டாயிரம் ரூபாய், இப்பவே."
+   "do": "act",
+   "goal": {
+    "en": "The land record: apply on your phone (Tamil Nilam, P), call Priya about Revathi, or pay the man by the gate",
+    "ta": "நில பதிவு: ஃபோன்ல அப்ளை பண்ணு (தமிழ் நிலம், P), ரேவதி பத்தி பிரியாவுக்கு கூப்பிடு, இல்லனா கேட் பக்கத்து ஆளுக்கு காசு குடு"
    },
-   "options": [
-    {
-     "text": {
-      "en": "Apply online on your phone, and wait",
-      "ta": "ஃபோன்ல ஆன்லைன்ல அப்ளை பண்ணிட்டு, காத்திருங்க"
+   "ways": {
+    "nilam": {
+     "want": {
+      "taluk": "Perur",
+      "village": "Pudhur Vayal",
+      "from": "214",
+      "to": "226"
      },
-     "set": "patta_online"
+     "flag": "patta_online"
     },
-    {
-     "text": {
-      "en": "Ask Priya whether Revathi can find the office's copy",
-      "ta": "ஆஃபீஸ் நகல ரேவதி கண்டுபிடிக்க முடியுமான்னு பிரியா கிட்ட கேளுங்க"
+    "call": {
+     "contact": {
+      "id": "priya",
+      "name": {
+       "en": "Dr. Priya",
+       "ta": "டாக்டர் பிரியா"
+      },
+      "number": "94430 5•••2",
+      "where": {
+       "en": "Raghavan sir's daughter, Kongu Multispeciality Hospital",
+       "ta": "ராகவன் சார் மகள், கொங்கு மல்டிஸ்பெஷாலிட்டி மருத்துவமனை"
+      }
      },
-     "set": "patta_revathi"
+     "flag": "patta_revathi"
     },
-    {
-     "text": {
-      "en": "Pay the man by the gate (₹2,000)",
-      "ta": "கேட் பக்கத்து ஆளுக்கு குடுங்க (₹2,000)"
-     },
-     "set": "patta_tout",
-     "pay": 2000
+    "pay": {
+     "who": "tout",
+     "amount": 2000,
+     "flag": "patta_tout"
     }
-   ]
+   }
   },
   {
    "do": "note",
@@ -7665,8 +7672,8 @@
    "lines": [
     {
      "who": "karthik",
-     "en": "(Name, survey numbers, fifty rupees by UPI. Application number TN-NLM-2026-0884213. Fifteen working days.)",
-     "ta": "(பேர், சர்வே நம்பர், UPI-ல அம்பது ரூபாய். விண்ணப்ப எண் TN-NLM-2026-0884213. பதினஞ்சு வேலை நாள்.)"
+     "en": "(Application TN-NLM-2026-0884213. Fifteen working days. On bail, fifteen days is a long time.)",
+     "ta": "(விண்ணப்ப எண் TN-NLM-2026-0884213. பதினஞ்சு வேலை நாள். பெயில்ல, பதினஞ்சு நாள் ரொம்ப நாள்.)"
     },
     {
      "who": "tout",
@@ -7681,8 +7688,8 @@
    "lines": [
     {
      "who": "karthik",
-     "en": "(I text Priya. 'The patta for Pudhur Vayal. Would the office have a copy? Only if it's safe for Revathi.')",
-     "ta": "(பிரியாவுக்கு மெசேஜ் பண்றேன். 'புதூர் வயல் பட்டா. ஆஃபீஸ்ல நகல் இருக்குமா? ரேவதிக்கு பாதுகாப்பா இருந்தா மட்டும்.')"
+     "en": "(I call Priya. 'The patta for Pudhur Vayal. Would the office have a copy? Only if it's safe for Revathi.' She says she'll ask.)",
+     "ta": "(பிரியாவுக்கு கூப்பிடறேன். 'புதூர் வயல் பட்டா. ஆஃபீஸ்ல நகல் இருக்குமா? ரேவதிக்கு பாதுகாப்பா இருந்தா மட்டும்.' கேக்கறேன்னு சொல்றாங்க.)"
     },
     {
      "who": "tout",

@@ -366,7 +366,7 @@ The slice grew into the whole of Part 1. Day by day, as it plays now:
 | 8 | Bala at the door (tell him the leads, or don't); the farmers ("Bring us paper"); Divya bullied | |
 | 9 | Perur temple: Meenakshi lets him speak; Suresh's visit to Amma; the market (Valliammai sells to him) | |
 | 10 | Priya and Revathi find the green-ink note; the farmers will testify | E09 |
-| 11 | The Collectorate: apply online, Revathi's office copy, or the tout's ₹2,000 | E16 |
+| 11 | The Collectorate, done not chosen: fill in the Tamil Nilam application on his phone (Perur taluk, Pudhur Vayal, survey nos. 214–226 from Sundaram's message; wrong details: "no records", ₹50 gone), call Priya about Revathi's office copy, or walk up to the tout and pay ₹2,000 | E16 |
 | 12 | The Siruvani Grand: a ₹899 shirt and the ₹1,450 lunch, and the doorman Ganesan | E18 |
 | 13 | The mortuary ("a copy" for ₹3,000 is fake) and the post-mortem through Priya; the black sedan follows him from the hospital: lose it in the lanes (a scooter corners better; 100 m clear for 4 s), or it parks at his corner and Divya sees it | E17 |
 | 14–15 | The key-cutters, found by asking (no pin): Town Hall's pavement, three umbrellas (a cobbler, a phone-cover boy, the key-cutter) and a flower seller; then R.S. Puram's shops by the flyover (a mobile shop, a sweet shop, a pharmacy, Vinayaga Key Works); Bala Motors' job card; the key programmer's PIN, found in the workshop (the sticky note, his first bike's plate in a photo, a decoy on the calendar) opens its log; Bala's chats (forgive him, or walk out); Suresh calls | E11, E11L, E12 |
