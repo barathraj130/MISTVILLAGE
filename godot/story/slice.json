@@ -11176,17 +11176,118 @@
    }
   },
   {
+   "do": "scene",
+   "props": [
+    {
+     "scene": "res://assets/city_props/agri_fair.glb",
+     "world": [
+      6261.0,
+      -2577.0
+     ],
+     "look_world": [
+      6251.0,
+      -2577.0
+     ],
+     "lift": 0.22
+    },
+    {
+     "scene": "res://assets/vehicles/bike_scooter_0.glb",
+     "world": [
+      6256.5,
+      -2587.5
+     ],
+     "look_world": [
+      6246.5,
+      -2587.5
+     ]
+    },
+    {
+     "scene": "res://assets/vehicles/bike_motorcycle_1.glb",
+     "world": [
+      6256.5,
+      -2586.6
+     ],
+     "look_world": [
+      6246.5,
+      -2586.6
+     ]
+    },
+    {
+     "scene": "res://assets/vehicles/bike_scooter_2.glb",
+     "world": [
+      6256.5,
+      -2585.7
+     ],
+     "look_world": [
+      6246.5,
+      -2585.7
+     ]
+    },
+    {
+     "scene": "res://assets/vehicles/bike_motorcycle_3.glb",
+     "world": [
+      6256.5,
+      -2584.8
+     ],
+     "look_world": [
+      6246.5,
+      -2584.8
+     ]
+    }
+   ],
+   "shots": [
+    {
+     "cam_world": [
+      6250.5,
+      2.3,
+      -2576.4
+     ],
+     "look_world": [
+      6271.0,
+      3.0,
+      -2577.0
+     ],
+     "fixed_cam": true,
+     "dur": 5.0,
+     "line": {
+      "who": "karthik",
+      "en": "(KOVAI AGRI EXPO. Tractors, pumps, seed stalls, half the farmers of the district... and somewhere in all this, Joseph.)",
+      "ta": "(கோவை அக்ரி எக்ஸ்போ. டிராக்டர், பம்ப், விதை ஸ்டால், மாவட்டத்துல பாதி விவசாயிங்க... இதுக்குள்ள எங்கயோ ஜோசப்.)"
+     }
+    },
+    {
+     "cam_world": [
+      6259.4,
+      1.6,
+      -2583.4
+     ],
+     "look_world": [
+      6263.4,
+      1.0,
+      -2580.4
+     ],
+     "fixed_cam": true,
+     "dur": 4.0,
+     "line": {
+      "who": "karthik",
+      "en": "(The tractor stalls. A red one with its price on a stand: seven lakh twenty.)",
+      "ta": "(டிராக்டர் ஸ்டால். ஒரு சிவப்பு டிராக்டர், விலைப் பலகையோட: ஏழு லட்சத்து இருபதாயிரம்.)"
+     }
+    }
+   ]
+  },
+  {
    "do": "meet",
    "who": "joseph",
    "cast": {
     "joseph": {
-     "pos": [
-      -2.6,
-      2.4
+     "world": [
+      6261.4,
+      -2581.4
      ],
-     "look": [
-      0,
-      0
+     "look_world": [
+      6257.0,
+      -2582.0
      ],
      "anim": "Idle"
     }

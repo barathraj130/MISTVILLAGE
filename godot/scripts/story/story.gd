@@ -741,6 +741,12 @@ func _w3(v: Array) -> Vector3:
 	return base + _r * float(v[0]) + Vector3.UP * float(v[1]) + _f * float(v[2])
 
 
+## A world point [x, height above the ground, z].
+func _wg(v: Array) -> Vector3:
+	var g: float = city.streamer.height_at(float(v[0]), float(v[2]))
+	return Vector3(float(v[0]), (g if not is_nan(g) else _o.y) + float(v[1]), float(v[2]))
+
+
 func _cast(spec: Dictionary) -> void:
 	for key in spec:
 		var d: Dictionary = spec[key]
@@ -857,6 +863,8 @@ func _next_shot() -> void:
 		pass                                             # dialogue: framed on whoever is speaking (rooms too)
 	elif sh.get("cam") is String and room != null:
 		_room_cam(str(sh["cam"]))                        # a planned shot of the room (wide, the photos...)
+	elif sh.has("cam_world"):                            # (a place's own shot, wherever he parked: the fair from its gate)
+		_put_cam(_wg(sh["cam_world"]), _wg(sh["look_world"]))
 	elif sh.has("cam"):
 		_put_cam(_w3(sh["cam"]), _w3(sh.get("look", [0.0, 1.5, 0.0])))
 	if sh.get("look_tail", false) and _tail:              # (his mirror: from his shoulder, on the car behind him)
@@ -1959,10 +1967,11 @@ func _set_props(list: Array) -> void:
 			continue
 		var pn := ps.instantiate() as Node3D
 		add_child(pn)
-		var at := _w2(pr["pos"])
+		var world: bool = pr.has("world")                # (at a place of its own: the fair on CODISSIA's forecourt)
+		var at := Vector3(float(pr["world"][0]), _o.y, float(pr["world"][1])) if world else _w2(pr["pos"])
 		var gy: float = city.streamer.height_at(at.x, at.z)
-		at.y = gy if not is_nan(gy) else at.y
-		var lk := _w2(pr.get("look", [0.0, 0.0]))
+		at.y = (gy if not is_nan(gy) else at.y) + float(pr.get("lift", 0.0))   # (a paved fair over the grass)
+		var lk := Vector3(float(pr["look_world"][0]), 0.0, float(pr["look_world"][1])) if world else _w2(pr.get("look", [0.0, 0.0]))
 		pn.global_position = at
 		pn.rotation.y = atan2(lk.x - at.x, lk.z - at.z) + float(pr.get("turn", 0.0))
 		if pr.has("paint"):                              # (a car's body colour: Suresh's black sedan)
