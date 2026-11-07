@@ -531,7 +531,7 @@
    "model": "crowd_m4",
    "hair": "#0f0c0a",
    "top": "#1c1f26",
-   "pants": "#2a2a30",
+   "pants": "#8a8a8e",
    "cap": true
   },
   "joseph": {
@@ -657,6 +657,87 @@
    "model": "crowd_m6",
    "hair": "#2a2520",
    "top": "#e8e8e8"
+  },
+  "bs_m_a": {
+   "en": "A man",
+   "ta": "ஒருத்தர்",
+   "colour": "#c0c0c0",
+   "model": "crowd_m1",
+   "hair": "#141110",
+   "top": "#1c1f26",
+   "pants": "#1c1f26",
+   "cap": true
+  },
+  "bs_m_b": {
+   "en": "A man",
+   "ta": "ஒருத்தர்",
+   "colour": "#c0c0c0",
+   "model": "crowd_m2",
+   "hair": "#141110",
+   "top": "#d8d2c4",
+   "pants": "#8a8a8e",
+   "cap": true
+  },
+  "bs_m_c": {
+   "en": "A man",
+   "ta": "ஒருத்தர்",
+   "colour": "#c0c0c0",
+   "model": "crowd_m3",
+   "hair": "#141110",
+   "top": "#1c1f26",
+   "pants": "#8a8a8e"
+  },
+  "bs_m_d": {
+   "en": "A man",
+   "ta": "ஒருத்தர்",
+   "colour": "#c0c0c0",
+   "model": "crowd_m5",
+   "hair": "#141110",
+   "top": "#9a2a20",
+   "pants": "#8a8a8e",
+   "cap": true
+  },
+  "bs_m_e": {
+   "en": "A man",
+   "ta": "ஒருத்தர்",
+   "colour": "#c0c0c0",
+   "model": "crowd_m6",
+   "hair": "#141110",
+   "top": "#1c1f26",
+   "pants": "#9a8a60",
+   "cap": true
+  },
+  "bs_m_f": {
+   "en": "A man",
+   "ta": "ஒருத்தர்",
+   "colour": "#c0c0c0",
+   "model": "crowd_m2",
+   "hair": "#141110",
+   "top": "#203050",
+   "pants": "#1c1f26"
+  },
+  "bs_m_g": {
+   "en": "A man",
+   "ta": "ஒருத்தர்",
+   "colour": "#c0c0c0",
+   "model": "crowd_m3",
+   "hair": "#141110",
+   "top": "#d8d2c4",
+   "pants": "#9a8a60"
+  },
+  "bs_w_a": {
+   "en": "A woman",
+   "ta": "ஒரு அம்மா",
+   "colour": "#c0c0c0",
+   "model": "crowd_w2",
+   "hair": "#141110"
+  },
+  "bs_w_b": {
+   "en": "A woman",
+   "ta": "ஒரு அம்மா",
+   "colour": "#c0c0c0",
+   "model": "crowd_w4",
+   "hair": "#141110"
   }
  },
  "spawn": "home",
@@ -11023,6 +11104,11 @@
     },
     {
      "who": "selvi",
+     "en": "The stand office says: a black cap, a dark jacket, grey trousers. The Salem bus leaves in a few minutes.",
+     "ta": "ஸ்டாண்ட் ஆபீஸ் சொல்றாங்க: கருப்பு தொப்பி, கருப்பு ஜாக்கெட், சாம்பல் பேன்ட். சேலம் பஸ் இன்னும் கொஞ்ச நிமிஷத்துல கிளம்பும்."
+    },
+    {
+     "who": "selvi",
      "en": "Don't touch him. Don't speak to him. Keep him in sight and call me. A patrol is ten minutes away.",
      "ta": "அவன தொடாத. பேசாத. கண்ணுல வச்சுக்கோ, எனக்கு கூப்பிடு. ஒரு பேட்ரோல் பத்து நிமிஷத்துல வரும்."
     }
@@ -11079,9 +11165,115 @@
    }
   },
   {
-   "do": "meet",
+   "do": "spot",
    "who": "pandi",
+   "secs": 150,
+   "penalty": 20,
+   "timeout": "pandi_bus_left",
+   "goal": {
+    "en": "By the Salem counter: find the man Selvi described (black cap, dark jacket, grey trousers)",
+    "ta": "சேலம் கவுண்டர் பக்கத்துல: செல்வி சொன்ன ஆள கண்டுபிடி (கருப்பு தொப்பி, கருப்பு ஜாக்கெட், சாம்பல் பேன்ட்)"
+   },
    "cast": {
+    "bs_m_a": {
+     "world": [
+      -77.47,
+      413.02
+     ],
+     "look_world": [
+      -80.47,
+      412.52
+     ],
+     "anim": "Idle"
+    },
+    "bs_m_b": {
+     "world": [
+      -74.47,
+      414.22
+     ],
+     "look_world": [
+      -77.47,
+      413.72
+     ],
+     "anim": "Idle"
+    },
+    "bs_m_c": {
+     "world": [
+      -68.47,
+      412.82
+     ],
+     "look_world": [
+      -71.47,
+      412.32
+     ],
+     "anim": "Idle"
+    },
+    "bs_m_d": {
+     "world": [
+      -65.47,
+      414.62
+     ],
+     "look_world": [
+      -68.47,
+      414.12
+     ],
+     "anim": "Idle"
+    },
+    "bs_m_e": {
+     "world": [
+      -75.97,
+      412.42
+     ],
+     "look_world": [
+      -78.97,
+      411.92
+     ],
+     "anim": "Idle"
+    },
+    "bs_m_f": {
+     "world": [
+      -63.97,
+      413.22
+     ],
+     "look_world": [
+      -66.97,
+      412.72
+     ],
+     "anim": "Idle"
+    },
+    "bs_m_g": {
+     "world": [
+      -78.97,
+      414.42
+     ],
+     "look_world": [
+      -81.97,
+      413.92
+     ],
+     "anim": "Idle"
+    },
+    "bs_w_a": {
+     "world": [
+      -69.97,
+      415.02
+     ],
+     "look_world": [
+      -72.97,
+      414.52
+     ],
+     "anim": "Idle"
+    },
+    "bs_w_b": {
+     "world": [
+      -66.97,
+      413.82
+     ],
+     "look_world": [
+      -69.97,
+      413.32
+     ],
+     "anim": "Idle"
+    },
     "pandi": {
      "world": [
       -71.47,
@@ -11094,9 +11286,27 @@
      "anim": "Idle"
     }
    },
-   "goal": {
-    "en": "The man in the cap, by the Salem counter",
-    "ta": "சேலம் கவுண்டர் பக்கத்துல தொப்பி போட்ட ஆள்"
+   "wrong": [
+    {
+     "en": "A man:  Enna? What do you want? (He turns his back on me.)",
+     "ta": "ஒருத்தர்:  என்ன? என்ன வேணும்? (திரும்பிக்கறார்.)"
+    },
+    {
+     "en": "(Not him. Wrong trousers. Look properly, Karthik.)",
+     "ta": "(இவன் இல்ல. பேன்ட் வேற. ஒழுங்கா பாரு, கார்த்திக்.)"
+    },
+    {
+     "en": "A man:  Brother, I'm waiting for my wife. Go and stare at someone else.",
+     "ta": "ஒருத்தர்:  தம்பி, என் மனைவிக்காக காத்திருக்கேன். வேற யாரையாவது பாரு."
+    },
+    {
+     "en": "(No. Everyone wears a cap at noon. Cap, jacket, grey trousers. All three.)",
+     "ta": "(இல்ல. மதியம் எல்லாரும் தொப்பி போடுவாங்க. தொப்பி, ஜாக்கெட், சாம்பல் பேன்ட். மூணும்.)"
+    }
+   ],
+   "missed": {
+    "en": "(The Salem bus pulls out of the bay. Somewhere on it, a black cap. I call Selvi with my hands shaking.)",
+    "ta": "(சேலம் பஸ் கிளம்பிடுச்சு. அதுக்குள்ள எங்கயோ ஒரு கருப்பு தொப்பி. நடுங்கற கையோட செல்விக்கு கூப்பிடறேன்.)"
    }
   },
   {
@@ -11112,7 +11322,8 @@
      "en": "(He sees me. He knows me. His hand goes to the ticket in his pocket.)",
      "ta": "(என்ன பாக்கறான். அவனுக்கு என்ன தெரியும். அவன் கை பாக்கெட்ல டிக்கெட்டுக்கு போகுது.)"
     }
-   ]
+   ],
+   "unless": "pandi_bus_left"
   },
   {
    "do": "choose",
@@ -11144,7 +11355,8 @@
      "set": "pandi_grabbed",
      "stress": 12
     }
-   ]
+   ],
+   "unless": "pandi_bus_left"
   },
   {
    "do": "talk",
@@ -11197,6 +11409,31 @@
      "en": "(In the jeep, before the door shuts:) He promised me two lakhs. He gave me forty thousand. I'm not going down for him alone. I'll tell everything.",
      "ta": "(ஜீப்ல, கதவு மூடறதுக்கு முன்னாடி:) ரெண்டு லட்சம்னு சொன்னாரு. நாப்பதாயிரம் தான் குடுத்தாரு. அவருக்காக நான் மட்டும் உள்ள போக மாட்டேன். எல்லாத்தையும் சொல்றேன்."
     }
+   ],
+   "unless": "pandi_bus_left"
+  },
+  {
+   "do": "talk",
+   "when": "pandi_bus_left",
+   "lines": [
+    {
+     "who": "selvi",
+     "en": "(on the phone) The patrol stopped the Salem bus at the Avinashi Road signal. He's in the jeep. ...Next time, Karthik, you look faster or you call sooner.",
+     "ta": "(ஃபோன்ல) ரோந்து வண்டி சேலம் பஸ்ஸ அவினாசி ரோடு சிக்னல்ல நிறுத்திடுச்சு. அவன் ஜீப்ல இருக்கான். ...அடுத்த தடவ, கார்த்திக், சீக்கிரம் பாரு, இல்லனா சீக்கிரம் கூப்பிடு."
+    },
+    {
+     "who": "karthik",
+     "en": "(That evening at the station he sits in the corner of the inspector's room, no cap now. He looks at me once and starts talking.)",
+     "ta": "(அன்னைக்கு சாயங்காலம் ஸ்டேஷன்ல இன்ஸ்பெக்டர் ரூம் மூலையில உக்காந்திருக்கான், இப்போ தொப்பி இல்ல. ஒரு தடவ என்ன பாக்கறான், பேச ஆரம்பிக்கறான்.)"
+    },
+    {
+     "who": "pandi",
+     "en": "He promised me two lakhs. He gave me forty thousand. I'm not going down for him alone. I'll tell everything.",
+     "ta": "ரெண்டு லட்சம் தரேன்னு சொன்னாரு. நாப்பதாயிரம் தான் குடுத்தாரு. அவருக்காக நான் மட்டும் உள்ள போக மாட்டேன். எல்லாத்தையும் சொல்றேன்."
+    }
+   ],
+   "hide": [
+    "pandi"
    ]
   },
   {

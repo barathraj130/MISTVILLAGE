@@ -108,6 +108,7 @@ var dvr: Control                      # a camera recorder's footage on someone's
 var court: Control                    # the trial: the prosecution's points, his evidence, the night on the map (court.gd)
 var keypad: Control                   # a thing with a PIN, worked up close: Bala's key programmer (keypad.gd)
 var _kp := {}                          # a "keypad" step as it goes: tries, opened, the skip's own steps
+var _spot := {}                        # a "spot" step as it goes: the time left, who he has already pointed at
 var _ask := {}                         # an "ask" step as it goes: how often each was asked, the skip's turn, the line's time
 var doorbell: Control                 # Ashwin's doorbell camera: it records him that night, plays on a tablet later (doorbell.gd)
 var _park := ""                       # a place the car is being set down at, out of sight (after a ride)
@@ -284,6 +285,8 @@ func _process(dt: float) -> void:
 			_keypad_step()
 		"ask":
 			_ask_step(dt)
+		"spot":
+			_spot_step(dt)
 		"choose":
 			_choose()
 		"climb":
@@ -680,6 +683,11 @@ func _next() -> void:
 			_covert_start()
 		"keypad":
 			_kp = {"tries": 0, "open": false, "seen": {}}
+		"spot":
+			_anchor()
+			_cast(cur.get("cast", {}))
+			map.pin = null                                  # (no pin: he has to know him when he sees him)
+			_spot = {"left": float(cur.get("secs", 150.0)), "tried": {}, "skip_i": 0, "t": 0.0}
 		"ask":
 			_anchor()
 			_set_props(cur.get("props", []))                # (first: the people stand at their stalls in them)
@@ -1494,6 +1502,97 @@ func _ask_step(dt: float) -> void:
 			return
 		_ask_one(best)
 	_e_down = e
+
+
+## "spot": someone to pick out of a crowd by what he was told of them ("who" among the "cast"), before "secs" run out
+## (the bus leaves). On foot, E by anyone points him out: the wrong one answers ("wrong": a line each) and it costs
+## "penalty" seconds and a little stress; the right one goes on. Out of time: "timeout" flag, his "missed" thought,
+## and on. The time left shows at the top. Testing: one wrong pick, then the right one (--storytimeout: neither).
+func _spot_step(dt: float) -> void:
+	var w: Node3D = city.walker
+	_spot["left"] = float(_spot["left"]) - dt
+	_spot["t"] = float(_spot["t"]) - dt
+	if _sub and float(_spot["t"]) <= 0.0:
+		_sub.visible = false
+	_ensure_lines()
+	var left := maxf(0.0, float(_spot["left"]))
+	_status.text = ("The Salem bus leaves in %d:%02d" if lang == "en" else "சேலம் பஸ் கிளம்ப இன்னும் %d:%02d") % [int(left) / 60, int(left) % 60]
+	_status.add_theme_color_override("font_color", Color(1.0, 0.5, 0.4) if left < 40.0 else Color(1, 1, 1, 0.92))
+	_status.visible = true
+	if _skip and "--storytimeout" in OS.get_cmdline_user_args() and t_step > 2.0:   # (testing: the bus goes)
+		_spot["left"] = 0.0
+	if float(_spot["left"]) <= 0.0:
+		flags[str(cur.get("timeout", "spot_missed"))] = true
+		_sub.text = tr_(cur["missed"])
+		_sub.visible = true
+		print("STORY spot: out of time")
+		_next()
+		_sub.visible = true                              # (his thought stays a moment into the next step)
+		return
+	var keys: Array = []
+	for k in cur["cast"]:
+		keys.append(str(k))
+	if _skip and t_step > 1.2 and not "--storytimeout" in OS.get_cmdline_user_args():
+		t_step = 0.0
+		var i: int = _spot["skip_i"]
+		_spot["skip_i"] = i + 1
+		var wrong := ""
+		for k in keys:
+			if k != str(cur["who"]):
+				wrong = k
+				break
+		if i == 0 and wrong != "":
+			_spot_pick(wrong)
+		else:
+			_spot_pick(str(cur["who"]))
+		_shot()
+		return
+	if w == null:
+		goal.text = tr_(cur["goal"]) + "\n" + _off_key()
+		return
+	var best := ""
+	var bd := 2.2
+	for k in keys:
+		var a: Node3D = cast.get(k)
+		if a == null or not a.visible:
+			continue
+		var dd := Vector2(w.global_position.x - a.global_position.x, w.global_position.z - a.global_position.z).length()
+		if dd < bd:
+			bd = dd
+			best = k
+	var hint := ""
+	if best != "":
+		hint = "E: " + ("It's him. Call Selvi" if lang == "en" else "இவன் தான். செல்விக்கு கூப்பிடு")
+	goal.text = tr_(cur["goal"]) + ("\n" + hint if hint != "" else "")
+	var e := Input.is_key_pressed(KEY_E)
+	if e and not _e_down and best != "":
+		_spot_pick(best)
+	_e_down = e
+
+
+func _spot_pick(key: String) -> void:
+	if key == str(cur["who"]):
+		print("STORY spot: found %s with %d s left" % [key, int(_spot["left"])])
+		if _sub:
+			_sub.visible = false
+		_next()
+		return
+	if _spot["tried"].has(key):
+		return
+	_spot["tried"][key] = true
+	_spot["left"] = float(_spot["left"]) - float(cur.get("penalty", 20.0))
+	var life = city.life if "life" in city else null
+	if life:
+		life.stress = clampf(life.stress + 3.0, 0.0, 100.0)
+	var lines: Array = cur.get("wrong", [])
+	var a: Node3D = cast.get(key)
+	if a and city.walker:
+		a.face(city.walker.global_position)
+	_ensure_lines()
+	_sub.text = tr_(lines[(_spot["tried"].size() - 1) % lines.size()]) if not lines.is_empty() else ""
+	_sub.visible = true
+	_spot["t"] = 4.5
+	print("STORY spot: wrong man (%s)" % key)
 
 
 func _ask_one(key: String) -> void:
@@ -3424,7 +3523,7 @@ func _refresh() -> void:
 	big.visible = kind in ["card", "jump"]
 	small.visible = kind in ["card", "jump"]
 	box.visible = false
-	goal.visible = kind in ["drive", "free", "meet", "home", "eat_out", "gigs", "climb", "covert", "keypad", "ask"]
+	goal.visible = kind in ["drive", "free", "meet", "home", "eat_out", "gigs", "climb", "covert", "keypad", "ask", "spot"]
 	clock.visible = kind in ["drive", "free", "talk", "comfort_verdict", "deliver_verdict", "task", "lapse", "meet", "home", "eat_out", "gigs", "climb", "choose"]
 	if step < 0:
 		big.visible = false                          # (no title shown: the story's name would give it away)
