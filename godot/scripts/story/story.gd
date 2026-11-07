@@ -725,10 +725,11 @@ func _next() -> void:
 				city.phone.enable_nilam(ways["nilam"]["want"])
 				if not city.phone.nilam_done.is_connected(_act_nilam):
 					city.phone.nilam_done.connect(_act_nilam)
-			if ways.has("call"):
-				city.phone.add_contact(ways["call"]["contact"])
-				if not city.phone.dialled.is_connected(_act_dial):
-					city.phone.dialled.connect(_act_dial)
+			for wk in ways:                                  # ("call", "call_sundaram"...: each a contact he can ring)
+				if str(wk).begins_with("call"):
+					city.phone.add_contact(ways[wk]["contact"])
+					if not city.phone.dialled.is_connected(_act_dial):
+						city.phone.dialled.connect(_act_dial)
 		"provoke":
 			if _f2f:
 				_f2f_off()
@@ -1711,8 +1712,9 @@ func _provoke_step(dt: float) -> void:
 
 
 ## "act": a choice made by doing, not from a list ("ways", whichever he does first): "nilam" (an application on
-## his phone's land-records app that finds the land: "want"), "call" (ringing a "contact" from his phone), "pay"
-## (E at someone, "who", for "amount" from the wallet). Each sets its "flag". Testing: --storychoose=1/2/3, in that order.
+## his phone's land-records app that finds the land: "want"), "call..." (ringing a "contact" from his phone; one with
+## "if_standing" that doesn't hold is answered with its "refused" line, and he must find another way), "pay" (E at
+## someone, "who", for "amount" from the wallet). Each sets its "flag". Testing: --storychoose=N, the Nth way.
 func _act_step() -> void:
 	var ways: Dictionary = cur["ways"]
 	if _skip and t_step > 1.5 and not _act.has("done"):
@@ -1720,8 +1722,8 @@ func _act_step() -> void:
 		for arg in OS.get_cmdline_user_args():
 			if arg.begins_with("--storychoose="):
 				pick = int(arg.get_slice("=", 1))
-		var order := ["nilam", "call", "pay"]
-		var way: String = order[clampi(pick - 1, 0, 2)]
+		var order: Array = ways.keys()
+		var way: String = order[clampi(pick - 1, 0, order.size() - 1)]
 		if way == "nilam":
 			var want: Dictionary = ways["nilam"]["want"]
 			city.phone.hold(true)
@@ -1741,8 +1743,11 @@ func _act_step() -> void:
 			await get_tree().create_timer(0.6).timeout
 			_shot()
 			city.phone.hold(false)
-		elif way == "call":
-			_act_dial(ways["call"]["contact"])
+		elif way.begins_with("call"):
+			_act_dial(ways[way]["contact"])
+			for w2 in order:                             # (refused: the other call, as a player would)
+				if not _act.has("done") and w2 != way and str(w2).begins_with("call"):
+					_act_dial(ways[w2]["contact"])
 		else:
 			_act_pay()
 		return
@@ -1773,8 +1778,19 @@ func _act_nilam(ok: bool, _form: Dictionary) -> void:
 
 
 func _act_dial(c: Dictionary) -> void:
-	if str(cur.get("do", "")) == "act" and str(c.get("id", "")) == str(cur["ways"]["call"]["contact"].get("id", "")):
-		_act_done("call")
+	if str(cur.get("do", "")) != "act":
+		return
+	for wk in cur["ways"]:
+		var w: Dictionary = cur["ways"][wk]
+		if str(wk).begins_with("call") and str(c.get("id", "")) == str(w["contact"].get("id", "")):
+			if w.has("if_standing") and not standing.allows(w["if_standing"]):
+				_ensure_lines()
+				_sub.text = tr_(w["refused"])
+				_sub.visible = true
+				print("STORY act: %s refused" % wk)
+				return
+			_act_done(str(wk))
+			return
 
 
 func _act_pay() -> void:
@@ -2685,6 +2701,7 @@ func _evidence() -> void:
 	var m: Dictionary = cur.get("memory", {})
 	evidence[str(cur["tag"])] = {"title": m.get("title", cur.get("label", {})), "body": m.get("body", {}), "paid": paid,
 		"doubt": cur.get("doubt", {}), "doubt_unless": cur.get("doubt_unless", [])}   # (a card the other side can pick at, unless backed)
+	print("STORY evidence %s%s" % [str(cur["tag"]), " (paid)" if paid else ""])
 
 
 ## "dvr": someone's monitor with a recorder's footage on it (dvr.gd), worked by him: he steps up to it with E, plays

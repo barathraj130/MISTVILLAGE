@@ -750,7 +750,7 @@
   "funeral_went": {
    "reputation": -5,
    "trust": {
-    "priya": -10,
+    "priya": -15,
     "meenakshi": 5
    }
   },
@@ -939,6 +939,12 @@
   "joseph_spooked": {
    "trust": {
     "joseph": -20
+   }
+  },
+  "pm_sundaram": {
+   "reputation": 1,
+   "trust": {
+    "sundaram": 5
    }
   }
  },
@@ -9141,28 +9147,55 @@
    ]
   },
   {
-   "do": "choose",
-   "prompt": {
-    "en": "Three thousand rupees. Or the family.",
-    "ta": "மூணாயிரம் ரூபாய். இல்லனா குடும்பம்."
+   "do": "act",
+   "goal": {
+    "en": "The post-mortem report: ask the family (call Priya), ask the court (call Sundaram sir), or pay the attendant ₹3,000",
+    "ta": "போஸ்ட்மார்ட்டம் அறிக்கை: குடும்பத்துகிட்ட கேளு (பிரியாவுக்கு கூப்பிடு), கோர்ட் மூலமா (சுந்தரம் சாருக்கு கூப்பிடு), இல்லனா உதவியாளருக்கு ₹3,000 குடு"
    },
-   "options": [
-    {
-     "text": {
-      "en": "Refuse, and ask Priya. She is the family",
-      "ta": "மறுத்துட்டு, பிரியா கிட்ட கேளுங்க. அவங்க தான் குடும்பம்"
+   "ways": {
+    "call": {
+     "contact": {
+      "id": "priya",
+      "name": {
+       "en": "Dr. Priya",
+       "ta": "டாக்டர் பிரியா"
+      },
+      "number": "94430 5•••2",
+      "where": {
+       "en": "Raghavan sir's daughter, Kongu Multispeciality Hospital",
+       "ta": "ராகவன் சார் மகள், கொங்கு மல்டிஸ்பெஷாலிட்டி மருத்துவமனை"
+      }
      },
-     "set": "pm_priya"
+     "flag": "pm_priya",
+     "if_standing": {
+      "trust.priya": ">=40"
+     },
+     "refused": {
+      "en": "(Priya sees my name and cuts the call. A text, a second later: 'Not now. Not you.')",
+      "ta": "(பிரியா என் பேர பாத்து கட் பண்றாங்க. ஒரு செகண்ட்ல ஒரு மெசேஜ்: 'இப்போ வேண்டாம். நீ வேண்டாம்.')"
+     }
     },
-    {
-     "text": {
-      "en": "Pay him (₹3,000)",
-      "ta": "அவருக்கு குடுங்க (₹3,000)"
+    "call_sundaram": {
+     "contact": {
+      "id": "sundaram",
+      "name": {
+       "en": "Sundaram sir (advocate)",
+       "ta": "சுந்தரம் சார் (வக்கீல்)"
+      },
+      "number": "98422 4•••1",
+      "where": {
+       "en": "Advocate, District Court, Coimbatore",
+       "ta": "வக்கீல், மாவட்ட நீதிமன்றம், கோவை"
+      }
      },
-     "set": "pm_paid",
-     "pay": 3000
+     "flag": "pm_sundaram"
+    },
+    "pay": {
+     "who": "attendant",
+     "amount": 3000,
+     "flag": "pm_paid"
     }
-   ]
+   }
   },
   {
    "do": "talk",
@@ -9215,11 +9248,58 @@
   },
   {
    "do": "talk",
+   "when": "pm_priya",
    "lines": [
     {
      "who": "karthik",
      "en": "(I call Priya. She listens without a word, then: 'I'm his daughter. I'll ask for it myself.')",
      "ta": "(பிரியாவுக்கு கூப்பிடறேன். ஒரு வார்த்த பேசாம கேக்கறாங்க, அப்புறம்: 'நான் அவர் பொண்ணு. நானே கேக்கறேன்.')"
+    }
+   ]
+  },
+  {
+   "do": "talk",
+   "when": "pm_paid",
+   "if_standing": {
+    "trust.priya": ">=40"
+   },
+   "set_flag": "pm_priya_after",
+   "lines": [
+    {
+     "who": "karthik",
+     "en": "(I call Priya. She listens without a word, then: 'I'm his daughter. I'll ask for it myself.')",
+     "ta": "(பிரியாவுக்கு கூப்பிடறேன். ஒரு வார்த்த பேசாம கேக்கறாங்க, அப்புறம்: 'நான் அவர் பொண்ணு. நானே கேக்கறேன்.')"
+    }
+   ]
+  },
+  {
+   "do": "talk",
+   "when": "pm_paid",
+   "if_standing": {
+    "trust.priya": "<40"
+   },
+   "set_flag": "pm_sundaram",
+   "lines": [
+    {
+     "who": "karthik",
+     "en": "(I call Priya. She cuts it after one ring. ...Sundaram sir, then. The slow way, the right way.)",
+     "ta": "(பிரியாவுக்கு கூப்பிடறேன். ஒரு ரிங்ல கட் பண்றாங்க. ...சுந்தரம் சார் தான். மெதுவான வழி, சரியான வழி.)"
+    }
+   ]
+  },
+  {
+   "do": "talk",
+   "when": "pm_sundaram",
+   "lines": [
+    {
+     "who": "sundaram",
+     "en": "(on the phone) The post-mortem? Thambi, you are the accused. The law gives you a copy of every document the police rely on, and that report is one of them. I'll apply today.",
+     "ta": "(ஃபோன்ல) போஸ்ட்மார்ட்டமா? தம்பி, நீ குற்றம் சாட்டப்பட்டவன். போலீஸ் நம்பற ஒவ்வொரு ஆவணத்தோட நகலும் உனக்கு சட்டப்படி கிடைக்கணும், அந்த அறிக்கையும் அதுல ஒண்ணு. இன்னைக்கே மனு போடறேன்."
+    },
+    {
+     "who": "sundaram",
+     "en": "It comes with the court's papers, not tomorrow. But nobody will ever call it a fake.",
+     "ta": "கோர்ட் பேப்பர்களோட வரும், நாளைக்கு இல்ல. ஆனா அத யாரும் போலின்னு சொல்ல முடியாது."
     }
    ]
   },
@@ -9403,7 +9483,8 @@
    "text": {
     "en": "I read the post-mortem myself, as his daughter. Time of death between 10:40 and 11:10 PM. Karthik... where were you then? Tell me the truth. – Priya",
     "ta": "அவர் பொண்ணா, போஸ்ட்மார்ட்டத்த நானே படிச்சேன். இறந்த நேரம் இரவு 10:40 முதல் 11:10 வரை. கார்த்திக்... அப்போ நீ எங்க இருந்த? உண்மைய சொல்லு. – பிரியா"
-   }
+   },
+   "unless": "pm_sundaram"
   },
   {
    "do": "talk",
@@ -9418,7 +9499,8 @@
      "en": "(I send her the doorbell clip's time, and the road home. Nothing else. She can do the sum herself.)",
      "ta": "(டோர்பெல் கிளிப் நேரத்தையும், வீட்டுக்கு வந்த ரோட்டையும் அனுப்பறேன். வேற எதுவும் இல்ல. கணக்க அவங்களே போட்டுக்கலாம்.)"
     }
-   ]
+   ],
+   "unless": "pm_sundaram"
   },
   {
    "do": "evidence",
@@ -9439,7 +9521,8 @@
      "en": "Death between 10:40 and 11:10 PM. Read by Priya, his daughter. At 10:21 I was at Ashwin's door, 12 km away.",
      "ta": "இறப்பு இரவு 10:40 முதல் 11:10 வரை. அவர் பொண்ணு பிரியா படிச்சாங்க. 10:21-க்கு நான் அஷ்வின் வாசல்ல, 12 கி.மீ தள்ளி."
     }
-   }
+   },
+   "unless": "pm_sundaram"
   },
   {
    "do": "home",
@@ -11536,6 +11619,40 @@
      "ta": "வட்டிக்காரரோட டிரைவர், சுரேஷுக்கு குடுத்தது. என் உடம்பு மாதிரியே. அன்னைக்கு ராத்திரி 10:30 முதல் 11:00 வரை புதூர் வயல்ல அவன் ஃபோன்."
     }
    }
+  },
+  {
+   "do": "message",
+   "when": "pm_sundaram",
+   "from": {
+    "en": "Sundaram sir",
+    "ta": "சுந்தரம் சார்"
+   },
+   "text": {
+    "en": "And the post-mortem, from the court's papers: time of death between 10:40 and 11:10 PM. Where were you at 10:40, thambi? Saravanampatti. Twelve kilometres away. – Sundaram",
+    "ta": "அப்புறம் போஸ்ட்மார்ட்டம், கோர்ட் பேப்பர்கள்ல இருந்து: இறந்த நேரம் இரவு 10:40 முதல் 11:10 வரை. 10:40-க்கு நீ எங்க இருந்த, தம்பி? சரவணம்பட்டி. பன்னிரண்டு கிலோமீட்டர் தூரம். – சுந்தரம்"
+   }
+  },
+  {
+   "do": "evidence",
+   "speaker": "sundaram",
+   "tag": "E17",
+   "label": {
+    "en": "Post-mortem (the court's copy): death 10:40 to 11:10 PM",
+    "ta": "போஸ்ட்மார்ட்டம் (கோர்ட் நகல்): இறப்பு இரவு 10:40 முதல் 11:10"
+   },
+   "memory": {
+    "id": "mem_pm",
+    "kind": "card",
+    "title": {
+     "en": "The post-mortem (E17)",
+     "ta": "போஸ்ட்மார்ட்டம் (E17)"
+    },
+    "body": {
+     "en": "Death between 10:40 and 11:10 PM. Read by Priya, his daughter. At 10:21 I was at Ashwin's door, 12 km away.",
+     "ta": "இறப்பு இரவு 10:40 முதல் 11:10 வரை. அவர் பொண்ணு பிரியா படிச்சாங்க. 10:21-க்கு நான் அஷ்வின் வாசல்ல, 12 கி.மீ தள்ளி."
+    }
+   },
+   "when": "pm_sundaram"
   },
   {
    "do": "home",
