@@ -9386,7 +9386,7 @@
     {
      "scene": "res://assets/city_props/rsp_shoprow.glb",
      "pos": [
-      -5.0,
+      -4.3,
       9.0
      ],
      "look": [
@@ -9400,31 +9400,31 @@
      "prop": "rsp_shoprow",
      "prop_at": [
       -6.0,
-      -0.4
+      -0.6
      ],
      "anim": "Idle"
     },
     "sweetsaunty": {
      "prop": "rsp_shoprow",
      "prop_at": [
-      -2.3,
-      0.5
+      -0.8,
+      0.9
      ],
      "anim": "Idle"
     },
     "pharmacist": {
      "prop": "rsp_shoprow",
      "prop_at": [
-      2.2,
-      0.5
+      3.2,
+      0.9
      ],
      "anim": "Idle"
     },
     "keycut2": {
      "prop": "rsp_shoprow",
      "prop_at": [
-      6.4,
-      1.6
+      7.2,
+      0.9
      ],
      "anim": "Idle"
     }

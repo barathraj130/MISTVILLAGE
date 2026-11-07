@@ -2145,14 +2145,15 @@ def townhall_pavement():
     return c
 
 
-def shopfront(c, x, w, name, sub, col, pic, goods):
-    """One shop of a row: its walls, the concrete sunshade over the front, the rolling shutter up, the board with
-    its picture and name, a tubelight inside, a glass counter, shelves of what it sells, and things out on the step."""
+def shopfront(c, x, w, name, sub, col, pic, goods, D=1.5):
+    """One shop of a row, D metres deep (shallow, as the small shops are, and so clear of the city's houses behind):
+    its walls, the concrete sunshade over the front, the rolling shutter up, the board with its picture and name, a
+    tubelight inside, a glass counter across the front, shelves of what it sells on the back wall."""
     wallc = mat("mk_shop_wall", (0.86, 0.84, 0.78), 0.8)
     for dx in (-w / 2, w / 2):
-        box(c, (x + dx, 1.6, 1.75), (0.25, 3.2, 3.5), wallc)
-    box(c, (x, 3.2, 1.75), (w, 0.2, 3.5), wallc)
-    box(c, (x, 1.6, 0.17), (w, 3.2, 0.06), mat("mk_shop_floor", (0.82, 0.8, 0.76), 0.25))   # the tiled floor
+        box(c, (x + dx, D / 2, 1.75), (0.25, D, 3.5), wallc)
+    box(c, (x, D, 1.75), (w, 0.2, 3.5), wallc)
+    box(c, (x, D / 2, 0.17), (w, D, 0.06), mat("mk_shop_floor", (0.82, 0.8, 0.76), 0.25))   # the tiled floor
     box(c, (x, -0.15, 0.12), (w, 0.6, 0.24), mat("mk_step", (0.55, 0.53, 0.5), 0.8))       # the step
     box(c, (x, -0.35, 3.3), (w + 0.25, 1.1, 0.1), mat("mk_chajja", (0.75, 0.73, 0.68), 0.85))   # the sunshade
     box(c, (x, 0.05, 3.05), (w - 0.3, 0.35, 0.35), tmat("mk_shutter", T_ALL["shutter"], 0.5, 0.5))   # the shutter, up
@@ -2160,14 +2161,14 @@ def shopfront(c, x, w, name, sub, col, pic, goods):
     panel(c, (x - w / 2 + 0.55, -0.225, 3.8), 0.7, 0.7, tmat("mk_" + pic, T_ALL[pic], 0.4))
     text(c, name, (x + 0.35, -0.22, 3.92), 0.24, M["plastic_white"])
     text(c, sub, (x + 0.35, -0.22, 3.62), 0.1, M["plastic_white"])
-    box(c, (x, 1.6, 3.2), (1.2, 0.05, 0.04), glow("mk_tubelight", (1.0, 1.0, 0.95), 4.0))   # the tubelight
-    box(c, (x, 1.0, 0.65), (w - 0.8, 0.55, 0.9), mat("mk_counter_base", (0.9, 0.9, 0.88), 0.4))
-    box(c, (x, 1.0, 1.12), (w - 0.8, 0.55, 0.03), mat("mk_counter_glass", (0.7, 0.85, 0.9), 0.05, 0.0, 0.4))
+    box(c, (x, D / 2, 3.2), (1.2, 0.05, 0.04), glow("mk_tubelight", (1.0, 1.0, 0.95), 4.0))   # the tubelight
+    box(c, (x - 0.5, 0.42, 0.65), (w - 1.8, 0.4, 0.9), mat("mk_counter_base", (0.9, 0.9, 0.88), 0.4))   # (a gap to step in)
+    box(c, (x - 0.5, 0.42, 1.12), (w - 1.8, 0.4, 0.03), mat("mk_counter_glass", (0.7, 0.85, 0.9), 0.05, 0.0, 0.4))
     for j in range(4):
-        box(c, (x, 2.95, 0.9 + j * 0.5), (w - 0.5, 0.35, 0.03), mat("mk_shelf", (0.85, 0.85, 0.84), 0.5))
+        box(c, (x, D - 0.22, 0.9 + j * 0.5), (w - 0.5, 0.3, 0.03), mat("mk_shelf", (0.85, 0.85, 0.84), 0.5))
         for i in range(int((w - 0.7) / 0.32)):
             gc = goods[(i + j) % len(goods)]
-            box(c, (x - w / 2 + 0.45 + i * 0.32, 2.95, 1.03 + j * 0.5), (0.22, 0.2, 0.22 if j % 2 else 0.18), mat("mk_goods_%d_%d_%d" % tuple(int(v * 99) for v in gc), gc, 0.45))
+            box(c, (x - w / 2 + 0.45 + i * 0.32, D - 0.22, 1.03 + j * 0.5), (0.22, 0.2, 0.22 if j % 2 else 0.18), mat("mk_goods_%d_%d_%d" % tuple(int(v * 99) for v in gc), gc, 0.45))
 
 
 def rsp_shoprow():
@@ -2179,8 +2180,8 @@ def rsp_shoprow():
     plastic chair, a crate of empty bottles. (The shops' names are the story's own.)"""
     c = new_coll("rsp_shoprow")
     pav = tmat("mk_pavers", T_ALL["pavers"], 0.85)
-    tile(box(c, (0, -1.3, 0.06), (18.0, 2.0, 0.12), pav), 8, 1)
-    box(c, (0, -2.35, 0.08), (18.0, 0.2, 0.16), mat("mk_kerb", (0.62, 0.6, 0.55), 0.8))
+    tile(box(c, (0, -0.95, 0.06), (18.0, 1.3, 0.12), pav), 8, 1)                # (a narrow footpath: the row stands close to the road)
+    box(c, (0, -1.65, 0.08), (18.0, 0.2, 0.16), mat("mk_kerb", (0.62, 0.6, 0.55), 0.8))
     shops = (("AMMAN MOBILES", "Recharge · Accessories · Service", (0.82, 0.1, 0.1), "pic_phone",
               ((0.1, 0.1, 0.12), (0.9, 0.9, 0.92), (0.2, 0.5, 0.9), (0.9, 0.3, 0.4))),
              ("KOVAI SWEETS & BAKERY", "Sweets · Savouries · Cakes", (0.92, 0.55, 0.08), "pic_sweets",
@@ -2193,9 +2194,9 @@ def rsp_shoprow():
         shopfront(c, -6.0 + k * 4.0, 4.0, name, sub, col, pic, goods)
     # the floors above: a slab, the walls with grilled windows, a tuition centre's board, the roof's water tank
     upper = mat("mk_upper_wall", (0.78, 0.72, 0.6), 0.85)
-    box(c, (0, 1.6, 3.6), (16.4, 3.4, 0.2), mat("mk_slab", (0.72, 0.7, 0.66), 0.85))
-    box(c, (0, 1.6, 5.4), (16.4, 3.2, 3.4), upper)
-    box(c, (0, 1.6, 7.2), (16.6, 3.4, 0.2), mat("mk_slab", (0.72, 0.7, 0.66), 0.85))
+    box(c, (0, 0.8, 3.6), (16.4, 1.8, 0.2), mat("mk_slab", (0.72, 0.7, 0.66), 0.85))
+    box(c, (0, 0.8, 5.4), (16.4, 1.6, 3.4), upper)
+    box(c, (0, 0.8, 7.2), (16.6, 1.8, 0.2), mat("mk_slab", (0.72, 0.7, 0.66), 0.85))
     grill = mat("mk_grill", (0.15, 0.25, 0.22), 0.5, 0.5)
     for k in range(6):
         wx = -6.5 + k * 2.6
@@ -2205,7 +2206,7 @@ def rsp_shoprow():
         box(c, (wx, -0.25, 6.05), (1.5, 0.5, 0.06), mat("mk_chajja", (0.75, 0.73, 0.68), 0.85))
     box(c, (-3.2, -0.08, 4.35), (4.0, 0.06, 0.8), mat("mk_tuition", (0.95, 0.9, 0.3), 0.5))
     text(c, "BRIGHT TUITION CENTRE · 1st floor", (-3.2, -0.12, 4.35), 0.16, mat("mk_letters_blue", (0.1, 0.22, 0.5), 0.4))
-    cyl(c, (5.5, 2.4, 8.0), 0.65, 1.4, mat("mk_sintex", (0.12, 0.12, 0.12), 0.6), verts=20)   # the black water tank
+    cyl(c, (5.5, 0.8, 8.0), 0.65, 1.4, mat("mk_sintex", (0.12, 0.12, 0.12), 0.6), verts=20)   # the black water tank
     for k in range(3):                                                         # meter boxes and their wires
         box(c, (-7.9, -0.02, 2.2 + k * 0.45), (0.35, 0.15, 0.35), mat("mk_meter", (0.5, 0.52, 0.5), 0.6, 0.3))
         line(c, (-7.9, -0.1, 2.4 + k * 0.45), (-7.9 - 0.3, -0.2, 3.2), 0.01, M["phone"])
@@ -2222,13 +2223,13 @@ def rsp_shoprow():
     for k in range(48):
         box(c, (7.28 + (k % 8) * 0.09, -0.29, 1.08 + (k // 8) * 0.15), (0.022, 0.006, 0.07), brass if k % 3 else M["steel"])
     kx = 6.0                                                                   # inside: the machine, the laptop, remotes
-    box(c, (kx + 0.8, 1.0, 1.32), (0.45, 0.35, 0.38), mat("mk_keymachine", (0.85, 0.85, 0.82), 0.3, 0.3))
-    box(c, (kx + 0.8, 0.82, 1.38), (0.3, 0.01, 0.15), glow("mk_screen_lit", (0.3, 0.8, 0.5), 1.5))
-    box(c, (kx - 0.6, 1.0, 1.15), (0.34, 0.24, 0.015), M["phone"])
-    box(c, (kx - 0.6, 1.12, 1.27), (0.34, 0.015, 0.22), glow("mk_laptop_lit", (0.5, 0.65, 0.95), 1.2), rot=(0.25, 0, 0))
-    box(c, (kx - 0.15, 0.95, 1.17), (0.16, 0.1, 0.05), mat("mk_programmer", (0.4, 0.42, 0.45), 0.4))
-    for k in range(6):
-        box(c, (kx - 1.3 + k * 0.15, 0.9, 1.15), (0.05, 0.1, 0.02), M["phone"])
+    box(c, (kx - 0.1, 0.45, 1.32), (0.45, 0.32, 0.38), mat("mk_keymachine", (0.85, 0.85, 0.82), 0.3, 0.3))
+    box(c, (kx - 0.1, 0.28, 1.38), (0.3, 0.01, 0.15), glow("mk_screen_lit", (0.3, 0.8, 0.5), 1.5))
+    box(c, (kx - 1.0, 0.45, 1.15), (0.34, 0.24, 0.015), M["phone"])
+    box(c, (kx - 1.0, 0.57, 1.27), (0.34, 0.015, 0.22), glow("mk_laptop_lit", (0.5, 0.65, 0.95), 1.2), rot=(0.25, 0, 0))
+    box(c, (kx - 0.55, 0.4, 1.17), (0.16, 0.1, 0.05), mat("mk_programmer", (0.4, 0.42, 0.45), 0.4))
+    for k in range(5):
+        box(c, (kx - 1.6 + k * 0.12, 0.35, 1.15), (0.05, 0.1, 0.02), M["phone"])
     glowc = glow("mk_cross_lit", (0.1, 0.9, 0.3), 3.0)                         # the pharmacy's lit cross
     box(c, (3.6, -0.3, 2.7), (0.08, 0.5, 0.15), glowc)
     box(c, (3.6, -0.3, 2.7), (0.08, 0.15, 0.5), glowc)
