@@ -109,3 +109,21 @@ Each vehicle now has its own engine curve, gearbox (a CVT on the scooter), brake
 | bus | t0_60 6.43, top_kmh 68.0 → t0_60 14.97, t0_100 -1.0, top_kmh 79.2 | dist_m 25.0 → dist_m 25.0 |
 
 Still to do: the scooter's and the motorbike's outrigger wheels carry weight and brake (slow pull-away, too-short stops, the bike tipping over): step 4 replaces them with a leaning two-wheeler. The auto's 14° roll and the bus braking the same wet and dry (its brakes are below wet grip) are left as they are for now.
+
+## Step 4, 2026-11-07: two-wheelers that stand, lean and stop
+
+Two wheels in line (front steers, rear drives); the outrigger wheels are gone. jeep.gd `_balance`:
+- **Lean:** a critically damped spring on the roll rate, with a little integral, holds the lean a turn needs (tan = v·yaw rate / g), upright at a crawl, never past 45°. It works through an inertia-scaled torque impulse; setting the velocity directly froze the body's turning under Jolt.
+- **Line keeping:** the turn rate is held to what the bars and wheelbase ask, capped at the tyres' grip. Without it they wandered 60–100 m off a straight road.
+- **Brakes:** two wheels carry the whole braking, not half of it.
+- **Springs:** twice as stiff, mounted ("ride") so the body sits at the model's own height. The scooter sat 6 cm low and its belly dragged.
+
+| vehicle | upright | 0–60 / top | 60–0 dry / wet | turning circle | 40 km/h corner (lat g, lean) | speed breaker 40 |
+|---|---|---|---|---|---|---|
+| karthik_scooter | yes | 7.53 s / 75.6 | 19.0 / 19.0 m | 2.5 m | 0.79 g, 38.9° | wheels off 0.02 s |
+| scooter | yes | 7.65 s / 75.5 | 20.0 / 20.1 m | 1.9 m | 1.57 g, 45.3° | wheels off 0.05 s |
+| bike | yes | 11.43 s / 93.6 | 17.5 / 19.5 m | 2.3 m | 1.57 g, 45.7° | wheels off 0.03 s |
+
+Before step 4 (outriggers): Karthik's scooter 0–60 in 19 s, top 63, stopping in 12.7 m (the outriggers braked); the motorbike fell over cornering and flipped over its front in a hard stop.
+
+Still to do: the generic motorbike and scooter reach 1.6 g at full lock at 40 km/h (lateral grip, step 3).

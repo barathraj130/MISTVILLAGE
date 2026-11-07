@@ -75,6 +75,7 @@ func _vehicle(kind: String) -> void:
 	add_child(car)
 	car.configure(kind)
 	car.autopilot = true
+	await _upright(kind)
 	await _accel(kind)
 	await _brake(kind, "brake", 1.0)
 	var wet := 0.7
@@ -117,6 +118,21 @@ func _cruise(target: float) -> void:
 	car.in_brake = clampf(-e * 0.4, 0.0, 1.0)
 
 
+## Standing still for 5 s, then 10 s at a crawl (5 km/h) with the bars turned: does it stay up? (the roll at most)
+func _upright(kind: String) -> void:
+	await _place(Vector3(800, 0, 0))
+	var roll := 0.0
+	var t := 0.0
+	while t < 15.0:
+		if t > 5.0:
+			_cruise(5.0 / 3.6)
+			car.in_steer = 0.6 * sin(t)
+		await get_tree().physics_frame
+		t += 1.0 / 60.0
+		roll = maxf(roll, absf(rad_to_deg(asin(clampf(car.global_basis.x.y, -1.0, 1.0)))))
+	_report(kind, "upright", {"max_roll_deg": snappedf(roll, 0.1), "fell": roll > 60.0})
+
+
 func _accel(kind: String) -> void:
 	await _place(Vector3(0, 0, -1800))
 	var t := 0.0
@@ -132,7 +148,8 @@ func _accel(kind: String) -> void:
 			t100 = t
 		if "--labtrace" in OS.get_cmdline_user_args() and int(t * 60.0) % 60 == 0:
 			print("TRACE t=%.0f v=%.1f gear=%d rpm=%.0f thr=%.2f eng=%.0f brake=%.1f" % [t, car.speed * 3.6, car.gear, car.rpm, car._thr, car.engine_force, car.brake])
-	_report(kind, "accel", {"t0_60": snappedf(t60, 0.01), "t0_100": snappedf(t100, 0.01), "top_kmh": snappedf(car.speed * 3.6, 0.1)})
+	_report(kind, "accel", {"t0_60": snappedf(t60, 0.01), "t0_100": snappedf(t100, 0.01), "top_kmh": snappedf(car.speed * 3.6, 0.1),
+		"drift_m": snappedf(absf(car.global_position.x - 0.0), 0.1), "heading_deg": snappedf(rad_to_deg(atan2(car.global_basis.z.x, car.global_basis.z.z)), 0.1)})
 
 
 func _brake(kind: String, test: String, grip: float) -> void:
@@ -167,6 +184,8 @@ func _turn(kind: String) -> void:
 		car.in_steer = 1.0 if t > 2.0 else 0.0
 		await get_tree().physics_frame
 		t += 1.0 / 60.0
+		if "--labtrace" in OS.get_cmdline_user_args() and int(t * 60.0) % 30 == 0:
+			print("TURN t=%.1f v=%.1f steer=%.3f angvel=%s lean=%.3f tgt=%.3f" % [t, car.speed * 3.6, car.steering, str(car.angular_velocity.snapped(Vector3.ONE * 0.001)), car.lean, car.lean_target])
 	var yaw: float = absf(car.angular_velocity.y)
 	var r: float = absf(car.speed) / maxf(yaw, 0.001)
 	_report(kind, "turn", {"radius_m": snappedf(r, 0.1), "speed_kmh": snappedf(car.speed * 3.6, 0.1)})
@@ -199,7 +218,7 @@ func _corner(kind: String) -> void:
 		var moving := Vector2(v.x, v.z).normalized()
 		if v.length() > 2.0 and heading.dot(moving) < cos(deg_to_rad(25.0)):
 			spun = true
-	_report(kind, "corner", {"max_lat_g": snappedf(lat, 0.01), "roll_deg": snappedf(roll, 0.1), "spun": spun})
+	_report(kind, "corner", {"max_lat_g": snappedf(lat, 0.01), "roll_deg": snappedf(roll, 0.1), "spun": spun, "fell": roll > 60.0})
 
 
 func _bump(kind: String, kmh: float) -> void:
@@ -220,7 +239,7 @@ func _bump(kind: String, kmh: float) -> void:
 		if passing:
 			var any := false
 			for w in car._wheels:
-				if (w as VehicleWheel3D).position.x != 0.0 and (w as VehicleWheel3D).is_in_contact():
+				if (w as VehicleWheel3D).is_in_contact():
 					any = true
 			if not any:
 				off += 1.0 / 60.0

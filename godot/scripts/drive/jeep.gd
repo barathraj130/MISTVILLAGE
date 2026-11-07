@@ -104,6 +104,10 @@ var brake_full := BRAKE            # full braking for this mass
 var cda := 0.95
 var crr := 0.015
 var tyre_grip := 4.6
+var two_wheeler := false           # a scooter or a motorbike: two wheels in line, balanced and leaning (_balance)
+var lean := 0.0                    # its lean now (rad, + to its left) and the lean the turn asks for
+var lean_target := 0.0
+var _lean_i := 0.0                 # (the balance's memory of a lean it hasn't reached: a turn's steady push outward)
 var manual := false
 var cockpit := false
 var is_coupe := false
@@ -213,9 +217,9 @@ const SPECS := {
 	"bike": {"name": "Motorbike", "built": "bike", "len": 2.0, "w": 0.8, "h": 1.4, "mass": 230.0, "radius": 0.31, "torque": 0.16, "top": 26.0, "rider": true},
 	## Karthik's own scooter (tools/story_scooter.py) with him riding it in his helmet (the story's night delivery)
 	"karthik_scooter": {"name": "Karthik's scooter", "glb": "res://assets/vehicles/karthik_scooter.glb", "mass": 190.0,
-		"com": Vector3(0, 0.5, -0.1), "radius": 0.24, "rest": 0.12, "travel": 0.1, "stiff": 40.0, "torque": 0.11,
+		"com": Vector3(0, 0.5, -0.1), "radius": 0.24, "rest": 0.12, "travel": 0.1, "sag": 0.0, "stiff": 40.0, "torque": 0.11,
 		"top": 21.0, "seat": Vector3(0, 1.62, -0.2), "glass": "NoGlass", "head": ["Headlamp"], "tail": ["TailLamp"],
-		"lamp": Vector3(0.0, 1.02, 0.5), "boxes": [[Vector3(0.6, 0.9, 1.85), Vector3(0, 0.55, -0.15)]],
+		"lamp": Vector3(0.0, 1.02, 0.5), "boxes": [[Vector3(0.6, 0.8, 1.85), Vector3(0, 0.62, -0.15)]],
 		"ind": [Vector3(0.2, 0.9, 0.49), Vector3(0.135, 0.6, -0.9), Vector3(0.1, 0.5, -0.92)], "rider": true,
 		"two_wheeler": true, "rider_model": "story_karthik", "helmet": "res://assets/vehicles/helmet.glb",
 		"hip": Vector3(0, 0.945, -0.17)},
@@ -290,6 +294,7 @@ func configure(kind: String, paint := Color(0, 0, 0, 0)) -> void:
 	top_speed = sp["top"]
 	torque_mul = sp["torque"]
 	wheel_r = sp["radius"]
+	two_wheeler = bool(sp.get("two_wheeler", false)) or (bool(sp.get("rider", false)) and kind != "auto")
 	_set_drive(kind)
 	seat = sp.get("seat", Vector3.ZERO)
 	gear = 1
@@ -535,14 +540,14 @@ static func _starts(nm: String, prefixes: Array) -> bool:
 func _build_glb_wheels(sp: Dictionary) -> void:
 	for cw in _coupe_wheels:
 		var xf: Transform3D = cw[1]
-		var w := _wheel(Vector3(xf.origin.x, xf.origin.y + sp["rest"], xf.origin.z), cw[2], sp)
+		# (the mounts moved by "ride" so that, the springs settled under the weight, the body rides at the model's own
+		#  height: measured, -0.06 for the scooter, which otherwise sat 6 cm low)
+		var w := _wheel(Vector3(xf.origin.x, xf.origin.y + sp["rest"] + float(sp.get("ride", 0.0)), xf.origin.z), cw[2], sp)
 		w.add_child(cw[0])
-	if sp.get("two_wheeler", false) and not _coupe_wheels.is_empty():
-		# two wheels in line can't stand: a pair of unseen outriggers keeps it upright (an arcade scooter)
-		var y: float = (_coupe_wheels[0][1] as Transform3D).origin.y + float(sp["rest"])
-		for sx in [-0.32, 0.32]:
-			var o := _wheel(Vector3(sx, y, 0.0), false, sp)
-			o.use_as_traction = false
+		if sp.get("two_wheeler", false) and cw[2]:
+			w.use_as_traction = false                  # (a scooter drives its rear wheel)
+	# (a two-wheeler stands on its own two wheels: _balance keeps it up and leans it into a turn; it used to have a
+	#  pair of unseen outrigger wheels, which carried its weight and braked: slow away, short stops, no lean)
 
 
 ## The story's own person riding (scripts/story people, the cast's "Ride" clip, tools/humans/story_cast.py): the
@@ -633,7 +638,8 @@ func _wheel(pos: Vector3, front: bool, sp: Dictionary) -> VehicleWheel3D:
 	w.wheel_radius = sp["radius"]
 	w.wheel_rest_length = sp.get("rest", 0.2)
 	w.suspension_travel = sp.get("travel", 0.2)
-	w.suspension_stiffness = float(sp.get("stiff", 36.0)) * (1.0 + float(sp["mass"]) / 6000.0)
+	w.suspension_stiffness = float(sp.get("stiff", 36.0)) * (1.0 + float(sp["mass"]) / 6000.0) * (3.0 if sp.get("rider", false) else 1.0)
+	#  (a two-wheeler's two springs carry it all: twice as stiff, or the body sits on the road)
 	w.suspension_max_force = float(sp["mass"]) * 18.0
 	w.damping_compression = 3.0
 	w.damping_relaxation = 3.6
@@ -848,11 +854,13 @@ func _build_generic(sp: Dictionary) -> void:
 	# physics wheels (the model draws its own)
 	var half_t := maxf(W * 0.5 - 0.18, 0.28)
 	var ax := L * 0.5 - maxf(L * 0.17, 0.45)
-	for spec in [[half_t, ax, true], [-half_t, ax, true], [half_t, -ax, false], [-half_t, -ax, false]]:
-		var t: float = spec[0]
-		if sp.get("rider", false):
-			t = signf(t) * 0.3                    # two-wheelers: a narrow stance that won't tip
-		_wheel(Vector3(t, float(sp["radius"]) + 0.18, spec[1]), spec[2], sp)
+	if sp.get("rider", false):                    # a two-wheeler: two wheels in line, the front steering, the rear driving
+		var fw := _wheel(Vector3(0, float(sp["radius"]) + 0.18, ax), true, sp)
+		fw.use_as_traction = false
+		_wheel(Vector3(0, float(sp["radius"]) + 0.18, -ax), false, sp)
+	else:
+		for spec in [[half_t, ax, true], [-half_t, ax, true], [half_t, -ax, false], [-half_t, -ax, false]]:
+			_wheel(Vector3(spec[0], float(sp["radius"]) + 0.18, spec[1]), spec[2], sp)
 	if not sp.get("rider", false):
 		_add_driver(DRIVER_SEAT + _generic_cabin(sp))
 
@@ -1358,7 +1366,7 @@ func _set_drive(kind: String) -> void:
 	idle_rpm = float(d["idle"])
 	redline = float(d["redline"])
 	_up = d["up"]
-	brake_full = float(d["brake_g"]) * 9.81 * mass / BRAKE_K
+	brake_full = float(d["brake_g"]) * 9.81 * mass / BRAKE_K * (2.0 if two_wheeler else 1.0)   # (two wheels share it, not four)
 	cda = float(d["cda"])
 	crr = float(d["crr"])
 	tyre_grip = float(d["grip"])
@@ -1455,7 +1463,7 @@ func _physics_process_body(delta: float) -> void:
 	# itself): about 1 g on dry tarmac, 0.7 wet, less off the road. Braking past it is lost, as ABS loses it (he
 	# keeps steering), and the tyres squeal; the drive past it spins them.
 	var mu := _weather_grip * _surface_grip
-	var cap := mu * 9.81 * mass / BRAKE_K
+	var cap := mu * 9.81 * mass / BRAKE_K * (2.0 if two_wheeler else 1.0)
 	var over := 0.0
 	if br > cap and not in_handbrake:
 		over = (br - cap) / maxf(br, 0.001)
@@ -1485,7 +1493,9 @@ func _physics_process_body(delta: float) -> void:
 			driven += 1
 	engine_force = drive_force / float(maxi(driven, 1)) * FWD
 	brake = br
-	if on_ground:
+	if two_wheeler:
+		_balance(delta, on_ground)
+	elif on_ground:
 		# anti-roll bars: the body leans into a corner but settles, it doesn't wallow
 		var fwd_axis := forward()
 		var roll := asin(clampf(global_transform.basis.x.y, -1.0, 1.0))
@@ -1511,6 +1521,41 @@ func _physics_process_body(delta: float) -> void:
 	var s := smoothstep(0.0, 18.0, absf(speed))
 	var max_s := lerpf(MAX_STEER, HIGH_SPEED_STEER, sqrt(s)) * (lerpf(1.0, steer_sens, s) if not autopilot else 1.0)
 	steering = move_toward(steering, _steer_in * max_s, delta * (1.0 if not autopilot else 2.5))
+
+
+## A two-wheeler kept up and leaned as a rider does it: the lean a turn needs (tan = v·yaw-rate / g, into the turn),
+## held by a torque about its length (a spring to the target, a damper on the rate); at a crawl it is held upright
+## (his feet), and never past 45°. The rider is part of the body, so he leans with it.
+func _balance(delta: float, on_ground: bool) -> void:
+	var fwd_axis := forward()
+	lean = asin(clampf(global_basis.x.y, -1.0, 1.0))
+	var rate := angular_velocity.dot(fwd_axis)
+	var yaw_rate := angular_velocity.dot(Vector3.UP)
+	var v := absf(speed)
+	var want := -atan(v * yaw_rate / 9.81) * smoothstep(1.0, 4.0, v)
+	lean_target = lerp_angle(lean_target, clampf(want, -0.78, 0.78), 1.0 - exp(-delta * 8.0))
+	# (a critically damped spring on the roll rate: a plain torque, against these light bodies' tiny shape-made
+	#  inertia, overshot and threw them over)
+	var w0 := lerpf(22.0, 16.0, smoothstep(1.0, 6.0, v))          # (stiffer at a crawl: his feet)
+	if not on_ground:
+		w0 *= 0.3
+		_lean_i = 0.0
+	var err := lean - lean_target
+	_lean_i = clampf(_lean_i + err * delta, -0.3, 0.3)
+	var accel := -(w0 * w0 * err + 2.0 * w0 * rate + w0 * w0 * 2.0 * _lean_i)
+	# its line: a bike's steering geometry (trail) keeps it on the line the bars ask for (yaw rate = v·tan(steer) /
+	# wheelbase); without it, it wandered off a straight road and weaved
+	var wb := 1.25
+	if _wheels.size() >= 2:
+		wb = maxf(absf((_wheels[0] as Node3D).position.z - (_wheels[_wheels.size() - 1] as Node3D).position.z), 0.8)
+	var yaw_want := speed * tan(steering) / wb
+	var grip_turn := _weather_grip * _surface_grip * 9.81 / maxf(v, 1.0)   # (no more turn than the tyres hold: ~1 g dry)
+	yaw_want = clampf(yaw_want, -grip_turn, grip_turn)
+	var yaw_acc := (yaw_want - yaw_rate) * 8.0 * smoothstep(0.5, 2.5, v) if on_ground else 0.0
+	var st := PhysicsServer3D.body_get_direct_state(get_rid())   # (a nudge of exactly that much roll and yaw rate,
+	if st:                                                        #  whatever the body's inertia; setting the velocity
+		var inertia := st.inverse_inertia_tensor.inverse()        #  itself froze the body's turning under Jolt)
+		apply_torque_impulse(inertia * ((fwd_axis * accel + Vector3.UP * yaw_acc) * delta))
 
 
 func _process(delta: float) -> void:
