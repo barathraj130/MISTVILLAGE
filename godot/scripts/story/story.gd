@@ -108,6 +108,7 @@ var dvr: Control                      # a camera recorder's footage on someone's
 var court: Control                    # the trial: the prosecution's points, his evidence, the night on the map (court.gd)
 var keypad: Control                   # a thing with a PIN, worked up close: Bala's key programmer (keypad.gd)
 var _kp := {}                          # a "keypad" step as it goes: tries, opened, the skip's own steps
+var _prov := {}                        # a "provoke" step as it goes: his line, its time, Karthik's anger, what he has seen
 var _spot := {}                        # a "spot" step as it goes: the time left, who he has already pointed at
 var _ask := {}                         # an "ask" step as it goes: how often each was asked, the skip's turn, the line's time
 var doorbell: Control                 # Ashwin's doorbell camera: it records him that night, plays on a tablet later (doorbell.gd)
@@ -287,6 +288,8 @@ func _process(dt: float) -> void:
 			_ask_step(dt)
 		"spot":
 			_spot_step(dt)
+		"provoke":
+			_provoke_step(dt)
 		"choose":
 			_choose()
 		"climb":
@@ -683,6 +686,10 @@ func _next() -> void:
 			_covert_start()
 		"keypad":
 			_kp = {"tries": 0, "open": false, "seen": {}}
+		"provoke":
+			if _f2f:
+				_f2f_off()
+			_prov = {"i": 0, "t": 0.0, "anger": float(cur.get("anger0", 0.15)), "seen": false, "gap": 0.0, "taunt": 0}
 		"spot":
 			_anchor()
 			_cast(cur.get("cast", {}))
@@ -1568,6 +1575,106 @@ func _spot_step(dt: float) -> void:
 	if e and not _e_down and best != "":
 		_spot_pick(best)
 	_e_down = e
+
+
+## "provoke": a man who wants him to do something stupid ("who": Suresh at the trap), on foot, in his own view. His
+## "lines" come one after another, low on the screen, each with its "anger" (Karthik's, a meter at the top, which
+## his stress makes quicker); holding Space he breathes and it eases. What he does is the answer: walk away (more than
+## "walk" metres: "walked"), E at him ("grab"), E at the bag on the bonnet ("bag", in the car's frame: "took"); his
+## anger full, his hands go to the collar by themselves ("grab"). Looking at "watch" (the police jeep, in the car's
+## frame) shows his "watch_line" thought once. Testing: --storychoose=1 walks, 2 grabs, 3 takes.
+func _provoke_step(dt: float) -> void:
+	var a: Node3D = cast.get(str(cur["who"]))
+	var w: Node3D = city.walker
+	var lines: Array = cur["lines"]
+	var name := tr_(data["people"].get(str(cur["who"]), {}))
+	_ensure_lines()
+	var life = city.life if "life" in city else null
+	var quick := 1.0 + (float(life.stress) / 200.0 if life else 0.0)      # (a worn man's temper is shorter)
+	var breathing := Input.is_key_pressed(KEY_SPACE)
+	if _skip and not "--storychoose=2" in OS.get_cmdline_user_args():
+		breathing = true                                  # (testing: a calm player breathes through it)
+	_prov["anger"] = clampf(float(_prov["anger"]) - dt * (0.12 if breathing else 0.01), 0.0, 1.0)
+	_prov["t"] = float(_prov["t"]) + dt
+	var i: int = _prov["i"]
+	if i < lines.size():
+		var ln: Dictionary = lines[i]
+		if float(_prov["t"]) - dt <= 0.0:                 # a new line: said, and it lands
+			_sub.text = name + ":  " + tr_(ln)
+			_sub.visible = true
+			if a:
+				a.play("Talk")
+			_shot()
+		if float(_prov["t"]) < 1.2:                        # (the anger comes in over a second)
+			_prov["anger"] = minf(1.0, float(_prov["anger"]) + dt / 1.2 * float(ln.get("anger", 0.1)) * quick)
+		if float(_prov["t"]) > clampf(str(tr_(ln)).length() / 12.0, 3.5, 9.0) * (0.3 if _skip else 1.0):
+			_prov["i"] = i + 1
+			_prov["t"] = 0.0
+			if a:
+				a.play("Idle")
+	else:                                                    # all said: he waits, and needles now and then
+		if float(_prov["t"]) > 9.0 and cur.has("taunts"):
+			var tl: Array = cur["taunts"]
+			_sub.text = name + ":  " + tr_(tl[int(_prov["taunt"]) % tl.size()])
+			_sub.visible = true
+			_prov["taunt"] = int(_prov["taunt"]) + 1
+			_prov["anger"] = minf(1.0, float(_prov["anger"]) + 0.06 * quick)
+			_prov["t"] = 0.0
+	var nb := int(round(float(_prov["anger"]) * 10.0))
+	_status.text = ("Anger " if lang == "en" else "கோபம் ") + "●".repeat(nb) + "○".repeat(10 - nb) + ("      Space: breathe" if lang == "en" else "      Space: மூச்சு விடு")
+	_status.add_theme_color_override("font_color", Color(1.0, 0.4, 0.35) if nb >= 7 else Color(1, 1, 1, 0.92))
+	_status.visible = true
+	var pick := 1
+	for arg in OS.get_cmdline_user_args():
+		if arg.begins_with("--storychoose="):
+			pick = int(arg.get_slice("=", 1))
+	if _skip and _prov["i"] >= lines.size():
+		_provoke_end(["walk", "grab", "take"][clampi(pick - 1, 0, 2)])
+		return
+	if float(_prov["anger"]) >= 1.0:
+		_provoke_end("grab")
+		return
+	if w == null or a == null:
+		goal.text = tr_(cur["goal"]) + ("\n" + _off_key() if w == null else "")
+		return
+	var d := Vector2(w.global_position.x - a.global_position.x, w.global_position.z - a.global_position.z).length()
+	if d > float(cur.get("walk", 9.0)):
+		_provoke_end("walk")
+		return
+	if cur.has("watch") and not _prov["seen"]:            # the jeep down the field road, if he looks
+		var jp: Vector3 = _w2(cur["watch"])
+		var fwd: Vector3 = -w.camera.global_basis.z
+		var to_j: Vector3 = jp - w.camera.global_position
+		if to_j.length() < 80.0 and Vector2(fwd.x, fwd.z).normalized().dot(Vector2(to_j.x, to_j.z).normalized()) > 0.96:
+			_prov["seen"] = true
+			flags[str(cur.get("seen_flag", "watch_seen"))] = true
+			_sub.text = tr_(cur["watch_line"])
+			_sub.visible = true
+			_prov["t"] = maxf(float(_prov["t"]), 0.01)
+	var near_bag := cur.has("bag") and Vector2(w.global_position.x - _w2(cur["bag"]).x, w.global_position.z - _w2(cur["bag"]).z).length() < 1.6
+	var hint := ""
+	if near_bag:
+		hint = "E: take the bag" if lang == "en" else "E: பைய எடு"
+	elif d < 2.2:
+		hint = "E: grab his collar" if lang == "en" else "E: காலர பிடி"
+	goal.text = tr_(cur["goal"]) + ("\n" + hint if hint != "" else "")
+	var e := Input.is_key_pressed(KEY_E)
+	if e and not _e_down:
+		if near_bag:
+			_provoke_end("take")
+		elif d < 2.2:
+			_provoke_end("grab")
+	_e_down = e
+
+
+func _provoke_end(what: String) -> void:
+	flags[str(cur["flags"][what])] = true
+	print("STORY provoke: %s (anger %.2f)" % [what, float(_prov.get("anger", 0.0))])
+	var life = city.life if "life" in city else null
+	if life:
+		life.stress = clampf(life.stress + float(_prov.get("anger", 0.0)) * 10.0, 0.0, 100.0)
+	_prov = {}
+	_next()
 
 
 func _spot_pick(key: String) -> void:
@@ -3523,7 +3630,7 @@ func _refresh() -> void:
 	big.visible = kind in ["card", "jump"]
 	small.visible = kind in ["card", "jump"]
 	box.visible = false
-	goal.visible = kind in ["drive", "free", "meet", "home", "eat_out", "gigs", "climb", "covert", "keypad", "ask", "spot"]
+	goal.visible = kind in ["drive", "free", "meet", "home", "eat_out", "gigs", "climb", "covert", "keypad", "ask", "spot", "provoke"]
 	clock.visible = kind in ["drive", "free", "talk", "comfort_verdict", "deliver_verdict", "task", "lapse", "meet", "home", "eat_out", "gigs", "climb", "choose"]
 	if step < 0:
 		big.visible = false                          # (no title shown: the story's name would give it away)

@@ -2243,9 +2243,30 @@ def rsp_shoprow():
     return c
 
 
+def cash_bag():
+    """The bag Suresh puts on his car's bonnet at the trap (Day 16): a black zip bag, half open, bundles of
+    five-hundred-rupee notes inside under their paper bands. (It stands on the ground at its origin; the story lifts it.)"""
+    c = new_coll("cash_bag")
+    blk = mat("mk_bag_black", (0.05, 0.05, 0.06), 0.55)
+    rbox(c, (0, 0, 0.13), (0.46, 0.26, 0.26), blk, bevel=0.05)
+    box(c, (0, 0, 0.265), (0.4, 0.03, 0.01), mat("mk_zip", (0.6, 0.6, 0.6), 0.3, 0.8))
+    for side in (-1, 1):                                                       # its handles
+        bpy.ops.mesh.primitive_torus_add(major_radius=0.1, minor_radius=0.012, location=(0, side * 0.08, 0.28), rotation=(math.pi / 2, 0, 0))
+        _put(bpy.context.object, blk, c)
+    note = mat("mk_note500", (0.62, 0.64, 0.6), 0.7)
+    band = mat("mk_band", (0.92, 0.9, 0.85), 0.7)
+    for k in range(6):                                                         # bundles peeking out of the open zip
+        x = -0.15 + (k % 3) * 0.15
+        y = -0.03 + (k // 3) * 0.06
+        box(c, (x, y, 0.27 + 0.01 * (k % 2)), (0.14, 0.06, 0.05), note, rot=(0.2 * (k % 2), 0, 0.1 * (k - 3)))
+        box(c, (x, y, 0.27 + 0.01 * (k % 2)), (0.02, 0.062, 0.052), band, rot=(0.2 * (k % 2), 0, 0.1 * (k - 3)))
+    return c
+
+
 BUILD = {"market_vegcart": vegcart, "market_groundstall": groundstall, "market_banana": banana, "market_crates": crates,
          "market_teakadai": teakadai, "bala_workshop": workshop, "bala_workshop_closed": workshop_closed,
-         "pudhur_site": pudhur_site, "agri_fair": agri_fair, "townhall_pavement": townhall_pavement, "rsp_shoprow": rsp_shoprow}
+         "pudhur_site": pudhur_site, "agri_fair": agri_fair, "townhall_pavement": townhall_pavement, "rsp_shoprow": rsp_shoprow,
+         "cash_bag": cash_bag}
 
 
 def join(coll, name):
@@ -2279,7 +2300,7 @@ def preview(out_dir, obs):
     sc.view_settings.view_transform = 'Standard'          # (the colours as they are, as Godot shows them)
     at = {"market_vegcart": -4.6, "market_groundstall": -1.2, "market_banana": 1.9, "market_crates": 4.4, "market_teakadai": 9.0,
           "bala_workshop": 16.0, "bala_workshop_closed": 16.0, "pudhur_site": 40.0, "agri_fair": 70.0,
-          "townhall_pavement": 110.0, "rsp_shoprow": 140.0}
+          "townhall_pavement": 110.0, "rsp_shoprow": 140.0, "cash_bag": 170.0}
     for ob in obs:
         ob.location = (at[ob.name], 0, 0)
     built = [ob.name for ob in obs]

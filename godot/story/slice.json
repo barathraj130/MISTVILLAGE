@@ -10710,6 +10710,30 @@
       0,
       3.0
      ]
+    },
+    {
+     "scene": "res://assets/vehicles/luxury_suv.glb",
+     "pos": [
+      9.0,
+      30.0
+     ],
+     "look": [
+      9.0,
+      20.0
+     ],
+     "paint": "#e6e6e2"
+    },
+    {
+     "scene": "res://assets/city_props/cash_bag.glb",
+     "pos": [
+      -4.6,
+      4.2
+     ],
+     "look": [
+      0,
+      4.2
+     ],
+     "lift": 1.42
     }
    ]
   },
@@ -10721,48 +10745,68 @@
      "who": "suresh",
      "en": "Boss! You came. Good boy. ...Sit, sit. Nobody here but the frogs.",
      "ta": "பாஸ்! வந்துட்ட. நல்ல பையன். ...உக்காரு உக்காரு. தவளைங்கள தவிர இங்க யாரும் இல்ல."
-    },
-    {
-     "who": "suresh",
-     "en": "Here. (A bag on the bonnet.) Five lakhs. Take Amma and Divya to Ooty. A new start. Forget the photos, forget the card. What good did any of it do Raghavan?",
-     "ta": "இந்தா. (பானெட் மேல ஒரு பை.) அஞ்சு லட்சம். அம்மாவையும் திவ்யாவையும் ஊட்டிக்கு கூட்டிட்டு போ. புது ஆரம்பம். போட்டோ, கார்டு எல்லாம் மறந்துடு. அதெல்லாம் ராகவனுக்கு என்ன நல்லது பண்ணுச்சு?"
-    },
-    {
-     "who": "karthik",
-     "en": "(Down the field road, under the trees, a jeep with its lights off. I know that jeep. Nagar station.)",
-     "ta": "(வயல் ரோட்டுல, மரத்துக்கு அடியில, லைட் அணைச்ச ஒரு ஜீப். அந்த ஜீப்ப எனக்கு தெரியும். நகர் ஸ்டேஷன்.)"
-    },
-    {
-     "who": "suresh",
-     "en": "No? ...Then think about your sister walking home from that college. Every evening. Alone.",
-     "ta": "வேண்டாமா? ...அப்போ உன் தங்கச்சி அந்த காலேஜ்ல இருந்து தனியா நடந்து வர்றத நினைச்சு பாரு. தினமும் சாயங்காலம். தனியா."
     }
    ]
   },
   {
-   "do": "choose",
+   "do": "provoke",
    "when": "trap_went",
-   "prompt": {
-    "en": "He's smiling. The jeep is waiting.",
-    "ta": "அவர் சிரிக்கிறாரு. ஜீப் காத்திருக்கு."
+   "who": "suresh",
+   "walk": 9.0,
+   "anger0": 0.2,
+   "goal": {
+    "en": "Don't give him what he wants",
+    "ta": "அவருக்கு வேண்டியத குடுக்காத"
    },
-   "options": [
+   "lines": [
     {
-     "text": {
-      "en": "Turn your back on him and walk to the scooter",
-      "ta": "அவருக்கு முதுக காட்டி ஸ்கூட்டருக்கு நடங்க"
-     },
-     "set": "trap_walked"
+     "en": "Here. (A bag on the roof of his car.) Five lakhs. Take Amma and Divya to Ooty. A new start. Forget the photos, forget the card. What good did any of it do Raghavan?",
+     "ta": "இந்தா. (கூரை மேல ஒரு பை.) அஞ்சு லட்சம். அம்மாவையும் திவ்யாவையும் ஊட்டிக்கு கூட்டிட்டு போ. புது ஆரம்பம். போட்டோ, கார்டு எல்லாம் மறந்துடு. அதெல்லாம் ராகவனுக்கு என்ன நல்லது பண்ணுச்சு?",
+     "anger": 0.12
     },
     {
-     "text": {
-      "en": "Grab him by the collar",
-      "ta": "அவர் சட்டை காலர பிடிங்க"
-     },
-     "set": "trap_grabbed",
-     "stress": 12
+     "en": "Your Amma still buys her vegetables from Valliammai, no? Nice lady. Talks a lot.",
+     "ta": "உங்கம்மா இன்னும் வள்ளியம்மை கிட்ட தான் காய்கறி வாங்கறாங்க, இல்ல? நல்ல அம்மா. நிறைய பேசுவாங்க.",
+     "anger": 0.18
+    },
+    {
+     "en": "No? ...Then think about your sister walking home from that college. Every evening. Alone.",
+     "ta": "வேண்டாமா? ...அப்போ உன் தங்கச்சி அந்த காலேஜ்ல இருந்து தனியா நடந்து வர்றத நினைச்சு பாரு. தினமும் சாயங்காலம். தனியா.",
+     "anger": 0.42
     }
-   ]
+   ],
+   "taunts": [
+    {
+     "en": "Go on then. Walk. You're good at that, driver.",
+     "ta": "போ அப்போ. நட. அதுல நீ கெட்டிக்காரன், டிரைவர்."
+    },
+    {
+     "en": "Raghavan trusted you too. Look where that got him.",
+     "ta": "ராகவனும் உன்ன நம்பினாரு. அவருக்கு என்ன ஆச்சு பாரு."
+    },
+    {
+     "en": "Five lakhs is five lakhs, boss. Divya's fees. Think.",
+     "ta": "அஞ்சு லட்சம் அஞ்சு லட்சம் தான், பாஸ். திவ்யா ஃபீஸ். யோசி."
+    }
+   ],
+   "watch": [
+    9.0,
+    30.0
+   ],
+   "watch_line": {
+    "en": "(Down the field road, under the trees, a jeep with its lights off. I know that jeep. Nagar station.)",
+    "ta": "(வயல் ரோட்டுல, மரத்துக்கு அடியில, லைட் அணைச்ச ஒரு ஜீப். அந்த ஜீப்ப எனக்கு தெரியும். நகர் ஸ்டேஷன்.)"
+   },
+   "seen_flag": "trap_saw_jeep",
+   "bag": [
+    -4.6,
+    4.2
+   ],
+   "flags": {
+    "walk": "trap_walked",
+    "grab": "trap_grabbed",
+    "take": "trap_took"
+   }
   },
   {
    "do": "talk",
@@ -10791,6 +10835,35 @@
    "strike": {
     "en": "The inspector saw you lay hands on a witness at the scene. That is a breach of your bail. One more and you go inside. – Selvi",
     "ta": "சம்பவ இடத்துல ஒரு சாட்சி மேல நீ கை வச்சத இன்ஸ்பெக்டர் பாத்தாரு. இது உன் பெயில் மீறல். இன்னொன்னு, உள்ள போவ. – செல்வி"
+   }
+  },
+  {
+   "do": "talk",
+   "when": "trap_took",
+   "lines": [
+    {
+     "who": "karthik",
+     "en": "(The bag is heavier than it looks. I've lifted it off the car before I know why.)",
+     "ta": "(பை பாக்கறத விட கனமா இருக்கு. ஏன்னு தெரியறதுக்கு முன்னாடியே கார் மேல இருந்து எடுத்துட்டேன்.)"
+    },
+    {
+     "who": "murugesan",
+     "en": "(Headlights. Boots on gravel.) Put it down. ...Five lakhs, in an accused's hands, from a witness, at the scene. Do you know what that looks like, Karthik? It looks like a price.",
+     "ta": "(ஹெட்லைட். சரளைக்கல்லுல பூட்ஸ்.) கீழ வை. ...அஞ்சு லட்சம், குற்றம் சாட்டப்பட்டவன் கையில, ஒரு சாட்சி கிட்ட இருந்து, சம்பவ இடத்துல. இது எப்படி தெரியுது தெரியுமா, கார்த்திக்? ஒரு விலை மாதிரி."
+    },
+    {
+     "who": "suresh",
+     "en": "He asked me for money, inspector. I only wanted the family to be all right. You saw.",
+     "ta": "அவன் தான் காசு கேட்டான், இன்ஸ்பெக்டர். குடும்பம் நல்லா இருக்கணும்னு தான் நினைச்சேன். நீங்களே பாத்தீங்க."
+    }
+   ]
+  },
+  {
+   "do": "bail",
+   "when": "trap_took",
+   "strike": {
+    "en": "The inspector found you with five lakhs of a witness's money at the scene. That is a breach of your bail, and it will be in his report. One more and you go inside. – Selvi",
+    "ta": "சம்பவ இடத்துல ஒரு சாட்சியோட அஞ்சு லட்சத்தோட உன்ன இன்ஸ்பெக்டர் பிடிச்சாரு. இது உன் பெயில் மீறல், அவர் ரிப்போர்ட்ல வரும். இன்னொன்னு, உள்ள போவ. – செல்வி"
    }
   },
   {
