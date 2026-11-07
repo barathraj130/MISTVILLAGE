@@ -8143,11 +8143,11 @@
    "options": [
     {
      "text": {
-      "en": "Go to The Noyyal Galleria, buy a proper shirt, come back for lunch (about ₹2,350)",
-      "ta": "நொய்யல் கேலரியா போய், நல்ல சட்ட வாங்கிட்டு, சாப்பிட திரும்ப வாங்க (சுமார் ₹2,350)"
+      "en": "Go to The Noyyal Galleria, buy clothes that get past that door, come back for lunch (₹2,500 or more)",
+      "ta": "நொய்யல் கேலரியா போய், அந்த கதவ தாண்டற துணி வாங்கிட்டு, சாப்பிட திரும்ப வாங்க (₹2,500 அல்லது அதுக்கு மேல)"
      },
      "set": "grand_shirt",
-     "need": 2350
+     "need": 2500
     },
     {
      "text": {
@@ -8204,19 +8204,118 @@
    }
   },
   {
-   "do": "talk",
+   "do": "shop",
    "when": "grand_shirt",
+   "shop": {
+    "en": "Kovai Cotton House · second floor, The Noyyal Galleria",
+    "ta": "கோவை காட்டன் ஹவுஸ் · இரண்டாம் தளம், நொய்யல் கேலரியா"
+   },
+   "smart_need": 1,
+   "flag": "grand_dressed",
+   "left": "grand_left_shop",
+   "rows": [
+    {
+     "label": {
+      "en": "Shirts",
+      "ta": "சட்டைகள்"
+     },
+     "items": [
+      {
+       "name": {
+        "en": "Round-neck T-shirt",
+        "ta": "ரவுண்ட் நெக் டி-ஷர்ட்"
+       },
+       "price": 399,
+       "smart": 0,
+       "colour": "#3a6a9a"
+      },
+      {
+       "name": {
+        "en": "Check shirt, sale rack",
+        "ta": "செக் சட்டை, தள்ளுபடி ரேக்"
+       },
+       "price": 499,
+       "smart": 1,
+       "colour": "#7a2a2a",
+       "pattern": "check"
+      },
+      {
+       "name": {
+        "en": "White cotton shirt",
+        "ta": "வெள்ளை காட்டன் சட்டை"
+       },
+       "price": 899,
+       "smart": 1,
+       "colour": "#f2f0ea"
+      },
+      {
+       "name": {
+        "en": "Linen shirt, sky blue",
+        "ta": "லினன் சட்டை, வான நீலம்"
+       },
+       "price": 1899,
+       "smart": 2,
+       "colour": "#a8c8e8"
+      }
+     ]
+    },
+    {
+     "label": {
+      "en": "For your feet",
+      "ta": "கால்களுக்கு"
+     },
+     "items": [
+      {
+       "name": {
+        "en": "Keep the rubber slippers",
+        "ta": "ரப்பர் செருப்பே போதும்"
+       },
+       "price": 0,
+       "smart": 0,
+       "colour": "#2a4a8a"
+      },
+      {
+       "name": {
+        "en": "Leather sandals",
+        "ta": "தோல் செருப்பு"
+       },
+       "price": 549,
+       "smart": 1,
+       "colour": "#6a4020"
+      },
+      {
+       "name": {
+        "en": "Formal shoes, black",
+        "ta": "ஃபார்மல் ஷூ, கருப்பு"
+       },
+       "price": 1799,
+       "smart": 2,
+       "colour": "#151515"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "do": "talk",
+   "when": "grand_dressed",
    "lines": [
     {
      "who": "karthik",
-     "en": "(Second floor, Kovai Cotton House. A white cotton shirt, ₹899. The girl at the counter folds it as if it were worth more.)",
-     "ta": "(ரெண்டாவது மாடி, கோவை காட்டன் ஹவுஸ். வெள்ள காட்டன் சட்ட, ₹899. கவுண்டர் பொண்ணு அத இன்னும் விலை அதிகம் மாதிரி மடிக்கிறா.)",
-     "pay": -899
-    },
+     "en": "(I change in the trial room and fold the rider jacket into the bag. In the mirror, a man who could walk through a hotel door.)",
+     "ta": "(டிரையல் ரூம்ல மாத்திட்டு, ரைடர் ஜாக்கெட்ட பையில மடிச்சு வைக்கறேன். கண்ணாடியில, ஹோட்டல் கதவு வழியா நடக்கற ஒரு ஆள்.)"
+    }
+   ]
+  },
+  {
+   "do": "talk",
+   "when": "grand_shirt",
+   "unless": "grand_dressed",
+   "lines": [
     {
      "who": "karthik",
-     "en": "(And leather sandals from the rack by the door. I change in the trial room and fold the rider jacket into the bag.)",
-     "ta": "(கதவு பக்கத்து ரேக்ல இருந்து தோல் செருப்பு. ட்ரையல் ரூம்ல மாத்திட்டு, ரைடர் ஜாக்கெட்ட பையில மடிச்சு வைக்கிறேன்.)"
+     "en": "(I change in the trial room. Something cheap, to save the lunch money. It'll do. It'll have to.)",
+     "ta": "(டிரையல் ரூம்ல மாத்திக்கறேன். சாப்பாட்டு காசுக்காக மலிவா ஒண்ணு. போதும். போதணும்.)"
     }
    ]
   },
@@ -8265,7 +8364,7 @@
   },
   {
    "do": "talk",
-   "when": "grand_shirt",
+   "when": "grand_dressed",
    "lines": [
     {
      "who": "security",
@@ -8280,8 +8379,25 @@
    ]
   },
   {
-   "do": "eat_out",
+   "do": "talk",
    "when": "grand_shirt",
+   "unless": "grand_dressed",
+   "lines": [
+    {
+     "who": "security",
+     "en": "(His eyes go to my feet, and stay there.) Sir... back gate. Service lane, on the left.",
+     "ta": "(அவர் கண்ணு என் காலுக்கு போகுது, அங்கயே நிக்குது.) சார்... பின் கேட். சர்வீஸ் லேன், இடது பக்கம்."
+    },
+    {
+     "who": "karthik",
+     "en": "(He looked at my feet. Half a shirt gets you half way.)",
+     "ta": "(என் கால பாத்தாரு. அரை சட்டை, பாதி தூரம் தான்.)"
+    }
+   ]
+  },
+  {
+   "do": "eat_out",
+   "when": "grand_dressed",
    "goal": {
     "en": "Lunch at the Siruvani Grand's restaurant",
     "ta": "சிறுவாணி கிராண்ட் உணவகத்துல மதிய சாப்பாடு"
@@ -8346,7 +8462,7 @@
   },
   {
    "do": "talk",
-   "when": "grand_shirt",
+   "when": "grand_dressed",
    "lines": [
     {
      "who": "ganesan",
@@ -8363,6 +8479,23 @@
   {
    "do": "talk",
    "when": "grand_shirt",
+   "unless": "grand_dressed",
+   "lines": [
+    {
+     "who": "ganesan",
+     "en": "(Low, not looking at me.) Not here, sir. Not like this, with the whole lobby watching me send you round the back. Come properly, another day, and ask.",
+     "ta": "(மெதுவா, என்ன பாக்காம.) இங்க வேண்டாம், சார். இப்படி இல்ல, உங்கள பின்னாடி அனுப்பறத லாபி முழுக்க பாக்குது. இன்னொரு நாள் ஒழுங்கா வந்து கேளுங்க."
+    },
+    {
+     "who": "karthik",
+     "en": "(Six hundred rupees saved. Whatever he knows walks back in through the front door without me.)",
+     "ta": "(அறுநூறு ரூபாய் மிச்சம். அவருக்கு தெரிஞ்சது என்ன இல்லாம முன் கதவு வழியா திரும்ப உள்ள போகுது.)"
+    }
+   ]
+  },
+  {
+   "do": "talk",
+   "when": "grand_dressed",
    "lines": [
     {
      "who": "karthik",
@@ -8373,12 +8506,12 @@
   },
   {
    "do": "record",
-   "when": "grand_shirt",
+   "when": "grand_dressed",
    "on": true
   },
   {
    "do": "talk",
-   "when": "grand_shirt",
+   "when": "grand_dressed",
    "lines": [
     {
      "who": "ganesan",
@@ -8399,12 +8532,12 @@
   },
   {
    "do": "record",
-   "when": "grand_shirt",
+   "when": "grand_dressed",
    "on": false
   },
   {
    "do": "evidence",
-   "when": "grand_shirt",
+   "when": "grand_dressed",
    "speaker": "ganesan",
    "tag": "E18",
    "label": {

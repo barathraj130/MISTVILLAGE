@@ -17,3 +17,13 @@ blender/
 build/
 vendor/
 godot/assets/city/
+
+# build logs (tools' runs)
+build_*.log
+previews/**/*.log
+# city props: the textures Godot extracts from each .glb on import (the .glb carries them; re-extracted on any
+# import) and market_props.py's generated texture folder (re-made each build). Already-tracked images stay tracked;
+# a new hand-made image here needs `git add -f`.
+godot/assets/city_props/*.png
+godot/assets/city_props/*.jpg
+godot/assets/city_props/tex/

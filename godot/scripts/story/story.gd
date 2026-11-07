@@ -59,6 +59,7 @@ const Wall := preload("res://scripts/story/wall.gd")
 const Dvr := preload("res://scripts/story/dvr.gd")
 const Doorbell := preload("res://scripts/story/doorbell.gd")
 const Keypad := preload("res://scripts/story/keypad.gd")
+const Shop := preload("res://scripts/story/shop.gd")
 const Court := preload("res://scripts/story/court.gd")
 const Actor := preload("res://scripts/story/actor.gd")
 const Walker := preload("res://scripts/player.gd")
@@ -106,6 +107,8 @@ var table: Control                    # the questioning (table.gd)
 var wall: Control                     # the wall in his room (wall.gd)
 var dvr: Control                      # a camera recorder's footage on someone's monitor (dvr.gd)
 var court: Control                    # the trial: the prosecution's points, his evidence, the night on the map (court.gd)
+var shop: Control                     # a shop's counter: racks, prices, his wallet (shop.gd)
+var _outfit := {}                      # what he bought and has on ({"top": colour}), until he's home again
 var keypad: Control                   # a thing with a PIN, worked up close: Bala's key programmer (keypad.gd)
 var _kp := {}                          # a "keypad" step as it goes: tries, opened, the skip's own steps
 var _act := {}                         # an "act" step as it goes: which way he went, the skip's time
@@ -248,6 +251,9 @@ func _process(dt: float) -> void:
 		return
 	t_step += dt
 	_keys()
+	if not _outfit.is_empty() and city.walker and city.walker.model and not city.walker.model.get_meta("dressed", false):
+		city.walker.model.set_meta("dressed", true)                # (a new body each time he gets off: dress it)
+		_tint(city.walker.model, "top", Color.html(str(_outfit["top"])))
 	if _park != "" and str(cur.get("do", "")) != "ride" and _place_at(place_pos(_park)):
 		_park = ""
 	match str(cur["do"]):
@@ -293,6 +299,9 @@ func _process(dt: float) -> void:
 			_provoke_step(dt)
 		"act":
 			_act_step()
+		"shop":
+			if _skip and t_step > 1.0 and shop.visible:     # (testing: the cheapest that passes; --storyshop=2 the cheapest of all)
+				_shop_skip()
 		"choose":
 			_choose()
 		"climb":
@@ -490,6 +499,11 @@ func _next() -> void:
 		var want := "bike" if str(cur["vehicle"]) == "karthik_scooter" and city.money and city.money.seized else str(cur["vehicle"])
 		if car.vehicle != want:
 			car.configure(want)
+	if str(cur["do"]) == "home" and not _outfit.is_empty():   # (home: the rider jacket back on)
+		_outfit = {}
+		if city.walker and city.walker.model:
+			city.walker.model.set_meta("dressed", false)
+			_tint(city.walker.model, "top", Color(0, 0, 0, 0))
 	if str(cur["do"]) in ["drive", "jump", "home", "ride"] and not _props.is_empty():
 		for pr in _props:
 			if is_instance_valid(pr):
@@ -689,6 +703,12 @@ func _next() -> void:
 			_covert_start()
 		"keypad":
 			_kp = {"tries": 0, "open": false, "seen": {}}
+		"shop":
+			if city.walker:
+				city.walker.active = false
+			shop.lang = lang
+			shop.open(tr_(cur["shop"]), cur["rows"], fines.sim.money if fines else 0)
+			_shot()
 		"act":
 			_anchor()
 			_cast(cur.get("cast", {}))
@@ -1760,6 +1780,68 @@ func _act_pay() -> void:
 	if fines:
 		fines.sim.money -= amt
 	_act_done("pay")
+
+
+## "shop": at a counter ("shop", its name), one thing from each of its "rows" (shop.gd); paid from his account. If
+## everything bought is "smart" enough ("smart_need") the "flag" is set (a hotel door lets him in). He wears it:
+## the shirt's colour on him from then until he's home. Esc leaves with nothing ("left" flag).
+func _shop_done(bought: Array) -> void:
+	if str(cur.get("do", "")) != "shop":
+		return
+	if city.walker:
+		city.walker.active = true
+	if bought.is_empty():
+		flags[str(cur.get("left", "shop_left"))] = true
+		print("STORY shop: left with nothing")
+		_next()
+		return
+	var cost := 0
+	var smart := 99
+	for it in bought:
+		cost += int(it["price"])
+		smart = mini(smart, int(it.get("smart", 0)))
+	if fines:
+		fines.sim.money -= cost
+	if smart >= int(cur.get("smart_need", 1)):
+		flags[str(cur["flag"])] = true
+	_outfit = {"top": str(bought[0].get("colour", "#ffffff"))}
+	print("STORY shop: ₹%d, smart %d" % [cost, smart])
+	_next()
+
+
+func _shop_skip() -> void:
+	var pick := 1
+	for arg in OS.get_cmdline_user_args():
+		if arg.begins_with("--storyshop="):
+			pick = int(arg.get_slice("=", 1))
+	var rows: Array = cur["rows"]
+	for r in rows.size():                                 # 1: the cheapest that's smart enough; 2: the cheapest of all
+		var best := -1
+		for i in rows[r]["items"].size():
+			var it: Dictionary = rows[r]["items"][i]
+			if pick == 1 and int(it.get("smart", 0)) < int(cur.get("smart_need", 1)):
+				continue
+			if best < 0 or int(it["price"]) < int(rows[r]["items"][best]["price"]):
+				best = i
+		shop.picked[r] = best
+	_shot()
+	shop.pay()
+
+
+## A colour on the parts of a model whose material is called "<part> ..." (the clothes: "Top trousers"); a
+## clear colour takes it off again.
+func _tint(model: Node3D, part: String, c: Color) -> void:
+	for mi in model.find_children("*", "MeshInstance3D", true, false):
+		var m3 := mi as MeshInstance3D
+		for i in m3.mesh.get_surface_count():
+			var mat := m3.mesh.surface_get_material(i)
+			if mat is BaseMaterial3D and mat.resource_name.to_lower().begins_with(part + " "):
+				if c.a == 0.0:
+					m3.set_surface_override_material(i, null)
+				else:
+					var dup := (mat as BaseMaterial3D).duplicate() as BaseMaterial3D
+					dup.albedo_color = c
+					m3.set_surface_override_material(i, dup)
 
 
 func _provoke_end(what: String) -> void:
@@ -3661,6 +3743,9 @@ func _build_ui() -> void:
 	court.visible = false
 	court.finished.connect(_court_done)
 	ui.add_child(court)
+	shop = Shop.new()
+	shop.finished.connect(_shop_done)
+	ui.add_child(shop)
 	keypad = Keypad.new()
 	keypad.closed.connect(_keypad_closed)
 	keypad.tried.connect(_keypad_tried)

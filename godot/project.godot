@@ -15,7 +15,7 @@ compatibility/default_parent_skeleton_in_mesh_instance_3d=true
 [application]
 
 config/name="The Mist Village"
-config/description="Exploration game set in a mountain resort in Kotagiri, Nilgiris."
+config/description="The Mist Village, Part 1: The Wrong Accusation. A story game in a real Coimbatore: a driver accused of his employer's murder clears his name, on bail, in twenty days."
 run/main_scene="res://scenes/start_menu.tscn"
 config/features=PackedStringArray("4.7", "Forward Plus")
 
