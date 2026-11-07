@@ -5439,7 +5439,20 @@
    "goal": {
     "en": "Three men walk out of the field towards your scooter",
     "ta": "வயல்ல இருந்து மூணு பேர் உங்க ஸ்கூட்டர நோக்கி வர்றாங்க"
-   }
+   },
+   "props": [
+    {
+     "scene": "res://assets/city_props/pudhur_site.glb",
+     "pos": [
+      -7.5,
+      3.0
+     ],
+     "look": [
+      0,
+      3.0
+     ]
+    }
+   ]
   },
   {
    "do": "talk",
@@ -7074,7 +7087,20 @@
    "goal": {
     "en": "Ponnusamy and the farmers, at the field's edge",
     "ta": "வயல் ஓரத்துல பொன்னுசாமியும் விவசாயிங்களும்"
-   }
+   },
+   "props": [
+    {
+     "scene": "res://assets/city_props/pudhur_site.glb",
+     "pos": [
+      -7.5,
+      3.0
+     ],
+     "look": [
+      0,
+      3.0
+     ]
+    }
+   ]
   },
   {
    "do": "talk",
@@ -10204,6 +10230,17 @@
      ],
      "turn": -1.5708,
      "paint": "#08080a"
+    },
+    {
+     "scene": "res://assets/city_props/pudhur_site.glb",
+     "pos": [
+      -7.5,
+      3.0
+     ],
+     "look": [
+      0,
+      3.0
+     ]
     }
    ]
   },

@@ -17,7 +17,9 @@ market_*.png: wood grain, worn and patched tarpaulin, woven palm, rusted iron, j
 
 Real produce from Poly Haven's CC0 scans (third_party/polyhaven/<id>, the 1k glTF from
 https://api.polyhaven.com/files/<id>, not in git): yellow_onion, food_ginger_01, lemon, food_lime_01, sweet_potato,
-bananas; each cut down to a few hundred triangles. The rest is painted here.
+bananas; each cut down to a few hundred triangles. Plants the same way: island_tree_02 (the tree by the Pudhur
+hut, its trunk and branches decimated, its leaf cards thinned and grown), shrub_02, shrub_04, grass_medium_01,
+weed_plant_02. The rest is painted here.
 
     Blender -b --factory-startup --python tools/market_props.py -- [--preview previews/market]
 """
@@ -67,6 +69,18 @@ def _save(name, rgb):
     rgba = np.ones((n, n, 4))
     rgba[:, :, :3] = np.clip(rgb, 0, 1)
     img.pixels = rgba[::-1].ravel()
+    path = os.path.join(TEX, "market_%s.png" % name)
+    img.filepath_raw = path
+    img.file_format = 'PNG'
+    img.save()
+    return path
+
+
+def _save_rgba(name, rgba):
+    os.makedirs(TEX, exist_ok=True)
+    n = rgba.shape[0]
+    img = bpy.data.images.new("market_" + name, n, n, alpha=True)
+    img.pixels = np.clip(rgba, 0, 1)[::-1].ravel()
     path = os.path.join(TEX, "market_%s.png" % name)
     img.filepath_raw = path
     img.file_format = 'PNG'
@@ -127,6 +141,65 @@ def make_textures():
     hand = (_fbm(n, 122, 14) > 0.72) & (y > 0.35) & (y < 0.6)                    # handprints by the bench
     grime[hand] *= 0.55
     T["grime"] = _save("grime", grime)
+    # the site: stained plaster, a faded peeling hoarding, red earth with weeds and the tyre tracks of two cars
+    pl = np.array([0.84, 0.8, 0.7]) * (0.85 + 0.2 * _fbm(n, 130, 4)[:, :, None])
+    streak = np.clip(np.sin(x * 2 * math.pi * 9 + _fbm(n, 131, 3) * 4) * 0.5 + 0.5, 0, 1) * np.clip(y * 1.3, 0, 1)
+    pl = pl * (1 - 0.3 * (streak ** 6)[:, :, None]) * (1 - 0.25 * (_fbm(n, 132, 10) > 0.7)[:, :, None])
+    chip = _fbm(n, 133, 18) > 0.78
+    pl[chip] = np.array([0.55, 0.45, 0.38])
+    T["plaster_stained"] = _save("plaster_stained", pl)
+    ho = np.array([0.2, 0.46, 0.3]) * (0.75 + 0.35 * _fbm(n, 140, 3)[:, :, None])
+    ho = ho + 0.25 * np.clip(_fbm(n, 141, 2) - 0.45, 0, 1)[:, :, None]            # sun-faded towards one corner
+    peel = (_fbm(n, 142, 6) > 0.66) & (y > 0.5)
+    ho[peel] = np.array([0.85, 0.83, 0.78]) * (0.9 + 0.1 * _fbm(n, 143, 20)[peel][:, None])
+    T["hoarding"] = _save("hoarding", ho)
+    ea = np.array([0.52, 0.37, 0.27]) * (0.8 + 0.3 * _fbm(n, 150, 5)[:, :, None])       # dusty, sun-bleached
+    path = np.abs(x - (0.5 + 0.25 * y + 0.04 * np.sin(y * 9))) < 0.03 + 0.01 * _fbm(n, 153, 6)   # a footpath worn to the hut
+    ea[path] = ea[path] * 1.25 + 0.04
+    weeds = (_fbm(n, 151, 24) > 0.68)
+    ea[weeds] = np.array([0.32, 0.4, 0.18]) * (0.8 + 0.3 * _fbm(n, 152, 30)[weeds][:, None])
+    for (c0, c1, k0) in ((0.42, 0.47, 0.0), (0.53, 0.58, 0.3)):               # two cars' tracks, curving in at the gate
+        bend = 0.08 * np.sin(y * 3.0 + k0)
+        for off in (0.0, 0.035):
+            band = (np.abs(x - (c0 + bend + off)) < 0.008) & (y < 0.75)
+            ea[band] *= 0.55
+    T["earth_site"] = _save("earth_site", ea)
+    tape = np.ones((n, n, 3)) * np.array([0.95, 0.8, 0.1])
+    tape[(np.floor((x + y) * 24) % 2) == 0] = 0.08
+    T["tape"] = _save("tape", tape * (0.7 + 0.35 * _fbm(n, 160, 4)[:, :, None]))
+    pb = np.zeros((n, n, 3))
+    blade = np.sin(x * 2 * math.pi * 70 + _fbm(n, 170, 4) * 6) * 0.5 + 0.5
+    tip = np.clip(1 - y * 1.1, 0, 1)                                        # lighter at the tips, darker at the water
+    pb[:] = np.array([0.22, 0.48, 0.14])
+    pb = pb * (0.6 + 0.5 * blade[:, :, None]) * (0.65 + 0.5 * tip[:, :, None]) * (0.85 + 0.25 * _fbm(n, 171, 8)[:, :, None])
+    pb = pb + np.array([0.12, 0.08, 0.0]) * (_fbm(n, 172, 3) > 0.6)[:, :, None] * tip[:, :, None]   # yellowing patches
+    T["paddy"] = _save("paddy", pb)
+    lu = np.ones((n, n, 3)) * np.array([0.15, 0.3, 0.55])
+    lu[(np.floor(x * 16) % 4) == 0] = np.array([0.1, 0.45, 0.3])
+    lu[(np.floor(y * 16) % 4) == 0] = np.array([0.1, 0.45, 0.3])
+    lu[((np.floor(x * 16) % 4) == 0) & ((np.floor(y * 16) % 4) == 0)] = np.array([0.85, 0.82, 0.7])
+    T["lungi"] = _save("lungi", lu * (0.85 + 0.2 * _fbm(n, 180, 6)[:, :, None]))
+    rw = (np.sin(x * 2 * math.pi * 40) * np.sin(y * 2 * math.pi * 40)) * 0.5 + 0.5
+    T["rope_weave"] = _save("rope_weave", np.array([0.75, 0.65, 0.45]) * (0.7 + 0.35 * rw[:, :, None]))
+    bk = np.array([0.36, 0.3, 0.25]) * (0.6 + 0.5 * (np.sin((x * 30 + _fbm(n, 190, 4) * 5) * math.pi) * 0.5 + 0.5))[:, :, None]
+    bk = bk * (0.8 + 0.3 * _fbm(n, 191, 12)[:, :, None]) * (1 - 0.4 * (_fbm(n, 192, 6) > 0.72)[:, :, None])   # fissures, knots
+    T["bark_neem"] = _save("bark_neem", bk)
+    ring = np.sin(y * 2 * math.pi * 30 + _fbm(n, 193, 3) * 2) * 0.5 + 0.5
+    T["bark_palm"] = _save("bark_palm", np.array([0.5, 0.45, 0.38]) * (0.65 + 0.4 * (ring ** 3)[:, :, None]) * (0.85 + 0.2 * _fbm(n, 194, 8)[:, :, None]))
+    # a coconut frond: the rib down the middle, leaflets slanting out to both sides, cut out (alpha)
+    fr = np.zeros((n, n, 4))
+    rib = np.abs(x - 0.5) < 0.012
+    leaflets = np.zeros((n, n), bool)
+    for k in range(48):
+        yy0 = 0.03 + k * 0.02
+        for side in (-1, 1):
+            u = (x - 0.5) * side
+            along = yy0 + u * 0.45
+            leaflets |= (u > 0) & (u < 0.48 * (1 - 0.6 * yy0)) & (np.abs(y - along) < 0.006 + 0.004 * (1 - u * 2))
+    col = np.array([0.32, 0.45, 0.2]) * (0.75 + 0.35 * _fbm(n, 195, 6)[:, :, None])
+    fr[..., :3] = np.where(rib[:, :, None], np.array([0.6, 0.6, 0.35]), col)
+    fr[..., 3] = (rib | leaflets).astype(float)
+    T["frond"] = _save_rgba("frond", fr)
     T["husk"] = _save("husk", np.array([0.42, 0.27, 0.13]) * (0.7 + 0.45 * husk[:, :, None]))
     # skins, on a UV sphere's map (the top rows are the top of the fruit)
     m = 256
@@ -193,7 +266,7 @@ def mat(name, colour, rough=0.6, metal=0.0, alpha=1.0):
     return m
 
 
-def tmat(name, path, rough=0.8, metal=0.0):
+def tmat(name, path, rough=0.8, metal=0.0, cutout=False):
     m = bpy.data.materials.get(name)
     if m:
         return m
@@ -204,6 +277,10 @@ def tmat(name, path, rough=0.8, metal=0.0):
     im = nt.nodes.new("ShaderNodeTexImage")
     im.image = bpy.data.images.load(path, check_existing=True)
     nt.links.new(im.outputs["Color"], b.inputs["Base Color"])
+    if cutout:                                                                # (leaves: the shape in the picture)
+        nt.links.new(im.outputs["Alpha"], b.inputs["Alpha"])
+        m.surface_render_method = 'DITHERED'
+        m.use_backface_culling = False
     b.inputs["Roughness"].default_value = rough
     b.inputs["Metallic"].default_value = metal
     return m
@@ -371,6 +448,110 @@ def load_scan(key, ident, size, tris=260):
         c.objects.unlink(ob)
     SCANS[key] = ob
     print("MARKET scan %s: %d tris" % (ident, sum(len(p.vertices) - 2 for p in ob.data.polygons)))
+
+
+PLANTS = {}
+
+
+def load_plant(key, ident, keep_leaves=1.0, grow=1.0, size=None, trunk_tris=3000, max_part=0):
+    """A Poly Haven plant (CC0), made light enough for the game: its trunk and branches decimated, its leaf cards
+    thinned to `keep_leaves` of them and each kept card grown by `grow` so the crown stays full; each part a
+    template the props copy. size: its height in metres."""
+    path = os.path.join(SCAN_DIR, ident, "%s_1k.gltf" % ident)
+    if not os.path.exists(path):
+        print("MARKET no plant", ident)
+        return
+    before = set(bpy.data.objects)
+    bpy.ops.import_scene.gltf(filepath=path)
+    parts = [o for o in set(bpy.data.objects) - before if o.type == 'MESH']
+    for o in set(bpy.data.objects) - before:
+        if o.type != 'MESH':
+            bpy.data.objects.remove(o, do_unlink=True)
+    split = []
+    for o in parts:                                                          # one material to a part: trunk, branches, leaves
+        bpy.ops.object.select_all(action='DESELECT')
+        o.select_set(True)
+        bpy.context.view_layer.objects.active = o
+        if len(o.data.materials) > 1:
+            before2 = set(bpy.data.objects)
+            bpy.ops.object.mode_set(mode='EDIT')
+            bpy.ops.mesh.separate(type='MATERIAL')
+            bpy.ops.object.mode_set(mode='OBJECT')
+            split += [o] + [x for x in set(bpy.data.objects) - before2 if x.type == 'MESH']
+        else:
+            split.append(o)
+    parts = split
+    out = []
+    for o in parts:
+        bpy.ops.object.select_all(action='DESELECT')
+        o.select_set(True)
+        bpy.context.view_layer.objects.active = o
+        bpy.ops.object.transform_apply(location=False, rotation=True, scale=True)
+        bm = bmesh.new()
+        bm.from_mesh(o.data)
+        leafy = {i for i, m in enumerate(o.data.materials) if m and ("leaf" in m.name.lower() or "leaves" in m.name.lower()
+                 or ident.startswith(("shrub", "grass", "weed")))}
+        doomed = []
+        for f in bm.faces:
+            if f.material_index in leafy and keep_leaves < 1.0:
+                if R.random() > keep_leaves:
+                    doomed.append(f)
+                elif grow != 1.0:
+                    cen = f.calc_center_median()
+                    for v in f.verts:
+                        v.co = cen + (v.co - cen) * grow
+        bmesh.ops.delete(bm, geom=doomed, context='FACES')
+        bm.to_mesh(o.data)
+        bm.free()
+        solid = [i for i in range(len(o.data.materials)) if i not in leafy]
+        n = len(o.data.polygons)
+        if solid and n > trunk_tris and len(solid) == len(o.data.materials):
+            d = o.modifiers.new("Less", 'DECIMATE')
+            d.ratio = trunk_tris / n
+            bpy.ops.object.modifier_apply(modifier="Less")
+        for c in o.users_collection:
+            c.objects.unlink(o)
+        out.append(o)
+    if size:
+        hgt = max(max(v.co.z for v in o.data.vertices) for o in out) - min(min(v.co.z for v in o.data.vertices) for o in out)
+        for o in out:
+            for v in o.data.vertices:
+                v.co *= size / hgt
+    if max_part:                                                             # (only the light clumps: grass by the hundred)
+        out = [o for o in out if len(o.data.polygons) <= max_part] or out[:1]
+    PLANTS[key] = out
+    print("MARKET plant %s: %s" % (ident, [len(o.data.polygons) for o in out]))
+
+
+def plant(c, key, p, scale=1.0, yaw=None, part=None):
+    """Copies of a plant's parts (all of them, or one) at p."""
+    obs = []
+    for i, t in enumerate(PLANTS.get(key, [])):
+        if part is not None and i != part % len(PLANTS[key]):
+            continue
+        ob = t.copy()
+        c.objects.link(ob)
+        ob.location = p
+        ob.rotation_euler = (0, 0, R.uniform(0, 6.3) if yaw is None else yaw)
+        ob.scale = (scale, scale, scale)
+        obs.append(ob)
+    return obs
+
+
+def palm_frond(c, base, a, length, droop, m):
+    """A coconut frond: a strip along its rib, arching up and out and drooping, the leaflets in its picture."""
+    bpy.ops.mesh.primitive_grid_add(x_subdivisions=12, y_subdivisions=2, size=1, location=(0, 0, 0))
+    ob = bpy.context.object
+    for v in ob.data.vertices:                                               # x along the frond (0..1), y across it
+        t = v.co.x + 0.5
+        w = v.co.y * 1.1 * (1.0 - 0.55 * t)
+        r = t * length
+        z = droop[0] * t * length - droop[1] * (t * length) ** 2 / length
+        v.co.x, v.co.y, v.co.z = r, w, z
+    ob.location = base
+    ob.rotation_euler = (0, 0, a)
+    bpy.ops.object.transform_apply(location=True, rotation=True)
+    return _put(ob, m, c, False)
 
 
 def scan(c, key, p, scale=1.0):
@@ -959,8 +1140,207 @@ def workshop():
     return c
 
 
+def pudhur_site():
+    """Pudhur Vayal, off the Thondamuthur road (STORY_BIBLE.md: the farmers' land, the Green Valley site, where
+    Raghavan died): the site's gate between two plastered pillars, a steel gate half open, a watchman's tin hut; a
+    big faded hoarding, GREEN VALLEY, a Raghavan Developers project, its plot layout; a barbed-wire fence on stone
+    posts along the road, survey stones in the cleared red earth; beyond the fence the farmers' paddy, green in rows,
+    a banana plot, a thatched field shed with a cart wheel against it, a well."""
+    c = new_coll("pudhur_site")
+    earth = tmat("mk_red_earth", T_ALL["earth_site"], 0.95)
+    box(c, (0, 6.0, 0.02), (24.0, 14.0, 0.04), earth)                         # the cleared site
+    plaster = tmat("mk_pillar", T_ALL["plaster_stained"], 0.9)
+    for x in (-2.6, 2.6):                                                    # the gate's pillars and the gate
+        box(c, (x, 0, 1.2), (0.6, 0.6, 2.4), plaster)
+        box(c, (x, 0, 2.45), (0.7, 0.7, 0.1), plaster)
+    gate = M["iron"]                                                         # (rusted)
+    box(c, (-1.25, 0.05, 1.0), (2.2, 0.05, 0.06), gate)
+    box(c, (-1.25, 0.05, 1.9), (2.2, 0.05, 0.06), gate)
+    for k in range(9):
+        box(c, (-2.25 + k * 0.25, 0.05, 1.05), (0.03, 0.03, 1.7), gate)
+    ca, sa = math.cos(1.0), math.sin(1.0)                                     # the other half, swung open
+    hx, hy = 2.3, 0.05
+    for z in (1.0, 1.9):
+        box(c, (hx - 1.1 * ca, hy + 1.1 * sa, z), (2.2, 0.05, 0.06), gate, rot=(0, 0, -1.0))
+    for k in range(9):
+        box(c, (hx - (0.1 + k * 0.25) * ca, hy + (0.1 + k * 0.25) * sa, 1.05), (0.03, 0.03, 1.7), gate)
+    # the watchman's hut
+    tin = M["iron"]
+    box(c, (4.8, 1.8, 1.1), (1.6, 1.6, 2.2), tin)
+    box(c, (4.8, 1.8, 2.25), (1.9, 1.9, 0.06), tin, rot=(0.05, 0, 0))
+    box(c, (4.0, 1.8, 0.95), (0.02, 0.7, 1.8), mat("mk_hut_door", (0.3, 0.2, 0.12), 0.8))
+    chair(c, 3.6, 1.1, -0.4, M["plastic_red"])
+    # the hoarding, faded: GREEN VALLEY
+    for x in (-6.5, -2.5):
+        box(c, (x, 3.0, 1.8), (0.15, 0.15, 3.6), M["iron"])
+    board = tmat("mk_hoarding", T_ALL["hoarding"], 0.85)
+    box(c, (-4.5, 3.0, 3.4), (5.0, 0.08, 2.4), board)
+    white = mat("mk_letters_white2", (0.95, 0.95, 0.92), 0.6)
+    gold = mat("mk_letters_gold2", (0.95, 0.8, 0.35), 0.5)
+    text(c, "GREEN VALLEY", (-4.5, 2.95, 4.15), 0.55, white)
+    text(c, "DTCP APPROVED PLOTS  ·  A RAGHAVAN DEVELOPERS PROJECT", (-4.5, 2.95, 3.6), 0.15, gold)
+    plan = mat("mk_plan", (0.92, 0.9, 0.8), 0.8)
+    box(c, (-4.5, 2.95, 2.75), (3.6, 0.01, 0.9), plan)
+    for k in range(6):
+        box(c, (-6.0 + k * 0.6, 2.94, 2.75), (0.02, 0.01, 0.85), mat("mk_plan_line", (0.4, 0.35, 0.3), 0.8))
+    box(c, (-4.5, 2.94, 2.75), (3.5, 0.01, 0.02), mat("mk_plan_line", (0.4, 0.35, 0.3), 0.8))
+    # the barbed-wire fence on stone posts along the road
+    stone = mat("mk_stone_post", (0.6, 0.58, 0.55), 0.95)
+    for k in range(-5, 6):
+        if abs(k) < 2:
+            continue
+        x = k * 2.0
+        box(c, (x, 0.0, 0.7), (0.15, 0.15, 1.4), stone)
+    for z in (0.5, 0.85, 1.2):
+        for side in (-1, 1):
+            line(c, (side * 3.0, 0.0, z), (side * 10.0, 0.0, z), 0.006, M["iron"], 4)
+    for k in range(8):                                                       # survey stones on the cleared plots
+        box(c, (R.uniform(-9, 9), R.uniform(3.0, 11.0), 0.12), (0.12, 0.12, 0.24), mat("mk_survey", (0.9, 0.88, 0.85), 0.8))
+    # the farmers' paddy, beyond, in rows; a banana plot; a field shed; a well
+    paddy = [mat("mk_paddy_%d" % k, (0.25 + 0.05 * k, 0.55 + 0.04 * k, 0.15), 0.8) for k in range(3)]
+    pmat = tmat("mk_paddy_rows", T_ALL["paddy"], 0.7)
+    for r in range(22):                                                      # paddy in rows, a carpet of blades
+        for x0 in (-11.0, 3.0):
+            bpy.ops.mesh.primitive_grid_add(x_subdivisions=24, y_subdivisions=2, size=1, location=(x0 + 4.0, 13.3 + r * 0.3, 0.3))
+            ob = bpy.context.object
+            ob.scale = (8.0, 0.22, 1)
+            ob.rotation_euler = (math.pi / 2 - 0.12, 0, 0)
+            bpy.ops.object.transform_apply(scale=True, rotation=True)
+            for v in ob.data.vertices:                                       # a ragged top, swaying
+                if v.co.z > 0.0:
+                    v.co.z += R.uniform(-0.08, 0.12)
+                    v.co.y += R.uniform(-0.06, 0.06)
+                v.co.z *= R.uniform(2.6, 2.9)
+            _put(ob, pmat, c)
+            for k in range(10):                                              # (a few blades standing out)
+                cyl(c, (x0 + R.uniform(0.1, 7.9), 13.3 + r * 0.3, 0.45), 0.03, 0.6, R.choice(paddy), rot=(R.uniform(-0.3, 0.3), R.uniform(-0.3, 0.3), 0), verts=4, r2=0.004)
+    for x0 in (-7.0, 7.0):
+        box(c, (x0, 16.5, 0.03), (8.2, 6.8, 0.01), mat("mk_paddy_water", (0.22, 0.28, 0.24), 0.04, 0.3))   # glinting
+    box(c, (-4.0, 16.5, 0.08), (0.5, 7.0, 0.16), earth)                       # a bund between the fields
+    leaf = M["plantain"]
+    for k in range(10):
+        x, y = 9.5 + (k % 3) * 1.6, 9.0 + (k // 3) * 1.7
+        cyl(c, (x, y, 1.0), 0.09, 2.0, mat("mk_banana_trunk", (0.45, 0.5, 0.25), 0.8), verts=8)
+        for j in range(6):
+            a = j * 1.05 + k
+            ob = blob(c, (x + 0.6 * math.cos(a), y + 0.6 * math.sin(a), 2.0), 0.8, leaf, (1.0, 0.25, 0.04), (0, -0.5, a), seg=8)
+    thatch = mat("mk_thatch", (0.6, 0.5, 0.3), 0.95)
+    for x in (-10.0, -7.6):
+        for y in (8.0, 10.0):
+            cyl(c, (x, y, 1.0), 0.07, 2.0, M["bamboo"], verts=6)
+    bpy.ops.mesh.primitive_cone_add(radius1=2.2, radius2=0.1, depth=1.2, vertices=4, location=(-8.8, 9.0, 2.5), rotation=(0, 0, math.pi / 4))
+    _put(bpy.context.object, thatch, c, False)
+    bpy.ops.mesh.primitive_torus_add(major_radius=0.6, minor_radius=0.06, location=(-7.3, 8.4, 0.62), rotation=(math.pi / 2, 0, 0.3))
+    _put(bpy.context.object, M["wood"], c)                                    # a cart wheel against the shed
+    cyl(c, (-6.0, 12.0, 0.4), 1.0, 0.8, stone, verts=20, smooth=False)       # the well
+    cyl(c, (-6.0, 12.0, 0.79), 0.85, 0.02, M["water"], verts=20, smooth=False)
+    # coconut palms along the bunds
+    trunk = tmat("mk_palm_trunk", T_ALL["bark_palm"], 0.9)
+    fmat = tmat("mk_frond", T_ALL["frond"], 0.7, 0.0, True)
+    frond = [mat("mk_frond_%d" % k, (0.2 + 0.05 * k, 0.42 + 0.04 * k, 0.12), 0.75) for k in range(3)]
+    for k, (x, y) in enumerate(((-12.0, 12.6), (-8.0, 20.0), (1.5, 12.5), (12.0, 13.0), (-2.0, 21.0), (8.0, 20.5))):
+        lean = R.uniform(-0.12, 0.12)
+        hgt = R.uniform(7.0, 9.5)
+        cyl(c, (x + lean * hgt / 2, y, hgt / 2), 0.17, hgt, trunk, rot=(0, lean, 0), verts=8, r2=0.12)
+        tx, tz = x + lean * hgt, hgt
+        for j in range(20):                                                  # fronds arching out and drooping
+            a = j * 0.314 + k + R.uniform(-0.1, 0.1)
+            palm_frond(c, (tx, y, tz - 0.2), a, R.uniform(3.0, 3.8), (R.uniform(0.2, 0.9), R.uniform(1.2, 2.0)), fmat)
+        for j in range(9):                                                   # the bunch of nuts under the crown
+            a = j * 0.7
+            blob(c, (tx + 0.28 * math.cos(a), y + 0.28 * math.sin(a), tz - 0.35 - 0.12 * (j % 3)), 0.14, M["husk"], seg=8)
+    # weeds and grass along the fence and at the pillars' feet
+    grass = [mat("mk_grass_%d" % k, (0.3 + 0.06 * k, 0.45, 0.15), 0.85) for k in range(3)]
+    for k in range(80):
+        x = R.uniform(-10.5, 10.5)
+        if abs(x) < 2.9 and R.random() < 0.8:
+            continue
+        p = (x, R.uniform(-0.5, 0.7), 0.0)
+        if "grass" in PLANTS:
+            plant(c, "grass" if k % 4 else "weed", p, R.uniform(1.6, 2.6), part=k)
+        else:
+            cyl(c, (p[0], p[1], 0.15), 0.05, R.uniform(0.2, 0.45), R.choice(grass), verts=4, r2=0.005)
+    # what the police left: faded tape on the gate, torn and hanging; a pole, its camera bracket empty
+    tape = tmat("mk_police_tape", T_ALL["tape"], 0.6)
+    line(c, (-2.6, -0.32, 1.5), (2.6, -0.32, 1.35), 0.012, tape, 4)
+    line(c, (-2.6, -0.32, 1.1), (-0.4, -0.32, 0.55), 0.012, tape, 4)             # (its end cut, fallen)
+    line(c, (2.6, -0.32, 1.0), (4.0, -0.32, 0.9), 0.012, tape, 4)
+    cyl(c, (-3.6, -0.6, 3.0), 0.08, 6.0, mat("mk_pole_concrete", (0.65, 0.64, 0.6), 0.9), verts=8)
+    box(c, (-3.6, -0.85, 4.6), (0.06, 0.5, 0.06), M["iron"])
+    box(c, (-3.6, -1.08, 4.5), (0.12, 0.04, 0.16), M["iron"])                  # the bracket, nothing on it
+    # a big neem over the hut, bushes along the fence
+    bark = tmat("mk_neem_bark", T_ALL["bark_neem"], 0.95)
+    neem = [mat("mk_neem_%d" % k, (0.2 + 0.03 * k, 0.32 + 0.04 * k, 0.16), 0.8) for k in range(3)]
+    if "neem" in PLANTS:                                                     # (a real tree, made light)
+        plant(c, "neem", (6.4, 3.8, 0.0), 1.0, 0.6)
+    else:
+        cyl(c, (6.2, 3.6, 1.6), 0.28, 3.2, bark, verts=10, r2=0.2)
+        for k in range(26):
+            a = R.uniform(0, 6.3)
+            rr = R.uniform(0.0, 2.8)
+            blob(c, (6.2 + rr * math.cos(a), 3.6 + rr * math.sin(a), R.uniform(3.6, 5.6)), R.uniform(0.7, 1.2), R.choice(neem), (1, 1, 0.75), seg=8, lumpy=0.12)
+    for k in range(12):                                                      # bushes along the fence
+        x = R.choice((-1, 1)) * R.uniform(3.6, 10.5)
+        if "bush" in PLANTS:
+            plant(c, "bush" if k % 3 else "bush2", (x, 0.7 + R.uniform(-0.1, 0.4), 0.0), R.uniform(0.5, 0.8), part=k)
+        else:
+            blob(c, (x, 0.6, 0.35), 0.45, R.choice(neem), (1, 1, 0.8), seg=7, lumpy=0.15)
+    # the farmers' life: a goat tied to a post, a bicycle at the hut, washing on a line, a cot, a pot on three stones
+    goat = mat("mk_goat", (0.5, 0.36, 0.25), 0.9)
+    goat_w = mat("mk_goat_w", (0.88, 0.85, 0.8), 0.9)
+    horn = mat("mk_horn", (0.35, 0.3, 0.25), 0.6)
+    gx, gy = 7.6, 5.5
+    box(c, (gx + 1.1, gy, 0.5), (0.08, 0.08, 1.0), M["wood"])
+    blob(c, (gx, gy, 0.6), 0.26, goat, (1.7, 0.85, 0.9), seg=12)              # the body
+    blob(c, (gx - 0.42, gy, 0.82), 0.1, goat, (0.9, 0.9, 1.1), (0, -0.4, 0), seg=10)   # the neck
+    blob(c, (gx - 0.58, gy, 0.95), 0.1, goat_w, (1.5, 0.85, 0.85), (0, 0.5, 0), seg=10)  # the head, the white face
+    for side in (-1, 1):
+        blob(c, (gx - 0.52, gy + side * 0.1, 0.98), 0.07, goat, (1.0, 0.25, 0.45), (0, 0.4, side * 0.6), seg=6)   # the ears
+        cyl(c, (gx - 0.5, gy + side * 0.04, 1.08), 0.015, 0.14, horn, rot=(0, -0.8, 0), verts=5, r2=0.003)
+    cyl(c, (gx - 0.7, gy, 0.86), 0.015, 0.07, goat_w, verts=5, r2=0.004)       # its beard
+    for dx in (-0.3, 0.3):
+        for dy in (-0.12, 0.12):
+            cyl(c, (gx + dx, gy + dy, 0.2), 0.025, 0.42, goat, verts=6)
+            cyl(c, (gx + dx, gy + dy, 0.015), 0.03, 0.03, horn, verts=6)
+    cyl(c, (gx + 0.44, gy, 0.75), 0.03, 0.12, goat, rot=(0, -0.7, 0), verts=5, r2=0.01)   # the tail, up
+    line(c, (gx + 1.1, gy, 0.8), (gx - 0.4, gy, 0.82), 0.004, M["rope"])
+    box(c, (4.0, 1.8, 0.95), (0.03, 0.75, 1.85), M["iron"])                    # the hut's tin door
+    for k in range(6):
+        box(c, (3.98, 1.45 + k * 0.14, 0.95), (0.02, 0.02, 1.8), M["iron"])
+    rope_top = tmat("mk_rope_weave", T_ALL["rope_weave"], 0.9)                # a rope cot outside the hut
+    box(c, (5.0, -0.2, 0.42), (1.9, 0.9, 0.04), rope_top)
+    for dx in (-0.9, 0.9):
+        box(c, (5.0 + dx, -0.2, 0.42), (0.07, 0.95, 0.07), M["wood"])
+        for dy in (-0.42, 0.42):
+            cyl(c, (5.0 + dx, -0.2 + dy, 0.2), 0.035, 0.42, M["wood"], verts=6)
+    wheel = mat("mk_bike_tyre", (0.05, 0.05, 0.05), 0.8)
+    frame = mat("mk_bike_frame", (0.1, 0.1, 0.12), 0.4, 0.5)
+    bx, by = 4.0, 2.7
+    for dx in (-0.55, 0.55):
+        bpy.ops.mesh.primitive_torus_add(major_radius=0.33, minor_radius=0.02, location=(bx + dx, by, 0.34), rotation=(math.pi / 2, 0, 0))
+        _put(bpy.context.object, wheel, c)
+    for a, b in (((-0.55, 0.34), (0.0, 0.34)), ((0.0, 0.34), (0.35, 0.8)), ((-0.55, 0.34), (-0.15, 0.8)), ((-0.15, 0.8), (0.35, 0.8)),
+                 ((0.55, 0.34), (0.4, 0.95)), ((-0.15, 0.8), (-0.2, 0.92))):
+        line(c, (bx + a[0], by, a[1]), (bx + b[0], by, b[1]), 0.015, frame, 6)
+    for x in (-12.0, -8.5):
+        cyl(c, (x, 6.5, 0.9), 0.04, 1.8, M["bamboo"], verts=6)
+    line(c, (-12.0, 6.5, 1.75), (-8.5, 6.5, 1.75), 0.004, M["rope"])
+    lungi = tmat("mk_lungi", T_ALL["lungi"], 0.9)
+    for k, col in enumerate(((0.75, 0.15, 0.2), (0.95, 0.92, 0.85), None, (0.85, 0.6, 0.15))):
+        m = lungi if col is None else mat("mk_washing_%d" % k, col, 0.9)
+        box(c, (-11.4 + k * 0.85, 6.5, 1.3), (0.7, 0.01, 0.9 if col is None else 0.75), m)   # a saree's end, a dhoti, a lungi, a shirt
+    for k in range(3):
+        a = k * 2.1
+        box(c, (-7.0 + 0.18 * math.cos(a), 9.8 + 0.18 * math.sin(a), 0.08), (0.15, 0.12, 0.16), mat("mk_stone_hearth", (0.45, 0.43, 0.4), 0.95))
+    cyl(c, (-7.0, 9.8, 0.3), 0.22, 0.3, mat("mk_pot_black", (0.08, 0.07, 0.07), 0.6), verts=16, r2=0.16)
+    cyl(c, (-7.0, 9.8, 0.01), 0.35, 0.01, mat("mk_ash", (0.3, 0.29, 0.28), 0.95), verts=16, smooth=False)
+    scatter(c, 0, 1.5, 0.04, 8.0, 3.0, 10, 4, 0)
+    return c
+
+
 BUILD = {"market_vegcart": vegcart, "market_groundstall": groundstall, "market_banana": banana, "market_crates": crates,
-         "market_teakadai": teakadai, "bala_workshop": workshop, "bala_workshop_closed": workshop_closed}
+         "market_teakadai": teakadai, "bala_workshop": workshop, "bala_workshop_closed": workshop_closed,
+         "pudhur_site": pudhur_site}
 
 
 def join(coll, name):
@@ -992,7 +1372,7 @@ def preview(out_dir, obs):
     sc.render.engine = 'BLENDER_EEVEE_NEXT' if 'BLENDER_EEVEE_NEXT' in engines else 'BLENDER_EEVEE'
     sc.render.resolution_x, sc.render.resolution_y = 1280, 720
     sc.view_settings.view_transform = 'Standard'          # (the colours as they are, as Godot shows them)
-    for ob, x in zip(obs, (-4.6, -1.2, 1.9, 4.4, 9.0, 16.0)):
+    for ob, x in zip(obs, (-4.6, -1.2, 1.9, 4.4, 9.0, 16.0, 16.0, 40.0)):
         ob.location = (x, 0, 0)
     bpy.ops.mesh.primitive_plane_add(size=40, location=(0, 0, 0))
     bpy.context.object.data.materials.append(mat("ground_dust", (0.5, 0.42, 0.33), 0.95))
@@ -1012,7 +1392,9 @@ def preview(out_dir, obs):
                             ("market_ground_close", (-1.2, -2.6, 1.6), (-1.2, 0.1, 0.2)),
                             ("market_teakadai", (10.2, -5.6, 2.1), (9.0, 0.0, 1.35)),
                             ("bala_workshop", (17.2, -8.5, 2.2), (16.0, 0.5, 1.6)),
-                            ("bala_workshop_in", (16.6, -3.0, 1.7), (15.6, 1.5, 1.1))):
+                            ("bala_workshop_in", (16.6, -3.0, 1.7), (15.6, 1.5, 1.1)),
+                            ("pudhur_site", (43.0, -11.0, 3.0), (39.0, 5.0, 1.5)),
+                            ("pudhur_site_wide", (52.0, -14.0, 7.0), (38.0, 9.0, 2.5))):
         cam.location = loc
         d = Vector(look) - Vector(loc)
         cam.rotation_euler = d.to_track_quat('-Z', 'Y').to_euler()
@@ -1029,6 +1411,11 @@ def main():
                                    ("lemon", "lemon", 0.055, 160), ("lime", "food_lime_01", 0.05, 160),
                                    ("sweet_potato", "sweet_potato", 0.15, 220), ("bananas", "bananas", 0.24, 500)):
         load_scan(key, ident, size, tris)
+    load_plant("neem", "island_tree_02", 0.06, 2.6, 8.5, 4000)
+    load_plant("bush", "shrub_02", 0.3, 1.5)
+    load_plant("bush2", "shrub_04", 0.4, 1.3)
+    load_plant("grass", "grass_medium_01", max_part=1500)
+    load_plant("weed", "weed_plant_02", 0.5, 1.2)
     obs = [export(fn()) for fn in BUILD.values()]
     if "--preview" in args:
         preview(os.path.abspath(args[args.index("--preview") + 1]), obs)
