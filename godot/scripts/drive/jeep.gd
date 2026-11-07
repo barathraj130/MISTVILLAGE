@@ -1338,15 +1338,16 @@ func _physics_process_body(delta: float) -> void:
 	rpm = maxf(wheel_rpm * ratio * FINAL, lerpf(IDLE, 1600.0, pedal) if absf(speed) < 2.5 else IDLE)
 	rpm = minf(rpm, REDLINE + 150.0)
 	if not manual and gear >= 1 and _shift_timer <= 0.0:
-		if rpm > lerpf(2000.0, 3600.0, _thr) and gear < RATIOS.size():
+		var up_at := lerpf(2000.0, 3600.0, _thr)
+		if rpm > up_at and gear < RATIOS.size():
 			gear += 1
 			_shift_timer = 0.25
 		elif rpm < 1150.0 and gear > 1:
 			gear -= 1
 			_shift_timer = 0.25
-		elif _thr > 0.9 and gear > 1 and rpm < 2300.0 and RATIOS[gear - 2] / RATIOS[gear - 1] * rpm < REDLINE - 600.0:
-			gear -= 1                                   # kickdown: floor it and it drops a gear
-			_shift_timer = 0.2
+		elif _thr > 0.9 and gear > 1 and rpm < 2300.0 and RATIOS[gear - 2] / RATIOS[gear - 1] * rpm < up_at - 500.0:
+			gear -= 1                                   # kickdown: floor it and it drops a gear (only to a gear it
+			_shift_timer = 0.2                          #  won't leave again at once: no hunting between two)
 	if out_of_fuel:
 		pedal = 0.0
 	elif _shift_timer > 0.0:
