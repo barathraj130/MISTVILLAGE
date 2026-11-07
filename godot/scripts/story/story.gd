@@ -134,6 +134,8 @@ var _props: Array[Node3D] = []         # things a meet sets out (a tea stall), u
 var _snap_ready := false
 var _tail: Node3D                      # a car following him ("tail" on a drive: Suresh's black sedan in the mirror)
 var _crumbs: Array[Vector3] = []       # (the way he drove, for it to follow)
+var _crumb_d: Array[float] = []        # (how far along that way each crumb is, metres)
+var _chase := {}                       # a tail he can shake ("chase"): its own speed along his way, how long he's been clear
 var _tail_gap := 24.0               # (a snapshot step: its picture is in his hands)
 var _climbing := false                # (on foot in a climb's room, until the story leaves it)
 var _torch: SpotLight3D
@@ -457,6 +459,10 @@ func _next() -> void:
 	if cur.has("add_minutes") and fines:                # time that passes off screen (a ride on the scooter)
 		fines.sim.minute += float(cur["add_minutes"])
 	_jumped = false
+	if _sub:                                            # (a step's own lines go with it)
+		_sub.visible = false
+	if _status:
+		_status.visible = false
 	if _f2f and not str(cur["do"]) in ["talk", "choose", "give", "table"]:          # the talk is over: his own eyes again
 		_f2f_off()
 	if _climbing and not str(cur["do"]) in ["talk", "choose"]:     # out of the dark building, back to the street
@@ -1159,6 +1165,24 @@ func _meet() -> void:
 ## Testing: --storystare looks at him the whole time (and so fails).
 func _covert_start() -> void:
 	_cv = {"i": 0, "t": 0.0, "sus": 0.0, "warned": false, "got": [], "gone": -1.0, "nudge": 0}
+	_ensure_lines()
+	_sub.text = ""
+	_sub.visible = true
+	_status.visible = true
+	var a: Node3D = cast.get(cur["who"])
+	if a:
+		a.face(_cv_spot())
+	if _skip and city.walker:                            # (testing: at the tractor, the recorder on, eyes on it)
+		var sp := _cv_spot()
+		var aw: Vector3 = a.global_position if a else sp
+		var stand := sp + (Vector3(aw.x - sp.x, 0.0, aw.z - sp.z).normalized() * 1.2) if a else sp
+		city.walker.global_position = stand + Vector3.UP * 0.1
+		if not city.phone.recording:
+			city.phone._toggle_rec()
+
+
+## The two small lines of play: low, what is said or thought (_sub); at the top, the state of things (_status).
+func _ensure_lines() -> void:
 	if _sub == null:
 		_sub = _label(22, Color(0.95, 0.95, 0.95))
 		_sub.anchor_left = 0.5
@@ -1171,9 +1195,8 @@ func _covert_start() -> void:
 		_sub.offset_bottom = -60
 		_sub.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		_sub.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		_sub.visible = false
 		ui.add_child(_sub)
-	_sub.text = ""
-	_sub.visible = true
 	if _status == null:
 		_status = _label(18, Color(1, 1, 1, 0.92))
 		_status.anchor_left = 0.5
@@ -1182,18 +1205,8 @@ func _covert_start() -> void:
 		_status.offset_right = 300
 		_status.offset_top = 132                          # (under the walking keys' banner)
 		_status.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		_status.visible = false
 		ui.add_child(_status)
-	_status.visible = true
-	var a: Node3D = cast.get(cur["who"])
-	if a:
-		a.face(_cv_spot())
-	if _skip and city.walker:                            # (testing: at the tractor, the recorder on, eyes on it)
-		var sp := _cv_spot()
-		var aw: Vector3 = a.global_position if a else sp
-		var stand := sp + (Vector3(aw.x - sp.x, 0.0, aw.z - sp.z).normalized() * 1.2) if a else sp
-		city.walker.global_position = stand + Vector3.UP * 0.1
-		if not city.phone.recording:
-			city.phone._toggle_rec()
 
 
 func _cv_spot() -> Vector3:
@@ -1365,19 +1378,7 @@ func _keypad_step() -> void:
 	if not best.is_empty():
 		hint = ("E: " + ("look at " if lang == "en" else "பாரு: ") + tr_(best["title"])) if best["kind"] == "clue" else ("E: " + tr_(best["title"]))
 	if int(_kp["tries"]) >= 2 and cur.has("nudge"):     # (his thought, low on the screen)
-		if _sub == null:
-			_sub = _label(22, Color(0.95, 0.95, 0.95))
-			_sub.anchor_left = 0.5
-			_sub.anchor_right = 0.5
-			_sub.anchor_top = 1.0
-			_sub.anchor_bottom = 1.0
-			_sub.offset_left = -520
-			_sub.offset_right = 520
-			_sub.offset_top = -150
-			_sub.offset_bottom = -60
-			_sub.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-			_sub.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-			ui.add_child(_sub)
+		_ensure_lines()
 		_sub.text = tr_(cur["nudge"])
 		_sub.visible = true
 	hint += ("\n" if hint != "" else "") + ("Q: leave it" if lang == "en" else "Q: விட்டுடு")
@@ -2253,6 +2254,17 @@ func _tail_start(spec: Dictionary) -> void:
 	_paint(_tail, Color(0.03, 0.03, 0.035))
 	var back: Vector3 = car.global_position - car.forward() * _tail_gap
 	_crumbs = [back, car.global_position]
+	_crumb_d = [0.0, _tail_gap]
+	_chase = {}
+	if spec.has("chase"):                                # (he can shake it: see _chase_tick)
+		_chase = (spec["chase"] as Dictionary).duplicate()
+		_chase["d"] = 0.0
+		_chase["v"] = maxf(absf(car.speed), 6.0)
+		_chase["clear"] = 0.0
+		_ensure_lines()
+		_sub.text = tr_(_chase["start"])
+		_sub.visible = true
+		_chase["sub_t"] = 6.0
 	_tail_tick()
 
 
@@ -2303,8 +2315,15 @@ func _tail_tick() -> void:
 	var here: Vector3 = car.global_position
 	if here.distance_to(_crumbs[-1]) > 40.0:            # (the car was moved, not driven: it's behind him again)
 		_crumbs = [here - car.forward() * _tail_gap, here]
+		_crumb_d = [0.0, _tail_gap]
+		if not _chase.is_empty():
+			_chase["d"] = 0.0
 	elif here.distance_to(_crumbs[-1]) > 0.6:
+		_crumb_d.append(_crumb_d[-1] + here.distance_to(_crumbs[-1]))
 		_crumbs.append(here)
+	if not _chase.is_empty():
+		_chase_tick(here)
+		return
 	var left := _tail_gap                                 # walk back along the crumbs from where he is
 	var at: Vector3 = _crumbs[0]
 	var ahead: Vector3 = _crumbs[min(1, _crumbs.size() - 1)]
@@ -2319,10 +2338,82 @@ func _tail_tick() -> void:
 		prev = _crumbs[i]
 	while _crumbs.size() > 400:
 		_crumbs.pop_front()
+		_crumb_d.pop_front()
 	_tail.global_position = at                           # (on the road where he was: the crumbs carry its height)
 	var dir := Vector3(ahead.x - at.x, 0.0, ahead.z - at.z)
 	if dir.length() > 0.05:
 		_tail.rotation.y = atan2(dir.x, dir.z)
+
+
+## "chase" on a tail: it drives his way at its own pace, "top" m/s on the straight and down to "turn" in a sharp
+## bend (a scooter takes the lanes' corners better than a sedan), never closer than "gap" and never past him. Clear
+## of it by more than "lose" metres for "secs" seconds, he has lost it: "flag", and his "lost" thought; it drives
+## off. Its distance behind him shows at the top. Testing: --storylose loses it after two seconds.
+func _chase_tick(here: Vector3) -> void:
+	var dt := get_process_delta_time()
+	var total: float = _crumb_d[-1] + here.distance_to(_crumbs[-1])
+	var d: float = _chase["d"]
+	var a0 := _path_at(d)
+	var a1 := _path_at(d + 6.0)
+	var a2 := _path_at(d + 12.0)
+	var bend := Vector2(a1.x - a0.x, a1.z - a0.z).angle_to(Vector2(a2.x - a1.x, a2.z - a1.z))
+	var lim := lerpf(float(_chase.get("top", 19.0)), float(_chase.get("turn", 7.0)), clampf((absf(bend) - 0.25) / 0.6, 0.0, 1.0))
+	var target := total - _tail_gap
+	var v: float = _chase["v"]
+	if d < target:
+		v = move_toward(v, lim, 4.0 * dt) if v < lim else move_toward(v, lim, 9.0 * dt)
+	else:
+		v = minf(v, absf(car.speed))
+	d = minf(d + v * dt, target)
+	_chase["v"] = v
+	_chase["d"] = d
+	var behind := total - d
+	var lose := float(_chase.get("lose", 100.0))
+	_chase["clear"] = (float(_chase["clear"]) + dt) if behind > lose else maxf(0.0, float(_chase["clear"]) - dt * 2.0)
+	_chase["sub_t"] = float(_chase.get("sub_t", 0.0)) - dt
+	if _sub and float(_chase["sub_t"]) <= 0.0:
+		_sub.visible = false
+	var gone: bool = float(_chase["clear"]) > float(_chase.get("secs", 4.0)) or d < _crumb_d[0]
+	if _skip and "--storylose" in OS.get_cmdline_user_args() and t_step > 2.0:
+		gone = true
+	if gone:
+		flags[str(_chase.get("flag", "tail_lost"))] = true
+		print("STORY chase: lost it (%.0f m behind)" % behind)
+		_ensure_lines()
+		_sub.text = tr_(_chase["lost"])
+		_sub.visible = true
+		_status.visible = false
+		_chase = {}
+		_tail_end()
+		return
+	var at := _path_at(d)
+	_tail.global_position = at
+	var dir := Vector3(a1.x - at.x, 0.0, a1.z - at.z)
+	if dir.length() > 0.05:
+		_tail.rotation.y = atan2(dir.x, dir.z)
+	_ensure_lines()
+	_status.text = ("Black sedan: %d m behind" if lang == "en" else "கருப்பு செடான்: %d மீ பின்னாடி") % int(behind)
+	_status.add_theme_color_override("font_color", Color(0.6, 1.0, 0.6) if behind > lose else Color(1.0, 0.55, 0.45))
+	_status.visible = true
+
+
+## The point "dist" metres along the way he drove (past the last crumb: towards where he is now).
+func _path_at(dist: float) -> Vector3:
+	var n := _crumbs.size()
+	if dist >= _crumb_d[n - 1]:
+		var here: Vector3 = car.global_position
+		var seg := here.distance_to(_crumbs[n - 1])
+		return _crumbs[n - 1].lerp(here, clampf((dist - _crumb_d[n - 1]) / maxf(seg, 0.001), 0.0, 1.0))
+	var lo := 0
+	var hi := n - 1
+	while hi - lo > 1:
+		var mid := (lo + hi) / 2
+		if _crumb_d[mid] <= dist:
+			lo = mid
+		else:
+			hi = mid
+	var span := maxf(_crumb_d[hi] - _crumb_d[lo], 0.001)
+	return _crumbs[lo].lerp(_crumbs[hi], clampf((dist - _crumb_d[lo]) / span, 0.0, 1.0))
 
 
 func _tail_end() -> void:
@@ -2330,6 +2421,7 @@ func _tail_end() -> void:
 		_tail.queue_free()
 	_tail = null
 	_crumbs.clear()
+	_crumb_d.clear()
 
 
 ## The doorbell in Ashwin's door frame, beside him, looking at whoever is at the door (Karthik): a few seconds of

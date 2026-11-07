@@ -368,7 +368,7 @@ The slice grew into the whole of Part 1. Day by day, as it plays now:
 | 10 | Priya and Revathi find the green-ink note; the farmers will testify | E09 |
 | 11 | The Collectorate: apply online, Revathi's office copy, or the tout's ₹2,000 | E16 |
 | 12 | The Siruvani Grand: a ₹899 shirt and the ₹1,450 lunch, and the doorman Ganesan | E18 |
-| 13 | The mortuary ("a copy" for ₹3,000 is fake) and the post-mortem through Priya; the black sedan in the mirror | E17 |
+| 13 | The mortuary ("a copy" for ₹3,000 is fake) and the post-mortem through Priya; the black sedan follows him from the hospital: lose it in the lanes (a scooter corners better; 100 m clear for 4 s), or it parks at his corner and Divya sees it | E17 |
 | 14–15 | The key-cutters, Bala Motors' job card; the key programmer's PIN, found in the workshop (the sticky note, his first bike's plate in a photo, a decoy on the calendar) opens its log; Bala's chats (forgive him, or walk out); Suresh calls | E11, E11L, E12 |
 | 16 | The trap at the site at 6:40 (call Sundaram, or go: walk away or grab his collar) | |
 | 17 | The court orders; Pandi at the Gandhipuram bus stand | E10, E13, E19 |

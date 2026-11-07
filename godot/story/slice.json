@@ -8697,11 +8697,26 @@
    "to": "home",
    "radius": 45,
    "tail": {
-    "gap": 26
+    "gap": 22,
+    "chase": {
+     "top": 19.0,
+     "turn": 7.0,
+     "lose": 100,
+     "secs": 4,
+     "flag": "sedan_lost",
+     "start": {
+      "en": "(The black sedan from the hospital gate. It's pulling out behind me.)",
+      "ta": "(மருத்துவமனை கேட்ல நின்ன கருப்பு செடான். என் பின்னாடி கிளம்புது.)"
+     },
+     "lost": {
+      "en": "(Gone. Lost it in the lanes. TN 37, the last four smeared with mud. I saw that much in the mirror.)",
+      "ta": "(போச்சு. சந்துகள்ல தொலைச்சிட்டேன். TN 37, கடைசி நாலு சேறு பூசி. கண்ணாடியில அவ்வளவு பாத்தேன்.)"
+     }
+    }
    },
    "goal": {
-    "en": "Home",
-    "ta": "வீடு"
+    "en": "Home. But lose the black sedan first: don't lead it to Amma and Divya",
+    "ta": "வீடு. ஆனா முதல்ல கருப்பு செடான தொலை: அம்மா, திவ்யா கிட்ட அத கூட்டிட்டு போகாத"
    }
   },
   {
@@ -8727,7 +8742,8 @@
      },
      "look_tail": true
     }
-   ]
+   ],
+   "unless": "sedan_lost"
   },
   {
    "do": "home",
@@ -8776,7 +8792,11 @@
      "en": "(She already has her phone up.) Number plate. TN 37... the last four are covered with mud. On purpose.",
      "ta": "(ஏற்கனவே ஃபோன தூக்கிட்டா.) நம்பர் பிளேட். TN 37... கடைசி நாலு நம்பர் மேல சேறு. வேணும்னே."
     }
-   ]
+   ],
+   "unless": "sedan_lost",
+   "life_add": {
+    "stress": 10
+   }
   },
   {
    "do": "evidence",
@@ -8797,7 +8817,51 @@
      "en": "Behind me from the hospital, at our corner after. TN 37, the last four muddied. Sekar saw a black car at the site gate that night.",
      "ta": "மருத்துவமனையில இருந்து என் பின்னாடி, அப்புறம் எங்க மூலையில. TN 37, கடைசி நாலு சேறு. அன்னைக்கு ராத்திரி சைட் கேட்ல கருப்பு கார சேகர் பாத்தாரு."
     }
-   }
+   },
+   "unless": "sedan_lost"
+  },
+  {
+   "do": "talk",
+   "when": "sedan_lost",
+   "lines": [
+    {
+     "who": "divya",
+     "en": "Anna? You're breathing like you ran all the way.",
+     "ta": "அண்ணா? ஓடி வந்த மாதிரி மூச்சு வாங்குது."
+    },
+    {
+     "who": "karthik",
+     "en": "Traffic. ...Stay away from the window tonight, okay? And don't tell Amma.",
+     "ta": "டிராஃபிக். ...இன்னைக்கு ராத்திரி ஜன்னல் பக்கம் போகாத, சரியா? அம்மா கிட்ட சொல்லாத."
+    },
+    {
+     "who": "divya",
+     "en": "(She looks at the window anyway. The street is empty.)",
+     "ta": "(அவ ஜன்னல பாக்கறா. தெரு காலியா இருக்கு.)"
+    }
+   ]
+  },
+  {
+   "do": "evidence",
+   "speaker": "karthik",
+   "tag": "lead_sedan",
+   "label": {
+    "en": "A black sedan, following",
+    "ta": "பின்தொடரும் கருப்பு செடான்"
+   },
+   "memory": {
+    "id": "mem_sedan",
+    "kind": "card",
+    "title": {
+     "en": "The black sedan",
+     "ta": "கருப்பு செடான்"
+    },
+    "body": {
+     "en": "Behind me from the hospital; I lost it in the lanes before home. TN 37, the last four muddied. Sekar saw a black car at the site gate that night.",
+     "ta": "மருத்துவமனையில இருந்து என் பின்னாடி; வீட்டுக்கு முன்னாடி சந்துகள்ல தொலைச்சேன். TN 37, கடைசி நாலு சேறு. அன்னைக்கு ராத்திரி சைட் கேட்ல கருப்பு கார சேகர் பாத்தாரு."
+    }
+   },
+   "when": "sedan_lost"
   },
   {
    "do": "message",
