@@ -108,6 +108,7 @@ var dvr: Control                      # a camera recorder's footage on someone's
 var court: Control                    # the trial: the prosecution's points, his evidence, the night on the map (court.gd)
 var keypad: Control                   # a thing with a PIN, worked up close: Bala's key programmer (keypad.gd)
 var _kp := {}                          # a "keypad" step as it goes: tries, opened, the skip's own steps
+var _ask := {}                         # an "ask" step as it goes: how often each was asked, the skip's turn, the line's time
 var doorbell: Control                 # Ashwin's doorbell camera: it records him that night, plays on a tablet later (doorbell.gd)
 var _park := ""                       # a place the car is being set down at, out of sight (after a ride)
 var cast := {}                      # story people in the world: key → Actor
@@ -281,6 +282,8 @@ func _process(dt: float) -> void:
 			_covert(dt)
 		"keypad":
 			_keypad_step()
+		"ask":
+			_ask_step(dt)
 		"choose":
 			_choose()
 		"climb":
@@ -677,6 +680,12 @@ func _next() -> void:
 			_covert_start()
 		"keypad":
 			_kp = {"tries": 0, "open": false, "seen": {}}
+		"ask":
+			_anchor()
+			_set_props(cur.get("props", []))                # (first: the people stand at their stalls in them)
+			_cast(cur.get("cast", {}))
+			map.pin = null                                  # (no pin: he finds them himself)
+			_ask = {"n": {}, "t": 0.0, "skip_i": 0}
 		"meet":
 			_anchor()
 			_cast(cur.get("cast", {}))
@@ -791,6 +800,10 @@ func _cast(spec: Dictionary) -> void:
 			_to_mark(act, str(d["mark"]))
 			if d.has("turn"):                            # (at the door, facing in: a visitor)
 				act.rotation.y += float(d["turn"])
+		elif d.has("prop_at"):                           # (at a stall in a prop: [x, y] as Blender has it, facing "prop_look")
+			var pa: Array = d["prop_at"]
+			var pl: Array = d.get("prop_look", [pa[0], float(pa[1]) - 2.0])
+			act.place(_prop_point(str(d["prop"]), [pa[0], pa[1], 0.0]), _prop_point(str(d["prop"]), [pl[0], pl[1], 0.0]))
 		elif d.has("world"):                             # (at a place of its own: the hospital's gate, whatever road he stops on)
 			act.place(Vector3(float(d["world"][0]), 0.0, float(d["world"][1])), Vector3(float(d["look_world"][0]), 0.0, float(d["look_world"][1])))
 		elif d.has("pos"):
@@ -1430,6 +1443,77 @@ func _keypad_closed() -> void:
 		if _sub:
 			_sub.visible = false
 		_next()
+
+
+## "ask": he looks for someone ("who") among people at a place, with no pin: on foot, E asks whoever he stands by,
+## and each answers in a line low on the screen ("asks": their lines, one more each time he asks again); E at the
+## one he's looking for goes on (the talk that follows). Testing: asks each of the others once, then finds them.
+func _ask_step(dt: float) -> void:
+	var w: Node3D = city.walker
+	_ask["t"] = float(_ask["t"]) - dt
+	if _sub and float(_ask["t"]) <= 0.0:
+		_sub.visible = false
+	var others: Array = []
+	for k in cur["cast"]:
+		if str(k) != str(cur["who"]):
+			others.append(str(k))
+	if _skip and t_step > 1.0:
+		var i: int = _ask["skip_i"]
+		t_step = 0.0
+		_ask["skip_i"] = i + 1
+		if i < others.size():
+			_ask_one(others[i])
+			get_tree().create_timer(0.3).timeout.connect(_shot)
+		else:
+			_next()
+		return
+	if w == null:
+		goal.text = tr_(cur["goal"]) + "\n" + _off_key()
+		return
+	var best := ""
+	var bd := 2.2
+	for k in cur["cast"]:
+		var a: Node3D = cast.get(str(k))
+		if a == null or not a.visible:
+			continue
+		var dd := Vector2(w.global_position.x - a.global_position.x, w.global_position.z - a.global_position.z).length()
+		if dd < bd:
+			bd = dd
+			best = str(k)
+	var hint := ""
+	if best != "":
+		hint = "E: " + (("talk" if lang == "en" else "பேசுங்க") if best == str(cur["who"]) else (("ask " if lang == "en" else "கேளுங்க: ") + tr_(data["people"].get(best, {}))))
+	goal.text = tr_(cur["goal"]) + ("\n" + hint if hint != "" else "")
+	var e := Input.is_key_pressed(KEY_E)
+	if e and not _e_down and best != "":
+		if best == str(cur["who"]):
+			if _sub:
+				_sub.visible = false
+			_e_down = e
+			_next()
+			return
+		_ask_one(best)
+	_e_down = e
+
+
+func _ask_one(key: String) -> void:
+	var lines: Array = cur.get("asks", {}).get(key, [])
+	if lines.is_empty():
+		return
+	var n: int = int(_ask["n"].get(key, 0))
+	_ask["n"][key] = n + 1
+	var a: Node3D = cast.get(key)
+	if a and city.walker:
+		a.face(city.walker.global_position)
+	_ensure_lines()
+	var p: Dictionary = data["people"].get(key, {})
+	var text: String = tr_(lines[mini(n, lines.size() - 1)])
+	_sub.text = tr_(p) + ":  " + text
+	_sub.visible = true
+	_ask["t"] = clampf(text.length() / 12.0, 3.5, 9.0)
+	if city.phone:
+		city.phone.heard(tr_(p), text)
+	print("STORY ask %s: %s" % [key, text.left(40)])
 
 
 ## Talking on foot: the view becomes Karthik's own eyes on the person he's talking to, close, their face and
@@ -3340,7 +3424,7 @@ func _refresh() -> void:
 	big.visible = kind in ["card", "jump"]
 	small.visible = kind in ["card", "jump"]
 	box.visible = false
-	goal.visible = kind in ["drive", "free", "meet", "home", "eat_out", "gigs", "climb", "covert", "keypad"]
+	goal.visible = kind in ["drive", "free", "meet", "home", "eat_out", "gigs", "climb", "covert", "keypad", "ask"]
 	clock.visible = kind in ["drive", "free", "talk", "comfort_verdict", "deliver_verdict", "task", "lapse", "meet", "home", "eat_out", "gigs", "climb", "choose"]
 	if step < 0:
 		big.visible = false                          # (no title shown: the story's name would give it away)

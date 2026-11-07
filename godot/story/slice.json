@@ -611,6 +611,52 @@
    "ta": "",
    "colour": "#cccccc",
    "model": "crowd_w2"
+  },
+  "cobbler": {
+   "en": "The cobbler",
+   "ta": "செருப்பு தைப்பவர்",
+   "colour": "#c8b090",
+   "model": "crowd_m5",
+   "hair": "#9a958c",
+   "top": "#7a6a55"
+  },
+  "phoneboy": {
+   "en": "The phone-cover boy",
+   "ta": "ஃபோன் கவர் பையன்",
+   "colour": "#90c0f0",
+   "model": "crowd_m4",
+   "hair": "#141110",
+   "top": "#2a4a80"
+  },
+  "flowerwoman": {
+   "en": "The flower seller",
+   "ta": "பூக்காரம்மா",
+   "colour": "#f0a0c0",
+   "model": "crowd_w3",
+   "hair": "#3a3530"
+  },
+  "mobileboy": {
+   "en": "The mobile shop boy",
+   "ta": "மொபைல் கடை பையன்",
+   "colour": "#f09090",
+   "model": "crowd_m2",
+   "hair": "#141110",
+   "top": "#a02020"
+  },
+  "sweetsaunty": {
+   "en": "The sweet shop lady",
+   "ta": "ஸ்வீட் கடை அம்மா",
+   "colour": "#f0c070",
+   "model": "crowd_w5",
+   "hair": "#1a1714"
+  },
+  "pharmacist": {
+   "en": "The pharmacist",
+   "ta": "மருந்துக்கடைக்காரர்",
+   "colour": "#90e0b0",
+   "model": "crowd_m6",
+   "hair": "#2a2520",
+   "top": "#e8e8e8"
   }
  },
  "spawn": "home",
@@ -9219,24 +9265,90 @@
    }
   },
   {
-   "do": "meet",
+   "do": "ask",
    "who": "keycut1",
-   "cast": {
-    "keycut1": {
+   "goal": {
+    "en": "Find the key-cutter: somewhere on Town Hall's pavement, under an umbrella",
+    "ta": "சாவிக்காரர கண்டுபிடி: டவுன் ஹால் நடைபாதையில, ஒரு குடை கீழ"
+   },
+   "props": [
+    {
+     "scene": "res://assets/city_props/townhall_pavement.glb",
      "pos": [
-      -3.0,
-      2.4
+      -5.0,
+      11.0
      ],
      "look": [
       0,
-      0
+      11.0
+     ]
+    }
+   ],
+   "cast": {
+    "flowerwoman": {
+     "prop": "townhall_pavement",
+     "prop_at": [
+      -11.0,
+      0.2
+     ],
+     "anim": "Idle"
+    },
+    "cobbler": {
+     "prop": "townhall_pavement",
+     "prop_at": [
+      -7.5,
+      0.4
+     ],
+     "anim": "Idle"
+    },
+    "phoneboy": {
+     "prop": "townhall_pavement",
+     "prop_at": [
+      0.7,
+      0.3
+     ],
+     "anim": "Idle"
+    },
+    "keycut1": {
+     "prop": "townhall_pavement",
+     "prop_at": [
+      7.7,
+      0.5
      ],
      "anim": "Idle"
     }
    },
-   "goal": {
-    "en": "The key-cutter under the umbrella",
-    "ta": "குடை கீழ சாவிக்காரர்"
+   "asks": {
+    "flowerwoman": [
+     {
+      "en": "Jasmine, thambi? Fresh, from Sathy this morning. ...Keys? Three umbrellas on this footpath and only one of them cuts keys. Look under them, they don't bite.",
+      "ta": "மல்லிப்பூ, தம்பி? சத்தியமங்கலத்துல இருந்து இன்னைக்கு காலையில. ...சாவியா? இந்த நடைபாதையில மூணு குடை, அதுல ஒண்ணு தான் சாவி வெட்டும். கீழ பாரு, கடிக்க மாட்டாங்க."
+     },
+     {
+      "en": "I told you. Three umbrellas. One has keys hanging. Go, go.",
+      "ta": "சொன்னேன்ல. மூணு குடை. ஒண்ணுல சாவி தொங்கும். போ, போ."
+     }
+    ],
+    "cobbler": [
+     {
+      "en": "Keys? I mend chappals, not locks. (He doesn't look up from the strap.) Further on. Past the boy with the phone covers. The old man with the file.",
+      "ta": "சாவியா? நான் செருப்பு தைக்கறவன், பூட்டு இல்ல. (வாரு மேல இருந்து கண்ண எடுக்கல.) இன்னும் தள்ளி. ஃபோன் கவர் பையனுக்கு அப்புறம். ஃபைல் வச்சிருக்கற பெரியவர்."
+     },
+     {
+      "en": "Your chappal's strap is going too, you know. Twenty rupees.",
+      "ta": "உன் செருப்பு வாரும் போகப்போகுது, தெரியுமா. இருபது ரூபாய்."
+     }
+    ],
+    "phoneboy": [
+     {
+      "en": "Screen guard, anna? Ninety-nine, fitted, two minutes. ...Key-cutter? Last umbrella, red and white. If he's asleep, shout.",
+      "ta": "ஸ்கிரீன் கார்டு, அண்ணா? தொண்ணூத்தொம்போது, போட்டு தரேன், ரெண்டு நிமிஷம். ...சாவிக்காரரா? கடைசி குடை, சிவப்பு வெள்ளை. தூங்கிட்டு இருந்தா, கத்துங்க."
+     },
+     {
+      "en": "Seventy-nine for you. Final.",
+      "ta": "உங்களுக்கு எழுபத்தொம்போது. கடைசி."
+     }
+    ]
    }
   },
   {
@@ -9264,24 +9376,82 @@
    }
   },
   {
-   "do": "meet",
+   "do": "ask",
    "who": "keycut2",
-   "cast": {
-    "keycut2": {
+   "goal": {
+    "en": "Find the key shop: one of the shops by the R.S. Puram flyover",
+    "ta": "சாவி கடைய கண்டுபிடி: ஆர்.எஸ். புரம் ஃப்ளைஓவர் பக்கத்து கடைகள்ல ஒண்ணு"
+   },
+   "props": [
+    {
+     "scene": "res://assets/city_props/rsp_shoprow.glb",
      "pos": [
-      -3.0,
-      2.4
+      -5.0,
+      9.0
      ],
      "look": [
       0,
-      0
+      9.0
+     ]
+    }
+   ],
+   "cast": {
+    "mobileboy": {
+     "prop": "rsp_shoprow",
+     "prop_at": [
+      -6.0,
+      -0.4
+     ],
+     "anim": "Idle"
+    },
+    "sweetsaunty": {
+     "prop": "rsp_shoprow",
+     "prop_at": [
+      -2.3,
+      0.5
+     ],
+     "anim": "Idle"
+    },
+    "pharmacist": {
+     "prop": "rsp_shoprow",
+     "prop_at": [
+      2.2,
+      0.5
+     ],
+     "anim": "Idle"
+    },
+    "keycut2": {
+     "prop": "rsp_shoprow",
+     "prop_at": [
+      6.4,
+      1.6
      ],
      "anim": "Idle"
     }
    },
-   "goal": {
-    "en": "The key shop",
-    "ta": "சாவி கடை"
+   "asks": {
+    "mobileboy": [
+     {
+      "en": "Recharge, sir? ...Key shop? By the flyover pillar, the last one. Vinayaga. He charges like a jeweller, careful.",
+      "ta": "ரீசார்ஜ், சார்? ...சாவி கடையா? ஃப்ளைஓவர் தூண் பக்கத்துல, கடைசி கடை. விநாயகா. நகைக்கடை மாதிரி காசு கேப்பாரு, பாத்துக்கோங்க."
+     }
+    ],
+    "sweetsaunty": [
+     {
+      "en": "Car keys? Not here, sir, we sell Mysore pak. (She points down the row with her ladle.) The blue board. The one with the noise.",
+      "ta": "கார் சாவியா? இங்க இல்ல சார், நாங்க மைசூர் பாக் விக்கறோம். (கரண்டியால வரிசையில கை காட்டறாங்க.) நீல போர்டு. சத்தம் வர்ற கடை."
+     },
+     {
+      "en": "Take a quarter kilo for your mother at least.",
+      "ta": "அம்மாவுக்கு கால் கிலோவாவது எடுத்துட்டு போங்க."
+     }
+    ],
+    "pharmacist": [
+     {
+      "en": "Next door. His machine screams all day, I hear it in my sleep. Go, go, before it starts again.",
+      "ta": "பக்கத்து கடை. அவர் மெஷின் நாள் முழுக்க கத்துது, தூக்கத்துலயும் கேக்குது. போங்க, திரும்ப ஆரம்பிக்கறதுக்குள்ள."
+     }
+    ]
    }
   },
   {

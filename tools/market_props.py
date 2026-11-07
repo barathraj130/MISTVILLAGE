@@ -326,6 +326,42 @@ def make_textures():
     te[tj] = np.array([0.75, 0.72, 0.66])
     te *= (1 - 0.2 * np.clip((y - 0.6) * 2.5, 0, 1) * _fbm(n, 261, 10))[:, :, None]   # rain streaks low down
     T["hall_terra"] = _save("hall_terra", te)
+    # the shops: a rolling shutter's ribs, greyed and streaked; the boards' pictures (a phone, a plate of sweets, a
+    # green cross, a key); an umbrella's sun-faded cloth
+    sh = np.array([0.5, 0.51, 0.52]) * (0.75 + 0.25 * (np.sin(y * math.pi * 60) * 0.5 + 0.5))[:, :, None]
+    sh *= (0.85 + 0.2 * _fbm(n, 270, 5))[:, :, None]
+    sh *= (1 - 0.25 * np.clip((y - 0.6) * 3, 0, 1) * (_fbm(n, 271, 9) > 0.55))[:, :, None]
+    T["shutter"] = _save("shutter", sh)
+    for key, bg in (("pic_phone", (0.95, 0.95, 0.97)), ("pic_sweets", (0.98, 0.92, 0.75)), ("pic_cross", (0.96, 0.98, 0.96)), ("pic_key", (0.9, 0.93, 0.98))):
+        im = np.ones((n, n, 3)) * np.array(bg)
+        cx, cy = x - 0.5, y - 0.5
+        if key == "pic_phone":
+            body = (np.abs(cx) < 0.2) & (np.abs(cy) < 0.38)
+            im[body] = 0.08
+            scr = (np.abs(cx) < 0.17) & (np.abs(cy) < 0.32)
+            im[scr] = (np.array([0.2, 0.45, 0.95]) * (1 - y[:, :, None] * 0.6) + np.array([0.9, 0.3, 0.6]) * y[:, :, None] * 0.6)[scr]
+        elif key == "pic_sweets":
+            plate = cx ** 2 + (cy * 1.6) ** 2 < 0.16
+            im[plate] = np.array([0.85, 0.85, 0.8])
+            for k, (px, py, col) in enumerate(((-0.15, -0.05, (0.95, 0.75, 0.2)), (0.1, -0.08, (0.9, 0.5, 0.15)), (-0.02, 0.08, (0.95, 0.9, 0.7)),
+                                                (0.18, 0.06, (0.6, 0.35, 0.15)), (-0.2, 0.08, (0.95, 0.6, 0.6)))):
+                im[(cx - px) ** 2 + (cy - py) ** 2 < 0.007] = np.array(col)
+        elif key == "pic_cross":
+            cr = ((np.abs(cx) < 0.1) & (np.abs(cy) < 0.32)) | ((np.abs(cy) < 0.1) & (np.abs(cx) < 0.32))
+            im[cr] = np.array([0.1, 0.65, 0.3])
+        else:
+            bow = (cx + 0.18) ** 2 + cy ** 2 < 0.03
+            hole = (cx + 0.18) ** 2 + cy ** 2 < 0.008
+            blade = (cx > -0.05) & (cx < 0.35) & (np.abs(cy) < 0.04)
+            teeth = (cx > 0.12) & (cx < 0.35) & (cy > 0.0) & (cy < 0.09) & (np.sin(cx * 90) > 0)
+            im[bow | blade | teeth] = np.array([0.78, 0.62, 0.25])
+            im[hole] = np.array(bg)
+        T[key] = _save(key, im)
+    for key, col in (("umb_red", (0.72, 0.16, 0.12)), ("umb_blue", (0.12, 0.32, 0.72)), ("umb_black", (0.07, 0.07, 0.08))):
+        um = np.array(col) * (0.85 + 0.2 * _fbm(n, 280, 3)[:, :, None])
+        um = um + 0.15 * np.clip(_fbm(n, 281, 2)[:, :, None] - 0.4, 0, 1)           # sun-faded
+        um *= (1 - 0.15 * (_fbm(n, 282, 10) > 0.7))[:, :, None]                   # stains
+        T[key] = _save(key, um)
     return T
 
 
@@ -1943,9 +1979,272 @@ def table(c, x, y, w=1.8, d=0.7):
     box(c, (x, y, 0.4), (w - 0.05, d - 0.05, 0.76), mat("mk_tablecloth", (0.92, 0.92, 0.95), 0.9))
 
 
+def panel(c, loc, w, h, m):
+    """A flat picture facing -y (the street), its texture whole on it: a board's picture, a poster."""
+    bpy.ops.mesh.primitive_plane_add(size=1, location=loc, rotation=(math.pi / 2, 0, 0))
+    ob = bpy.context.object
+    ob.scale = (w, h, 1)
+    bpy.ops.object.transform_apply(scale=True)
+    return _put(ob, m, c, False)
+
+
+def glow(name, colour, strength=3.0):
+    """A thing that gives light: a tubelight, a lit sign."""
+    m = mat(name, colour, 0.5)
+    b = m.node_tree.nodes["Principled BSDF"]
+    b.inputs["Emission Color"].default_value = (*colour, 1.0)
+    b.inputs["Emission Strength"].default_value = strength
+    return m
+
+
+def street_umbrella(c, x, y, cloth, stripe=None, h=2.25, r=1.4, tilt=0.12):
+    """A big pavement umbrella as the vendors use them: a pole a little off true, the canopy in eight panels on its
+    ribs, sagging between them, a scalloped valance; its cloth sun-faded and stained (and every other panel white,
+    if "stripe")."""
+    cyl(c, (x, y, h / 2), 0.028, h, M["steel"], rot=(tilt * 0.3, -tilt, 0), verts=8)
+    top = Vector((x - tilt * h * 0.5, y + tilt * h * 0.15, h + 0.02))
+    cm = tmat("mk_" + cloth, T_ALL[cloth], 0.85)
+    sm = mat("mk_umb_white", (0.9, 0.88, 0.82), 0.85) if stripe else cm
+    for k in range(8):
+        a0, a1 = k * math.pi / 4, (k + 1) * math.pi / 4
+        bm = bmesh.new()
+        verts = [bm.verts.new(top + Vector((0, 0, 0.42)))]
+        for j in range(7):                                                    # the panel's edge, sagging between ribs
+            a = a0 + (a1 - a0) * j / 6
+            sag = 0.08 * math.sin(math.pi * j / 6)
+            verts.append(bm.verts.new(top + Vector((r * (1 - sag) * math.cos(a), r * (1 - sag) * math.sin(a), 0.0))))
+        for j in range(1, 7):
+            bm.faces.new((verts[0], verts[j], verts[j + 1]))
+        me = bpy.data.meshes.new("umb")
+        bm.to_mesh(me)
+        bm.free()
+        ob = bpy.data.objects.new("umb", me)
+        c.objects.link(ob)
+        ob.data.materials.append(sm if (stripe and k % 2) else cm)
+        mod = ob.modifiers.new("Solid", 'SOLIDIFY')
+        mod.thickness = 0.012
+        bpy.context.view_layer.objects.active = ob
+        bpy.ops.object.select_all(action='DESELECT')
+        ob.select_set(True)
+        bpy.ops.object.modifier_apply(modifier="Solid")
+        for j in range(5):                                                    # the scalloped valance under its edge
+            a = a0 + (a1 - a0) * (j + 0.5) / 5
+            box(c, top + Vector((r * 0.99 * math.cos(a), r * 0.99 * math.sin(a), -0.08)), (0.2, 0.01, 0.16), sm if (stripe and k % 2) else cm,
+                rot=(0, 0, a + math.pi / 2))
+        line(c, top + Vector((0, 0, 0.42)), top + Vector((r * math.cos(a0), r * math.sin(a0), 0.0)), 0.006, M["steel"])   # its rib
+
+
+def townhall_pavement():
+    """Town Hall's pavement (Day 14, the key-cutter search), as these footpaths are: a compound wall with torn posters
+    and a painted 'stick no bills', a neem's shade, an electric pole and its tangle of wires, a bin, a parked
+    bicycle; and three big umbrellas, only one of which cuts keys:
+      the cobbler (black umbrella): his wooden box with its drawers, the iron last, a tarp of chappals and shoes in
+        rows, polish tins and brushes, a tin of nails;
+      the phone-cover boy (blue and white): a folding table under covers in their packets hanging on strings,
+        screen guards fanned out, earphones and chargers on hooks, his board 'COVERS Rs 99';
+      the key-cutter (faded red and white): his low box with a vice and a hand-cranked cutter, two boards of key
+        blanks on nails, a row of padlocks, a glass-topped box of keys, a tin of filings, his stool, and a painted
+        tin board KEYS · LOCK REPAIR with his number."""
+    c = new_coll("townhall_pavement")
+    pav = tmat("mk_pavers", T_ALL["pavers"], 0.85)
+    tile(box(c, (0, 0.6, 0.06), (28.0, 3.4, 0.12), pav), 12, 2)
+    box(c, (0, -1.1, 0.07), (28.0, 0.2, 0.14), mat("mk_kerb", (0.62, 0.6, 0.55), 0.8))
+    for k in range(14):                                                       # the kerb's paint, black and yellow
+        box(c, (-13.5 + k * 2.0, -1.21, 0.08), (1.0, 0.01, 0.12), mat("mk_kerb_yellow", (0.9, 0.75, 0.15), 0.7))
+    wall = tmat("mk_plaster_stained", T_ALL["plaster_stained"], 0.9)
+    tile(box(c, (0, 2.4, 1.2), (28.0, 0.25, 2.4), wall), 7, 1)
+    box(c, (0, 2.4, 2.45), (28.2, 0.35, 0.1), mat("mk_coping", (0.7, 0.68, 0.62), 0.8))
+    for k in range(7):                                                        # posters pasted over posters, torn
+        for j in range(2):
+            box(c, (-12 + k * 3.9 + j * 0.5, 2.26 - j * 0.005, 1.35 + j * 0.15), (0.75, 0.01, 1.0),
+                mat("mk_poster_%d" % ((k + j) % 4), ((0.85, 0.75, 0.2), (0.75, 0.2, 0.15), (0.2, 0.4, 0.7), (0.9, 0.9, 0.85))[(k + j) % 4], 0.8))
+    text(c, "STICK NO BILLS", (4.0, 2.26, 2.05), 0.16, mat("mk_letters_black", (0.05, 0.05, 0.05), 0.6))
+    if "neem" in PLANTS:                                                      # a neem's shade over the cobbler
+        plant(c, "neem", (-9.5, 3.4, 0.0), 0.75)
+    cyl(c, (11.5, -0.7, 4.5), 0.13, 9.0, mat("mk_pole", (0.55, 0.54, 0.5), 0.8), verts=10, r2=0.09)   # the electric pole
+    box(c, (11.5, -0.7, 8.6), (1.8, 0.12, 0.12), mat("mk_pole", (0.55, 0.54, 0.5), 0.8))
+    for k in range(5):                                                        # its wires, sagging away both ways
+        for side in (-1, 1):
+            z = 8.65 + (k % 2) * 0.1
+            line(c, (11.5 - 0.8 + k * 0.4, -0.7, z), (11.5 - 0.8 + k * 0.4 + side * 14, -0.7 + side * 0.5, z - 0.9), 0.008, M["phone"])
+    box(c, (11.5, -0.55, 1.6), (0.3, 0.15, 0.4), mat("mk_meter", (0.5, 0.52, 0.5), 0.6, 0.3))
+    cyl(c, (-3.6, 1.9, 0.45), 0.25, 0.8, mat("mk_bin_green", (0.1, 0.5, 0.2), 0.4), verts=14, r2=0.22)   # a bin
+    for dx in (-0.45, 0.45):                                                  # a bicycle against the wall
+        bpy.ops.mesh.primitive_torus_add(major_radius=0.33, minor_radius=0.015, location=(-14.0 + 3.5 + dx, 2.05, 0.45), rotation=(math.pi / 2, 0, 0))
+        _put(bpy.context.object, M["phone"], c)
+    line(c, (-10.95, 2.05, 0.45), (-10.3, 2.05, 0.85), 0.018, mat("mk_cycle", (0.1, 0.12, 0.35), 0.5, 0.5))
+    line(c, (-10.3, 2.05, 0.85), (-10.05, 2.05, 0.45), 0.018, mat("mk_cycle", (0.1, 0.12, 0.35), 0.5, 0.5))
+    line(c, (-10.95, 2.05, 0.45), (-10.55, 2.05, 0.95), 0.018, mat("mk_cycle", (0.1, 0.12, 0.35), 0.5, 0.5))
+    # the cobbler
+    street_umbrella(c, -7.0, 0.9, "umb_black")
+    box(c, (-7.0, 1.4, 0.32), (0.9, 0.5, 0.4), M["wood"])
+    for j in range(3):
+        box(c, (-7.3 + j * 0.3, 1.14, 0.3), (0.24, 0.01, 0.12), mat("mk_drawer", (0.35, 0.22, 0.12), 0.7))
+    box(c, (-7.0, 0.4, 0.125), (1.8, 1.3, 0.008), tmat("mk_tarp_blue", T_ALL["tarp_blue"], 0.6))
+    cyl(c, (-6.7, 0.9, 0.3), 0.03, 0.35, M["iron"], verts=8)
+    box(c, (-6.7, 0.9, 0.5), (0.24, 0.08, 0.07), M["iron"])
+    for row in range(2):
+        for k in range(6):
+            col = ((0.4, 0.25, 0.12), (0.08, 0.08, 0.08), (0.6, 0.2, 0.15), (0.75, 0.6, 0.4))[(k + row) % 4]
+            box(c, (-7.75 + k * 0.28, 0.0 + row * 0.35, 0.145), (0.1, 0.27, 0.03), mat("mk_chappal_%d" % ((k + row) % 4), col, 0.6), rot=(0, 0, 0.1 * (k % 3)))
+            if row == 1 and k % 2:
+                box(c, (-7.75 + k * 0.28, 0.35, 0.2), (0.1, 0.24, 0.1), mat("mk_shoe_%d" % k, col, 0.4))
+    for k in range(4):
+        cyl(c, (-6.55 + k * 0.1, 1.45, 0.54), 0.04, 0.03, mat("mk_polish", (0.1, 0.1, 0.12), 0.3, 0.4), verts=10)
+    box(c, (-7.3, 1.45, 0.56), (0.18, 0.06, 0.05), mat("mk_brush", (0.35, 0.2, 0.1), 0.8))
+    # the phone-cover boy
+    street_umbrella(c, 0.0, 0.9, "umb_blue", stripe=True)
+    box(c, (0.0, 1.0, 0.85), (1.7, 0.65, 0.04), mat("mk_table_white", (0.9, 0.9, 0.88), 0.5))
+    for dx in (-0.8, 0.8):
+        line(c, (dx, 0.75, 0.12), (dx, 1.25, 0.83), 0.015, M["steel"])
+        line(c, (dx, 1.25, 0.12), (dx, 0.75, 0.83), 0.015, M["steel"])
+    for j in range(4):                                                        # covers in packets on strings
+        z = 1.95 - j * 0.28
+        line(c, (-0.85, 1.35, z + 0.12), (0.85, 1.35, z + 0.12), 0.004, M["string"])
+        for k in range(10):
+            box(c, (-0.78 + k * 0.17, 1.35, z), (0.1, 0.012, 0.2), mat("mk_cover_%d" % ((k + j) % 6),
+                ((0.9, 0.2, 0.4), (0.1, 0.1, 0.1), (0.2, 0.6, 0.9), (0.95, 0.8, 0.2), (0.6, 0.3, 0.8), (0.3, 0.8, 0.4))[(k + j) % 6], 0.25))
+    for dx in (-0.85, 0.85):
+        cyl(c, (dx, 1.35, 1.1), 0.015, 2.0, M["steel"], verts=6)
+    for k in range(12):
+        box(c, (-0.65 + k * 0.11, 0.85, 0.875), (0.08, 0.15, 0.008), mat("mk_guard", (0.85, 0.9, 0.95), 0.1, 0.0, 0.6), rot=(0, 0, 0.05 * (k - 6)))
+    for k in range(5):                                                        # earphones, chargers on hooks
+        line(c, (0.5 + k * 0.07, 1.1, 1.2), (0.5 + k * 0.07, 1.1, 0.95), 0.006, M["plastic_white"] if k % 2 else M["phone"])
+    box(c, (0.0, 0.67, 0.68), (1.1, 0.01, 0.32), mat("mk_board_yellow", (0.98, 0.85, 0.2), 0.6))
+    text(c, "COVERS  Rs 99", (0.0, 0.66, 0.72), 0.12, mat("mk_letters_red", (0.75, 0.1, 0.08), 0.5))
+    text(c, "Screen guard fitting", (0.0, 0.66, 0.6), 0.06, M["phone"])
+    # the key-cutter
+    street_umbrella(c, 7.0, 0.9, "umb_red", stripe=True)
+    box(c, (7.0, 1.15, 0.36), (1.1, 0.6, 0.48), M["wood"])
+    box(c, (7.0, 1.15, 0.61), (1.0, 0.5, 0.02), mat("mk_glasstop", (0.7, 0.8, 0.85), 0.05, 0.0, 0.45))   # its glass top
+    brass = mat("mk_brass_key", (0.78, 0.62, 0.25), 0.35, 0.8)
+    for k in range(30):                                                       # keys under the glass
+        box(c, (6.6 + (k % 10) * 0.08, 1.0 + (k // 10) * 0.12, 0.59), (0.02, 0.06, 0.006), brass if k % 3 else M["steel"], rot=(0, 0, 0.3 * (k % 4)))
+    box(c, (6.7, 1.0, 0.68), (0.12, 0.16, 0.12), M["iron"])                   # the vice
+    box(c, (7.3, 1.2, 0.71), (0.3, 0.2, 0.18), mat("mk_cutter_grey", (0.45, 0.47, 0.5), 0.4, 0.5))
+    cyl(c, (7.3, 1.08, 0.75), 0.08, 0.02, M["steel"], rot=(math.pi / 2, 0, 0), verts=16)
+    line(c, (7.46, 1.2, 0.8), (7.56, 1.2, 1.0), 0.012, M["iron"])
+    blob(c, (7.56, 1.2, 1.02), 0.025, M["plastic_red"], seg=8)
+    for bx in (6.45, 7.55):                                                   # two boards of blanks on nails
+        box(c, (bx, 2.05, 1.15), (1.0, 0.04, 1.1), mat("mk_keyboard", (0.2, 0.3, 0.45), 0.7), rot=(0.1, 0, 0))
+        for k in range(70):
+            box(c, (bx - 0.43 + (k % 10) * 0.095, 2.0 - 0.01 * (k // 10), 0.72 + (k // 10) * 0.12), (0.022, 0.006, 0.07),
+                brass if (k + int(bx)) % 3 else M["steel"], rot=(0.1, 0, 0))
+    for k in range(14):                                                       # padlocks hanging along the top
+        px = 6.05 + k * 0.14
+        box(c, (px, 1.98, 1.83), (0.08, 0.03, 0.07), brass if k % 3 else M["steel"])
+        bpy.ops.mesh.primitive_torus_add(major_radius=0.025, minor_radius=0.006, location=(px, 1.98, 1.89), rotation=(math.pi / 2, 0, 0))
+        _put(bpy.context.object, M["steel"], c)
+    cyl(c, (6.55, 1.5, 0.66), 0.07, 0.06, mat("mk_tin", (0.6, 0.6, 0.55), 0.4, 0.6), verts=12)
+    cyl(c, (7.7, 0.35, 0.2), 0.16, 0.38, M["plastic_red"], verts=14)
+    tin = mat("mk_tin_board", (0.92, 0.9, 0.82), 0.6, 0.3)
+    box(c, (7.0, 0.38, 0.5), (0.9, 0.02, 0.45), tin)
+    text(c, "KEYS", (7.0, 0.365, 0.6), 0.14, mat("mk_letters_red", (0.75, 0.1, 0.08), 0.5))
+    text(c, "LOCK REPAIR · DUPLICATE KEY", (7.0, 0.365, 0.44), 0.045, M["phone"])
+    text(c, "94433 2•••8", (7.0, 0.365, 0.35), 0.05, M["phone"])
+    return c
+
+
+def shopfront(c, x, w, name, sub, col, pic, goods):
+    """One shop of a row: its walls, the concrete sunshade over the front, the rolling shutter up, the board with
+    its picture and name, a tubelight inside, a glass counter, shelves of what it sells, and things out on the step."""
+    wallc = mat("mk_shop_wall", (0.86, 0.84, 0.78), 0.8)
+    for dx in (-w / 2, w / 2):
+        box(c, (x + dx, 1.6, 1.75), (0.25, 3.2, 3.5), wallc)
+    box(c, (x, 3.2, 1.75), (w, 0.2, 3.5), wallc)
+    box(c, (x, 1.6, 0.17), (w, 3.2, 0.06), mat("mk_shop_floor", (0.82, 0.8, 0.76), 0.25))   # the tiled floor
+    box(c, (x, -0.15, 0.12), (w, 0.6, 0.24), mat("mk_step", (0.55, 0.53, 0.5), 0.8))       # the step
+    box(c, (x, -0.35, 3.3), (w + 0.25, 1.1, 0.1), mat("mk_chajja", (0.75, 0.73, 0.68), 0.85))   # the sunshade
+    box(c, (x, 0.05, 3.05), (w - 0.3, 0.35, 0.35), tmat("mk_shutter", T_ALL["shutter"], 0.5, 0.5))   # the shutter, up
+    box(c, (x, -0.15, 3.8), (w, 0.12, 0.8), mat("mk_shopboard_%s" % pic, col, 0.4))
+    panel(c, (x - w / 2 + 0.55, -0.225, 3.8), 0.7, 0.7, tmat("mk_" + pic, T_ALL[pic], 0.4))
+    text(c, name, (x + 0.35, -0.22, 3.92), 0.24, M["plastic_white"])
+    text(c, sub, (x + 0.35, -0.22, 3.62), 0.1, M["plastic_white"])
+    box(c, (x, 1.6, 3.2), (1.2, 0.05, 0.04), glow("mk_tubelight", (1.0, 1.0, 0.95), 4.0))   # the tubelight
+    box(c, (x, 1.0, 0.65), (w - 0.8, 0.55, 0.9), mat("mk_counter_base", (0.9, 0.9, 0.88), 0.4))
+    box(c, (x, 1.0, 1.12), (w - 0.8, 0.55, 0.03), mat("mk_counter_glass", (0.7, 0.85, 0.9), 0.05, 0.0, 0.4))
+    for j in range(4):
+        box(c, (x, 2.95, 0.9 + j * 0.5), (w - 0.5, 0.35, 0.03), mat("mk_shelf", (0.85, 0.85, 0.84), 0.5))
+        for i in range(int((w - 0.7) / 0.32)):
+            gc = goods[(i + j) % len(goods)]
+            box(c, (x - w / 2 + 0.45 + i * 0.32, 2.95, 1.03 + j * 0.5), (0.22, 0.2, 0.22 if j % 2 else 0.18), mat("mk_goods_%d_%d_%d" % tuple(int(v * 99) for v in gc), gc, 0.45))
+
+
+def rsp_shoprow():
+    """R.S. Puram by the flyover (Day 14, the key shop search), as these rows are: a two-storey block with grilled
+    windows, a sintex tank on the roof and a tuition centre's board upstairs, over four shops: AMMAN MOBILES,
+    KOVAI SWEETS & BAKERY (a glass cabinet of sweets on the step), SAI MEDICALS (a lit green cross), and by the
+    flyover's pier VINAYAGA KEY WORKS (car keys, remotes, locks: a board of blanks hung outside like the street
+    cutters, an electronic key machine and a laptop with its programmer on the counter). Meter boxes and wires, a
+    plastic chair, a crate of empty bottles. (The shops' names are the story's own.)"""
+    c = new_coll("rsp_shoprow")
+    pav = tmat("mk_pavers", T_ALL["pavers"], 0.85)
+    tile(box(c, (0, -1.3, 0.06), (18.0, 2.0, 0.12), pav), 8, 1)
+    box(c, (0, -2.35, 0.08), (18.0, 0.2, 0.16), mat("mk_kerb", (0.62, 0.6, 0.55), 0.8))
+    shops = (("AMMAN MOBILES", "Recharge · Accessories · Service", (0.82, 0.1, 0.1), "pic_phone",
+              ((0.1, 0.1, 0.12), (0.9, 0.9, 0.92), (0.2, 0.5, 0.9), (0.9, 0.3, 0.4))),
+             ("KOVAI SWEETS & BAKERY", "Sweets · Savouries · Cakes", (0.92, 0.55, 0.08), "pic_sweets",
+              ((0.95, 0.75, 0.2), (0.9, 0.5, 0.15), (0.95, 0.9, 0.7), (0.6, 0.35, 0.15))),
+             ("SAI MEDICALS", "24 hrs · Free home delivery", (0.08, 0.5, 0.28), "pic_cross",
+              ((0.95, 0.95, 0.95), (0.3, 0.6, 0.9), (0.9, 0.4, 0.3), (0.95, 0.85, 0.3))),
+             ("VINAYAGA KEY WORKS", "Car keys · Remotes · Locks", (0.1, 0.24, 0.58), "pic_key",
+              ((0.78, 0.62, 0.25), (0.75, 0.76, 0.78), (0.1, 0.1, 0.12))))
+    for k, (name, sub, col, pic, goods) in enumerate(shops):
+        shopfront(c, -6.0 + k * 4.0, 4.0, name, sub, col, pic, goods)
+    # the floors above: a slab, the walls with grilled windows, a tuition centre's board, the roof's water tank
+    upper = mat("mk_upper_wall", (0.78, 0.72, 0.6), 0.85)
+    box(c, (0, 1.6, 3.6), (16.4, 3.4, 0.2), mat("mk_slab", (0.72, 0.7, 0.66), 0.85))
+    box(c, (0, 1.6, 5.4), (16.4, 3.2, 3.4), upper)
+    box(c, (0, 1.6, 7.2), (16.6, 3.4, 0.2), mat("mk_slab", (0.72, 0.7, 0.66), 0.85))
+    grill = mat("mk_grill", (0.15, 0.25, 0.22), 0.5, 0.5)
+    for k in range(6):
+        wx = -6.5 + k * 2.6
+        box(c, (wx, -0.02, 5.3), (1.2, 0.02, 1.3), mat("mk_window_glass", (0.25, 0.32, 0.36), 0.1, 0.4))
+        for j in range(5):
+            box(c, (wx - 0.5 + j * 0.25, -0.05, 5.3), (0.02, 0.02, 1.3), grill)
+        box(c, (wx, -0.25, 6.05), (1.5, 0.5, 0.06), mat("mk_chajja", (0.75, 0.73, 0.68), 0.85))
+    box(c, (-3.2, -0.08, 4.35), (4.0, 0.06, 0.8), mat("mk_tuition", (0.95, 0.9, 0.3), 0.5))
+    text(c, "BRIGHT TUITION CENTRE · 1st floor", (-3.2, -0.12, 4.35), 0.16, mat("mk_letters_blue", (0.1, 0.22, 0.5), 0.4))
+    cyl(c, (5.5, 2.4, 8.0), 0.65, 1.4, mat("mk_sintex", (0.12, 0.12, 0.12), 0.6), verts=20)   # the black water tank
+    for k in range(3):                                                         # meter boxes and their wires
+        box(c, (-7.9, -0.02, 2.2 + k * 0.45), (0.35, 0.15, 0.35), mat("mk_meter", (0.5, 0.52, 0.5), 0.6, 0.3))
+        line(c, (-7.9, -0.1, 2.4 + k * 0.45), (-7.9 - 0.3, -0.2, 3.2), 0.01, M["phone"])
+    # out on the step: the sweet shop's glass cabinet, a chair, a crate of bottles; the key works' board outside
+    box(c, (-2.0, -0.6, 0.75), (1.4, 0.55, 1.1), mat("mk_cabinet_glass", (0.75, 0.85, 0.9), 0.05, 0.0, 0.35))
+    for j in range(3):
+        for i in range(6):
+            box(c, (-2.55 + i * 0.22, -0.6, 0.4 + j * 0.32), (0.18, 0.4, 0.06),
+                mat("mk_sweet_%d" % ((i + j) % 4), ((0.95, 0.75, 0.2), (0.9, 0.5, 0.15), (0.95, 0.9, 0.7), (0.6, 0.35, 0.15))[(i + j) % 4], 0.5))
+    chair(c, 3.0, -0.7, 0.4, M["plastic_white"])
+    box(c, (-5.0, -0.6, 0.27), (0.45, 0.32, 0.3), M["crate_red"])
+    brass = mat("mk_brass_key", (0.78, 0.62, 0.25), 0.35, 0.8)
+    box(c, (7.6, -0.25, 1.5), (0.8, 0.04, 1.1), mat("mk_keyboard", (0.2, 0.3, 0.45), 0.7))
+    for k in range(48):
+        box(c, (7.28 + (k % 8) * 0.09, -0.29, 1.08 + (k // 8) * 0.15), (0.022, 0.006, 0.07), brass if k % 3 else M["steel"])
+    kx = 6.0                                                                   # inside: the machine, the laptop, remotes
+    box(c, (kx + 0.8, 1.0, 1.32), (0.45, 0.35, 0.38), mat("mk_keymachine", (0.85, 0.85, 0.82), 0.3, 0.3))
+    box(c, (kx + 0.8, 0.82, 1.38), (0.3, 0.01, 0.15), glow("mk_screen_lit", (0.3, 0.8, 0.5), 1.5))
+    box(c, (kx - 0.6, 1.0, 1.15), (0.34, 0.24, 0.015), M["phone"])
+    box(c, (kx - 0.6, 1.12, 1.27), (0.34, 0.015, 0.22), glow("mk_laptop_lit", (0.5, 0.65, 0.95), 1.2), rot=(0.25, 0, 0))
+    box(c, (kx - 0.15, 0.95, 1.17), (0.16, 0.1, 0.05), mat("mk_programmer", (0.4, 0.42, 0.45), 0.4))
+    for k in range(6):
+        box(c, (kx - 1.3 + k * 0.15, 0.9, 1.15), (0.05, 0.1, 0.02), M["phone"])
+    glowc = glow("mk_cross_lit", (0.1, 0.9, 0.3), 3.0)                         # the pharmacy's lit cross
+    box(c, (3.6, -0.3, 2.7), (0.08, 0.5, 0.15), glowc)
+    box(c, (3.6, -0.3, 2.7), (0.08, 0.15, 0.5), glowc)
+    # the flyover beside the row: a pier, its cap, the deck going over the road
+    concrete = tmat("mk_plaster_stained", T_ALL["plaster_stained"], 0.9)
+    box(c, (10.8, 0.5, 4.5), (1.6, 1.6, 9.0), concrete)
+    box(c, (10.8, -3.0, 9.4), (2.4, 10.0, 0.8), concrete)
+    box(c, (10.8, -3.0, 10.3), (12.0, 16.0, 1.0), concrete)
+    for k in range(3):                                                         # posters on the pier
+        box(c, (10.8 - 0.81, 0.5, 1.6 + k * 0.9), (0.01, 0.9, 0.7), mat("mk_poster_%d" % (k % 4), ((0.85, 0.75, 0.2), (0.75, 0.2, 0.15), (0.2, 0.4, 0.7), (0.9, 0.9, 0.85))[k % 4], 0.8))
+    return c
+
+
 BUILD = {"market_vegcart": vegcart, "market_groundstall": groundstall, "market_banana": banana, "market_crates": crates,
          "market_teakadai": teakadai, "bala_workshop": workshop, "bala_workshop_closed": workshop_closed,
-         "pudhur_site": pudhur_site, "agri_fair": agri_fair}
+         "pudhur_site": pudhur_site, "agri_fair": agri_fair, "townhall_pavement": townhall_pavement, "rsp_shoprow": rsp_shoprow}
 
 
 def join(coll, name):
@@ -1977,8 +2276,12 @@ def preview(out_dir, obs):
     sc.render.engine = 'BLENDER_EEVEE_NEXT' if 'BLENDER_EEVEE_NEXT' in engines else 'BLENDER_EEVEE'
     sc.render.resolution_x, sc.render.resolution_y = 1280, 720
     sc.view_settings.view_transform = 'Standard'          # (the colours as they are, as Godot shows them)
-    for ob, x in zip(obs, (-4.6, -1.2, 1.9, 4.4, 9.0, 16.0, 16.0, 40.0, 70.0)):
-        ob.location = (x, 0, 0)
+    at = {"market_vegcart": -4.6, "market_groundstall": -1.2, "market_banana": 1.9, "market_crates": 4.4, "market_teakadai": 9.0,
+          "bala_workshop": 16.0, "bala_workshop_closed": 16.0, "pudhur_site": 40.0, "agri_fair": 70.0,
+          "townhall_pavement": 110.0, "rsp_shoprow": 140.0}
+    for ob in obs:
+        ob.location = (at[ob.name], 0, 0)
+    built = [ob.name for ob in obs]
     bpy.ops.mesh.primitive_plane_add(size=40, location=(0, 0, 0))
     bpy.context.object.data.materials.append(mat("ground_dust", (0.5, 0.42, 0.33), 0.95))
     sun = bpy.data.objects.new("Sun", bpy.data.lights.new("Sun", 'SUN'))
@@ -2001,7 +2304,16 @@ def preview(out_dir, obs):
                             ("pudhur_site", (43.0, -11.0, 3.0), (39.0, 5.0, 1.5)),
                             ("pudhur_site_wide", (52.0, -14.0, 7.0), (38.0, 9.0, 2.5)),
                             ("agri_fair", (70.0, -13.0, 3.4), (70.5, 6.0, 1.6)),
-                            ("agri_fair_tractor", (63.0, -2.2, 1.6), (66.4, 2.6, 1.0))):
+                            ("agri_fair_tractor", (63.0, -2.2, 1.6), (66.4, 2.6, 1.0)),
+                            ("townhall_pavement", (104.0, -14.0, 3.2), (109.0, 1.0, 1.0)),
+                            ("townhall_pavement_keys", (115.5, -2.2, 1.5), (117.0, 1.3, 0.8)),
+                            ("rsp_shoprow", (137.0, -17.0, 3.0), (142.0, 1.5, 3.0))):
+        if not any(name.startswith(b) or (name.startswith("market_") and b.startswith("market_")) for b in built):
+            continue
+        if name.startswith(("townhall", "rsp")) and not bpy.data.objects.get("ground_street"):
+            bpy.ops.mesh.primitive_plane_add(size=80, location=(125.0, 0, -0.005))   # (the road in front of them)
+            bpy.context.object.name = "ground_street"
+            bpy.context.object.data.materials.append(mat("mk_asphalt_prev", (0.2, 0.2, 0.21), 0.9))
         if name.startswith("agri") and not bpy.data.objects.get("bike_borrowed"):
             vdir = os.path.join(HERE, "..", "godot", "assets", "vehicles")
             for k, (fn, bx, by) in enumerate((("bike_scooter_0", 59.5, 5.0), ("bike_motorcycle_1", 59.5, 5.9), ("bike_scooter_2", 59.5, 6.8),
@@ -2042,7 +2354,8 @@ def main():
     load_plant("bush2", "shrub_04", 0.4, 1.3)
     load_plant("grass", "grass_medium_01", max_part=1500)
     load_plant("weed", "weed_plant_02", 0.5, 1.2)
-    obs = [export(fn()) for fn in BUILD.values()]
+    only = args[args.index("--only") + 1].split(",") if "--only" in args else list(BUILD)   # (just these: --only a,b)
+    obs = [export(fn()) for name, fn in BUILD.items() if name in only]
     if "--preview" in args:
         preview(os.path.abspath(args[args.index("--preview") + 1]), obs)
 
