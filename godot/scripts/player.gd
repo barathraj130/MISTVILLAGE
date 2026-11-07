@@ -8,8 +8,8 @@ extends CharacterBody3D
 
 const STEP_HEIGHT := 0.35          # stone steps and kerbs are 15–25 cm
 
-@export var walk_speed := 3.2
-@export var run_speed := 7.0
+@export var walk_speed := 1.4       # a person's pace: the Walk clip covers 1.18–1.5 m a cycle, so feet don't slide
+@export var run_speed := 4.2        # a run: the Run clip covers 3.9–5.5 m
 @export var jump_velocity := 4.2
 @export var mouse_sensitivity := 0.0025
 
@@ -30,7 +30,11 @@ var _step_drop := 0.0               # a step just climbed: the body still catchi
 var _last_pos := Vector3.INF       # (a jump of metres in a frame is a teleport: the body faces as it was set)
 const ACCEL := 3.5                  # m/s² getting going (walking pace in about half a second)
 const DECEL := 5.0                  # m/s² coming to a stop
-const TURN_RATE := 7.0              # how quickly the body swings round to the way you go
+const TURN_RATE := 7.0              # how quickly the body swings round to the way you go, walking…
+const TURN_RATE_RUN := 3.5          # …and running (momentum: no about-turn on the spot at a run)
+var auto_input := Vector2.INF       # (testing: a move held as if from the keys, tests/movement_lab.gd)
+var auto_run := false
+var debug_label: Label              # (development: --movedebug shows how he moves)
 const AVATAR := "res://assets/people/person_man_shirt.glb"
 static var avatar := ""            # who you are on foot, when not the default (the story: Karthik himself)
 var avatar_run_stride := false     # a story cast model: its Run covers ~3.9 m/s at speed 1
@@ -39,7 +43,7 @@ var avatar_run_stride := false     # a story cast model: its Run covers ~3.9 m/s
 func _init() -> void:
 	var shape := CollisionShape3D.new()
 	var capsule := CapsuleShape3D.new()
-	capsule.radius = 0.3
+	capsule.radius = 0.25                                # (a person's shoulders; 0.3 jammed on a stair's 30 cm tread)
 	capsule.height = 1.75
 	shape.shape = capsule
 	shape.position.y = 0.875
@@ -71,6 +75,16 @@ func _init() -> void:
 			if anim.has_animation(a):
 				anim.get_animation(a).loop_mode = Animation.LOOP_LINEAR
 	_set_view(true)
+	if "--movedebug" in OS.get_cmdline_user_args():
+		var layer := CanvasLayer.new()
+		layer.layer = 30
+		add_child(layer)
+		debug_label = Label.new()
+		debug_label.position = Vector2(16, 120)
+		debug_label.add_theme_font_size_override("font_size", 16)
+		debug_label.add_theme_color_override("font_outline_color", Color.BLACK)
+		debug_label.add_theme_constant_override("outline_size", 4)
+		layer.add_child(debug_label)
 	floor_max_angle = deg_to_rad(50.0)
 	floor_snap_length = STEP_HEIGHT + 0.05
 
@@ -129,27 +143,31 @@ func _physics_process(delta: float) -> void:
 	if active:
 		if Input.is_action_just_pressed("jump") and is_on_floor():
 			velocity.y = jump_velocity
-		var input := Input.get_vector("move_left", "move_right", "move_forward", "move_back")
+		var input := Input.get_vector("move_left", "move_right", "move_forward", "move_back") if auto_input == Vector2.INF else auto_input
 		var dir := (transform.basis * Vector3(input.x, 0.0, input.y)).normalized()
-		var speed := run_speed if Input.is_action_pressed("run") else walk_speed
+		var running := Input.is_action_pressed("run") if auto_input == Vector2.INF else auto_run
+		var speed := (run_speed if running else walk_speed) * minf(input.length(), 1.0)   # (a stick half pushed: slower)
 		if dir != Vector3.ZERO and model:               # a sharp turn: he slows to make it, then goes on
 			var off := absf(angle_difference(_model_yaw, atan2(dir.x, dir.z)))
 			speed *= clampf(1.0 - (off - 0.6) / 2.0, 0.35, 1.0)
+		if dir != Vector3.ZERO and is_on_floor():       # a slope: slower up it, careful down a steep one
+			var grade := -dir.dot(get_floor_normal())    # (sin of the slope, + uphill)
+			if grade > 0.0:
+				speed *= 1.0 - clampf(grade * 0.5, 0.0, 0.3)
+			else:
+				speed *= 1.0 - clampf((-grade - 0.2) * 0.8, 0.0, 0.2)
 		var want := Vector2(dir.x, dir.z) * speed
 		var have := Vector2(velocity.x, velocity.z)
 		var rate := (ACCEL if want.length() > have.length() else DECEL) * (1.0 if is_on_floor() else 0.3)
 		have = have.move_toward(want, rate * delta)
 		velocity.x = have.x
 		velocity.z = have.y
-		_try_step_up(delta)
 	else:
 		velocity.x = 0.0
 		velocity.z = 0.0
-	var y0 := global_position.y
+	if active:                                          # up a step: the body catches up with the capsule
+		_step_drop = minf(_step_drop + _try_step_up(delta), 0.4)
 	move_and_slide()
-	var rise := global_position.y - y0
-	if rise > 0.08 and rise < 0.5 and is_on_floor():   # up a step: the body catches up with the capsule
-		_step_drop = minf(_step_drop + rise, 0.4)
 	if global_position.y < -400.0:         # fell off the world
 		_respawn()
 	_animate(delta)
@@ -168,7 +186,8 @@ func _animate(delta: float) -> void:
 	if sp > 0.2:
 		# face the way you're walking (the model faces +Z), turning at a person's pace; standing, he stays put
 		var was := _model_yaw
-		_model_yaw = lerp_angle(_model_yaw, atan2(flat.x, flat.z), 1.0 - exp(-delta * TURN_RATE))
+		var rate := lerpf(TURN_RATE, TURN_RATE_RUN, clampf((sp - walk_speed) / maxf(run_speed - walk_speed, 0.1), 0.0, 1.0))
+		_model_yaw = lerp_angle(_model_yaw, atan2(flat.x, flat.z), 1.0 - exp(-delta * rate))
 		turned = angle_difference(was, _model_yaw) / maxf(delta, 0.001)
 	_lean = lerpf(_lean, clampf(-turned * sp * 0.012, -0.12, 0.12), 1.0 - exp(-delta * 6.0))   # into the curve
 	model.global_rotation = Vector3(0.0, _model_yaw, 0.0)
@@ -187,19 +206,38 @@ func _animate(delta: float) -> void:
 	# story_cast.py --walkstrip); the resort figure's walk 1.5, run 5.5
 	var stride := (1.18 if avatar_run_stride else 1.5) if a == "Walk" else (3.9 if avatar_run_stride else 5.5)
 	anim.speed_scale = clampf(sp / stride, 0.45, 1.8) if a != "Idle" else 1.0
+	if debug_label:                                  # how he moves, for tuning: the foot-slide ratio is the ground the
+		var slide := (sp / maxf(stride * anim.speed_scale, 0.01)) if a != "Idle" else 0.0   #  body covers per the clip's
+		var slope := rad_to_deg(get_floor_normal().angle_to(Vector3.UP)) if is_on_floor() else 0.0
+		debug_label.text = "%.2f m/s  %s ×%.2f  slide %.2f  %s  vy %.2f  slope %.0f°" % [sp, a, anim.speed_scale, slide,
+			"ground" if is_on_floor() else "air", velocity.y, slope]
 
 
 ## CharacterBody3D cannot climb steps on its own: if something low blocks us
 ## and the same move is free one step higher, lift the body and let floor snap settle it.
-func _try_step_up(delta: float) -> void:
+## How: something just ahead blocks him; from a step's height up, the way ahead is free; looking down from there
+## finds a walkable top within that height. Then he rises exactly to it (not a fixed lift and a fall back: that
+## floated over the first step and jammed at the next riser of a flight).
+func _try_step_up(delta: float) -> float:
 	var h := Vector3(velocity.x, 0.0, velocity.z) * delta
-	if h.length() < 0.001 or not is_on_floor():
-		return
-	if not test_move(global_transform, h):
-		return
+	if h.length() < 0.0005 or not is_on_floor():
+		return 0.0
+	var ahead := h.normalized() * maxf(h.length(), 0.1)
+	if not test_move(global_transform, ahead):
+		return 0.0
 	var up := Vector3.UP * STEP_HEIGHT
-	if test_move(global_transform, up):
-		return
-	if test_move(global_transform.translated(up), h):
-		return
-	global_position += up
+	if test_move(global_transform, up):                  # (a low ceiling: no room to rise)
+		return 0.0
+	var high := global_transform.translated(up)
+	if test_move(high, ahead):                           # (still blocked up there: a wall, not a step)
+		return 0.0
+	var hit := KinematicCollision3D.new()
+	if not test_move(high.translated(ahead), Vector3.DOWN * (STEP_HEIGHT + 0.02), hit):
+		return 0.0
+	if hit.get_normal().angle_to(Vector3.UP) > floor_max_angle:
+		return 0.0
+	var rise := STEP_HEIGHT - hit.get_travel().length()
+	if rise <= 0.02:
+		return 0.0
+	global_position.y += rise + 0.005
+	return rise + 0.005
