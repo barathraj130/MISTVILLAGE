@@ -338,6 +338,17 @@ clock and the danger in the story (the black sedan following him, the trap in Ac
 A power cut on the office stair at night is just that, as Coimbatore has them: the watchman waits at the top with
 his torch and tells him what he saw.
 
+## 6c. Where he stands (standing.gd, decided 2026-11-07)
+One system keeps the consequences of what Karthik does, across all twenty days, built on what the game already
+keeps: the inspector's **suspicion** is bail.gd's own (signings, lates, strikes, the border); **compliance** comes
+from bail's strikes and lates; money **pressure** from the bills due in three days against his wallet. New beside
+them: the city's **reputation** of him (from 50) and each witness's **trust** (from 50). The story's "standing" table
+(slice.json) says what each of its flags does to these, counted once when the flag comes true (a bribe, a grab, an
+honest way); old saves are rebuilt from their flags. People react: Selvi texts when suspicion passes 60, Sundaram at
+85, Amma when the lane turns on him (reputation ≤ 30) or the bills press (≥ 70), Divya when the tea shop speaks well
+of him (≥ 70); at the trial a suspicion of 70 or more leaves the judge one point less patience. Any step may ask
+"if_standing" (e.g. a witness who talks only if his trust is over 60). Never a game over; never a number on screen.
+
 ## 7. Relationships (shown through behaviour, not numbers)
 - **Amma:** trust stays, health worsens with gossip. Coming home for dinner, not missing signings and paying rent
   keep her steady.

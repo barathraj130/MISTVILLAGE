@@ -60,6 +60,7 @@ const Dvr := preload("res://scripts/story/dvr.gd")
 const Doorbell := preload("res://scripts/story/doorbell.gd")
 const Keypad := preload("res://scripts/story/keypad.gd")
 const Shop := preload("res://scripts/story/shop.gd")
+const Standing := preload("res://scripts/story/standing.gd")
 const Court := preload("res://scripts/story/court.gd")
 const Actor := preload("res://scripts/story/actor.gd")
 const Walker := preload("res://scripts/player.gd")
@@ -99,6 +100,7 @@ var _peek := -1                     # (testing) the house visit the walker was s
 var _beam: MeshInstance3D
 const SAVE := "user://story_save.json"   # the story's own save: each morning (menu: Continue the story)
 var _slept := false                  # (a night's sleep just ended: the next step is a morning, saved)
+var standing := Standing.new()      # where he stands: suspicion, reputation, each witness's trust (standing.gd)
 var evidence := {}                  # tag → {title, body, paid}: what he can put before the court (court.gd)
 var flags := {}                     # what the player did in tasks (short_found, signed, ...)
 var _paid := {}                     # lines that already paid (step:line)
@@ -203,6 +205,8 @@ func load_chapter(path := CHAPTER) -> bool:
 		push_error("story: no chapter at " + path)
 		return false
 	data = JSON.parse_string(f.get_as_text())
+	if data is Dictionary:
+		standing.setup(city, data)
 	return data is Dictionary
 
 
@@ -450,8 +454,10 @@ func _next() -> void:
 	for a in OS.get_cmdline_user_args():                # (testing: --storystop=N quits on reaching step N)
 		if a.begins_with("--storystop=") and step >= int(a.get_slice("=", 1)):
 			get_tree().quit()
+	_settle()
 	cur = data["steps"][step]
-	while (cur.has("when") and not flags.get(cur["when"], false)) or (cur.has("unless") and flags.get(cur["unless"], false)):
+	while (cur.has("when") and not flags.get(cur["when"], false)) or (cur.has("unless") and flags.get(cur["unless"], false)) \
+			or (cur.has("if_standing") and not standing.allows(cur["if_standing"])):
 		step += 1
 		if step >= data["steps"].size():
 			return
@@ -605,6 +611,7 @@ func _next() -> void:
 			court.places = data["places"]
 			court.map_segs = map.all_segs
 			court.start(cur, ev, lang, _skip)
+			court.set("_patience", 2 if standing.suspicion() >= 70.0 else 3)   # (a judge who has heard the police's view of him)
 			if _skip:                                    # (testing: the court, mid-case and the night on the map)
 				for t in [2.0, 9.5, 12.0]:
 					get_tree().create_timer(t).timeout.connect(_shot)
@@ -3029,7 +3036,8 @@ func _story_save() -> void:
 		"flags": flags, "evidence": evidence, "accounts": city.fines._save_data.get("accounts", {}),
 		"bail": city.fines._save_data.get("bail", {}), "stress": city.life.stress if city.life else 0.0,
 		"contacts": city.phone.contacts, "pins": city.phone.pins, "notes": city.phone.notes,
-		"items": strip.call(city.hands.items), "wall": strip.call(wall.pool), "wall_pins": pins, "threads": wall.state["threads"]}
+		"items": strip.call(city.hands.items), "wall": strip.call(wall.pool), "wall_pins": pins, "threads": wall.state["threads"],
+		"standing": standing.save(), "version": 2}
 	var f := FileAccess.open(SAVE, FileAccess.WRITE)
 	if f:
 		f.store_string(JSON.stringify(d))
@@ -3068,7 +3076,20 @@ func _story_load() -> void:
 		var v: Array = d["wall_pins"][k]
 		wall.state["pins"][k] = Vector2(float(v[0]), float(v[1]))
 	wall.state["threads"] = d.get("threads", [])
+	standing.city = city
+	standing.load(d.get("standing", {}), flags)             # (a save from before standing: rebuilt from its flags)
 	print("STORY continued at step %d (day %d)" % [int(d["step"]), fines.sim.day])
+
+
+## What he did, counted (standing.gd): the flags that came true since the last step move suspicion, reputation and
+## trust; a value crossing its mark sends its notice (a text, as people send them).
+func _settle() -> void:
+	standing.city = city
+	for n in standing.settle(flags):
+		city.phone.message(n["from"], n["text"])
+		print("STANDING notice (%s %s): %s" % [str(n["value"]), str(n["at"]), str(n["text"]["en"]).left(50)])
+	if "--storystanding" in OS.get_cmdline_user_args():
+		print("STANDING now: " + standing.summary())
 
 
 func _court_done(result: Dictionary) -> void:

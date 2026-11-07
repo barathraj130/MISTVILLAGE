@@ -740,6 +740,270 @@
    "hair": "#141110"
   }
  },
+ "standing": {
+  "told_truth": {
+   "suspicion": -10
+  },
+  "lied_home": {
+   "suspicion": 15
+  },
+  "funeral_went": {
+   "reputation": -5,
+   "trust": {
+    "priya": -10,
+    "meenakshi": 5
+   }
+  },
+  "honest_watchman": {
+   "trust": {
+    "muniyandi": 25
+   }
+  },
+  "bribed_watchman": {
+   "suspicion": 5,
+   "reputation": -2,
+   "trust": {
+    "muniyandi": -10
+   }
+  },
+  "kathir_paid": {
+   "suspicion": 5,
+   "reputation": -2
+  },
+  "kathir_walked": {
+   "reputation": 1
+  },
+  "lakshmi_lawyer": {
+   "trust": {
+    "lakshmi": 15
+   }
+  },
+  "lakshmi_offered": {
+   "suspicion": 3,
+   "trust": {
+    "lakshmi": -15
+   }
+  },
+  "sekar_tea": {
+   "trust": {
+    "sekar": 15
+   }
+  },
+  "sekar_pushed": {
+   "reputation": -2,
+   "trust": {
+    "sekar": -15
+   }
+  },
+  "told_bala": {
+   "trust": {
+    "bala": 10
+   }
+  },
+  "kept_from_bala": {
+   "trust": {
+    "bala": -5
+   }
+  },
+  "farmers_heard": {
+   "reputation": 5,
+   "trust": {
+    "farmers": 20
+   }
+  },
+  "farmers_offered": {
+   "reputation": -3,
+   "trust": {
+    "farmers": -10
+   }
+  },
+  "farmers_left": {
+   "trust": {
+    "farmers": -10
+   }
+  },
+  "divya_partner": {
+   "trust": {
+    "divya": 15
+   }
+  },
+  "divya_angry": {
+   "trust": {
+    "divya": -10
+   }
+  },
+  "meenakshi_plain": {
+   "trust": {
+    "meenakshi": 15
+   }
+  },
+  "meenakshi_cap": {
+   "trust": {
+    "meenakshi": 10
+   }
+  },
+  "meenakshi_money": {
+   "reputation": -2,
+   "trust": {
+    "meenakshi": -10
+   }
+  },
+  "market_went": {
+   "reputation": 5
+  },
+  "priya_thanked": {
+   "trust": {
+    "priya": 10
+   }
+  },
+  "patta_online": {
+   "reputation": 2
+  },
+  "patta_revathi": {
+   "trust": {
+    "priya": 5
+   }
+  },
+  "patta_tout": {
+   "reputation": -5
+  },
+  "grand_tip": {
+   "suspicion": 2,
+   "reputation": -2
+  },
+  "grand_dressed": {
+   "trust": {
+    "ganesan": 15
+   }
+  },
+  "pm_paid": {
+   "suspicion": 8,
+   "reputation": -3
+  },
+  "pm_priya": {
+   "trust": {
+    "priya": 10
+   }
+  },
+  "bala_forgiven": {
+   "trust": {
+    "bala": 20
+   }
+  },
+  "bala_walked": {
+   "trust": {
+    "bala": -10
+   }
+  },
+  "trap_called": {
+   "suspicion": -5,
+   "trust": {
+    "sundaram": 15
+   }
+  },
+  "trap_went": {
+   "suspicion": 5
+  },
+  "trap_walked": {
+   "suspicion": -5,
+   "reputation": 2
+  },
+  "trap_grabbed": {
+   "reputation": -5
+  },
+  "trap_took": {
+   "reputation": -10
+  },
+  "pandi_called": {
+   "suspicion": -5,
+   "trust": {
+    "selvi": 15
+   }
+  },
+  "pandi_blocked": {
+   "reputation": 1
+  },
+  "pandi_grabbed": {
+   "reputation": -3
+  },
+  "pandi_bus_left": {
+   "trust": {
+    "selvi": -5
+   }
+  },
+  "joseph_taped": {
+   "trust": {
+    "joseph": 10
+   }
+  },
+  "joseph_spooked": {
+   "trust": {
+    "joseph": -20
+   }
+  }
+ },
+ "standing_notices": [
+  {
+   "value": "suspicion",
+   "at": ">=60",
+   "from": {
+    "en": "Constable Selvi",
+    "ta": "கான்ஸ்டபிள் செல்வி"
+   },
+   "text": {
+    "en": "The inspector has written your name on his board again. Sign on time. Don't give him a reason. – Selvi",
+    "ta": "இன்ஸ்பெக்டர் மறுபடியும் உன் பேர அவர் போர்டுல எழுதியிருக்கார். நேரத்துக்கு கையெழுத்து போடு. அவருக்கு காரணம் குடுக்காத. – செல்வி"
+   }
+  },
+  {
+   "value": "suspicion",
+   "at": ">=85",
+   "from": {
+    "en": "Sundaram sir",
+    "ta": "சுந்தரம் சார்"
+   },
+   "text": {
+    "en": "Thambi, the police have asked the court to cancel your bail. One more wrong step and I can't stop it. – Sundaram",
+    "ta": "தம்பி, உன் பெயில ரத்து பண்ண போலீஸ் கோர்ட்ல கேட்டிருக்காங்க. இன்னொரு தப்பு, என்னால தடுக்க முடியாது. – சுந்தரம்"
+   }
+  },
+  {
+   "value": "reputation",
+   "at": "<=30",
+   "from": {
+    "en": "Amma",
+    "ta": "அம்மா"
+   },
+   "text": {
+    "en": "Kanna, the lane is talking again. Kamala didn't take the kolam powder from me this morning. Come home early.",
+    "ta": "கண்ணா, தெருவுல மறுபடியும் பேசறாங்க. இன்னைக்கு காலையில கமலா என் கிட்ட கோல மாவு வாங்கல. சீக்கிரம் வா."
+   }
+  },
+  {
+   "value": "reputation",
+   "at": ">=70",
+   "from": {
+    "en": "Divya",
+    "ta": "திவ்யா"
+   },
+   "text": {
+    "en": "Anna! The tea shop uncle said you're a good man. In front of everyone. I didn't cry. Much.",
+    "ta": "அண்ணா! டீக்கடை அங்கிள் நீ நல்லவன்னு சொன்னாரு. எல்லார் முன்னாடியும். நான் அழல. ரொம்ப."
+   }
+  },
+  {
+   "value": "pressure",
+   "at": ">=70",
+   "from": {
+    "en": "Amma",
+    "ta": "அம்மா"
+   },
+   "text": {
+    "en": "Kanna, about the bills... don't worry, we'll manage something. Just eat. And sign on time.",
+    "ta": "கண்ணா, பில்லு விஷயம்... கவலப்படாத, ஏதாவது பண்ணிக்கலாம். சாப்பிடு. நேரத்துக்கு கையெழுத்து போடு."
+   }
+  }
+ ],
  "spawn": "home",
  "steps": [
   {
