@@ -77,7 +77,11 @@ func _vehicle(kind: String) -> void:
 	car.autopilot = true
 	await _accel(kind)
 	await _brake(kind, "brake", 1.0)
-	await _brake(kind, "wet", 0.7)
+	var wet := 0.7
+	for a in OS.get_cmdline_user_args():                  # (--labgrip=0.3: the wet run's grip, to find the tyres' limit)
+		if a.begins_with("--labgrip="):
+			wet = float(a.get_slice("=", 1))
+	await _brake(kind, "wet", wet)
 	await _turn(kind)
 	await _corner(kind)
 	await _bump(kind, 20.0)

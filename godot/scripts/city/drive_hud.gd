@@ -85,7 +85,7 @@ func _draw() -> void:
 	var g: String = ("M" if car.manual else "") + (car.gear_name() if car.gear > 0 else "R")
 	draw_string(f, c + Vector2(-60, -30), g, HORIZONTAL_ALIGNMENT_CENTER, 120, 26, Color(1.0, 0.82, 0.3, 0.95))
 	# the rev arc: 0 .. redline round the bottom-left, red near the top
-	var frac := clampf(car.rpm / car.REDLINE, 0.0, 1.0)
+	var frac := clampf(car.rpm / car.redline, 0.0, 1.0)
 	var a0 := deg_to_rad(140.0)
 	var a1 := deg_to_rad(400.0)
 	draw_arc(c, 84.0, a0, a1, 48, Color(1, 1, 1, 0.15), 6.0, true)

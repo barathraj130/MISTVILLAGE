@@ -93,3 +93,19 @@ Before = the driving as it was. After = with the gearbox's kickdown fixed (it no
 5. **The motorbike falls over:** it tips onto its side when cornering at 40 km/h, and its front flips it in a hard stop (a 62° nose dive).
 6. **The auto-rickshaw rolls 22°** when cornering at 40 km/h.
 7. **The chase (Day 13):** the black sedan follows at up to 19 m/s (68 km/h) on straights and 7 m/s in sharp bends; with the scooter at 29 km/h, it can only be lost in a run of tight lanes. Not changed here; see the next step's report.
+
+## Step 2, 2026-11-07: a drive profile per kind of vehicle
+
+Each vehicle now has its own engine curve, gearbox (a CVT on the scooter), brakes scaled to its mass, air drag and rolling resistance, and tyres (jeep.gd DRIVE / DRIVE_OF). Godot's default linear damping (a hidden brake) is off; drag is the profile's. The road's grip caps braking and drive (about 1 g dry, 0.7 wet, less off the road): past it the brakes are lost as ABS loses them, the tyres squeal, the drive spins. Engine force is split between the driven wheels (two on a scooter).
+
+| vehicle | 0–60 / 0–100 / top (after step 1 → step 2) | braking 60–0 dry → wet (step 2) |
+|---|---|---|
+| karthik_scooter | t0_60 -1.0, top_kmh 29.4 → t0_60 18.95, t0_100 -1.0, top_kmh 63.1 | dist_m 12.7 → dist_m 12.7 |
+| bike | t0_60 4.97, top_kmh 68.1 → t0_60 11.43, t0_100 -1.0, top_kmh 93.6 | dist_m 16.9 → dist_m 19.2 |
+| auto | t0_60 -1.0, top_kmh 54.0 → t0_60 -1.0, t0_100 -1.0, top_kmh 54.0 | never reached 60 km/h → never reached 60 km/h |
+| hatchback | t0_60 4.1, top_kmh 81.0 → t0_60 5.0, t0_100 11.83, top_kmh 147.8 | dist_m 16.4 → dist_m 19.8 |
+| sedan | t0_60 3.95, top_kmh 83.4 → t0_60 5.1, t0_100 11.87, top_kmh 150.2 | dist_m 16.4 → dist_m 19.8 |
+| luxury_suv | t0_60 4.55, top_kmh 86.1 → t0_60 3.77, t0_100 9.15, top_kmh 167.8 | dist_m 16.4 → dist_m 19.8 |
+| bus | t0_60 6.43, top_kmh 68.0 → t0_60 14.97, t0_100 -1.0, top_kmh 79.2 | dist_m 25.0 → dist_m 25.0 |
+
+Still to do: the scooter's and the motorbike's outrigger wheels carry weight and brake (slow pull-away, too-short stops, the bike tipping over): step 4 replaces them with a leaning two-wheeler. The auto's 14° roll and the bus braking the same wet and dry (its brakes are below wet grip) are left as they are for now.

@@ -39,6 +39,41 @@ const WHEEL_R := 0.36
 const IDLE := 780.0
 const REDLINE := 4500.0
 
+## What drives each kind of vehicle (tunable, measured in tests/vehicle_lab.gd, not claims about real models):
+##   torque   the engine's curve, [rpm, N·m] points (straight lines between)
+##   ratios   the gears (overall with "final"); "cvt": [low, high] overall ratios, the engine held near its best
+##   idle, redline, up   rpm; up: the upshift point at light and at full throttle
+##   brake_g  full braking, in g (scaled to the mass: a bus and a hatchback stop as they weigh)
+##   cda      drag area (Cd × frontal m²): air drag ½ρ·CdA·v²;  crr: rolling resistance × weight
+##   grip     tyre friction (VehicleWheel3D's friction slip); wet and off-road scale it
+const DRIVE := {
+	"diesel_suv": {"torque": [[780.0, 220.0], [1600.0, 450.0], [2800.0, 450.0], [4500.0, 300.0]], "ratios": [4.46, 2.61, 1.66, 1.24, 1.0, 0.83],
+		"final": 3.6, "reverse": 4.0, "idle": 780.0, "redline": 4500.0, "up": [2000.0, 3600.0], "brake_g": 0.85, "cda": 0.95, "crr": 0.015, "grip": 4.6},
+	"petrol_car": {"torque": [[800.0, 70.0], [2000.0, 100.0], [4200.0, 113.0], [6200.0, 95.0]], "ratios": [3.55, 1.95, 1.29, 0.97, 0.78],
+		"final": 4.1, "reverse": 3.5, "idle": 800.0, "redline": 6200.0, "up": [2600.0, 5600.0], "brake_g": 0.85, "cda": 0.65, "crr": 0.013, "grip": 4.6},
+	"sport": {"torque": [[800.0, 250.0], [1800.0, 420.0], [5000.0, 420.0], [6800.0, 330.0]], "ratios": [3.8, 2.3, 1.6, 1.25, 1.0, 0.82],
+		"final": 3.5, "reverse": 3.5, "idle": 850.0, "redline": 6800.0, "up": [2800.0, 6200.0], "brake_g": 0.95, "cda": 0.6, "crr": 0.012, "grip": 5.0},
+	"auto": {"torque": [[1200.0, 8.0], [3000.0, 12.5], [5000.0, 12.0], [6500.0, 9.0]], "ratios": [3.9, 2.4, 1.6, 1.15],
+		"final": 8.5, "reverse": 3.9, "idle": 1200.0, "redline": 6500.0, "up": [3500.0, 5800.0], "brake_g": 0.6, "cda": 1.2, "crr": 0.02, "grip": 4.0},
+	"scooter": {"torque": [[1500.0, 6.0], [5000.0, 8.8], [7500.0, 8.0], [9000.0, 6.0]], "cvt": [22.0, 8.0], "rpm_band": [3200.0, 7000.0],
+		"final": 1.0, "reverse": 0.0, "idle": 1500.0, "redline": 9000.0, "up": [0.0, 0.0], "brake_g": 0.7, "cda": 0.6, "crr": 0.015, "grip": 4.0},
+	"bike": {"torque": [[1500.0, 6.0], [4000.0, 11.0], [7000.0, 13.0], [9500.0, 11.0]], "ratios": [14.5, 9.6, 7.2, 5.9, 5.0],
+		"final": 1.0, "reverse": 0.0, "idle": 1400.0, "redline": 9500.0, "up": [4000.0, 8500.0], "brake_g": 0.8, "cda": 0.5, "crr": 0.015, "grip": 4.4},
+	"heavy": {"torque": [[600.0, 400.0], [1200.0, 800.0], [1800.0, 800.0], [2600.0, 600.0]], "ratios": [4.5, 2.8, 1.8, 1.3, 1.0],
+		"final": 4.0, "reverse": 4.5, "idle": 600.0, "redline": 2600.0, "up": [1400.0, 2300.0], "brake_g": 0.55, "cda": 6.5, "crr": 0.008, "grip": 4.2},
+	"light_truck": {"torque": [[700.0, 120.0], [1500.0, 250.0], [2800.0, 250.0], [3800.0, 190.0]], "ratios": [5.0, 2.9, 1.8, 1.25, 1.0],
+		"final": 4.3, "reverse": 4.5, "idle": 700.0, "redline": 3800.0, "up": [1800.0, 3200.0], "brake_g": 0.65, "cda": 2.6, "crr": 0.01, "grip": 4.4},
+	"tractor": {"torque": [[800.0, 120.0], [1400.0, 180.0], [2200.0, 170.0]], "ratios": [9.0, 6.0, 4.0, 2.6], "final": 6.0, "reverse": 9.0,
+		"idle": 800.0, "redline": 2200.0, "up": [1300.0, 2000.0], "brake_g": 0.4, "cda": 3.0, "crr": 0.03, "grip": 5.0},
+}
+## Which profile each vehicle has, and its own scale of the engine ("tq") where it differs from its kind's.
+const DRIVE_OF := {"luxury_suv": ["diesel_suv", 1.0], "xuv": ["diesel_suv", 1.0], "suv": ["diesel_suv", 0.75], "van": ["diesel_suv", 0.6],
+	"coupe": ["sport", 1.0], "hatchback": ["petrol_car", 1.0], "sedan": ["petrol_car", 1.15], "taxi": ["petrol_car", 1.15],
+	"auto": ["auto", 1.0], "bus": ["heavy", 1.0], "lorry": ["heavy", 1.1], "delivery": ["light_truck", 1.0], "tractor": ["tractor", 1.0],
+	"bike": ["bike", 1.0], "karthik_scooter": ["scooter", 1.0], "scooter": ["scooter", 1.0]}
+## Godot's VehicleBody3D brake is a force-like number per wheel: this many N of stopping per unit (measured).
+const BRAKE_K := 236.0
+
 const PAINT := Color(0.035, 0.12, 0.36)      # electric blue
 const BLACK := Color(0.015, 0.015, 0.017)
 const CHROME := Color(0.55, 0.56, 0.58)
@@ -55,6 +90,20 @@ var lights_on := false
 var honked := false
 var gear := 1                      # 0 = reverse, 1..6
 var rpm := IDLE
+var drive_kind := "diesel_suv"     # this vehicle's DRIVE profile, and what it reads from it:
+var ratios: Array = RATIOS
+var final_drive := FINAL
+var reverse_ratio := REVERSE
+var idle_rpm := IDLE
+var redline := REDLINE
+var _curve: Array = []
+var _up := [2000.0, 3600.0]
+var _cvt: Array = []               # [low, high] overall ratios of a CVT (a scooter's), else empty
+var _band := [3200.0, 7000.0]      # a CVT holds the engine here, from light to full throttle
+var brake_full := BRAKE            # full braking for this mass
+var cda := 0.95
+var crr := 0.015
+var tyre_grip := 4.6
 var manual := false
 var cockpit := false
 var is_coupe := false
@@ -241,6 +290,7 @@ func configure(kind: String, paint := Color(0, 0, 0, 0)) -> void:
 	top_speed = sp["top"]
 	torque_mul = sp["torque"]
 	wheel_r = sp["radius"]
+	_set_drive(kind)
 	seat = sp.get("seat", Vector3.ZERO)
 	gear = 1
 	if sp.has("glb"):
@@ -587,7 +637,7 @@ func _wheel(pos: Vector3, front: bool, sp: Dictionary) -> VehicleWheel3D:
 	w.suspension_max_force = float(sp["mass"]) * 18.0
 	w.damping_compression = 3.0
 	w.damping_relaxation = 3.6
-	w.wheel_friction_slip = 4.6
+	w.wheel_friction_slip = tyre_grip * _weather_grip * _surface_grip
 	w.wheel_roll_influence = 0.05 if sp.get("rider", false) else 0.12
 	_wheels.append(w)
 	add_child(w)
@@ -1157,7 +1207,7 @@ func set_surface(kind: String) -> void:
 
 func _apply_grip() -> void:
 	for w in _wheels:
-		(w as VehicleWheel3D).wheel_friction_slip = 4.6 * _weather_grip * _surface_grip
+		(w as VehicleWheel3D).wheel_friction_slip = tyre_grip * _weather_grip * _surface_grip
 
 
 func gear_name() -> String:
@@ -1292,12 +1342,41 @@ func honk() -> void:
 
 
 ## 2.2 L diesel: 450 N·m across 1,600–2,800 rpm.
+## This vehicle's engine, gearbox, brakes, drag and tyres, from its DRIVE profile. The vehicle body's own damping
+## is switched off: the drag is the profile's (Godot's default damping had acted as a hidden brake).
+func _set_drive(kind: String) -> void:
+	var of: Array = DRIVE_OF.get(kind, ["diesel_suv", 1.0])
+	drive_kind = of[0]
+	var d: Dictionary = DRIVE[drive_kind]
+	torque_mul = float(of[1])
+	_curve = d["torque"]
+	_cvt = d.get("cvt", [])
+	_band = d.get("rpm_band", [3200.0, 7000.0])
+	ratios = d.get("ratios", [1.0])
+	final_drive = float(d["final"])
+	reverse_ratio = float(d["reverse"])
+	idle_rpm = float(d["idle"])
+	redline = float(d["redline"])
+	_up = d["up"]
+	brake_full = float(d["brake_g"]) * 9.81 * mass / BRAKE_K
+	cda = float(d["cda"])
+	crr = float(d["crr"])
+	tyre_grip = float(d["grip"])
+	linear_damp_mode = RigidBody3D.DAMP_MODE_REPLACE
+	linear_damp = 0.0
+	rpm = idle_rpm
+	_apply_grip()
+
+
 func _torque(r: float) -> float:
-	if r < 1600.0:
-		return lerpf(220.0, 450.0, clampf((r - IDLE) / 820.0, 0.0, 1.0))
-	if r < 2800.0:
-		return 450.0
-	return lerpf(450.0, 300.0, clampf((r - 2800.0) / 1700.0, 0.0, 1.0))
+	if _curve.is_empty():
+		return 0.0
+	if r <= _curve[0][0]:
+		return _curve[0][1]
+	for i in range(1, _curve.size()):
+		if r <= _curve[i][0]:
+			return lerpf(_curve[i - 1][1], _curve[i][1], (r - _curve[i - 1][0]) / (_curve[i][0] - _curve[i - 1][0]))
+	return _curve[-1][1]
 
 
 func _physics_process(delta: float) -> void:
@@ -1328,24 +1407,31 @@ func _physics_process_body(delta: float) -> void:
 		_steer_in = target_steer
 	_shift_timer -= delta
 	if not manual:
-		if _brk > 0.05 and speed < 0.4 and gear != 0:
+		if _brk > 0.05 and speed < 0.4 and gear != 0 and reverse_ratio > 0.0:   # (a two-wheeler has no reverse)
 			gear = 0
 		elif _thr > 0.05 and gear == 0 and speed > -0.4:
 			gear = 1
-	var ratio: float = REVERSE if gear == 0 else RATIOS[gear - 1]
 	var wheel_rpm := absf(speed) / (TAU * wheel_r) * 60.0
 	var pedal := _brk if (gear == 0 and not manual) else _thr
-	rpm = maxf(wheel_rpm * ratio * FINAL, lerpf(IDLE, 1600.0, pedal) if absf(speed) < 2.5 else IDLE)
-	rpm = minf(rpm, REDLINE + 150.0)
-	if not manual and gear >= 1 and _shift_timer <= 0.0:
-		var up_at := lerpf(2000.0, 3600.0, _thr)
-		if rpm > up_at and gear < RATIOS.size():
+	var ratio: float
+	if not _cvt.is_empty():                             # a CVT: the engine held in its band, the ratio sliding
+		gear = 0 if gear == 0 else 1
+		var want := lerpf(float(_band[0]), float(_band[1]), pedal)
+		ratio = clampf(want / maxf(wheel_rpm, 1.0), float(_cvt[1]), float(_cvt[0])) if gear != 0 else float(_cvt[0])
+		rpm = maxf(wheel_rpm * ratio, lerpf(idle_rpm, want, pedal))   # (below the band the clutch slips)
+	else:
+		ratio = reverse_ratio if gear == 0 else ratios[gear - 1]
+		rpm = maxf(wheel_rpm * ratio * final_drive, lerpf(idle_rpm, idle_rpm * 2.0, pedal) if absf(speed) < 2.5 else idle_rpm)
+	rpm = minf(rpm, redline + 150.0)
+	if not manual and _cvt.is_empty() and gear >= 1 and _shift_timer <= 0.0:
+		var up_at := lerpf(float(_up[0]), float(_up[1]), _thr)
+		if rpm > up_at and gear < ratios.size():
 			gear += 1
 			_shift_timer = 0.25
-		elif rpm < 1150.0 and gear > 1:
+		elif rpm < maxf(idle_rpm * 1.45, float(_up[0]) * 0.55) and gear > 1:
 			gear -= 1
 			_shift_timer = 0.25
-		elif _thr > 0.9 and gear > 1 and rpm < 2300.0 and RATIOS[gear - 2] / RATIOS[gear - 1] * rpm < up_at - 500.0:
+		elif _thr > 0.9 and gear > 1 and rpm < up_at * 0.64 and ratios[gear - 2] / ratios[gear - 1] * rpm < up_at - 500.0:
 			gear -= 1                                   # kickdown: floor it and it drops a gear (only to a gear it
 			_shift_timer = 0.2                          #  won't leave again at once: no hunting between two)
 	if out_of_fuel:
@@ -1354,17 +1440,30 @@ func _physics_process_body(delta: float) -> void:
 		pedal *= 0.25                                   # a torque dip while the box shifts, not a dead stop
 	var dir := -1.0 if gear == 0 else 1.0
 	var drive_force := 0.0
-	if rpm < REDLINE and absf(speed) < top_speed:
-		drive_force = _torque(rpm) * torque_mul * ratio * FINAL / wheel_r * 0.88 * pedal * dir
+	if rpm < redline and absf(speed) < top_speed:
+		drive_force = _torque(rpm) * torque_mul * ratio * (1.0 if not _cvt.is_empty() else final_drive) / wheel_r * 0.88 * pedal * dir
 	var br := 0.0
 	if gear != 0 and _brk > 0.05 and not (manual and gear == 0):
-		br = _brk * BRAKE
+		br = _brk * brake_full
 	if gear == 0 and not manual and _thr > 0.05:
-		br = _thr * BRAKE
-	if pedal < 0.05:
-		br = maxf(br, 0.5 + rpm / REDLINE * 2.4)
+		br = _thr * brake_full
+	if pedal < 0.05:                                    # engine braking, off the throttle
+		br = maxf(br, (0.5 + rpm / redline * 2.4) * mass / 1500.0)
 	if in_handbrake:
-		br = BRAKE * 1.2
+		br = brake_full * 1.2
+	# the road's grip caps what the tyres can do (VehicleWheel3D's friction doesn't limit the brakes or the drive by
+	# itself): about 1 g on dry tarmac, 0.7 wet, less off the road. Braking past it is lost, as ABS loses it (he
+	# keeps steering), and the tyres squeal; the drive past it spins them.
+	var mu := _weather_grip * _surface_grip
+	var cap := mu * 9.81 * mass / BRAKE_K
+	var over := 0.0
+	if br > cap and not in_handbrake:
+		over = (br - cap) / maxf(br, 0.001)
+		br = cap
+	var drive_cap := mu * 9.81 * mass
+	if absf(drive_force) > drive_cap:
+		over = maxf(over, (absf(drive_force) - drive_cap) / absf(drive_force))
+		drive_force = signf(drive_force) * drive_cap
 	# tyre slip (VehicleWheel3D skid info: 1 = gripping, 0 = sliding)
 	var grip := 1.0
 	var on_ground := false
@@ -1372,15 +1471,19 @@ func _physics_process_body(delta: float) -> void:
 		if (w as VehicleWheel3D).is_in_contact():
 			on_ground = true
 			grip = minf(grip, (w as VehicleWheel3D).get_skidinfo())
-	slip = move_toward(slip, clampf((0.75 - grip) / 0.6, 0.0, 1.0) if on_ground and absf(speed) > 2.0 else 0.0, delta * 6.0)
+	slip = move_toward(slip, maxf(clampf((0.75 - grip) / 0.6, 0.0, 1.0), over * 2.0) if on_ground and absf(speed) > 2.0 else 0.0, delta * 6.0)
 	# ABS: when the wheels lock under braking, pulse the brakes (about 12 times a second)
 	_abs_t += delta
-	if br > BRAKE * 0.3 and grip < 0.45 and absf(speed) > 3.0 and not in_handbrake:
+	if br > brake_full * 0.3 and grip < 0.45 and absf(speed) > 3.0 and not in_handbrake:
 		br *= 0.35 if fmod(_abs_t, 0.083) < 0.04 else 1.0
 	# traction control: wheelspin from a standstill eases the throttle
 	if pedal > 0.3 and grip < 0.5 and absf(speed) < 14.0:
 		drive_force *= 0.55
-	engine_force = drive_force / 4.0 * FWD
+	var driven := 0                                     # (split between the driven wheels: two on a scooter)
+	for w in _wheels:
+		if (w as VehicleWheel3D).use_as_traction:
+			driven += 1
+	engine_force = drive_force / float(maxi(driven, 1)) * FWD
 	brake = br
 	if on_ground:
 		# anti-roll bars: the body leans into a corner but settles, it doesn't wallow
@@ -1401,7 +1504,8 @@ func _physics_process_body(delta: float) -> void:
 		_thud = minf(1.0, _thud + jolt / 80.0)
 	var v := linear_velocity.length()
 	if v > 0.3:
-		apply_central_force(-linear_velocity / v * (280.0 + 0.95 * v * v + _surface_drag * minf(v, 12.0)))
+		# rolling resistance and air drag, this vehicle's own (and more of it off the tarmac)
+		apply_central_force(-linear_velocity / v * (crr * mass * 9.81 + 0.6 * cda * v * v + _surface_drag * minf(v, 12.0)))
 	# speed-sensitive steering: full lock at a crawl, a few degrees at highway speed
 	# full lock only at a crawl (hairpins, parking); it falls away quickly once you're moving
 	var s := smoothstep(0.0, 18.0, absf(speed))
@@ -1426,7 +1530,7 @@ func _process_body(delta: float) -> void:
 		if gear == 0:
 			gear = 1
 	if manual and not autopilot and _shift_timer <= 0.0:
-		if Input.is_action_just_pressed("shift_up") and gear < RATIOS.size():
+		if Input.is_action_just_pressed("shift_up") and gear < ratios.size():
 			gear += 1
 			_shift_timer = 0.3
 		elif Input.is_action_just_pressed("shift_down") and (gear > 1 or absf(speed) < 1.0):
@@ -1460,7 +1564,7 @@ func _fill_engine() -> void:
 		return
 	var f := rpm / 60.0 * 2.0
 	var load := clampf(_thr if gear != 0 else _brk, 0.0, 1.0)
-	var amp := 0.12 + 0.14 * load + 0.05 * rpm / REDLINE
+	var amp := 0.12 + 0.14 * load + 0.05 * rpm / redline
 	var inc := f / 22050.0
 	for i in pb.get_frames_available():
 		_engine_phase = fmod(_engine_phase + inc, 1.0)
