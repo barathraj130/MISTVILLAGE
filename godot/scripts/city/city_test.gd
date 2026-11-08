@@ -319,6 +319,28 @@ func _environment() -> void:
 	add_child(sun)
 
 
+## The city after dark (0 day → 1 night): lit rooms in some windows and the shop signs glowing (building.gdshader,
+## building_kit.gdshader `night`), the street lamps' heads bright, and a soft bloom so lit things glow.
+func _city_lights(n: float) -> void:
+	env.glow_enabled = n > 0.05                  # (every frame: a room's own glow settings may have been left)
+	env.glow_intensity = lerpf(0.3, 0.9, n)
+	env.glow_bloom = 0.05 * n
+	env.glow_hdr_threshold = 1.1
+	if absf(n - _lights_n) < 0.01:
+		return
+	_lights_n = n
+	if streamer.building_mat is ShaderMaterial:
+		(streamer.building_mat as ShaderMaterial).set_shader_parameter("night", n)
+	if streamer.kit:
+		streamer.kit.set_night(n)
+	if streamer.pool_mat:
+		streamer.pool_mat.set_shader_parameter("night", n)
+	if streamer.lamp_mesh and streamer.lamp_mesh.get_surface_count() > 1:
+		var glow := streamer.lamp_mesh.surface_get_material(1) as StandardMaterial3D
+		if glow:
+			glow.emission_energy_multiplier = lerpf(0.4, 9.0, n)
+
+
 ## Story mode: the sun follows the game clock (the same sky as the mountain drive, drive_game.gd): low and warm at
 ## dawn and dusk, a faint blue moon at night, the sky and ambient light dimming with it; the headlights come on
 ## by themselves after dusk (L still switches them).
@@ -342,10 +364,10 @@ func _daylight() -> void:
 	env.ambient_light_source = Environment.AMBIENT_SOURCE_SKY
 	env.ssil_enabled = false
 	env.ssao_intensity = 2.0
-	env.glow_enabled = false
 	var sim = fines.sim
 	var sd: Vector3 = sim.sun_dir()
 	var day: float = sim.daylight()
+	_city_lights(clampf((0.55 - day) / 0.45, 0.0, 1.0))
 	env.background_energy_multiplier = lerpf(0.1, 1.0, day)
 	env.ambient_light_energy = lerpf(0.16, 0.45, day)          # a city's night: street lights and shops keep it grey, not black
 	env.fog_light_color = Color(0.74, 0.76, 0.8) * lerpf(0.05, 1.0, day)
@@ -357,7 +379,7 @@ func _daylight() -> void:
 	var sm := env.sky.sky_material as ProceduralSkyMaterial if env.sky else null
 	if sm:
 		var top := Color(0.32, 0.5, 0.78).lerp(Color(0.27, 0.34, 0.56), dusk).lerp(Color(0.02, 0.035, 0.08), night)
-		var hor := Color(0.72, 0.78, 0.85).lerp(Color(0.98, 0.58, 0.32), dusk).lerp(Color(0.07, 0.08, 0.12), night)
+		var hor := Color(0.72, 0.78, 0.85).lerp(Color(0.98, 0.58, 0.32), dusk).lerp(Color(0.12, 0.095, 0.085), night)   # (night: the city's own glow on the haze)
 		var grey := Color(0.5, 0.52, 0.55) * lerpf(1.0, 0.15, night)
 		sm.sky_top_color = top.lerp(grey * 0.9, cloud * 0.85)
 		sm.sky_horizon_color = hor.lerp(grey, cloud * 0.85)
@@ -372,7 +394,7 @@ func _daylight() -> void:
 		sun.light_energy = 2.6 * smoothstep(-0.04, 0.15, sd.y)
 	else:
 		sun.light_color = Color(0.55, 0.65, 1.0)
-		sun.light_energy = 0.18
+		sun.light_energy = 0.07                      # (a city's moon: the street lamps light the street, not it)
 	sun.shadow_enabled = sun.light_energy > 0.2 and not "--noshadow" in OS.get_cmdline_user_args()
 	if car:
 		car.night = 1.0 - day
@@ -489,7 +511,8 @@ var view := PackedFloat32Array()
 ## from there), eases to the end over secs and quits a second after.
 var flyover := PackedFloat32Array()
 var _nohud := false                         # --nohud: no minimap or speedometer, ever (the story turns them on again)
-var _free_clock := false                    # --clock=HH:MM outside the story: the sun at that hour, held there (trailers)
+var _free_clock := false
+var _lights_n := -1.0                       # the city lights' last night level (_city_lights)                    # --clock=HH:MM outside the story: the sun at that hour, held there (trailers)
 var _fly_t := -1.0
 
 

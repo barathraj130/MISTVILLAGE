@@ -44,6 +44,8 @@ var kerb_mat: Material
 var yard_mat: Material
 var wall_mat: Material
 var lamp_mesh: ArrayMesh
+var pool_mesh: Mesh                        # the pool of light on the road under each street lamp (shaders/lamp_pool)
+var pool_mat: ShaderMaterial
 var prop_meshes := {}                      # prop type → Mesh (1 traffic signal, 2 bus shelter, 3 speed breaker)
 var kit
 var landmarks: Array = []                  # {glb, x, y, z, yaw, lots: [[x, z]...], labels}: each in place of the blocks
@@ -111,6 +113,13 @@ func _ready() -> void:
 	if FileAccess.file_exists(LANDMARKS):
 		landmarks = JSON.parse_string(FileAccess.get_file_as_string(LANDMARKS))
 	lamp_mesh = _lamp()
+	var pq2 := QuadMesh.new()
+	pq2.size = Vector2(2, 2)
+	pq2.orientation = PlaneMesh.FACE_Y
+	pool_mat = ShaderMaterial.new()
+	pool_mat.shader = preload("res://shaders/lamp_pool.gdshader")
+	pq2.material = pool_mat
+	pool_mesh = pq2
 	signal_shader = _signal_shader()
 	# Coimbatore street trees: natural neem, rain tree and gulmohar (tools/vegetation.py) and coconut palms
 	# (tools/trees_tn.py); far versions from the lighter palm / neem models
@@ -1112,6 +1121,14 @@ func _walks(walks: Array, out: Dictionary, g: Array) -> void:
 		for i in lamps.size():
 			mm.set_instance_transform(i, lamps[i])
 		out["lamps"] = mm
+		var pm := _MM.new()                             # (under each head, 1.75 m out over the road: its light)
+		pm.transform_format = MultiMesh.TRANSFORM_3D
+		pm.mesh = pool_mesh
+		pm.instance_count = lamps.size()
+		for i in lamps.size():
+			var lx: Transform3D = lamps[i]
+			pm.set_instance_transform(i, Transform3D(Basis().scaled(Vector3(7.5, 1.0, 7.5)), lx * Vector3(0, 0.13, 2.6)))   # (the road is drawn 9 cm over its centreline)
+		out["lamp_pools"] = pm
 
 
 ## Junction surfaces: flat-shaded asphalt triangles over the road ends (road shader, junction mode: no lanes).
@@ -2276,6 +2293,11 @@ func _instance(k: Vector2i, d: Dictionary) -> void:
 		bmi.lod_bias = 6.0                  # keep detail: a coarse level drops the painted body and leaves floating wheels
 		bmi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 		node.add_child(bmi)
+	if d.has("lamp_pools"):
+		var lpi := MultiMeshInstance3D.new()
+		lpi.multimesh = _real(d["lamp_pools"])
+		lpi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		node.add_child(lpi)
 	if d.has("lamps"):
 		var lmi := MultiMeshInstance3D.new()
 		lmi.multimesh = _real(d["lamps"])

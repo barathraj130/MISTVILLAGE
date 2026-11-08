@@ -85,7 +85,8 @@ func apply(env: Environment, sun: DirectionalLight3D, cam: Camera3D) -> void:
 	var cloud: float = sim.wx["cloud"]
 	var r: float = sim.wx["rain"]
 	var wet: float = sim.wet
-	if city.story == null:                          # (free play: the light isn't reset each frame by the clock)
+	if city.story == null and not city._free_clock:  # (free play: the light isn't reset each frame by the clock;
+		#                                                  with --clock it is, and this had put the noon sun into the night)
 		sun.light_energy = 2.6
 		sun.shadow_enabled = not "--noshadow" in OS.get_cmdline_user_args()
 		env.background_energy_multiplier = 1.0
