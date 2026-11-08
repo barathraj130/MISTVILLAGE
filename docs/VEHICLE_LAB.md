@@ -220,5 +220,49 @@ vehicle kept running into it.
 - `--weather=rain` starts with the roads already soaked.
 - `set_grip` now acts only on a change: called every step, it had been undoing the handbrake's locked-wheel grip.
 
-Still to do: potholes; dents you can see on the body; a pedestrian on the street to hit (the street has none yet
-that collide); the scooter's wet stopping (19.0 m wet and dry: its brakes stop it just inside the wet grip).
+Still to do then: potholes; dents you can see; pedestrians; the scooter's wet stopping. All but potholes are done below.
+
+## Dents, pedestrians, two-wheelers in the wet, the test driver, 2026-11-08
+
+**Dents you can see** (dents.gd).
+- **Where and how big:** a crash pushes the panels in round where it hit. The dent is wider and deeper the harder the hit, up to 35 cm in. A square-on hit dents towards the middle of the nose or tail.
+- **How it looks:** the dent is crumpled a little, the same way across every part, so the grille and lamps go with the panel. The light shows the crease.
+- **Low-poly panels** are split finer inside the dent first, so they have points to move. The split points are shared with neighbouring triangles, so nothing tears.
+- **Measured in metres:** imported parts can be scaled very unevenly (the SUV's body is about 1.5 × 105 × 100 units). Before this, the SUV wouldn't dent.
+- **Traffic you hit is dented too**, and `repair()` puts your vehicle back.
+- `--labshots=DIR` in the lab, not headless, takes a picture of each crash.
+
+**Pedestrians** (city_bystanders.gd). The people standing about the streets are the streamer's street-life instances, tagged "people".
+- **When someone notices:** each person notices a vehicle coming at them 0.7–1.7 s before it arrives. This is fixed per person: some are on their phones.
+- **Getting clear:** they need half a second to react, then move at about 3 m/s.
+- **Time enough:** they jump clear and shout (EN/TA).
+- **It passes close:** a startled step back.
+- **Not time enough:** knocked down. They are thrown along the hit, fall, lie about 4 s and get up slowly. Nothing gory.
+- **The cost of a knock-down:**
+  - a bump in the car and the crowd's voice
+  - ₹3,000 paid on the spot for the hospital (what the wallet holds)
+  - a ₹1,000 rash-driving e-challan
+  - on bail, the inspector's suspicion +10
+- **Under 11 km/h:** they step aside.
+
+`--peopletest` drives at a person on the street (a clear line, 9–32 m back):
+
+| speed | that person's attention | what happened |
+|---|---|---|
+| 8 km/h | 0.69 | stepped aside 1.3 m |
+| 30 km/h | 0.76 | the car never got there (stuck on the way): no result |
+| 50 km/h | 0.94 | jumped clear 2.3 m, shouted |
+| 60 km/h | 0.06 | knocked down, thrown 4.1 m, ₹3,000 paid, 1 challan, up again |
+
+**Two-wheelers in the wet** (DRIVE `wet_k`). A scooter's narrow small tyres lose more of their grip in the wet than a car's: scooter ×1.55, motorbike ×1.3 of the loss. Before, the scooter's brakes (0.7 g) stopped it inside even the wet grip, so rain changed nothing.
+
+| from 60 km/h | dry | wet (lab, grip 0.7) |
+|---|---|---|
+| Karthik's scooter | 19.0 m | 24.4 m (was 19.0) |
+| scooter | 20.0 m | 24.7 m |
+| motorbike | 17.5 m | 22.0 m (was 19.5) |
+| hatchback | 16.4 m | 19.8 m (unchanged) |
+
+**The test driver** (`--testdrive`) ran off the road into a wall in every run. Its first road ran east and the car stood facing west, so it tried a U-turn in a lane. It now sets off pointing along its road: 50 km/h along it, no crashes. This was the test, not the physics.
+
+Still to do: potholes. Parked cars and bikes in the street life have no collision (the car drives through them), like the people had none.

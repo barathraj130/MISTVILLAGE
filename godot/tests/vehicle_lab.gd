@@ -277,7 +277,38 @@ func _crash(kind: String, kmh: float, fresh := true) -> void:
 	for h in car._headlights:
 		lit = lit or (h as Node3D).visible
 	_report(kind, "crash%d" % int(kmh), {"hits": hits, "front": snappedf(car.damage["front"], 0.01), "headlights_broken": car.damage["front"] >= 0.45,
-		"glass_cracked": car.damage["front"] >= 0.65, "pull": snappedf(car._pull, 0.003), "limp": car.torque_mul < float(car.DRIVE_OF.get(kind, ["", 1.0])[1]) - 0.01})
+		"glass_cracked": car.damage["front"] >= 0.65, "pull": snappedf(car._pull, 0.003), "limp": car.torque_mul < float(car.DRIVE_OF.get(kind, ["", 1.0])[1]) - 0.01,
+		"dented_meshes": car._dents.size()})
+	for a in OS.get_cmdline_user_args():                  # (--labshots=DIR, not headless: a picture of the front)
+		if a.begins_with("--labshots="):
+			await _shot(a.get_slice("=", 1), "%s_crash%d" % [kind, int(kmh)])
+
+
+func _shot(dir: String, name: String) -> void:
+	DirAccess.make_dir_recursive_absolute(dir)
+	var cam := get_node_or_null("ShotCam") as Camera3D
+	if cam == null:
+		cam = Camera3D.new()
+		cam.name = "ShotCam"
+		add_child(cam)
+		var we := WorldEnvironment.new()
+		var env := Environment.new()
+		env.background_mode = Environment.BG_COLOR
+		env.background_color = Color(0.62, 0.66, 0.7)
+		env.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
+		env.ambient_light_color = Color(0.8, 0.8, 0.85)
+		env.ambient_light_energy = 0.6
+		we.environment = env
+		add_child(we)
+	var f: Vector3 = car.global_basis.z
+	var side: Vector3 = car.global_basis.x
+	var c: Vector3 = car.global_position
+	cam.global_position = c + f * 3.6 + side * 1.6 + Vector3.UP * 1.3
+	cam.look_at(c + f * 1.6 + Vector3.UP * 0.6)
+	cam.make_current()
+	for i in 4:
+		await get_tree().process_frame
+	get_viewport().get_texture().get_image().save_jpg(dir + "/" + name + ".jpg", 0.85)
 
 
 func _turn(kind: String) -> void:

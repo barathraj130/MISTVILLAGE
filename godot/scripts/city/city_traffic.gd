@@ -130,7 +130,7 @@ func _spawn(me: Vector3) -> void:
 	add_child(body)
 	var v := {"body": body, "kind": kind, "road": r, "road_node": r["node"], "dir": dir, "i": i0, "t": 0.0,
 		"speed": float(CRUISE.get(r["c"], 8.0)) * 0.6, "half": dims.z * 0.5, "pos": at, "fwd": Vector3.FORWARD,
-		"wait": 0.0, "off": Vector3.ZERO, "yaw": 0.0, "push": Vector3.ZERO, "spin": 0.0, "stunned": 0.0}
+		"wait": 0.0, "off": Vector3.ZERO, "yaw": 0.0, "push": Vector3.ZERO, "spin": 0.0, "stunned": 0.0, "dents": {}}
 	vehicles.append(v)
 	_place(v)
 
@@ -249,6 +249,14 @@ func struck(body: Object, vel: Vector3, normal: Vector3, my_mass: float) -> floa
 		print("TRAFFIC struck %s: shoved %.1f m/s, spin %.2f rad/s" % [v["kind"], (v["push"] as Vector3).length(), v["spin"]])
 		return theirs.dot(n) + common * 0.9
 	return -1.0
+
+
+## Its dented meshes (dents.gd keeps the originals there).
+func dents_of(body: Object) -> Dictionary:
+	for v in vehicles:
+		if v["body"] == body:
+			return v["dents"]
+	return {}
 
 
 func is_vehicle(body: Object) -> bool:

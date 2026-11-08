@@ -18,6 +18,8 @@ const DriveHud := preload("res://scripts/city/drive_hud.gd")
 const Fines := preload("res://scripts/city/fines.gd")
 const CityPolice := preload("res://scripts/city/city_police.gd")
 const CityWeather := preload("res://scripts/city/city_weather.gd")
+const Bystanders := preload("res://scripts/city/city_bystanders.gd")
+const Dents := preload("res://scripts/drive/dents.gd")
 const CityDoors := preload("res://scripts/city/city_doors.gd")
 const Life := preload("res://scripts/city/life.gd")
 const Story := preload("res://scripts/story/story.gd")
@@ -77,6 +79,7 @@ var map
 var traffic
 var police                                  # the police checking points (city_police.gd)
 var weather                                 # rain and wet roads (city_weather.gd)
+var bystanders                              # the people on the street, and a vehicle coming at them (city_bystanders.gd)
 var _hit_seen := {}                         # what you hit → when (a crash is one complaint, not one per contact)
 
 
@@ -218,6 +221,10 @@ func _ready() -> void:
 		bail.name = "Bail"
 		bail.city = self
 		add_child(bail)
+		bystanders = Bystanders.new()
+		bystanders.name = "Bystanders"
+		bystanders.city = self
+		add_child(bystanders)
 		weather = CityWeather.new()
 		weather.name = "Weather"
 		weather.city = self
@@ -593,6 +600,10 @@ func _on_impact(_zone: String, severity: float, other: Object) -> void:
 		var keep: float = traffic.struck(other, car.hit_velocity, car.hit_normal, car.mass)
 		if keep >= 0.0:
 			car.share_momentum(-Vector3(car.hit_normal.x, 0, car.hit_normal.z).normalized(), keep)
+			if car.hit_point != Vector3.ZERO and other is Node3D:          # (its panels give as yours do)
+				var hp: Vector3 = car.hit_point
+				hp.y = maxf(hp.y, (other as Node3D).global_position.y + 0.6)
+				Dents.dent(other, hp, -car.hit_normal, 0.45 + severity * 0.75, 0.04 + severity * 0.26, traffic.dents_of(other))
 		if again:
 			return
 		var lines := [["Oi! Eyes open, saar!", "ஏய்! கண்ணைத் திறந்து ஓட்டு, சார்!"],
@@ -712,6 +723,89 @@ func _crashtest(dt: float) -> void:
 		_ct["v"] = {}
 		_ct["t"] = 0.0
 		kinds.pop_front()
+
+
+var _pt := {"t": 0.0, "runs": [8.0, 30.0, 50.0, 60.0], "log": [], "p": {}}
+
+
+## --peopletest: the car 30 m from a person on the street (a clear line to them), driven straight at them at 8 then
+## 45 km/h; reports what they did (hopped clear / knocked down), the car's speed, the money and challans.
+func _peopletest(dt: float) -> void:
+	_pt["t"] = float(_pt["t"]) + dt
+	car.autopilot = true
+	if t < 12.0:
+		return
+	var runs: Array = _pt["runs"]
+	if _pt.has("seen") and float(_pt["t"]) - float(_pt["seen"]) > 1.0 and not _pt.has("down_seen"):
+		var c0: Dictionary = (_pt["p"] as Dictionary).get("c", {})
+		if not c0.is_empty():
+			var m0 := c0["mms"][0] as MultiMeshInstance3D
+			_pt["down_seen"] = (m0.global_transform * m0.multimesh.get_instance_transform(c0["i"])).basis.y.dot(Vector3.UP) < 0.5
+	if runs.is_empty():
+		print("PEOPLETEST " + JSON.stringify(_pt["log"]))
+		get_tree().quit()
+		return
+	var p: Dictionary = _pt["p"]
+	if p.is_empty():
+		bystanders._scan(400.0)
+		var space := get_world_3d().direct_space_state
+		var best := {}
+		var bd := INF
+		for c in bystanders._near:
+			var xf: Transform3D = c["xf"]
+			for k in 12:
+				var d := Vector3(cos(k * TAU / 12.0), 0, sin(k * TAU / 12.0))
+				var from: Vector3 = xf.origin + d * clampf(float(runs[0]) / 3.6 * 3.0, 9.0, 32.0) + Vector3.UP * 1.0
+				var q := PhysicsRayQueryParameters3D.create(xf.origin + Vector3.UP * 1.0, from)
+				var q2 := PhysicsRayQueryParameters3D.create(from + Vector3.UP * 3.0, from + Vector3.DOWN * 6.0)
+				var g := space.intersect_ray(q2)
+				if space.intersect_ray(q).is_empty() and not g.is_empty() and absf(g["position"].y - xf.origin.y) < 0.6:
+					var dd: float = xf.origin.distance_to(car.global_position) + (0.0 if not _pt.has("used") or _pt["used"] != c["xf"].origin else 1e6)
+					if dd < bd:
+						bd = dd
+						best = {"c": c, "start": Vector3(from.x, g["position"].y + 0.5, from.z), "d": -d}
+		if best.is_empty():
+			print("PEOPLETEST none found")
+			get_tree().quit()
+			return
+		_pt["p"] = best
+		_pt["t"] = 0.0
+		_pt["money0"] = fines.sim.money
+		_pt["ch0"] = fines.challans.size()
+		car.repair()
+		car.global_transform = Transform3D(Basis.looking_at(-best["d"], Vector3.UP), best["start"])
+		car.linear_velocity = (best["d"] as Vector3) * runs[0] / 3.6
+		car._v_prev = car.linear_velocity
+		_pt["key"] = bystanders._key(best["c"])
+		_pt["xf0"] = (best["c"]["xf"] as Transform3D)
+		return
+	var want: float = runs[0] / 3.6
+	car.in_steer = 0.0
+	car.in_throttle = clampf((want - car.speed) * 0.5, 0.0, 1.0) if float(_pt["t"]) < 6.0 else 0.0
+	car.in_brake = 0.0 if float(_pt["t"]) < 6.0 else 1.0
+	if bystanders._busy.has(_pt["key"]) and not _pt.has("seen"):
+		_pt["seen"] = _pt["t"]
+		_pt["kmh_at"] = snappedf(car.speed * 3.6, 0.1)
+	var since: float = float(_pt["t"]) - float(_pt.get("seen", INF))
+	if since > 0.6 and not _pt.has("shot"):
+		_pt["shot"] = true
+		if shots_dir != "":
+			get_viewport().get_texture().get_image().save_jpg(shots_dir + "/people_%d.jpg" % int(runs[0]), 0.85)
+	if float(_pt["t"]) > 9.0:
+		var c: Dictionary = p["c"]
+		var mmi := c["mms"][0] as MultiMeshInstance3D
+		var now_xf := mmi.global_transform * mmi.multimesh.get_instance_transform(c["i"])
+		var moved: Vector3 = now_xf.origin - (_pt["xf0"] as Transform3D).origin
+		_pt["log"].append({"kmh": runs[0], "reacted": _pt.has("seen"), "attention": snappedf(bystanders._attention(c), 0.01),
+			"down_now": now_xf.basis.y.dot(Vector3.UP) < 0.5, "car_kmh_then": _pt.get("kmh_at", 0.0),
+			"moved_m": snappedf(Vector3(moved.x, 0, moved.z).length(), 0.01), "paid": int(_pt["money0"]) - fines.sim.money,
+			"challans": fines.challans.size() - int(_pt["ch0"]), "fell": _pt.get("down_seen", false)})
+		_pt["used"] = (_pt["xf0"] as Transform3D).origin
+		for k in ["seen", "kmh_at", "shot", "key", "xf0", "down_seen"]:
+			_pt.erase(k)
+		_pt["p"] = {}
+		_pt["t"] = 0.0
+		runs.pop_front()
 
 
 func _t(d: Dictionary) -> String:
@@ -840,6 +934,9 @@ func _process(dt: float) -> void:
 							print("RIDER %s in scooter frame %s" % [bn, str(gp.snapped(Vector3.ONE * 0.01))])
 				get_tree().quit()
 			return
+		if "--peopletest" in OS.get_cmdline_user_args():         # self-test: at a person on the street, slow then fast
+			_peopletest(dt)
+			return
 		if "--crashtest" in OS.get_cmdline_user_args():          # self-test: drive into traffic (a car, an auto, a bus)
 			_crashtest(dt)
 			return
@@ -851,6 +948,10 @@ func _process(dt: float) -> void:
 				if not nxt.is_empty():
 					path = nxt
 					path_i = 0
+					if t < 4.0 and nxt.size() > 1:             # (the first road: set off along it, not into a U-turn)
+						var d0 := Vector3(nxt[1].x - nxt[0].x, 0, nxt[1].z - nxt[0].z).normalized()
+						car.global_transform = Transform3D(Basis.looking_at(-d0, Vector3.UP), car.global_position)
+						car.linear_velocity = Vector3.ZERO
 			var steer := 0.0
 			if path.size() > 1:
 				while path_i < path.size() - 1 and Vector2(path[path_i].x - car.global_position.x, path[path_i].z - car.global_position.z).length() < 12.0:

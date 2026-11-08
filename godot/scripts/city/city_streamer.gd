@@ -1459,6 +1459,8 @@ func _life(life: Array, out: Dictionary, roads: Array = []) -> void:
 		for i in by[key].size():
 			mm.set_instance_transform(i, by[key][i])
 		var nm: String = names[kind]
+		if nm.begins_with("street_") or nm.begins_with("sf_"):     # (people: city_bystanders.gd finds them)
+			mm.set_meta("people", "%d,%d,%d" % [key.x, key.y, key.z])
 		if kind < life_far.size() and life_far[kind] != null:
 			var fm := _MM.new()
 			fm.transform_format = MultiMesh.TRANSFORM_3D
@@ -1466,6 +1468,8 @@ func _life(life: Array, out: Dictionary, roads: Array = []) -> void:
 			fm.instance_count = by[key].size()
 			for i in by[key].size():
 				fm.set_instance_transform(i, by[key][i])
+			if mm.has_meta("people"):
+				fm.set_meta("people", mm.get_meta("people"))
 			var near := (TREE_NEAR if nm.begins_with("veg_") and not nm.begins_with("veg_bush") else 40.0) + LIFE_CELL * 0.71
 			mms.append([mm, near, 0.0, false])
 			mms.append([fm, (320.0 if not nm.begins_with("veg_bush") else 150.0) + LIFE_CELL * 0.71, near - 4.0])
@@ -2107,6 +2111,8 @@ func _instance(k: Vector2i, d: Dictionary) -> void:
 		lmi2.visibility_range_end = lm[1]
 		lmi2.visibility_range_begin = lm[2]
 		lmi2.lod_bias = lm[0].get_meta("lod_bias", 1.0)
+		if lm[0].has_meta("people"):
+			lmi2.set_meta("people", lm[0].get_meta("people"))
 		if lm.size() > 3:
 			lmi2.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_SHADOWS_ONLY if lm[3] else GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 		elif lm[1] < 150.0 or lm[2] > 0.0:

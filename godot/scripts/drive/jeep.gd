@@ -9,6 +9,7 @@ extends VehicleBody3D
 ## self-centres; throttle and brakes ramp too; a calm, heavy body with soft suspension.
 ## (The file keeps its old name, jeep.gd, so the rest of the game needs no changes.)
 
+const Dents := preload("res://scripts/drive/dents.gd")
 const Prof := preload("res://scripts/drive/prof.gd")
 const MB := preload("res://scripts/drive/mesh_builder.gd")
 const RiderPose := preload("res://scripts/drive/rider_pose.gd")
@@ -46,6 +47,7 @@ const REDLINE := 4500.0
 ##   brake_g  full braking, in g (scaled to the mass: a bus and a hatchback stop as they weigh)
 ##   cda      drag area (Cd × frontal m²): air drag ½ρ·CdA·v²;  crr: rolling resistance × weight
 ##   grip     tyre friction (VehicleWheel3D's friction slip); wet and off-road scale it
+##   wet_k    how much of the wet's loss these tyres feel (1 a car's; a scooter's narrow small tyres more)
 const DRIVE := {
 	"diesel_suv": {"torque": [[780.0, 220.0], [1600.0, 450.0], [2800.0, 450.0], [4500.0, 300.0]], "ratios": [4.46, 2.61, 1.66, 1.24, 1.0, 0.83],
 		"final": 3.6, "reverse": 4.0, "idle": 780.0, "redline": 4500.0, "up": [2000.0, 3600.0], "brake_g": 0.85, "cda": 0.95, "crr": 0.015, "grip": 4.6},
@@ -58,9 +60,11 @@ const DRIVE := {
 	"auto": {"torque": [[1200.0, 8.0], [3000.0, 12.5], [5000.0, 12.0], [6500.0, 9.0]], "ratios": [3.9, 2.4, 1.6, 1.15],
 		"final": 8.5, "reverse": 3.9, "idle": 1200.0, "redline": 6500.0, "up": [3500.0, 5800.0], "brake_g": 0.6, "cda": 1.2, "crr": 0.02, "grip": 4.0},
 	"scooter": {"torque": [[1500.0, 6.0], [5000.0, 8.8], [7500.0, 8.0], [9000.0, 6.0]], "cvt": [22.0, 8.0], "rpm_band": [3200.0, 7000.0],
-		"final": 1.0, "reverse": 0.0, "idle": 1500.0, "redline": 9000.0, "up": [0.0, 0.0], "brake_g": 0.7, "cda": 0.6, "crr": 0.015, "grip": 4.0},
+		"final": 1.0, "reverse": 0.0, "idle": 1500.0, "redline": 9000.0, "up": [0.0, 0.0], "brake_g": 0.7, "cda": 0.6, "crr": 0.015, "grip": 4.0,
+		"wet_k": 1.55},
 	"bike": {"torque": [[1500.0, 6.0], [4000.0, 11.0], [7000.0, 13.0], [9500.0, 11.0]], "ratios": [14.5, 9.6, 7.2, 5.9, 5.0],
-		"final": 1.0, "reverse": 0.0, "idle": 1400.0, "redline": 9500.0, "up": [4000.0, 8500.0], "brake_g": 0.8, "cda": 0.5, "crr": 0.015, "grip": 4.4},
+		"final": 1.0, "reverse": 0.0, "idle": 1400.0, "redline": 9500.0, "up": [4000.0, 8500.0], "brake_g": 0.8, "cda": 0.5, "crr": 0.015, "grip": 4.4,
+		"wet_k": 1.3},
 	"heavy": {"torque": [[600.0, 400.0], [1200.0, 800.0], [1800.0, 800.0], [2600.0, 600.0]], "ratios": [4.5, 2.8, 1.8, 1.3, 1.0],
 		"final": 4.0, "reverse": 4.5, "idle": 600.0, "redline": 2600.0, "up": [1400.0, 2300.0], "brake_g": 0.55, "cda": 6.5, "crr": 0.008, "grip": 4.2},
 	"light_truck": {"torque": [[700.0, 120.0], [1500.0, 250.0], [2800.0, 250.0], [3800.0, 190.0]], "ratios": [5.0, 2.9, 1.8, 1.25, 1.0],
@@ -125,6 +129,7 @@ var brake_full := BRAKE            # full braking for this mass
 var cda := 0.95
 var crr := 0.015
 var tyre_grip := 4.6
+var wet_k := 1.0
 var rear_grip := 1.0               # the rear tyres' grip against the front's: over 1 a car understeers, under 1 its tail steps out
 var _feel_t := 0.0                 # (the road under it, looked at ten times a second)
 var _hb_on := false                # (the handbrake's hold on the rear tyres, to let go of)
@@ -135,6 +140,9 @@ var damage := {"front": 0.0, "rear": 0.0, "left": 0.0, "right": 0.0}
 var _v_prev := Vector3.ZERO
 var hit_velocity := Vector3.ZERO   # the last crash: its velocity just before, and the way the other pushed it (world)
 var hit_normal := Vector3.ZERO
+var hit_point := Vector3.ZERO      # (world)
+var _dents := {}                   # the meshes a crash has dented → their originals (dents.gd)
+var _glass_mat: Material           # the windscreen before it cracked
 var _share := Vector4.ZERO         # a crash with something kinematic: (normal, speed along it) to set next step
 var _crash := 0.0                  # (the crunch, sounding)
 var _crash_phase := 0.0
@@ -681,7 +689,7 @@ func _wheel(pos: Vector3, front: bool, sp: Dictionary) -> VehicleWheel3D:
 	w.suspension_max_force = float(sp["mass"]) * 18.0
 	w.damping_compression = 3.0
 	w.damping_relaxation = 3.6
-	w.wheel_friction_slip = tyre_grip * _weather_grip * _surface_grip
+	w.wheel_friction_slip = tyre_grip * _wet_grip() * _surface_grip
 	w.wheel_roll_influence = 0.05 if sp.get("rider", false) else 0.12
 	_wheels.append(w)
 	add_child(w)
@@ -1234,6 +1242,11 @@ func set_grip(mult: float) -> void:
 	_apply_grip()
 
 
+## The weather's grip as these tyres feel it: a scooter's lose more of it in the wet than a car's.
+func _wet_grip() -> float:
+	return clampf(1.0 - (1.0 - _weather_grip) * wet_k, 0.2, 1.0)
+
+
 ## Off the road the tyres find less grip and much more rolling resistance: grass and dirt
 ## slow you down and slide, so the road is where you want to be (no invisible walls).
 func set_surface(kind: String) -> void:
@@ -1262,7 +1275,7 @@ func set_surface(kind: String) -> void:
 func _apply_grip() -> void:
 	for w in _wheels:
 		var vw := w as VehicleWheel3D
-		vw.wheel_friction_slip = tyre_grip * _weather_grip * _surface_grip * (rear_grip if vw.position.z < 0.0 else 1.0)
+		vw.wheel_friction_slip = tyre_grip * _wet_grip() * _surface_grip * (rear_grip if vw.position.z < 0.0 else 1.0)
 
 
 func gear_name() -> String:
@@ -1419,6 +1432,7 @@ func _set_drive(kind: String) -> void:
 	crr = float(d["crr"])
 	tyre_grip = float(d["grip"])
 	rear_grip = float(d.get("rear_grip", 1.0))
+	wet_k = float(d.get("wet_k", 1.0))
 	linear_damp_mode = RigidBody3D.DAMP_MODE_REPLACE
 	linear_damp = 0.0
 	rpm = idle_rpm
@@ -1523,7 +1537,7 @@ func _physics_process_body(delta: float) -> void:
 	# the road's grip caps what the tyres can do (VehicleWheel3D's friction doesn't limit the brakes or the drive by
 	# itself): about 1 g on dry tarmac, 0.7 wet, less off the road. Braking past it is lost, as ABS loses it (he
 	# keeps steering), and the tyres squeal; the drive past it spins them.
-	var mu := _weather_grip * _surface_grip
+	var mu := _wet_grip() * _surface_grip
 	var cap := mu * 9.81 * mass / BRAKE_K * (2.0 if two_wheeler else 1.0)
 	var over := 0.0
 	if br > cap and not in_handbrake:
@@ -1559,7 +1573,7 @@ func _physics_process_body(delta: float) -> void:
 			var vw := w as VehicleWheel3D
 			vw.brake = brake_full * 1.6 if vw.position.z < 0.0 else _brk * brake_full
 			if vw.position.z < 0.0 and absf(speed) > 3.0:
-				vw.wheel_friction_slip = 0.35 * _weather_grip * _surface_grip     # (locked: a fixed low grip, not a share of a grippy tyre)
+				vw.wheel_friction_slip = 0.35 * _wet_grip() * _surface_grip     # (locked: a fixed low grip, not a share of a grippy tyre)
 		_hb_on = true
 	elif _hb_on:
 		_hb_on = false
@@ -1593,7 +1607,7 @@ func _physics_process_body(delta: float) -> void:
 	var max_s := lerpf(MAX_STEER, HIGH_SPEED_STEER, sqrt(s)) * (lerpf(1.0, steer_sens, s) if not autopilot else 1.0)
 	if two_wheeler and _wheels.size() >= 2:              # (a rider's bars ask no more turn than the tyres hold: ~0.95 g)
 		var wb := maxf(absf((_wheels[0] as Node3D).position.z - (_wheels[_wheels.size() - 1] as Node3D).position.z), 0.8)
-		max_s = minf(max_s, atan(wb * 0.95 * _weather_grip * _surface_grip * 9.81 / maxf(speed * speed, 1.0)))
+		max_s = minf(max_s, atan(wb * 0.95 * _wet_grip() * _surface_grip * 9.81 / maxf(speed * speed, 1.0)))
 	steering = move_toward(steering, _steer_in * max_s + _pull, delta * (1.0 if not autopilot else 2.5))
 
 
@@ -1634,6 +1648,7 @@ func _integrate_forces(state: PhysicsDirectBodyState3D) -> void:
 	var severity := clampf((dv.length() - 3.0) / 12.0, 0.05, 1.0)
 	hit_velocity = before
 	hit_normal = state.get_contact_local_normal(best)
+	hit_point = state.get_contact_local_position(best)
 	_hit(zone, severity, state.get_contact_collider_object(best))
 
 
@@ -1643,6 +1658,19 @@ func _hit(zone: String, severity: float, other: Object) -> void:
 	jolt = maxf(jolt, 30.0 + severity * 90.0)          # (the camera feels it)
 	_apply_damage()
 	print("CRASH %s %.2f (front %.2f rear %.2f left %.2f right %.2f)" % [zone, severity, damage["front"], damage["rear"], damage["left"], damage["right"]])
+	if hit_point != Vector3.ZERO:
+		# the dent: centred where the panels are (a wall's contact can be at the floor's edge), as wide and deep
+		# as the hit was hard: a 50 km/h crash crumples the whole nose by a hand's width or more
+		var lp := to_local(hit_point)
+		var sp: Dictionary = SPECS.get(vehicle, {})
+		lp.y = clampf(lp.y, 0.45, float(sp.get("h", 1.5)) * 0.45)
+		if zone == "front" or zone == "rear":                   # (square on: towards the middle of the nose)
+			lp.x *= 0.5
+		else:
+			lp.z *= 0.6
+		var skip: Array = _wheels + _cab_parts + [_rider]
+		var n := Dents.dent(self, to_global(lp), hit_normal, 0.45 + severity * 0.75, 0.04 + severity * 0.26, _dents, skip)
+		print("DENT %d vertices, %d meshes, at %s local" % [n, _dents.size(), str(lp.snapped(Vector3.ONE * 0.01))])
 	impacted.emit(zone, severity, other)
 
 
@@ -1655,6 +1683,8 @@ func _apply_damage() -> void:
 		if _lamp_mat:
 			_lamp_mat.emission_energy_multiplier = 0.0
 	if front >= 0.65 and _glass and _glass.material_override is BaseMaterial3D:
+		if _glass_mat == null:
+			_glass_mat = _glass.material_override
 		var g := (_glass.material_override as BaseMaterial3D).duplicate() as BaseMaterial3D
 		g.albedo_color = Color(0.55, 0.58, 0.6, 0.9)               # (crazed: milky, rough)
 		g.roughness = 0.7
@@ -1671,6 +1701,10 @@ func repair() -> void:
 		damage[k] = 0.0
 	_pull = 0.0
 	torque_mul = float(DRIVE_OF.get(vehicle, ["", 1.0])[1])
+	Dents.mend(_dents)
+	if _glass_mat and _glass:
+		_glass.material_override = _glass_mat
+	_glass_mat = null
 	if _lamp_mat:
 		set_lights(lights_on)
 
@@ -1701,7 +1735,7 @@ func _balance(delta: float, on_ground: bool) -> void:
 	if _wheels.size() >= 2:
 		wb = maxf(absf((_wheels[0] as Node3D).position.z - (_wheels[_wheels.size() - 1] as Node3D).position.z), 0.8)
 	var yaw_want := speed * tan(steering) / wb
-	var grip_turn := _weather_grip * _surface_grip * 9.81 / maxf(v, 1.0)   # (no more turn than the tyres hold: ~1 g dry)
+	var grip_turn := _wet_grip() * _surface_grip * 9.81 / maxf(v, 1.0)   # (no more turn than the tyres hold: ~1 g dry)
 	yaw_want = clampf(yaw_want, -grip_turn, grip_turn)
 	var yaw_acc := (yaw_want - yaw_rate) * 8.0 * smoothstep(0.5, 2.5, v) if on_ground else 0.0
 	var st := PhysicsServer3D.body_get_direct_state(get_rid())   # (a nudge of exactly that much roll and yaw rate,
