@@ -1,0 +1,264 @@
+{
+ "name": "mist_village_gameplay",
+ "formats": {
+  "wide": [
+   1920,
+   1080
+  ]
+ },
+ "langs": [
+  "en",
+  "ta"
+ ],
+ "fonts": {
+  "en": [
+   "Avenir Next Condensed",
+   "Helvetica Neue"
+  ],
+  "ta": [
+   "Tamil Sangam MN"
+  ],
+  "name": [
+   "Avenir Next Condensed",
+   "Impact"
+  ],
+  "name_ta": [
+   "Tamil Sangam MN"
+  ]
+ },
+ "letterbox": 0,
+ "bpm": 88,
+ "music": "auto",
+ "game_audio": 0.25,
+ "vo_dir": "vo",
+ "vo_scratch": "vo/scratch",
+ "vo_pad": 0.8,
+ "segments": [
+  {
+   "vo": "01",
+   "clip": "../clips/fly_dusk_high.avi",
+   "from": 0.0,
+   "dur": 5,
+   "music": "calm",
+   "fade": 1.0
+  },
+  {
+   "clip": "../clips/fly_dusk_low.avi",
+   "from": 2.0,
+   "dur": 5,
+   "music": "calm"
+  },
+  {
+   "clip": "../clips/drive_dusk.avi",
+   "from": 30.0,
+   "dur": 4,
+   "music": "calm"
+  },
+  {
+   "clip": "../clips/night_drive.avi",
+   "from": 8.0,
+   "dur": 4,
+   "music": "calm"
+  },
+  {
+   "clip": "../clips/fly_night2.avi",
+   "from": 1.0,
+   "dur": 4,
+   "music": "calm"
+  },
+  {
+   "vo": "02",
+   "clip": "../clips/drive_dusk.avi",
+   "from": 8.0,
+   "dur": 5,
+   "music": "calm",
+   "name": {
+    "en": "KARTHIK",
+    "ta": "கார்த்திக்"
+   },
+   "role": {
+    "en": "The driver",
+    "ta": "டிரைவர்"
+   }
+  },
+  {
+   "clip": {
+    "en": "../clips/funeral_en.avi",
+    "ta": "../clips/funeral_ta.avi"
+   },
+   "from": 8.0,
+   "dur": 5,
+   "music": "build"
+  },
+  {
+   "clip": {
+    "en": "../clips/watchman_en.avi",
+    "ta": "../clips/watchman_ta.avi"
+   },
+   "from": 2.2,
+   "dur": 3,
+   "music": "build"
+  },
+  {
+   "vo": "03",
+   "clip": "../clips/bail_evening.avi",
+   "from": 10.0,
+   "dur": 5,
+   "music": "build"
+  },
+  {
+   "clip": "../clips/bail_evening.avi",
+   "from": 25.0,
+   "dur": 5,
+   "music": "build"
+  },
+  {
+   "clip": "../clips/bail_evening.avi",
+   "from": 45.0,
+   "dur": 5,
+   "music": "build"
+  },
+  {
+   "vo": "04",
+   "clip": {
+    "en": "../clips/tea_en.avi",
+    "ta": "../clips/tea_ta.avi"
+   },
+   "from": 3.0,
+   "dur": 4,
+   "music": "build",
+   "fill": true
+  },
+  {
+   "clip": {
+    "en": "../clips/ask_en.avi",
+    "ta": "../clips/ask_ta.avi"
+   },
+   "from": 3.0,
+   "dur": 4,
+   "music": "build"
+  },
+  {
+   "clip": {
+    "en": "../clips/record_en.avi",
+    "ta": "../clips/record_ta.avi"
+   },
+   "from": 3.0,
+   "dur": 4,
+   "music": "build"
+  },
+  {
+   "clip": {
+    "en": "../clips/cctv_en.avi",
+    "ta": "../clips/cctv_ta.avi"
+   },
+   "from": 3.0,
+   "dur": 4,
+   "music": "build"
+  },
+  {
+   "clip": {
+    "en": "../clips/board_en.avi",
+    "ta": "../clips/board_ta.avi"
+   },
+   "from": 3.0,
+   "dur": 4,
+   "music": "build"
+  },
+  {
+   "vo": "05",
+   "clip": "../clips/police_check.avi",
+   "from": 10.0,
+   "dur": 5,
+   "music": "tense",
+   "fill": true
+  },
+  {
+   "clip": "../clips/crash_traffic.avi",
+   "from": 12.0,
+   "dur": 4,
+   "music": "tense"
+  },
+  {
+   "clip": "../clips/drive_rain_night.avi",
+   "from": 4.0,
+   "dur": 5,
+   "music": "tense"
+  },
+  {
+   "clip": "../clips/night_drive.avi",
+   "from": 20.0,
+   "dur": 4,
+   "music": "tense"
+  },
+  {
+   "vo": "06",
+   "clip": {
+    "en": "../clips/gigs_en.avi",
+    "ta": "../clips/gigs_ta.avi"
+   },
+   "from": 3.0,
+   "dur": 5,
+   "music": "build"
+  },
+  {
+   "clip": {
+    "en": "../clips/home_en.avi",
+    "ta": "../clips/home_ta.avi"
+   },
+   "from": 3.0,
+   "dur": 5,
+   "music": "calm"
+  },
+  {
+   "vo": "07",
+   "clip": {
+    "en": "../clips/court_en.avi",
+    "ta": "../clips/court_ta.avi"
+   },
+   "from": 2.0,
+   "dur": 4,
+   "music": "tense"
+  },
+  {
+   "clip": {
+    "en": "../clips/court_en.avi",
+    "ta": "../clips/court_ta.avi"
+   },
+   "from": 28.0,
+   "dur": 4,
+   "music": "tense"
+  },
+  {
+   "vo": "08",
+   "card": {
+    "en": "THE MIST VILLAGE",
+    "ta": "தி மிஸ்ட் வில்லேஜ்"
+   },
+   "sub": {
+    "en": "PART 1 · THE WRONG ACCUSATION",
+    "ta": "பாகம் 1 · தவறான குற்றச்சாட்டு"
+   },
+   "dur": 6,
+   "music": "hit",
+   "hit": true,
+   "fade": 0.6,
+   "scale": 2.4
+  },
+  {
+   "vo_stop": true,
+   "card": {
+    "en": "Coming soon on Steam",
+    "ta": "விரைவில் Steam-இல்"
+   },
+   "sub": {
+    "en": "English · தமிழ்",
+    "ta": "English · தமிழ்"
+   },
+   "dur": 4,
+   "music": "build",
+   "fade": 0.6,
+   "scale": 0.9
+  }
+ ]
+}

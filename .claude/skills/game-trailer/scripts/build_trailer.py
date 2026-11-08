@@ -11,7 +11,8 @@ The edit (paths relative to the edit file):
   "fonts": {"en": ["Georgia"], "ta": ["Tamil Sangam MN"]},         # system font names (Godot draws the text)
   "letterbox": 2.39,               # widescreen bars on the wide cut (0: none)
   "bpm": 94,                       # the score's tempo (score.py)
-  "music": "score.wav",            # made by score.py from this same edit (optional; no music if missing)
+  "music": "score.wav",            # or "auto": score.py run on each language's (narration-fitted) cut
+  "vo_dir": "vo",                  # narration: <vo_dir>/<id>_<lang>.(m4a|wav|mp3|aiff), else vo/scratch/ (see fit())            # made by score.py from this same edit (optional; no music if missing)
   "game_audio": 0.35,              # the game's own sound under the music (per segment: "audio")
   "segments": [
     {"clip": "clips/flyover.avi", "from": 0.5, "dur": 5.0,          # seconds into the clip (after its .mark, if any);
@@ -195,13 +196,60 @@ def segment(seg, base, W, H, lang, pngs, out, game_audio, draft, letterbox=0):
          "-t", str(dur), *enc, out])
 
 
+VO_EXTS = (".m4a", ".wav", ".mp3", ".aiff", ".aif", ".caf")
+
+
+def vo_file(base, edit, sid, lang):
+    """A section's narration: the recorded take (edit "vo_dir", default vo/) or else the scratch reading."""
+    for d in (edit.get("vo_dir", "vo"), edit.get("vo_scratch", "vo/scratch")):
+        for ext in VO_EXTS:
+            p = os.path.join(base, d, f"{sid}_{lang}{ext}")
+            if os.path.exists(p):
+                return p
+    return None
+
+
+def duration(path):
+    r = subprocess.run(["ffprobe", "-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0", path],
+                       capture_output=True, text=True)
+    return float(r.stdout.strip() or 0)
+
+
+def fit(edit, base, lang):
+    """Narrated edits: a segment with "vo": "03" starts section 03, which runs to the next "vo" (or a segment with
+    "vo_stop": true). Its segments are stretched or shrunk together to the reading's length (+ "vo_pad"), so a new
+    take re-times the cut. Returns the segments for this language and [(voice file, start seconds)]."""
+    segs = [dict(sg) for sg in edit["segments"]]
+    marks = [i for i, sg in enumerate(segs) if sg.get("vo")]
+    voices = []
+    for n, i in enumerate(marks):
+        path = vo_file(base, edit, segs[i]["vo"], lang)
+        if not path:
+            print(f"  (no narration for section {segs[i]['vo']} in {lang})", flush=True)
+            continue
+        end = marks[n + 1] if n + 1 < len(marks) else len(segs)
+        for k in range(i + 1, end):
+            if segs[k].get("vo_stop"):
+                end = k
+                break
+        total = sum(float(segs[k]["dur"]) for k in range(i, end))
+        want = duration(path) + float(edit.get("vo_pad", 0.6))
+        for k in range(i, end):
+            segs[k]["dur"] = round(float(segs[k]["dur"]) * want / total, 3)
+        voices.append([path, i])
+    starts, t = [], 0.0
+    for sg in segs:
+        starts.append(t)
+        t += float(sg["dur"])
+    return segs, [[p, starts[i] + float(edit.get("vo_lead", 0.25))] for p, i in voices]
+
+
 def build(edit_path, only=None, lang_only=None, draft=False):
     edit = json.load(open(edit_path, encoding="utf-8"))
     base = os.path.dirname(os.path.abspath(edit_path))
     outdir = os.path.join(base, "out")
     os.makedirs(outdir, exist_ok=True)
     fonts = edit.get("fonts", {"en": ["Georgia"], "ta": ["Tamil Sangam MN"]})
-    music = os.path.join(base, edit["music"]) if edit.get("music") else None
     made = []
     for fmt, size in edit.get("formats", {"wide": [1920, 1080]}).items():
         if only and fmt != only:
@@ -213,16 +261,24 @@ def build(edit_path, only=None, lang_only=None, draft=False):
             if lang_only and lang != lang_only:
                 continue
             with tempfile.TemporaryDirectory() as tmp:
+                segs, voices = fit(edit, base, lang)
+                music = os.path.join(base, edit["music"]) if edit.get("music") and edit["music"] != "auto" else None
+                if edit.get("music") == "auto":                 # (the score timed to this language's cut)
+                    fe = dict(edit, segments=segs)
+                    fj = os.path.join(tmp, "fitted.json")
+                    json.dump(fe, open(fj, "w", encoding="utf-8"), ensure_ascii=False)
+                    music = os.path.join(tmp, "score.wav")
+                    run([sys.executable, os.path.join(HERE, "score.py"), fj, music])
                 texts = Texts(tmp)
                 lb = edit.get("letterbox", 0)
-                planned = [plan_texts(seg, W, H, lang, fonts, texts, lb) for seg in edit["segments"]]
+                planned = [plan_texts(seg, W, H, lang, fonts, texts, lb) for seg in segs]
                 texts.render()
                 parts = []
-                for i, seg in enumerate(edit["segments"]):
+                for i, seg in enumerate(segs):
                     p = os.path.join(tmp, f"seg{i:03d}.mp4")
                     segment(seg, base, W, H, lang, planned[i], p, float(edit.get("game_audio", 0.35)), draft, lb)
                     parts.append(p)
-                    print(f"  {fmt} {lang} segment {i + 1}/{len(edit['segments'])}", flush=True)
+                    print(f"  {fmt} {lang} segment {i + 1}/{len(segs)}", flush=True)
                 lst = os.path.join(tmp, "list.txt")
                 with open(lst, "w") as f:
                     for p in parts:
@@ -230,7 +286,27 @@ def build(edit_path, only=None, lang_only=None, draft=False):
                 body = os.path.join(tmp, "body.mp4")
                 run(["ffmpeg", "-v", "error", "-y", "-f", "concat", "-safe", "0", "-i", lst, "-c", "copy", body])
                 out = os.path.join(outdir, f"{edit.get('name', 'trailer')}_{fmt}_{lang}{'_draft' if draft else ''}.mp4")
-                if music and os.path.exists(music):
+                if voices:                                     # narration: the voice on top, music and game ducked under it
+                    ins = ["-i", body, "-i", music] if music else ["-i", body]
+                    f = "[0:a]volume=1.0[g];" + ("[1:a]volume=0.8[m0];" if music else "")
+                    vi = []
+                    first = 2 if music else 1
+                    for k, (vp, at) in enumerate(voices):
+                        ins += ["-i", vp]
+                        ms = int(at * 1000)
+                        f += (f"[{first + k}:a]aresample=48000,aformat=channel_layouts=stereo,highpass=f=80,"
+                              f"acompressor=threshold=0.1:ratio=3:attack=5:release=120,volume=1.6,adelay={ms}|{ms}[v{k}];")
+                        vi.append(f"[v{k}]")
+                    f += "".join(vi) + f"amix=inputs={len(vi)}:normalize=0:duration=longest,asplit=3[va][vb][vc];"
+                    f += "[g][vb]sidechaincompress=threshold=0.03:ratio=8:attack=15:release=400[gd];"
+                    if music:
+                        f += "[m0][vc]sidechaincompress=threshold=0.03:ratio=6:attack=20:release=500[md];"
+                        f += "[gd][md][va]amix=inputs=3:duration=first:normalize=0,loudnorm=I=-14:TP=-1.5:LRA=11[a]"
+                    else:
+                        f += "[gd][va]amix=inputs=2:duration=first:normalize=0,loudnorm=I=-14:TP=-1.5:LRA=11[a]"
+                    run(["ffmpeg", "-v", "error", "-y", *ins, "-filter_complex", f,
+                         "-map", "0:v", "-map", "[a]", "-c:v", "copy", "-c:a", "aac", "-b:a", "192k", "-movflags", "+faststart", out])
+                elif music and os.path.exists(music):
                     mix = ("[0:a]volume=1.0[g];[1:a]volume=0.9[m];[g][m]amix=inputs=2:duration=first:normalize=0,"
                            "loudnorm=I=-14:TP=-1.5:LRA=11[a]")
                     run(["ffmpeg", "-v", "error", "-y", "-i", body, "-i", music, "-filter_complex", mix,

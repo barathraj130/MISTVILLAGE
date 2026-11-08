@@ -35,3 +35,9 @@ trailer/*.wav
 trailer/*.skill
 trailer/*.log
 trailer/clips/
+trailer/gameplay/out/
+trailer/gameplay/vo/
+trailer/gameplay/*.log
+trailer/posts/raw/
+trailer/posts/out/
+trailer/posts/*.zip

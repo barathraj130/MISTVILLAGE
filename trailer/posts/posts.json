@@ -1,0 +1,153 @@
+{
+ "out": "out",
+ "formats": {
+  "portrait": [
+   1080,
+   1350
+  ],
+  "wide": [
+   1920,
+   1080
+  ]
+ },
+ "langs": [
+  "en",
+  "ta"
+ ],
+ "fonts": {
+  "en": [
+   "Avenir Next Condensed",
+   "Helvetica Neue"
+  ],
+  "ta": [
+   "Tamil Sangam MN"
+  ]
+ },
+ "mark": {
+  "en": "THE MIST VILLAGE",
+  "ta": "தி மிஸ்ட் வில்லேஜ்"
+ },
+ "posts": [
+  {
+   "name": "01_title",
+   "image": "raw/aerial_golden/view.jpg",
+   "crop_x": 0.6,
+   "crop_y": 0.6,
+   "grade": "saturation=1.15:contrast=1.05",
+   "title": true,
+   "big": {
+    "en": "THE MIST VILLAGE",
+    "ta": "தி மிஸ்ட் வில்லேஜ்"
+   },
+   "small": {
+    "en": "PART 1 · THE WRONG ACCUSATION",
+    "ta": "பாகம் 1 · தவறான குற்றச்சாட்டு"
+   },
+   "foot": {
+    "en": "The real Coimbatore · Coming soon on Steam",
+    "ta": "உண்மையான கோயம்புத்தூர் · விரைவில் Steam-இல்"
+   }
+  },
+  {
+   "name": "02_karthik",
+   "image": "raw/drive_dusk/drive.jpg",
+   "crop_x": 0.5,
+   "crop_y": 0.4,
+   "grade": "saturation=1.15:contrast=1.06:gamma=1.1",
+   "big": {
+    "en": "KARTHIK",
+    "ta": "கார்த்திக்"
+   },
+   "small": {
+    "en": "Six years he drove the same man.\nA week after his promotion, that man was dead.",
+    "ta": "ஆறு வருஷம் ஒரே முதலாளிக்கு ஓட்டினான்.\nபதவி உயர்வு கிடைச்ச ஒரு வாரத்துல, அவர் இறந்துட்டார்."
+   }
+  },
+  {
+   "name": "03_priya",
+   "image": {
+    "en": "raw/priya_en.png",
+    "ta": "raw/priya_ta.png"
+   },
+   "crop_x": 0.46,
+   "crop_y": 0.2,
+   "grade": "saturation=1.1:contrast=1.05",
+   "big": {
+    "en": "EVERYONE HAS ALREADY DECIDED.",
+    "ta": "எல்லாரும் ஏற்கனவே முடிவு பண்ணிட்டாங்க."
+   },
+   "small": {
+    "en": "Every trace points at him. Prove where he really was.",
+    "ta": "எல்லா தடயமும் அவனையே காட்டுது. அவன் உண்மையில எங்க இருந்தான்னு நிரூபிங்க."
+   },
+   "precrop": [
+    0,
+    0,
+    1,
+    0.79
+   ]
+  },
+  {
+   "name": "04_night",
+   "image": "raw/night_junction.png",
+   "crop_x": 0.25,
+   "crop_y": 0.3,
+   "cover": [
+    [
+     0.95,
+     0.66,
+     0.045,
+     0.11
+    ]
+   ],
+   "grade": "gamma=1.75:saturation=1.3:contrast=1.08",
+   "big": {
+    "en": "SIGN AT THE STATION.\nEVERY EVENING.",
+    "ta": "தினமும் சாயங்காலம்\nஸ்டேஷன்ல கையெழுத்து."
+   },
+   "small": {
+    "en": "Out on bail. Not allowed to leave the district.",
+    "ta": "ஜாமீன்ல வெளியே. மாவட்டத்தை விட்டு போகக் கூடாது."
+   }
+  },
+  {
+   "name": "05_rain",
+   "image": "raw/rain_road.png",
+   "crop_x": 0.62,
+   "crop_y": 0.4,
+   "grade": "gamma=1.55:saturation=1.2:contrast=1.08",
+   "big": {
+    "en": "THE CITY REMEMBERS\nWHERE HE WAS.",
+    "ta": "அவன் எங்க இருந்தான்னு\nஊருக்குத் தெரியும்."
+   },
+   "small": {
+    "en": "Drive the real Coimbatore, in sun, rain and night.",
+    "ta": "உண்மையான கோயம்புத்தூரில் ஓட்டுங்க: வெயிலிலும், மழையிலும், இரவிலும்."
+   }
+  },
+  {
+   "name": "06_court",
+   "image": {
+    "en": "raw/court_en.png",
+    "ta": "raw/court_ta.png"
+   },
+   "crop_x": 0.5,
+   "crop_y": 0.35,
+   "grade": "saturation=1.1:contrast=1.06",
+   "big": {
+    "en": "TWENTY DAYS.\nONE TRUTH.",
+    "ta": "இருபது நாட்கள்.\nஒரே உண்மை."
+   },
+   "small": {
+    "en": "Part 1 · The Wrong Accusation · Coming soon on Steam",
+    "ta": "பாகம் 1 · தவறான குற்றச்சாட்டு · விரைவில் Steam-இல்"
+   },
+   "precrop": [
+    0,
+    0.075,
+    1,
+    0.715
+   ]
+  }
+ ]
+}
