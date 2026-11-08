@@ -481,6 +481,8 @@ func _next() -> void:
 			life.set(k, clampf(float(life.get(k)) + float(cur["life_add"][k]), 0.0, 100.0))
 	if life and (cur.has("clock") or cur.has("add_days")):   # a jump of the clock isn't hours awake
 		life._clock = life._clock_now()
+	if cur.has("weather") and city and city.weather:   # (the day's weather: clear unless a step says otherwise)
+		city.weather.set_weather(str(cur["weather"]))
 	if cur.has("set_flag"):                             # (a step that, when it plays, tells the later ones so)
 		flags[str(cur["set_flag"])] = true
 	if cur.has("add_minutes") and fines:                # time that passes off screen (a ride on the scooter)

@@ -14,6 +14,7 @@ const CRUISE := {"trunk": 15.0, "primary": 13.0, "secondary": 11.5, "tertiary": 
 const BIG := {"trunk": 3.0, "primary": 2.5, "secondary": 2.0, "tertiary": 1.5}
 const DIMS := {"hatchback": Vector3(1.7, 1.5, 3.9), "sedan": Vector3(1.75, 1.45, 4.4), "taxi": Vector3(1.75, 1.45, 4.4),
 	"auto": Vector3(1.4, 1.75, 2.7), "bus": Vector3(2.55, 3.2, 11.0), "lorry": Vector3(2.5, 3.3, 8.2)}
+const MASS := {"hatchback": 1050.0, "sedan": 1250.0, "taxi": 1250.0, "auto": 400.0, "bus": 11000.0, "lorry": 9000.0}
 const LIFT := 0.09                         # road surface above its centreline points (= streamer RANK + 0.06)
 
 @export var count := 36                    # out in the suburbs; more in the centre (BUSY)
@@ -22,6 +23,7 @@ const CENTRE_R := 4500.0                   # metres from the city origin (Gandhi
 var streamer
 var player: Node3D
 var vehicles: Array = []
+var wet := 0.0                             # how soaked the roads are (city_weather.gd): everyone a little slower
 var ends := {}                             # Vector2i (1 m grid) → [[road, at_end(bool)], ...]
 var signals: Array = []
 var _built_seen := -1
@@ -128,7 +130,7 @@ func _spawn(me: Vector3) -> void:
 	add_child(body)
 	var v := {"body": body, "kind": kind, "road": r, "road_node": r["node"], "dir": dir, "i": i0, "t": 0.0,
 		"speed": float(CRUISE.get(r["c"], 8.0)) * 0.6, "half": dims.z * 0.5, "pos": at, "fwd": Vector3.FORWARD,
-		"wait": 0.0}
+		"wait": 0.0, "off": Vector3.ZERO, "yaw": 0.0, "push": Vector3.ZERO, "spin": 0.0, "stunned": 0.0}
 	vehicles.append(v)
 	_place(v)
 
@@ -166,7 +168,8 @@ func _place(v: Dictionary) -> void:
 	var c := a.lerp(b, float(v["t"])) + left * _lane(r) + Vector3(0, LIFT, 0)
 	v["pos"] = c
 	v["fwd"] = flat
-	var basis := Basis.looking_at(-flat, Vector3.UP)
+	c += v.get("off", Vector3.ZERO)
+	var basis := Basis.looking_at(-flat, Vector3.UP).rotated(Vector3.UP, float(v.get("yaw", 0.0)))
 	var pitch := atan2(b.y - a.y, Vector2(b.x - a.x, b.z - a.z).length())
 	basis = basis.rotated(left, -pitch) if absf(pitch) < 0.3 else basis
 	var body: AnimatableBody3D = v["body"]
@@ -223,11 +226,76 @@ func _next(v: Dictionary) -> bool:
 	return false
 
 
+## You hit one: it is shoved the way you pushed it, as much as the two masses share it (a bus barely moves, an
+## auto is knocked aside and spun), slides to a stop on its tyres, and its driver waits a few seconds before
+## easing back into the lane. `vel` is your velocity just before, `normal` the way it pushed you back. Returns
+## the speed your vehicle keeps along the hit (the share of a bodies-together crash), or −1 if it wasn't one of ours.
+func struck(body: Object, vel: Vector3, normal: Vector3, my_mass: float) -> float:
+	for v in vehicles:
+		if v["body"] != body:
+			continue
+		var m: float = MASS.get(v["kind"], 1200.0)
+		var n := Vector3(-normal.x, 0, -normal.z).normalized()        # (it goes the other way)
+		var theirs: Vector3 = (v["fwd"] as Vector3) * float(v["speed"]) + (v["push"] as Vector3)
+		var closing := maxf((vel - theirs).dot(n), 0.0)
+		var common := closing * my_mass / (my_mass + m)                  # (a crumpling hit: they move off together)
+		if common < 0.2:
+			return -1.0
+		v["push"] = theirs + n * common * 1.1                            # (a little faster: they part)
+		var arm: Vector3 = v["fwd"]                                      # off-centre hits spin it
+		v["spin"] = clampf(float(v["spin"]) + arm.cross(n).y * common * 0.25, -2.0, 2.0)
+		v["stunned"] = maxf(float(v["stunned"]), 3.0 + minf(closing, 10.0) * 0.4)
+		v["speed"] = 0.0
+		print("TRAFFIC struck %s: shoved %.1f m/s, spin %.2f rad/s" % [v["kind"], (v["push"] as Vector3).length(), v["spin"]])
+		return theirs.dot(n) + common * 0.9
+	return -1.0
+
+
+func is_vehicle(body: Object) -> bool:
+	for v in vehicles:
+		if v["body"] == body:
+			return true
+	return false
+
+
+## After a hit: the shove slides out (tyres, about 0.7 g sideways), then the offset eases back.
+func _knocked(v: Dictionary, delta: float) -> bool:
+	var push: Vector3 = v["push"]
+	var off: Vector3 = v["off"]
+	if push.length() > 0.01 or absf(float(v["spin"])) > 0.01:
+		var fwd: Vector3 = v["fwd"]
+		var along := push.dot(fwd)                                        # (forward: on along its road)
+		if along > 0.0:
+			_advance(v, along * delta)
+			off += (push - fwd * along) * delta
+		else:
+			off += push * delta
+		v["yaw"] = float(v["yaw"]) + float(v["spin"]) * delta
+		v["push"] = push.move_toward(Vector3.ZERO, 7.0 * delta)
+		v["spin"] = move_toward(float(v["spin"]), 0.0, 3.0 * delta)
+		v["off"] = off
+		v["speed"] = 0.0
+		_place(v)
+		return true
+	if float(v["stunned"]) > 0.0:
+		v["stunned"] = float(v["stunned"]) - delta
+		v["speed"] = 0.0
+		_place(v)
+		return true
+	if off.length() > 0.01 or absf(float(v["yaw"])) > 0.01:              # back into the lane as it moves off
+		var k := minf(1.0, delta * 0.6)
+		v["off"] = off.lerp(Vector3.ZERO, k).move_toward(Vector3.ZERO, delta * 0.3)
+		v["yaw"] = move_toward(lerpf(float(v["yaw"]), 0.0, k), 0.0, delta * 0.1)
+	return false
+
+
 func _drive(v: Dictionary, delta: float, me: Vector3) -> void:
+	if _knocked(v, delta):
+		return
 	var r: Dictionary = v["road"]
 	var p: PackedFloat32Array = r["p"]
 	var n := p.size() / 3
-	var target: float = CRUISE.get(r["c"], 8.0) * (0.75 if v["kind"] in ["bus", "lorry", "auto"] else 1.0)
+	var target: float = CRUISE.get(r["c"], 8.0) * (0.75 if v["kind"] in ["bus", "lorry", "auto"] else 1.0) * (1.0 - 0.2 * wet)
 	var pos: Vector3 = v["pos"]
 	var fwd: Vector3 = v["fwd"]
 	# the road ahead: slow for the end of the piece when it bends
@@ -281,8 +349,19 @@ func _drive(v: Dictionary, delta: float, me: Vector3) -> void:
 	var spd: float = v["speed"]
 	spd = move_toward(spd, target, delta * (5.0 if target < spd else 1.8))
 	v["speed"] = spd
-	# move along the polyline
-	var step := spd * delta
+	_advance(v, spd * delta)
+	_place(v)
+
+
+## Along the road by `step` metres: on to the next piece at its end.
+func _advance(v: Dictionary, step: float) -> void:
+	var r: Dictionary = v["road"]
+	var p: PackedFloat32Array = r["p"]
+	var n := p.size() / 3
+	var last := n - 1 if int(v["dir"]) > 0 else 0
+	var i: int = v["i"]
+	if i == last:
+		return
 	var guard := 0
 	while step > 0.0 and guard < 8:
 		guard += 1
@@ -306,4 +385,3 @@ func _drive(v: Dictionary, delta: float, me: Vector3) -> void:
 				p = r["p"]
 				n = p.size() / 3
 				last = n - 1 if int(v["dir"]) > 0 else 0
-	_place(v)

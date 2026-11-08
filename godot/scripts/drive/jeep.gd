@@ -96,6 +96,10 @@ const BLACK := Color(0.015, 0.015, 0.017)
 const CHROME := Color(0.55, 0.56, 0.58)
 const CLADDING := Color(0.03, 0.03, 0.032)
 
+## A crash: which side took it (front, rear, left, right), how hard (0..1), and what it hit (city_test.gd fines it,
+## the police hear of it).
+signal impacted(zone: String, severity: float, other: Object)
+
 ## Driver inputs. The keyboard fills these unless `autopilot` is on.
 var autopilot := false
 var in_throttle := 0.0
@@ -124,6 +128,17 @@ var tyre_grip := 4.6
 var rear_grip := 1.0               # the rear tyres' grip against the front's: over 1 a car understeers, under 1 its tail steps out
 var _feel_t := 0.0                 # (the road under it, looked at ten times a second)
 var _hb_on := false                # (the handbrake's hold on the rear tyres, to let go of)
+## Damage, from crashes: each side 0..1, and what it does (readable, never the end of it: repair() mends it all):
+## the front past 0.45 breaks the headlights, past 0.65 cracks the windscreen; a bent front pulls the steering;
+## past 2.5 in all, the engine limps at 60%.
+var damage := {"front": 0.0, "rear": 0.0, "left": 0.0, "right": 0.0}
+var _v_prev := Vector3.ZERO
+var hit_velocity := Vector3.ZERO   # the last crash: its velocity just before, and the way the other pushed it (world)
+var hit_normal := Vector3.ZERO
+var _share := Vector4.ZERO         # a crash with something kinematic: (normal, speed along it) to set next step
+var _crash := 0.0                  # (the crunch, sounding)
+var _crash_phase := 0.0
+var _pull := 0.0                   # (the steering's pull from a bent front, rad)
 var two_wheeler := false           # a scooter or a motorbike: two wheels in line, balanced and leaning (_balance)
 var lean := 0.0                    # its lean now (rad, + to its left) and the lean the turn asks for
 var lean_target := 0.0
@@ -315,6 +330,9 @@ func configure(kind: String, paint := Color(0, 0, 0, 0)) -> void:
 	torque_mul = sp["torque"]
 	wheel_r = sp["radius"]
 	two_wheeler = bool(sp.get("two_wheeler", false)) or (bool(sp.get("rider", false)) and kind != "auto")
+	contact_monitor = true                      # (crashes: _integrate_forces reads the contacts)
+	max_contacts_reported = 8
+	repair()
 	_set_drive(kind)
 	seat = sp.get("seat", Vector3.ZERO)
 	gear = 1
@@ -1210,6 +1228,8 @@ func pedal() -> float:
 
 ## Weather grip: 1 dry, ~0.7 on wet tarmac.
 func set_grip(mult: float) -> void:
+	if absf(mult - _weather_grip) < 0.002:             # (called every step by the city's weather)
+		return
 	_weather_grip = mult
 	_apply_grip()
 
@@ -1366,9 +1386,10 @@ func _update_lamps(delta: float) -> void:
 
 func set_lights(on: bool) -> void:
 	lights_on = on
+	var broken: bool = float(damage.get("front", 0.0)) >= 0.45
 	for s in _headlights:
-		s.visible = on
-	_lamp_mat.emission_energy_multiplier = 5.0 if on else (0.6 if is_coupe else 2.5)
+		s.visible = on and not broken
+	_lamp_mat.emission_energy_multiplier = 0.0 if broken else (5.0 if on else (0.6 if is_coupe else 2.5))
 
 
 func honk() -> void:
@@ -1573,7 +1594,85 @@ func _physics_process_body(delta: float) -> void:
 	if two_wheeler and _wheels.size() >= 2:              # (a rider's bars ask no more turn than the tyres hold: ~0.95 g)
 		var wb := maxf(absf((_wheels[0] as Node3D).position.z - (_wheels[_wheels.size() - 1] as Node3D).position.z), 0.8)
 		max_s = minf(max_s, atan(wb * 0.95 * _weather_grip * _surface_grip * 9.81 / maxf(speed * speed, 1.0)))
-	steering = move_toward(steering, _steer_in * max_s, delta * (1.0 if not autopilot else 2.5))
+	steering = move_toward(steering, _steer_in * max_s + _pull, delta * (1.0 if not autopilot else 2.5))
+
+
+## A crash is a change of velocity no brake makes (over 3 m/s in one step) while touching something that isn't the
+## road: the hardest contact says which side took it.
+## After a crash into something that can't take momentum itself (the traffic, moved by script): this body keeps
+## its share, `along` m/s in the direction `n`, as if the two had moved off together.
+func share_momentum(n: Vector3, along: float) -> void:
+	_share = Vector4(n.x, n.y, n.z, along)
+
+
+func _integrate_forces(state: PhysicsDirectBodyState3D) -> void:
+	if _share != Vector4.ZERO:
+		var n := Vector3(_share.x, _share.y, _share.z)
+		state.linear_velocity += n * (_share.w - state.linear_velocity.dot(n))
+		_share = Vector4.ZERO
+		_v_prev = state.linear_velocity
+		return
+	var dv := state.linear_velocity - _v_prev
+	var before := _v_prev
+	_v_prev = state.linear_velocity
+	if dv.length() < 3.0:
+		return
+	var best := -1
+	var most := 0.0
+	for i in state.get_contact_count():
+		var n := state.get_contact_local_normal(i)
+		if n.y > 0.6:                                    # (the ground under it)
+			continue
+		var imp := state.get_contact_impulse(i).length()
+		if imp > most:
+			most = imp
+			best = i
+	if best < 0:
+		return
+	var ln := global_basis.inverse() * state.get_contact_local_normal(best)   # (pushed this way: the hit came from the other)
+	var zone := "front" if ln.z < -0.5 else ("rear" if ln.z > 0.5 else ("left" if ln.x < 0.0 else "right"))
+	var severity := clampf((dv.length() - 3.0) / 12.0, 0.05, 1.0)
+	hit_velocity = before
+	hit_normal = state.get_contact_local_normal(best)
+	_hit(zone, severity, state.get_contact_collider_object(best))
+
+
+func _hit(zone: String, severity: float, other: Object) -> void:
+	damage[zone] = minf(1.0, float(damage[zone]) + severity * 0.6)
+	_crash = maxf(_crash, 0.4 + severity * 0.6)
+	jolt = maxf(jolt, 30.0 + severity * 90.0)          # (the camera feels it)
+	_apply_damage()
+	print("CRASH %s %.2f (front %.2f rear %.2f left %.2f right %.2f)" % [zone, severity, damage["front"], damage["rear"], damage["left"], damage["right"]])
+	impacted.emit(zone, severity, other)
+
+
+## What the damage shows and does: broken headlights, a cracked windscreen, a pull, a limping engine.
+func _apply_damage() -> void:
+	var front: float = damage["front"]
+	if front >= 0.45:
+		for h in _headlights:
+			(h as Node3D).visible = false
+		if _lamp_mat:
+			_lamp_mat.emission_energy_multiplier = 0.0
+	if front >= 0.65 and _glass and _glass.material_override is BaseMaterial3D:
+		var g := (_glass.material_override as BaseMaterial3D).duplicate() as BaseMaterial3D
+		g.albedo_color = Color(0.55, 0.58, 0.6, 0.9)               # (crazed: milky, rough)
+		g.roughness = 0.7
+		g.metallic = 0.1
+		_glass.material_override = g
+	_pull = clampf(front - 0.5, 0.0, 0.5) * 0.06 * (1.0 if float(damage["left"]) >= float(damage["right"]) else -1.0)
+	var total: float = damage["front"] + damage["rear"] + damage["left"] + damage["right"]
+	torque_mul = float(DRIVE_OF.get(vehicle, ["", 1.0])[1]) * (0.6 if total > 2.5 else 1.0)
+
+
+## Mended (a garage, a new day's car): no damage, the lamps and the glass as they were.
+func repair() -> void:
+	for k in damage:
+		damage[k] = 0.0
+	_pull = 0.0
+	torque_mul = float(DRIVE_OF.get(vehicle, ["", 1.0])[1])
+	if _lamp_mat:
+		set_lights(lights_on)
 
 
 ## A two-wheeler kept up and leaned as a rider does it: the lean a turn needs (tan = v·yaw-rate / g, into the turn),
@@ -1702,7 +1801,7 @@ func _fill_road() -> void:
 		return
 	var v := absf(speed)
 	var wind_amp := clampf(v * v / 1600.0, 0.0, 0.6)
-	var rough := 1.0 if surface == "asphalt" else 2.2
+	var rough := 1.0 if surface in ["asphalt", "concrete"] else (1.6 if surface == "gravel" else 2.2)
 	var rumble_amp := clampf(v / 30.0, 0.0, 0.5) * rough
 	var sq := slip * clampf(v / 6.0, 0.0, 1.0)
 	for i in pb.get_frames_available():
@@ -1716,6 +1815,12 @@ func _fill_road() -> void:
 		if _thud > 0.0:
 			smp += sin(_thud * 140.0) * _thud * 0.5
 			_thud = maxf(0.0, _thud - 1.0 / 22050.0 * 9.0)
+		if _crash > 0.0:                                  # a crash: a thump, a crunch, metal ringing
+			_crash_phase += 1.0 / 22050.0
+			smp += (sin(_crash_phase * TAU * 55.0) * 0.6 + n * 0.8 + sin(_crash_phase * TAU * 870.0) * 0.25 * _crash) * _crash * 0.9
+			_crash = maxf(0.0, _crash - 1.0 / 22050.0 * 2.2)
+			if _crash <= 0.0:
+				_crash_phase = 0.0
 		pb.push_frame(Vector2(smp, smp))
 
 

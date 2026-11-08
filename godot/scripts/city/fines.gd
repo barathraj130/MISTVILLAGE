@@ -10,6 +10,8 @@ const Sim := preload("res://scripts/drive/sim.gd")
 const RED_LIGHT := 1000
 const OVERSPEED := 1000
 const SKIP_CHECK := 2000
+const RASH := 1000                # rash driving (MV Act s.184): a collision reported
+const BARRICADE := 2000           # damaging a police checking point's barricades
 const CITY_LIMIT_KMH := 50.0
 
 var sim: Sim = Sim.new()

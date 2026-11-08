@@ -31,6 +31,14 @@ func _ready() -> void:
 	_breaker(Vector3(400, 0, 0))                          # the bump lane: x = 400
 	_patch(Vector3(1000, 0, 0), "gravel")                 # surface lanes (tagged as the city's collision is)
 	_patch(Vector3(1100, 0, 0), "mud")
+	var wall := StaticBody3D.new()                        # a wall across a lane (x = 1300), for crashes
+	var wcs := CollisionShape3D.new()
+	var wbx := BoxShape3D.new()
+	wbx.size = Vector3(30, 3, 1)
+	wcs.shape = wbx
+	wall.add_child(wcs)
+	wall.position = Vector3(1300, 1.5, 0)
+	add_child(wall)
 	_breaker(Vector3(400, 0, 120))
 	var light := DirectionalLight3D.new()
 	add_child(light)
@@ -102,6 +110,8 @@ func _vehicle(kind: String) -> void:
 	await _surface_brake(kind, "gravel", 1000.0)
 	await _surface_brake(kind, "mud", 1100.0)
 	await _handbrake(kind)
+	await _crash(kind, 30.0)
+	await _crash(kind, 50.0, false)
 	await _turn(kind)
 	await _corner(kind)
 	await _bump(kind, 20.0)
@@ -243,6 +253,31 @@ func _handbrake(kind: String) -> void:
 	car.in_handbrake = false
 	var turned := rad_to_deg(absf(angle_difference(h0, atan2(car.global_basis.z.x, car.global_basis.z.z))))
 	_report(kind, "handbrake", {"turned_deg": snappedf(turned, 0.1), "tail_out": slid})
+
+
+## Into the wall at a speed (the damage from before kept, unless `fresh`): what it registered and what's broken.
+func _crash(kind: String, kmh: float, fresh := true) -> void:
+	await _place(Vector3(1300, 0, -120))
+	if fresh:
+		car.repair()
+	var hits: Array = []
+	var got := func(zone: String, sev: float, _o: Object) -> void:
+		hits.append([zone, snappedf(sev, 0.01)])
+	car.impacted.connect(got)
+	var t := 0.0
+	while t < 20.0 and car.global_position.z < -1.0:
+		_cruise(kmh / 3.6)
+		await get_tree().physics_frame
+		t += 1.0 / 60.0
+	for i in 60:
+		car.in_throttle = 0.0
+		await get_tree().physics_frame
+	car.impacted.disconnect(got)
+	var lit := false
+	for h in car._headlights:
+		lit = lit or (h as Node3D).visible
+	_report(kind, "crash%d" % int(kmh), {"hits": hits, "front": snappedf(car.damage["front"], 0.01), "headlights_broken": car.damage["front"] >= 0.45,
+		"glass_cracked": car.damage["front"] >= 0.65, "pull": snappedf(car._pull, 0.003), "limp": car.torque_mul < float(car.DRIVE_OF.get(kind, ["", 1.0])[1]) - 0.01})
 
 
 func _turn(kind: String) -> void:

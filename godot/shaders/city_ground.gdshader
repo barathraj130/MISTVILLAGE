@@ -7,6 +7,7 @@ uniform sampler2D green_tex : source_color, filter_linear_mipmap_anisotropic, re
 uniform sampler2D soil_tex : source_color, filter_linear_mipmap_anisotropic, repeat_enable;
 uniform sampler2D noise_tex : filter_linear_mipmap, repeat_enable;
 uniform float tile = 6.0;
+uniform float wet = 0.0;                    // after rain: darker soil and grass, a little sheen
 
 varying vec3 wpos;
 
@@ -25,6 +26,6 @@ void fragment() {
 	vec3 col = mix(dry, green, smoothstep(0.52, 0.68, n1 + (n3 - 0.5) * 0.15));
 	col = mix(col, soil, smoothstep(0.55, 0.72, n2 + (n3 - 0.5) * 0.2));
 	col *= 0.9 + 0.2 * n3;
-	ALBEDO = col;
-	ROUGHNESS = 0.95;
+	ALBEDO = col * mix(1.0, 0.62, wet);
+	ROUGHNESS = mix(0.95, 0.6, wet);
 }

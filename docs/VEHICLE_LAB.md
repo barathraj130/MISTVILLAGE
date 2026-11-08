@@ -155,4 +155,70 @@ Lanes win, highways lose, as designed. This is still to be confirmed by driving 
 | karthik_scooter | 19.0 / 19.6 | 13.2 | rear brake (two-wheeler) |
 | bike | 17.5 / 19.9 | 13.3 | rear brake (two-wheeler) |
 
-Still to do: the generic motorbike and scooter's 1.6 g at full lock; wet roads in the city (no weather there yet); potholes; damage; engine sounds per vehicle.
+Still to do then: the generic motorbike and scooter's 1.6 g at full lock; wet roads in the city; potholes; damage; engine sounds per vehicle. All but potholes are done below.
+
+## Crashes, struck traffic and wet city roads, 2026-11-08
+
+**Crash damage** (jeep.gd `_integrate_forces`, `_hit`, `_apply_damage`). A crash is a speed change of more than 3 m/s
+in one physics step while touching something that isn't the ground.
+- **Where:** front, rear, left or right, from the contact's direction.
+- **How hard:** severity 0 to 1, for a speed change of 3 to 15 m/s.
+- **What it does:**
+  - a crunch (a thump, grit and a metal ring) and a camera jolt
+  - damage to that side builds up
+  - front 0.45 or more: the headlights go out
+  - front 0.65 or more: the windscreen cracks
+  - a front over 0.5 pulls the steering a little
+  - all sides over 2.5 in total: the engine limps (60% torque)
+- `repair()` clears it; a new vehicle starts clean.
+
+| lab run (wall, from rest) | first hit | front damage | lamps / glass | pull |
+|---|---|---|---|---|
+| sedan at 30 km/h | 0.44 | 0.26 | fine | none |
+| sedan at 50 km/h (on top) | 0.90 | 0.80 | broken / cracked | 0.018 |
+| Karthik's scooter at 50 km/h (on top) | 0.86 | 0.77 | broken | 0.015 |
+
+**What a crash costs in the city** (city_test.gd `_on_impact`):
+
+| You hit... | What happens |
+|---|---|
+| another vehicle | its driver has words (EN/TA) |
+| another vehicle, hard (severity 0.25+) | a rash-driving e-challan, ₹1,000 (fines.gd `RASH`, MV Act s.184), by SMS; while on bail, the inspector's suspicion +4 |
+| a police check's barricades | ₹2,000 on the spot (`BARRICADE`); on bail, suspicion +6 |
+| walls, kerbs, poles | only the car pays |
+
+The same vehicle within 6 s counts as one crash.
+
+**Traffic that reacts** (city_traffic.gd `struck`, `_knocked`). Traffic is moved by script, so to physics it is a
+wall. A crash into it is worked out as two bodies that crumple and move off together, sharing momentum by mass:
+- **The struck vehicle** is shoved: along its road it is carried on, across its road it is pushed aside, and an off-centre hit spins it.
+- It slides to a stop (about 0.7 g), waits 3–7 s, then eases back into its lane.
+- **Your vehicle** keeps its share (`jeep.share_momentum`) instead of bouncing off as from a wall.
+- Masses: auto 400 kg, hatchback 1,050, sedan and taxi 1,250, lorry 9,000, bus 11,000.
+
+`--crashtest` (city_test.gd) puts the car 22 m behind a hatchback, an auto and a bus in live traffic and drives into each:
+
+| struck | you / they before (km/h) | contacts | you just after | challan |
+|---|---|---|---|---|
+| hatchback | 65.6 / 27.0 | 1 | 43.2 km/h | yes |
+| auto | 60.7 / 20.3 | 1 | 44.2 km/h | yes |
+| bus | none came by in that run | | | |
+
+Barricade: ₹2,000 paid.
+
+Before the momentum share, one crash registered as 12–18 hits: the car bounced off as from a wall and the shoved
+vehicle kept running into it.
+
+**Wet roads in the city** (city_weather.gd, using the mountain drive's weather table and save):
+- **Rain:** streaks round the camera (none indoors), a hiss, a grey sky, less sun, more haze.
+- **The roads** soak in over a minute or so of rain and dry slowly after:
+  - the asphalt darkens and shines (road_surface.gdshader `wet`)
+  - pavements, kerbs and open ground darken (city_ground.gdshader `wet`)
+- **Driving:** tyre grip falls to ×0.72 when soaked, the wipers run, and traffic drives 20% slower.
+- **In the story** the weather is clear unless a step says `"weather": "rain"` (or `"cloudy"`), so no scene meets rain it wasn't written for. No step uses it yet.
+- **In free play** it changes by itself, as on the plains.
+- `--weather=rain` starts with the roads already soaked.
+- `set_grip` now acts only on a change: called every step, it had been undoing the handbrake's locked-wheel grip.
+
+Still to do: potholes; dents you can see on the body; a pedestrian on the street to hit (the street has none yet
+that collide); the scooter's wet stopping (19.0 m wet and dry: its brakes stop it just inside the wet grip).

@@ -17,6 +17,7 @@ const CityWater := preload("res://scripts/city/city_water.gd")
 const DriveHud := preload("res://scripts/city/drive_hud.gd")
 const Fines := preload("res://scripts/city/fines.gd")
 const CityPolice := preload("res://scripts/city/city_police.gd")
+const CityWeather := preload("res://scripts/city/city_weather.gd")
 const CityDoors := preload("res://scripts/city/city_doors.gd")
 const Life := preload("res://scripts/city/life.gd")
 const Story := preload("res://scripts/story/story.gd")
@@ -74,6 +75,9 @@ var _jolt := 0.0
 var _vy_prev := 0.0
 var map
 var traffic
+var police                                  # the police checking points (city_police.gd)
+var weather                                 # rain and wet roads (city_weather.gd)
+var _hit_seen := {}                         # what you hit → when (a crash is one complaint, not one per contact)
 
 
 func _ready() -> void:
@@ -187,7 +191,7 @@ func _ready() -> void:
 		life.city = self
 		add_child(life)
 		hud.life = life
-		var police := CityPolice.new()
+		police = CityPolice.new()
 		police.name = "Police"
 		police.car = car
 		police.streamer = streamer
@@ -209,10 +213,15 @@ func _ready() -> void:
 		phone.city = self
 		pl.add_child(phone)
 		police.phone = phone
+		car.impacted.connect(_on_impact)
 		bail = Bail.new()
 		bail.name = "Bail"
 		bail.city = self
 		add_child(bail)
+		weather = CityWeather.new()
+		weather.name = "Weather"
+		weather.city = self
+		add_child(weather)
 		money = Money.new()
 		money.name = "Money"
 		money.city = self
@@ -572,6 +581,144 @@ func _crossed_signal(sp: Vector3, state: int) -> void:
 
 
 ## An e-challan arrives as it does in Coimbatore: an SMS from the police, on his phone.
+## A crash. Another vehicle: it is shoved (city_traffic.gd), its driver has words, and a hard hit is a rash-driving
+## complaint (an e-challan) and, while he is on bail, one more thing the inspector hears of. A police checking
+## point's barricades: fined on the spot. Walls and kerbs only cost the car.
+func _on_impact(_zone: String, severity: float, other: Object) -> void:
+	var now := Time.get_ticks_msec() / 1000.0
+	var key := other.get_instance_id() if other else 0
+	var again := now - float(_hit_seen.get(key, -99.0)) < 6.0
+	_hit_seen[key] = now
+	if traffic and traffic.is_vehicle(other):
+		var keep: float = traffic.struck(other, car.hit_velocity, car.hit_normal, car.mass)
+		if keep >= 0.0:
+			car.share_momentum(-Vector3(car.hit_normal.x, 0, car.hit_normal.z).normalized(), keep)
+		if again:
+			return
+		var lines := [["Oi! Eyes open, saar!", "ஏய்! கண்ணைத் திறந்து ஓட்டு, சார்!"],
+			["What is this driving? Look at my vehicle!", "என்ன ஓட்டுறீங்க? என் வண்டியைப் பாருங்க!"],
+			["Are you mad? Stop, stop!", "பைத்தியமா? நில்லுங்க, நில்லுங்க!"]]
+		var l: Array = lines[randi() % lines.size()]
+		hud.say(_t({"en": "Other driver", "ta": "மற்ற ஓட்டுநர்"}), _t({"en": l[0], "ta": l[1]}), 3.5)
+		if severity >= 0.25 and fines:
+			fines.challan("Rash driving (collision)", Fines.RASH)
+			phone.message({"en": "Coimbatore City Police", "ta": "கோவை மாநகர காவல்"},
+				{"en": "E-challan %s: rash driving, a collision reported, %s." % [Fines.rupees(Fines.RASH), _now12()],
+				"ta": "இ-சலான் %s: அலட்சியமாக ஓட்டியது, மோதல் புகார், %s." % [Fines.rupees(Fines.RASH), _now12()]})
+			if bail and bail.active:
+				bail.suspicion = clampf(bail.suspicion + 4.0, 0.0, 100.0)
+			print("IMPACT rash-driving challan (severity %.2f), suspicion %.0f" % [severity, bail.suspicion if bail else 0.0])
+	elif police and other is Node and police.is_ancestor_of(other) and not again and fines:
+		var paid: int = fines.pay(Fines.BARRICADE)
+		hud.say(_t({"en": "Traffic police", "ta": "போக்குவரத்து காவல்"}),
+			_t({"en": "Our barricade! Get out. Pay for it, now.", "ta": "எங்க தடுப்பு! இறங்குங்க. இப்பவே கட்டுங்க."}), 5.0)
+		phone.message({"en": "Coimbatore City Police", "ta": "கோவை மாநகர காவல்"},
+			{"en": "Fined %s on the spot: damaged a police barricade." % Fines.rupees(paid),
+			"ta": "அந்த இடத்திலேயே %s அபராதம்: காவல் தடுப்பைச் சேதப்படுத்தியது." % Fines.rupees(paid)})
+		if bail and bail.active:
+			bail.suspicion = clampf(bail.suspicion + 6.0, 0.0, 100.0)
+		print("IMPACT police barricade: paid %d" % paid)
+
+
+var _ct := {"t": 0.0, "kinds": ["hatchback", "auto", "bus"], "v": {}, "log": [], "hits": []}
+
+
+## --crashtest: behind a traffic vehicle of each kind in turn (one with clear road ahead of it), 22 m back at its
+## speed, then full throttle into it; reports the speed of the hit, the shove, the spin, the damage and the
+## challans, then checks a police barricade's fine. Shots of each crash with --shots=DIR.
+func _crashtest(dt: float) -> void:
+	_ct["t"] = float(_ct["t"]) + dt
+	car.autopilot = true
+	if t < 10.0:
+		return
+	if not _ct.has("wired"):
+		_ct["wired"] = true
+		_ct["challans0"] = fines.challans.size()
+		car.impacted.connect(func(zone: String, sev: float, o: Object) -> void:
+			if traffic.is_vehicle(o):
+				_ct["hits"].append({"zone": zone, "sev": snappedf(sev, 0.01), "kmh": snappedf(car.hit_velocity.length() * 3.6, 0.1), "body": o}))
+	var kinds: Array = _ct["kinds"]
+	if kinds.is_empty():
+		var before: int = fines.sim.money
+		police._body = StaticBody3D.new()
+		police.add_child(police._body)
+		_on_impact("front", 0.3, police._body)
+		_ct["log"].append({"barricade_paid": before - fines.sim.money})
+		print("CRASHTEST " + JSON.stringify({"runs": _ct["log"], "new_challans": fines.challans.size() - int(_ct["challans0"]),
+			"suspicion": bail.suspicion, "bail_active": bail.active}))
+		get_tree().quit()
+		return
+	var v: Dictionary = _ct["v"]
+	if v.is_empty():
+		for o in traffic.vehicles:
+			if o["kind"] != kinds[0] or float(o["stunned"]) > 0.0 or float(o["speed"]) < 2.0:
+				continue
+			var clear := true
+			for o2 in traffic.vehicles:
+				var rel: Vector3 = o2["pos"] - o["pos"]
+				if o2 != o and rel.length() < 45.0:
+					clear = false
+			if clear:
+				v = o
+				break
+		if v.is_empty():
+			if float(_ct["t"]) > 40.0:                      # (none of that kind about: the next)
+				_ct["log"].append({"kind": kinds[0], "skipped": true})
+				kinds.pop_front()
+				_ct["t"] = 0.0
+			return
+		_ct["v"] = v
+		_ct["t"] = 0.0
+		_ct["hits"] = []
+		v["speed0"] = v["speed"]
+		car.repair()
+		var f: Vector3 = v["fwd"]
+		var at: Vector3 = v["pos"] - f * (float(v["half"]) + 22.0)
+		car.global_transform = Transform3D(Basis.looking_at(-f, Vector3.UP), at + Vector3.UP * 0.6)
+		car.linear_velocity = f * float(v["speed"])
+		car.angular_velocity = Vector3.ZERO
+		car._v_prev = car.linear_velocity
+		return
+	var hits: Array = _ct["hits"]
+	var to: Vector3 = v["pos"] - car.global_position
+	var f2: Vector3 = car.forward()
+	var ang := atan2(f2.x * to.z - f2.z * to.x, f2.x * to.x + f2.z * to.z)
+	car.in_steer = clampf(-ang * 2.0, -1.0, 1.0)
+	car.in_throttle = 1.0 if hits.is_empty() else 0.0
+	car.in_brake = 0.0 if hits.is_empty() or car.speed < 0.5 else 1.0
+	car.in_handbrake = not hits.is_empty() and car.speed < 0.5
+	if not hits.is_empty() and not _ct.has("hit_t"):
+		_ct["hit_t"] = _ct["t"]
+	var since: float = float(_ct["t"]) - float(_ct.get("hit_t", INF))
+	if since > 0.25 and not _ct.has("after"):
+		_ct["after"] = snappedf(car.speed * 3.6, 0.1)
+	if since > 0.8 and not _ct.has("shot"):
+		_ct["shot"] = true
+		if shots_dir != "":
+			get_viewport().get_texture().get_image().save_jpg(shots_dir + "/crash_%s.jpg" % kinds[0], 0.85)
+	if float(_ct["t"]) > 14.0 or since > 4.0:
+		var struck: Dictionary = {}
+		for o in traffic.vehicles:
+			if not hits.is_empty() and o["body"] == hits[0]["body"]:
+				struck = o
+		var first: Dictionary = hits[0].duplicate() if not hits.is_empty() else {}
+		first.erase("body")
+		_ct["log"].append({"kind": kinds[0], "first_hit": first, "contacts": hits.size(), "struck": struck.get("kind", ""),
+			"shoved_m": snappedf((struck.get("off", Vector3.ZERO) as Vector3).length(), 0.01),
+			"yaw_deg": snappedf(rad_to_deg(float(struck.get("yaw", 0.0))), 0.1), "my_kmh_after": _ct.get("after", 0.0), "their_kmh_before": snappedf(float(v.get("speed0", 0.0)) * 3.6, 0.1),
+			"damage_front": snappedf(car.damage["front"], 0.01), "challans": fines.challans.size() - int(_ct["challans0"])})
+		for k in ["hit_t", "shot", "after"]:
+			_ct.erase(k)
+		_ct["v"] = {}
+		_ct["t"] = 0.0
+		kinds.pop_front()
+
+
+func _t(d: Dictionary) -> String:
+	var lang: String = story.lang if story else "en"
+	return str(d.get(lang, d.get("en", "")))
+
+
 func _sms(text: String) -> void:
 	if phone:
 		phone.message({"en": "Coimbatore City Police", "ta": "கோவை மாநகர காவல்"}, {"en": text, "ta": text})
@@ -646,6 +793,8 @@ func _process(dt: float) -> void:
 		if walker == null:
 			_drive_camera(dt)
 		_daylight()
+		if weather:
+			weather.apply(env, sun, get_viewport().get_camera_3d())
 		_red_light_check()
 		if " ".join(OS.get_cmdline_user_args()).contains("--trafficshot"):
 			if int(t) != int(t - dt) and int(t) % 5 == 0:
@@ -690,6 +839,9 @@ func _process(dt: float) -> void:
 							var gp: Vector3 = car.global_transform.affine_inverse() * (s3.global_transform * s3.get_bone_global_pose(s3.find_bone(bn)).origin)
 							print("RIDER %s in scooter frame %s" % [bn, str(gp.snapped(Vector3.ONE * 0.01))])
 				get_tree().quit()
+			return
+		if "--crashtest" in OS.get_cmdline_user_args():          # self-test: drive into traffic (a car, an auto, a bus)
+			_crashtest(dt)
 			return
 		if "--testdrive" in OS.get_cmdline_user_args():          # self-test: accelerate, report, screenshot, quit
 			# a test driver: follows the main roads at ~50 km/h, keeping left (pure pursuit 12 m ahead)
