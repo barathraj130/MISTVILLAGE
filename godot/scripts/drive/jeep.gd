@@ -1570,6 +1570,9 @@ func _physics_process_body(delta: float) -> void:
 	# full lock only at a crawl (hairpins, parking); it falls away quickly once you're moving
 	var s := smoothstep(0.0, 18.0, absf(speed))
 	var max_s := lerpf(MAX_STEER, HIGH_SPEED_STEER, sqrt(s)) * (lerpf(1.0, steer_sens, s) if not autopilot else 1.0)
+	if two_wheeler and _wheels.size() >= 2:              # (a rider's bars ask no more turn than the tyres hold: ~0.95 g)
+		var wb := maxf(absf((_wheels[0] as Node3D).position.z - (_wheels[_wheels.size() - 1] as Node3D).position.z), 0.8)
+		max_s = minf(max_s, atan(wb * 0.95 * _weather_grip * _surface_grip * 9.81 / maxf(speed * speed, 1.0)))
 	steering = move_toward(steering, _steer_in * max_s, delta * (1.0 if not autopilot else 2.5))
 
 
