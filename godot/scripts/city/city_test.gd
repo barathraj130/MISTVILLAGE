@@ -622,7 +622,8 @@ func _crossed_signal(sp: Vector3, state: int) -> void:
 ## An e-challan arrives as it does in Coimbatore: an SMS from the police, on his phone.
 ## A crash. Another vehicle: it is shoved (city_traffic.gd), its driver has words, and a hard hit is a rash-driving
 ## complaint (an e-challan) and, while he is on bail, one more thing the inspector hears of. A police checking
-## point's barricades: fined on the spot. Walls and kerbs only cost the car.
+## point's barricades: fined on the spot. A parked vehicle: its owner wants the dent paid for, there and then
+## (a light knock, only words). Walls and kerbs only cost the car.
 func _on_impact(_zone: String, severity: float, other: Object) -> void:
 	var now := Time.get_ticks_msec() / 1000.0
 	var key := other.get_instance_id() if other else 0
@@ -651,6 +652,18 @@ func _on_impact(_zone: String, severity: float, other: Object) -> void:
 			if bail and bail.active:
 				bail.suspicion = clampf(bail.suspicion + 4.0, 0.0, 100.0)
 			print("IMPACT rash-driving challan (severity %.2f), suspicion %.0f" % [severity, bail.suspicion if bail else 0.0])
+	elif streamer and other == streamer.parked_body:      # a parked vehicle: its owner comes out
+		if again or severity < 0.12:
+			return
+		var who := _t({"en": "The owner", "ta": "வண்டி உரிமையாளர்"})
+		if severity < 0.3 or fines == null:
+			hud.say(who, _t({"en": "Hey! My vehicle! ...Look where you're going.", "ta": "ஏய்! என் வண்டி! ...பார்த்து ஓட்டுங்க."}), 4.0)
+			return
+		var asked := int(round((1500.0 + 4000.0 * severity) / 500.0)) * 500       # (the dent, settled there and then)
+		var paid: int = fines.pay(asked)
+		hud.say(who, _t({"en": "Look at this dent! %s for the repair, now. Or we go to the station." % Fines.rupees(asked),
+			"ta": "இந்த நசுங்கலைப் பாருங்க! ரிப்பேருக்கு %s, இப்பவே. இல்லைனா ஸ்டேஷனுக்குப் போவோம்." % Fines.rupees(asked)}), 5.0)
+		print("IMPACT parked vehicle (severity %.2f): paid %d of %d" % [severity, paid, asked])
 	elif police and other is Node and police.is_ancestor_of(other) and not again and fines:
 		var paid: int = fines.pay(Fines.BARRICADE)
 		hud.say(_t({"en": "Traffic police", "ta": "போக்குவரத்து காவல்"}),
@@ -755,6 +768,63 @@ func _crashtest(dt: float) -> void:
 		_ct["v"] = {}
 		_ct["t"] = 0.0
 		kinds.pop_front()
+
+
+var _pk := {"t": 0.0}
+
+
+## --parkedtest: the nearest parked vehicle with a clear 25 m run-up on its road side, driven into at 35 km/h:
+## reports the shapes loaded, whether the car stopped against it (not through it), the damage and what was paid.
+func _parkedtest(dt: float) -> void:
+	car.autopilot = true
+	if t < 12.0:
+		return
+	_pk["t"] = float(_pk["t"]) + dt
+	if not _pk.has("target"):
+		var space := get_world_3d().direct_space_state
+		var best := {}
+		var bd := INF
+		for cs in streamer.parked_body.get_children():
+			var c: Vector3 = (cs as CollisionShape3D).global_position
+			var fwd: Vector3 = (cs as CollisionShape3D).global_basis.z.normalized()
+			for d in [fwd, -fwd]:
+				var from: Vector3 = c + d * 25.0
+				var g := space.intersect_ray(PhysicsRayQueryParameters3D.create(from + Vector3.UP * 4.0, from + Vector3.DOWN * 8.0))
+				var q := PhysicsRayQueryParameters3D.create(c + d * 3.0 + Vector3.UP * 0.8, from + Vector3.UP * 0.8)
+				q.exclude = [streamer.parked_body.get_rid()]
+				if g.is_empty() or absf(g["position"].y - c.y) > 1.5 or not space.intersect_ray(q).is_empty():
+					continue
+				var dd := c.distance_to(car.global_position)
+				if dd < bd:
+					bd = dd
+					best = {"c": c, "start": Vector3(from.x, g["position"].y + 0.6, from.z), "d": -d}
+		if best.is_empty():
+			print("PARKEDTEST none found among %d shapes" % streamer.parked_body.get_child_count())
+			get_tree().quit()
+			return
+		_pk["target"] = best
+		_pk["t"] = 0.0
+		_pk["money0"] = fines.sim.money
+		_pk["shapes"] = streamer.parked_body.get_child_count()
+		car.repair()
+		car.global_transform = Transform3D(Basis.looking_at(-best["d"], Vector3.UP), best["start"])
+		car.linear_velocity = Vector3.ZERO
+		car._v_prev = Vector3.ZERO
+		return
+	var tg: Dictionary = _pk["target"]
+	var to: Vector3 = tg["c"] - car.global_position
+	var f2: Vector3 = car.forward()
+	car.in_steer = clampf(-atan2(f2.x * to.z - f2.z * to.x, f2.x * to.x + f2.z * to.z) * 2.0, -1.0, 1.0)
+	car.in_throttle = clampf((35.0 / 3.6 - car.speed) * 0.5, 0.0, 1.0) if float(_pk["t"]) < 5.0 else 0.0
+	car.in_brake = 0.0 if float(_pk["t"]) < 5.0 else 1.0
+	if float(_pk["t"]) > 8.0:
+		var past: float = (car.global_position - (tg["c"] as Vector3)).dot(tg["d"])     # > 0: drove through it
+		print("PARKEDTEST " + JSON.stringify({"shapes_loaded": _pk["shapes"], "stopped_short": past < 0.5,
+			"past_its_centre_m": snappedf(past, 0.01), "front_damage": snappedf(car.damage["front"], 0.01),
+			"paid": int(_pk["money0"]) - fines.sim.money}))
+		if shots_dir != "":
+			get_viewport().get_texture().get_image().save_jpg(shots_dir + "/parked.jpg", 0.85)
+		get_tree().quit()
 
 
 var _pt := {"t": 0.0, "runs": [8.0, 30.0, 50.0, 60.0], "log": [], "p": {}}
@@ -968,6 +1038,9 @@ func _process(dt: float) -> void:
 							var gp: Vector3 = car.global_transform.affine_inverse() * (s3.global_transform * s3.get_bone_global_pose(s3.find_bone(bn)).origin)
 							print("RIDER %s in scooter frame %s" % [bn, str(gp.snapped(Vector3.ONE * 0.01))])
 				get_tree().quit()
+			return
+		if "--parkedtest" in OS.get_cmdline_user_args():         # self-test: into a parked car at 35 km/h
+			_parkedtest(dt)
 			return
 		if "--peopletest" in OS.get_cmdline_user_args():         # self-test: at a person on the street, slow then fast
 			_peopletest(dt)

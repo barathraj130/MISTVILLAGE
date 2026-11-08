@@ -265,4 +265,22 @@ Still to do then: potholes; dents you can see; pedestrians; the scooter's wet st
 
 **The test driver** (`--testdrive`) ran off the road into a wall in every run. Its first road ran east and the car stood facing west, so it tried a U-turn in a lane. It now sets off pointing along its road: 50 km/h along it, no crashes. This was the test, not the physics.
 
-Still to do: potholes. Parked cars and bikes in the street life have no collision (the car drives through them), like the people had none.
+Still to do then: potholes, and solid parked vehicles. Parked vehicles are done below.
+
+## Parked vehicles are solid, 2026-11-08
+
+The street life's parked cars, autos, lorries and two-wheelers (city_streamer.gd `_life`) each get a collision box:
+the vehicle's own mesh size, a little inside the body so nothing snags, where it stands. Before, the car drove
+straight through them. The boxes sit on their own body, `ParkedVehicles`, so a crash knows what it hit.
+
+**Hitting one** (city_test.gd `_on_impact`):
+- **A light knock:** the owner has words (EN/TA).
+- **A real hit (severity 0.3 or more):** the owner wants the dent paid for there and then, ₹1,500 + ₹4,000 × severity, rounded to ₹500, out of the wallet. No police and no bail effect: it's settled on the street.
+
+`--parkedtest` drives at the nearest parked vehicle with a clear run-up:
+
+| Shapes loaded | Result |
+|---|---|
+| 7,179 | Hit at about 32 km/h (severity 0.50) and stopped against it; front damage 0.30; ₹3,500 paid |
+
+Still to do: potholes. The two-wheelers parked in rows on the pavements (the `bikes` layer) have no collision yet.

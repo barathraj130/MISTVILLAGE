@@ -58,6 +58,8 @@ const LIFE_CELL := 64.0
 const TREE_NEAR := 70.0                     # full trees this near (from their 64 m cell's centre), the far version beyond
 var life_far: Array = []                    # life kind → far Mesh or null (trees and bushes: veg_*_far)
 var life_meshes: Array = []                # life kind → Mesh (index.json life_kinds)
+var life_boxes: Array = []                 # life kind → its mesh's AABB, read here once (workers mustn't touch meshes)
+var parked_body: StaticBody3D              # parked cars, autos, lorries and bikes are solid (you can hit them)
 var life_names: Array = []                 # life kind → name (index.json life_kinds, then our own extra kinds)
 var bhel_kind := -1                        # the snack cart (life_bhel.glb): it stands in for every third push cart
 ## The Sketchfab street crowd (tools/sketchfab_people.py): each stands in for every third standing man / woman of the
@@ -85,6 +87,9 @@ func _ready() -> void:
 	body = StaticBody3D.new()
 	body.name = "CityCollision"
 	add_child(body)
+	parked_body = StaticBody3D.new()
+	parked_body.name = "ParkedVehicles"
+	add_child(parked_body)
 	for a in OS.get_cmdline_user_args():
 		if a.begins_with("--kitnear="):
 			kit_near = float(a.get_slice("=", 1))
@@ -130,6 +135,8 @@ func _ready() -> void:
 				life_meshes.append(_with_lods(_scene_mesh(pp)))
 				life_far.append(null)
 				life_names.append(nm)
+	for m in life_meshes:
+		life_boxes.append((m as Mesh).get_aabb() if m else AABB())
 	shrub_mesh = _gltf_mesh("res://assets/models/veg_hedgerow_bush_0_lod.gltf")
 	pier_mesh = _gltf_mesh("res://assets/city_props/flyover_pier.glb")
 	fly_lamp_mesh = _gltf_mesh("res://assets/city_props/flyover_lamp.glb")
@@ -1419,6 +1426,7 @@ void fragment() {
 ## Street life: one MultiMesh per kind; people, kolams and bikes only near, trees and poles further.
 func _life(life: Array, out: Dictionary, roads: Array = []) -> void:
 	var by := {}
+	var parked: Array = []
 	var names0: Array = life_names
 	var segs := _road_segs(roads)
 	for rec in life:
@@ -1443,6 +1451,10 @@ func _life(life: Array, out: Dictionary, roads: Array = []) -> void:
 		var a := v[3]
 		var x := Vector3(cos(a), 0, sin(a))
 		var bs := Basis(x, Vector3.UP, x.cross(Vector3.UP)).scaled(Vector3.ONE * v[4])
+		if (nm0.begins_with("fleet_") or nm0.begins_with("bike_")) and kind < life_boxes.size():
+			var bb: AABB = life_boxes[kind]                 # (its box: the car's own size, where it really stands)
+			if bb.size.length() > 0.1:
+				parked.append([Transform3D(bs, Vector3(v[0], v[1], v[2])), bb])
 		# visibility ranges are measured from each MultiMesh's centre, so the things are grouped in 64 m cells
 		var key := Vector3i(kind, floori(v[0] / LIFE_CELL), floori(v[2] / LIFE_CELL))
 		if not by.has(key):
@@ -1485,6 +1497,7 @@ func _life(life: Array, out: Dictionary, roads: Array = []) -> void:
 			mm.set_meta("lod_bias", 6.0)            # keep detail: a coarse level drops bodies and leaves floating wheels
 		mms.append([mm, far + LIFE_CELL * 0.71, 0.0])
 	out["life"] = mms
+	out["parked"] = parked
 
 
 ## The tile's drivable road centrelines as segments [a, b, half width] (flyovers left out: nothing parks up there).
@@ -2105,6 +2118,19 @@ func _instance(k: Vector2i, d: Dictionary) -> void:
 		mpi.multimesh = _real(d["median_plants"])
 		mpi.visibility_range_end = 250.0
 		node.add_child(mpi)
+	for pk in ([] if "--nolife" in OS.get_cmdline_user_args() else d.get("parked", [])):
+		var xf: Transform3D = pk[0]
+		var bb: AABB = pk[1]
+		var pcs := CollisionShape3D.new()
+		var pbx := BoxShape3D.new()
+		pbx.size = bb.size * xf.basis.get_scale() * Vector3(0.96, 0.92, 0.96)   # (a little inside the body: no snagging)
+		pcs.shape = pbx
+		pcs.transform = Transform3D(xf.basis.orthonormalized(), xf * bb.get_center())
+		pcs.set_meta("surface", "concrete")
+		parked_body.add_child(pcs)
+		node.tree_exiting.connect(func() -> void:
+			if is_instance_valid(pcs):
+				pcs.queue_free())
 	for lm in ([] if "--nolife" in OS.get_cmdline_user_args() else d.get("life", [])):
 		var lmi2 := MultiMeshInstance3D.new()
 		lmi2.multimesh = _real(lm[0])
