@@ -73,6 +73,21 @@ const DRIVE_OF := {"luxury_suv": ["diesel_suv", 1.0], "xuv": ["diesel_suv", 1.0]
 	"coupe": ["sport", 1.0], "hatchback": ["petrol_car", 1.0], "sedan": ["petrol_car", 1.15], "taxi": ["petrol_car", 1.15],
 	"auto": ["auto", 1.0], "bus": ["heavy", 1.0], "lorry": ["heavy", 1.1], "delivery": ["light_truck", 1.0], "tractor": ["tractor", 1.0],
 	"bike": ["bike", 1.0], "karthik_scooter": ["scooter", 1.0], "scooter": ["scooter", 1.0]}
+## How each kind of engine sounds (synthesised, _engine_sample): "fires" a revolution (a single-cylinder four-stroke
+## 0.5, a four-cylinder 2, a six 3), the harmonics' weights and a sub-octave, how sharp each firing is ("pulse") and
+## how much clatter rides on it (idle, full load), a turbo's whistle, a CVT belt's whine, a rattle, and the overall level.
+const ENGINE_SOUND := {
+	"diesel_suv": {"fires": 2.0, "harm": [0.6, 0.35, 0.2, 0.0], "sub": 0.12, "pulse": 6.0, "noise": [0.2, 0.4], "turbo": 0.035, "whine": 0.0, "rattle": 0.0, "level": 1.0},
+	"petrol_car": {"fires": 2.0, "harm": [0.5, 0.4, 0.25, 0.12], "sub": 0.04, "pulse": 3.0, "noise": [0.04, 0.12], "turbo": 0.0, "whine": 0.0, "rattle": 0.0, "level": 0.85},
+	"sport": {"fires": 3.0, "harm": [0.55, 0.45, 0.35, 0.2], "sub": 0.1, "pulse": 4.0, "noise": [0.06, 0.2], "turbo": 0.02, "whine": 0.0, "rattle": 0.0, "level": 1.1},
+	"auto": {"fires": 0.5, "harm": [0.4, 0.3, 0.3, 0.25], "sub": 0.15, "pulse": 10.0, "noise": [0.3, 0.5], "turbo": 0.0, "whine": 0.0, "rattle": 0.25, "level": 0.9},
+	"scooter": {"fires": 0.5, "harm": [0.5, 0.35, 0.3, 0.2], "sub": 0.05, "pulse": 8.0, "noise": [0.1, 0.2], "turbo": 0.0, "whine": 0.03, "rattle": 0.0, "level": 0.7},
+	"bike": {"fires": 0.5, "harm": [0.6, 0.4, 0.25, 0.1], "sub": 0.25, "pulse": 7.0, "noise": [0.15, 0.3], "turbo": 0.0, "whine": 0.0, "rattle": 0.0, "level": 0.95},
+	"heavy": {"fires": 3.0, "harm": [0.7, 0.4, 0.2, 0.1], "sub": 0.2, "pulse": 5.0, "noise": [0.3, 0.5], "turbo": 0.02, "whine": 0.0, "rattle": 0.05, "level": 1.25},
+	"light_truck": {"fires": 2.0, "harm": [0.6, 0.35, 0.2, 0.05], "sub": 0.15, "pulse": 6.0, "noise": [0.3, 0.5], "turbo": 0.02, "whine": 0.0, "rattle": 0.05, "level": 1.05},
+	"tractor": {"fires": 1.5, "harm": [0.6, 0.4, 0.3, 0.1], "sub": 0.3, "pulse": 7.0, "noise": [0.4, 0.6], "turbo": 0.0, "whine": 0.0, "rattle": 0.15, "level": 1.1},
+}
+
 ## Godot's VehicleBody3D brake is a force-like number per wheel: this many N of stopping per unit (measured).
 const BRAKE_K := 236.0
 
@@ -1642,21 +1657,34 @@ func _fill_engine() -> void:
 	var pb := _engine.get_stream_playback() as AudioStreamGeneratorPlayback
 	if pb == null:
 		return
-	var f := rpm / 60.0 * 2.0
 	var load := clampf(_thr if gear != 0 else _brk, 0.0, 1.0)
-	var amp := 0.12 + 0.14 * load + 0.05 * rpm / redline
-	var inc := f / 22050.0
 	for i in pb.get_frames_available():
-		_engine_phase = fmod(_engine_phase + inc, 1.0)
-		var p := _engine_phase * TAU
-		var pulse := pow(maxf(sin(p), 0.0), 6.0)
-		var smp := (0.6 * sin(p) + 0.35 * sin(2.0 * p + 0.3) + 0.2 * sin(3.0 * p + 1.1) + 0.12 * sin(0.5 * p)) * 0.5
-		smp += (randf() * 2.0 - 1.0) * pulse * (0.2 + 0.4 * load)
-		# turbo: a faint whistle climbing with revs, only under load
-		_turbo_phase = fmod(_turbo_phase + (900.0 + rpm * 0.6) / 22050.0, 1.0)
-		smp += sin(_turbo_phase * TAU) * 0.035 * load * clampf((rpm - 1500.0) / 2000.0, 0.0, 1.0)
-		smp *= amp
+		var smp := _engine_sample(load)
 		pb.push_frame(Vector2(smp, smp))
+
+
+## One sample (22,050 a second) of this vehicle's engine at its rpm now, under `load` (0..1): its kind's firing
+## rate and harmonics, the clatter on each firing, a turbo's whistle, a CVT's whine, a rattle (ENGINE_SOUND).
+func _engine_sample(load: float) -> float:
+	var es: Dictionary = ENGINE_SOUND.get(drive_kind, ENGINE_SOUND["diesel_suv"])
+	var f := rpm / 60.0 * float(es["fires"])
+	_engine_phase = fmod(_engine_phase + f / 22050.0, 1.0)
+	var p := _engine_phase * TAU
+	var h: Array = es["harm"]
+	var smp := (float(h[0]) * sin(p) + float(h[1]) * sin(2.0 * p + 0.3) + float(h[2]) * sin(3.0 * p + 1.1)
+		+ float(h[3]) * sin(4.0 * p + 0.7) + float(es["sub"]) * sin(0.5 * p)) * 0.5
+	var pulse := pow(maxf(sin(p), 0.0), float(es["pulse"]))
+	var nz: Array = es["noise"]
+	smp += (randf() * 2.0 - 1.0) * pulse * lerpf(float(nz[0]), float(nz[1]), load)
+	if float(es["turbo"]) > 0.0:                         # a faint whistle climbing with revs, only under load
+		_turbo_phase = fmod(_turbo_phase + (900.0 + rpm * 0.6) / 22050.0, 1.0)
+		smp += sin(_turbo_phase * TAU) * float(es["turbo"]) * load * clampf((rpm - idle_rpm * 2.0) / (redline * 0.45), 0.0, 1.0)
+	if float(es["whine"]) > 0.0:                         # the belt of a CVT, rising with the road speed
+		_turbo_phase = fmod(_turbo_phase + (300.0 + absf(speed) * 45.0) / 22050.0, 1.0)
+		smp += sin(_turbo_phase * TAU) * float(es["whine"]) * (0.4 + 0.6 * load)
+	if float(es["rattle"]) > 0.0:                        # loose panels shaken by each firing
+		smp += (randf() * 2.0 - 1.0) * float(es["rattle"]) * pulse * pulse
+	return smp * (0.12 + 0.14 * load + 0.05 * rpm / redline) * float(es["level"])
 
 
 ## Road noise: wind (rising with the square of speed), tyre rumble on the surface (rougher off the tarmac),
