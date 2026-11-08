@@ -127,3 +127,14 @@ Two wheels in line (front steers, rear drives); the outrigger wheels are gone. j
 Before step 4 (outriggers): Karthik's scooter 0–60 in 19 s, top 63, stopping in 12.7 m (the outriggers braked); the motorbike fell over cornering and flipped over its front in a hard stop.
 
 Still to do: the generic motorbike and scooter reach 1.6 g at full lock at 40 km/h (lateral grip, step 3).
+
+## The Day 13 chase after step 4
+
+With the old scooter (29 km/h top) the black sedan (19 m/s on the straight, 7 in sharp bends) could only be lost in a
+run of tight lanes. With the new one (76 km/h, 0.8 g cornering) it outran the sedan on the straight too, so the
+chase was too easy. The sedan's straight-road pace is now 23.5 m/s (85 km/h). Its bends (7 m/s) and the rule
+(100 m clear for 4 s) are unchanged.
+- **On a straight:** the sedan keeps up.
+- **Through each tight bend:** the scooter, near its grip (about 10 m/s round a 10 m bend, 14 m/s round a 20 m one), gains 3–7 m/s on it.
+
+Lanes win, highways lose, as designed. This is still to be confirmed by driving it at the keyboard (auto-tests teleport).
