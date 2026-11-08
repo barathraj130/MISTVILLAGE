@@ -20,6 +20,7 @@ const CityPolice := preload("res://scripts/city/city_police.gd")
 const CityWeather := preload("res://scripts/city/city_weather.gd")
 const Bystanders := preload("res://scripts/city/city_bystanders.gd")
 const Dents := preload("res://scripts/drive/dents.gd")
+const Potholes := preload("res://scripts/city/city_potholes.gd")
 const CityDoors := preload("res://scripts/city/city_doors.gd")
 const Life := preload("res://scripts/city/life.gd")
 const Story := preload("res://scripts/story/story.gd")
@@ -185,7 +186,11 @@ func _ready() -> void:
 			add_child(traffic)
 		fines = Fines.new()
 		fines.load_wallet()
-		fines.persist = not ("--testdrive" in args or "--carshot" in args or " ".join(args).contains("--trafficshot"))
+		var self_test := false                      # (a self-test never writes your saved game: wallet, challans, weather)
+		for flag in ["--testdrive", "--carshot", "--trafficshot", "--crashtest", "--peopletest", "--parkedtest",
+				"--potholetest", "--flyover", "--clock=", "--weather=", "--nohud"]:
+			self_test = self_test or " ".join(args).contains(flag)
+		fines.persist = not self_test
 		hud = DriveHud.new()
 		hud.car = car
 		hud.fines = fines
@@ -221,6 +226,10 @@ func _ready() -> void:
 		bail.name = "Bail"
 		bail.city = self
 		add_child(bail)
+		var ph := Potholes.new()
+		ph.name = "Potholes"
+		ph.city = self
+		add_child(ph)
 		bystanders = Bystanders.new()
 		bystanders.name = "Bystanders"
 		bystanders.city = self
@@ -770,6 +779,84 @@ func _crashtest(dt: float) -> void:
 		kinds.pop_front()
 
 
+var _ph := {"t": 0.0}
+
+
+## --potholetest: the nearest pothole with a clear 30 m run-up, the car lined up so its left wheels run through it
+## at 40 km/h; a close look at it first (shots: pothole.jpg), then reports the hits, the jolt and the speed lost.
+func _potholetest(dt: float) -> void:
+	car.autopilot = true
+	if t < 12.0:
+		return
+	_ph["t"] = float(_ph["t"]) + dt
+	if not _ph.has("hole"):
+		var space := get_world_3d().direct_space_state
+		var best := {}
+		var bd := INF
+		for cell in streamer.potholes:
+			for h in streamer.potholes[cell]:
+				var c: Vector3 = h[0]
+				if c.distance_to(car.global_position) > bd:
+					continue
+				var rd: Vector3 = h[2]
+				for d in [Vector3(rd.x, 0, rd.z).normalized(), -Vector3(rd.x, 0, rd.z).normalized()]:   # (along its road)
+					var from: Vector3 = c - d * 30.0
+					var g := space.intersect_ray(PhysicsRayQueryParameters3D.create(from + Vector3.UP * 4.0, from + Vector3.DOWN * 8.0))
+					var sd := Vector3(-d.z, 0, d.x)
+					var blocked := g.is_empty() or absf(g["position"].y - c.y) > 0.8
+					for lat in [-1.7, -0.78, 0.15]:                  # (the car's whole width, along its track)
+						var q := PhysicsRayQueryParameters3D.create(c + sd * lat + d * 3.0 + Vector3.UP * 0.7, from + sd * lat + Vector3.UP * 0.7)
+						blocked = blocked or not space.intersect_ray(q).is_empty()
+					if blocked:
+						continue
+					bd = c.distance_to(car.global_position)
+					best = {"c": c, "r": h[1], "d": d, "ground": float(g["position"].y)}
+					break
+		if best.is_empty():
+			print("POTHOLETEST none found (%d cells)" % streamer.potholes.size())
+			get_tree().quit()
+			return
+		_ph["hole"] = best
+		var c: Vector3 = best["c"]
+		var gh := space.intersect_ray(PhysicsRayQueryParameters3D.create(c + Vector3.UP * 3.0, c + Vector3.DOWN * 3.0))
+		print("POTHOLETEST surface at the hole %.3f, the hole %.3f (%s)" % [float(gh["position"].y) if gh else NAN, c.y,
+			str(gh.get("collider")) if gh else "nothing"])
+		cam.global_position = c + Vector3(2.2, 1.6, 2.2)
+		cam.look_at(c)
+		_ph["look"] = true
+		return
+	var hole: Dictionary = _ph["hole"]
+	var c2: Vector3 = hole["c"]
+	var d2: Vector3 = hole["d"]
+	if _ph.has("look"):                                       # (a still look at it, before the drive)
+		cam.global_position = c2 + Vector3(2.2, 1.6, 2.2)
+		cam.look_at(c2)
+		if float(_ph["t"]) > 3.0:
+			if shots_dir != "":
+				get_viewport().get_texture().get_image().save_jpg(shots_dir + "/pothole.jpg", 0.85)
+			_ph.erase("look")
+			_ph["t"] = 0.0
+			var side := Vector3(-d2.z, 0, d2.x)                  # (the car's left, so its left wheels meet the hole)
+			var start := c2 - d2 * 30.0 - side * 0.78
+			start.y = float(hole["ground"]) + 0.8
+			car.repair()
+			car.global_transform = Transform3D(Basis.looking_at(-d2, Vector3.UP), start)
+			_ph["start"] = start
+			car.linear_velocity = d2 * (40.0 / 3.6)
+			car._v_prev = car.linear_velocity
+			_ph["v0"] = 0.0
+		return
+	car.in_steer = 0.0
+	car.in_throttle = clampf((40.0 / 3.6 - car.speed) * 0.5, 0.0, 1.0) if float(_ph["t"]) < 2.2 else 0.0
+	car.in_brake = 0.0
+	var ph = get_node("Potholes")
+	if float(_ph["t"]) > 4.0:
+		print("POTHOLETEST " + JSON.stringify({"radius": snappedf(float(hole["r"]), 0.01), "wheel_hits": ph._hits,
+			"moved_m": snappedf(car.global_position.distance_to(_ph["start"]), 0.1),
+			"speed_now_kmh": snappedf(car.speed * 3.6, 0.1), "front_damage": snappedf(car.damage["front"], 0.01)}))
+		get_tree().quit()
+
+
 var _pk := {"t": 0.0}
 
 
@@ -1038,6 +1125,9 @@ func _process(dt: float) -> void:
 							var gp: Vector3 = car.global_transform.affine_inverse() * (s3.global_transform * s3.get_bone_global_pose(s3.find_bone(bn)).origin)
 							print("RIDER %s in scooter frame %s" % [bn, str(gp.snapped(Vector3.ONE * 0.01))])
 				get_tree().quit()
+			return
+		if "--potholetest" in OS.get_cmdline_user_args():        # self-test: a wheel through a pothole at 40 km/h
+			_potholetest(dt)
 			return
 		if "--parkedtest" in OS.get_cmdline_user_args():         # self-test: into a parked car at 35 km/h
 			_parkedtest(dt)

@@ -283,4 +283,37 @@ straight through them. The boxes sit on their own body, `ParkedVehicles`, so a c
 |---|---|
 | 7,179 | Hit at about 32 km/h (severity 0.50) and stopped against it; front damage 0.30; ₹3,500 paid |
 
-Still to do: potholes. The two-wheelers parked in rows on the pavements (the `bikes` layer) have no collision yet.
+Still to do then: potholes. The two-wheelers parked in rows on the pavements (the `bikes` layer) have no collision yet.
+
+## Potholes, 2026-11-08
+
+**Where** (city_streamer.gd `_potholes`):
+- **How many:** along each road piece, every 20 m a chance by its class: residential 35%, unclassified and service 40%, tertiary 20%, secondary 12%, primary 6%, trunk 3%. None on flyovers.
+- **Spacing:** sometimes two or three together.
+- **Size and place:** 0.5–1.3 m across, anywhere across the carriageway but its very edge.
+- **Always the same:** seeded by the road's own points, so each one is always where it was.
+
+**Look** (shaders/pothole.gdshader):
+- a ragged hole, shaped by its own seed
+- walls that slope in (a normal map) and a lighter broken rim
+- dark grit at the bottom
+- after rain, standing water that holds the grey sky at a slant
+
+**Feel** (city_potholes.gd). A wheel that drops into one:
+- the far edge kicks that corner up, harder with speed and size
+- the body jolts, a thud plays, a little speed is lost
+- on a two-wheeler the bars twitch
+- fast and hard (over about 45 km/h), the front takes a little damage
+
+`--potholetest` lines the car up along the road so its left wheels run through the nearest pothole at 40 km/h:
+
+| Hole radius | Front wheel | Rear wheel | Speed lost |
+|---|---|---|---|
+| 0.51 m | 39 km/h, kick 0.87 | 37 km/h, kick 0.84 | about 2 km/h per hit |
+
+Bugs found on the way:
+- **Holes far from their tile's centre were never drawn:** a visibility range counts from the middle of the whole MultiMesh, so it was removed.
+- **A hole 4 mm over the road lost the depth test:** they now sit 2 cm up.
+- **The new self-tests (crash, people, parked, pothole) wrote to the real save file:** wallet payments, test challans, the rain. Every self-test mode now leaves the save alone (checked: the file is unchanged after a test). The save was repaired: the 20 test challans removed, the weather clear, ₹18,500 (the payments that can be proven) put back. A backup of the file as it was is in the same folder.
+
+Still to do: the two-wheelers parked in rows on the pavements have no collision.

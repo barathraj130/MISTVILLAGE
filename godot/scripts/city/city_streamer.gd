@@ -60,6 +60,12 @@ var life_far: Array = []                    # life kind → far Mesh or null (tr
 var life_meshes: Array = []                # life kind → Mesh (index.json life_kinds)
 var life_boxes: Array = []                 # life kind → its mesh's AABB, read here once (workers mustn't touch meshes)
 var parked_body: StaticBody3D              # parked cars, autos, lorries and bikes are solid (you can hit them)
+var pothole_mesh: Mesh                     # potholes: a flat quad each, shaped by shaders/pothole.gdshader
+var pothole_mat: ShaderMaterial
+var potholes := {}                         # Vector2i (8 m cell) → [[centre, radius], ...] of the loaded tiles
+## How many potholes per 20 m of road, by its class (Coimbatore: the residential lanes are the worst).
+const POTHOLES := {"trunk": 0.03, "primary": 0.06, "secondary": 0.12, "tertiary": 0.2, "unclassified": 0.4,
+	"residential": 0.35, "living_street": 0.3, "service": 0.4}
 var life_names: Array = []                 # life kind → name (index.json life_kinds, then our own extra kinds)
 var bhel_kind := -1                        # the snack cart (life_bhel.glb): it stands in for every third push cart
 ## The Sketchfab street crowd (tools/sketchfab_people.py): each stands in for every third standing man / woman of the
@@ -87,6 +93,13 @@ func _ready() -> void:
 	body = StaticBody3D.new()
 	body.name = "CityCollision"
 	add_child(body)
+	var pq := QuadMesh.new()
+	pq.size = Vector2(2, 2)
+	pq.orientation = PlaneMesh.FACE_Y
+	pothole_mesh = pq
+	pothole_mat = ShaderMaterial.new()
+	pothole_mat.shader = preload("res://shaders/pothole.gdshader")
+	pq.material = pothole_mat
 	parked_body = StaticBody3D.new()
 	parked_body.name = "ParkedVehicles"
 	add_child(parked_body)
@@ -361,6 +374,7 @@ func _build(k: Vector2i) -> void:
 	_props(props, out)
 	_yards(yards, out)
 	_life(life, out, roads)
+	_potholes(roads, out)
 	_wires(wires, out)
 	out["roads_raw"] = roads
 	_mutex.lock()
@@ -1500,6 +1514,66 @@ func _life(life: Array, out: Dictionary, roads: Array = []) -> void:
 	out["parked"] = parked
 
 
+## Potholes along the tile's roads: every 20 m a chance by the road's class (POTHOLES), sometimes two or three
+## together; somewhere across the carriageway, not on its very edge; 0.5–1.3 m across. Seeded by the road's own
+## points, so each is always where it was. out["potholes"]: a MultiMesh and [[centre, radius, the road's direction]].
+func _potholes(roads: Array, out: Dictionary) -> void:
+	var list: Array = []
+	for r in roads:
+		if r.get("fly", false) or not POTHOLES.has(r["c"]):
+			continue
+		var p: PackedFloat32Array = r["p"]
+		var n := p.size() / 3
+		if n < 2:
+			continue
+		var rng := RandomNumberGenerator.new()
+		rng.seed = hash(Vector3i(roundi(p[0] * 10.0), roundi(p[2] * 10.0), n))
+		var half: float = float(r["w"]) * 0.5
+		var lift: float = RANK.get(r["c"], 0.02) + 0.06 + 0.02          # (2 cm over the road: nearer, it lost the depth test)
+		var chance: float = POTHOLES[r["c"]]
+		var carry := rng.randf() * 20.0
+		for i in n - 1:
+			var a := Vector3(p[i * 3], p[i * 3 + 1], p[i * 3 + 2])
+			var b := Vector3(p[i * 3 + 3], p[i * 3 + 4], p[i * 3 + 5])
+			var L := a.distance_to(b)
+			var dir := (b - a) / maxf(L, 0.01)
+			var side := Vector3(dir.z, 0, -dir.x).normalized()
+			var at := carry
+			while at < L:
+				if rng.randf() < chance:
+					var count := 1 if rng.randf() < 0.75 else rng.randi_range(2, 3)
+					for _c in count:
+						var off := rng.randf_range(-1.0, 1.0) * maxf(half - 0.7, 0.2)
+						var c := a + dir * (at + rng.randf_range(-1.5, 1.5)) + side * off + Vector3(0, lift, 0)
+						list.append([c, rng.randf_range(0.25, 0.65), rng.randf() * TAU, rng.randf(), dir])
+				at += 20.0
+			carry = at - L
+	if list.is_empty():
+		return
+	var mm := _MM.new()
+	mm.transform_format = MultiMesh.TRANSFORM_3D
+	mm.use_custom_data = true
+	mm.mesh = pothole_mesh
+	mm.instance_count = list.size()
+	var holes: Array = []
+	for i in list.size():
+		var h: Array = list[i]
+		var rad: float = h[1]
+		mm.set_instance_transform(i, Transform3D(Basis(Vector3.UP, h[2]).scaled(Vector3(rad, 1.0, rad)), h[0]))
+		mm.set_instance_custom_data(i, Color(h[3], 0, 0, 0))
+		holes.append([h[0], rad, h[4]])
+	out["potholes"] = [mm, holes]
+
+
+## The pothole under a point (a wheel's contact), or [] (the loaded tiles' 8 m cells).
+func pothole_at(at: Vector3) -> Array:
+	for h in potholes.get(Vector2i(floori(at.x / 8.0), floori(at.z / 8.0)), []):
+		var c: Vector3 = h[0]
+		if Vector2(at.x - c.x, at.z - c.z).length() < float(h[1]) * 0.8 and absf(at.y - c.y) < 0.6:
+			return h
+	return []
+
+
 ## The tile's drivable road centrelines as segments [a, b, half width] (flyovers left out: nothing parks up there).
 static func _road_segs(roads: Array) -> Array:
 	var segs := []
@@ -2155,6 +2229,29 @@ func _instance(k: Vector2i, d: Dictionary) -> void:
 		wmi2.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 		wmi2.visibility_range_end = 250.0
 		node.add_child(wmi2)
+	if d.has("potholes") and not "--nopotholes" in OS.get_cmdline_user_args():
+		var pmi := MultiMeshInstance3D.new()
+		pmi.multimesh = _real(d["potholes"][0])
+		# (no visibility range: it would count from the middle of the whole tile's set, and holes far from it vanished)
+		pmi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		node.add_child(pmi)
+		var cells: Array = []
+		for h in d["potholes"][1]:
+			var cell := Vector2i(floori((h[0] as Vector3).x / 8.0), floori((h[0] as Vector3).z / 8.0))
+			for dx in [-1, 0, 1]:                                    # (in its neighbours too: one near an edge)
+				for dz in [-1, 0, 1]:
+					var ck := cell + Vector2i(dx, dz)
+					if not potholes.has(ck):
+						potholes[ck] = []
+					potholes[ck].append(h)
+					cells.append(ck)
+		var mine: Array = d["potholes"][1]
+		node.tree_exiting.connect(func() -> void:
+			for ck in cells:
+				if potholes.has(ck):
+					potholes[ck] = (potholes[ck] as Array).filter(func(x): return not x in mine)
+					if (potholes[ck] as Array).is_empty():
+						potholes.erase(ck))
 	for bm3 in d.get("bikes", []):
 		var bmi := MultiMeshInstance3D.new()
 		bmi.multimesh = _real(bm3)
