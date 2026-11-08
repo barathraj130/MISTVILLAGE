@@ -1464,8 +1464,8 @@ func _physics_process_body(delta: float) -> void:
 		var q := PhysicsRayQueryParameters3D.create(global_position + Vector3.UP * 0.6, global_position + Vector3.DOWN * 1.2)
 		q.exclude = [get_rid()]
 		var hit := get_world_3d().direct_space_state.intersect_ray(q)
-		if not hit.is_empty() and hit["collider"] is CollisionObject3D:
-			var co := hit["collider"] as CollisionObject3D
+		if not hit.is_empty() and hit["collider"] is CollisionObject3D and not (hit["collider"] as CollisionObject3D).get_shape_owners().is_empty():
+			var co := hit["collider"] as CollisionObject3D          # (a server-made body, parked vehicles: no owners to ask)
 			var owner_id := co.shape_find_owner(int(hit["shape"]))
 			var sn = co.shape_owner_get_owner(owner_id) if owner_id >= 0 else null
 			if sn is Node and (sn as Node).has_meta("surface"):

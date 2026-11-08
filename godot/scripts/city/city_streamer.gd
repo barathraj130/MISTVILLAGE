@@ -54,12 +54,14 @@ var kit_far_meshes: Array = []             # variant index → its far version (
 var kit_boxes: Array = []                  # variant index → AABB of the design (far stand-in and collision)
 var tree_meshes: Array = []                # [near Mesh, far LOD Mesh] per tree kind
 var bike_meshes: Array = []                # parked scooters and motorcycles
+var bike_boxes: Array = []                 # their AABBs (read once here: workers mustn't touch meshes)
 const LIFE_CELL := 64.0
 const TREE_NEAR := 70.0                     # full trees this near (from their 64 m cell's centre), the far version beyond
 var life_far: Array = []                    # life kind → far Mesh or null (trees and bushes: veg_*_far)
 var life_meshes: Array = []                # life kind → Mesh (index.json life_kinds)
 var life_boxes: Array = []                 # life kind → its mesh's AABB, read here once (workers mustn't touch meshes)
-var parked_body: StaticBody3D              # parked cars, autos, lorries and bikes are solid (you can hit them)
+var parked_body: StaticBody3D              # parked cars, autos, lorries and bikes are solid (you can hit them): their
+var parked_rids := {}                      #  shapes are on physics-server bodies (one a tile) that report as this node
 var pothole_mesh: Mesh                     # potholes: a flat quad each, shaped by shaders/pothole.gdshader
 var pothole_mat: ShaderMaterial
 var potholes := {}                         # Vector2i (8 m cell) → [[centre, radius], ...] of the loaded tiles
@@ -159,6 +161,7 @@ func _ready() -> void:
 			var bm := _with_lods(_gltf_mesh("res://assets/vehicles/bike_%s_%d.glb" % [kind, ci]))
 			if bm:
 				bike_meshes.append(bm)
+				bike_boxes.append(bm.get_aabb())
 	var sig: Mesh = _designed_signal()
 	prop_meshes = {1: sig if sig else _signal(), 2: _shelter(), 3: _breaker()}
 	var booth: Mesh = _scene_mesh("res://assets/city_props/police_booth.glb")      # 4: traffic police umbrella booth
@@ -1811,6 +1814,7 @@ func _yards(yards: Array, out: Dictionary) -> void:
 			tm.append([mm, lod])
 	out["trees"] = tm
 	var bm2 := []
+	var pb: Array = []
 	for bi in bikes:
 		var mm := _MM.new()
 		mm.transform_format = MultiMesh.TRANSFORM_3D
@@ -1818,8 +1822,11 @@ func _yards(yards: Array, out: Dictionary) -> void:
 		mm.instance_count = bikes[bi].size()
 		for i in bikes[bi].size():
 			mm.set_instance_transform(i, bikes[bi][i])
+			if bi < bike_boxes.size():                # (solid, as the street's parked vehicles are)
+				pb.append([bikes[bi][i], bike_boxes[bi]])
 		bm2.append(mm)
 	out["bikes"] = bm2
+	out["parked_bikes"] = pb
 
 
 ## Parked two-wheelers in a forecourt (shops: 2–5) or a house yard (0–2): a row along the yard's long side, nose
@@ -2192,19 +2199,29 @@ func _instance(k: Vector2i, d: Dictionary) -> void:
 		mpi.multimesh = _real(d["median_plants"])
 		mpi.visibility_range_end = 250.0
 		node.add_child(mpi)
-	for pk in ([] if "--nolife" in OS.get_cmdline_user_args() else d.get("parked", [])):
-		var xf: Transform3D = pk[0]
-		var bb: AABB = pk[1]
-		var pcs := CollisionShape3D.new()
-		var pbx := BoxShape3D.new()
-		pbx.size = bb.size * xf.basis.get_scale() * Vector3(0.96, 0.92, 0.96)   # (a little inside the body: no snagging)
-		pcs.shape = pbx
-		pcs.transform = Transform3D(xf.basis.orthonormalized(), xf * bb.get_center())
-		pcs.set_meta("surface", "concrete")
-		parked_body.add_child(pcs)
+	var no_parked := "--nolife" in OS.get_cmdline_user_args() or "--noparked" in OS.get_cmdline_user_args()
+	var parked_list: Array = [] if no_parked else d.get("parked", []) + d.get("parked_bikes", [])
+	if not parked_list.is_empty():
+		# one physics-server body per tile, no nodes: thousands of CollisionShape3D nodes under one body had it
+		# rebuilt whenever a tile came or went (physics 20 → 40-56 ms a frame). Crashes still see parked_body.
+		var prid := PhysicsServer3D.body_create()
+		PhysicsServer3D.body_set_mode(prid, PhysicsServer3D.BODY_MODE_STATIC)
+		PhysicsServer3D.body_set_space(prid, get_world_3d().space)
+		PhysicsServer3D.body_attach_object_instance_id(prid, parked_body.get_instance_id())
+		var shapes: Array = []
+		for pk in parked_list:
+			var xf: Transform3D = pk[0]
+			var bb: AABB = pk[1]
+			var sh := PhysicsServer3D.box_shape_create()
+			PhysicsServer3D.shape_set_data(sh, bb.size * xf.basis.get_scale() * Vector3(0.96, 0.92, 0.96) * 0.5)   # (a little inside the body)
+			PhysicsServer3D.body_add_shape(prid, sh, Transform3D(xf.basis.orthonormalized(), xf * bb.get_center()))
+			shapes.append(sh)
+		parked_rids[prid] = shapes.size()
 		node.tree_exiting.connect(func() -> void:
-			if is_instance_valid(pcs):
-				pcs.queue_free())
+			parked_rids.erase(prid)
+			PhysicsServer3D.free_rid(prid)
+			for sh in shapes:
+				PhysicsServer3D.free_rid(sh))
 	for lm in ([] if "--nolife" in OS.get_cmdline_user_args() else d.get("life", [])):
 		var lmi2 := MultiMeshInstance3D.new()
 		lmi2.multimesh = _real(lm[0])

@@ -871,28 +871,33 @@ func _parkedtest(dt: float) -> void:
 		var space := get_world_3d().direct_space_state
 		var best := {}
 		var bd := INF
-		for cs in streamer.parked_body.get_children():
-			var c: Vector3 = (cs as CollisionShape3D).global_position
-			var fwd: Vector3 = (cs as CollisionShape3D).global_basis.z.normalized()
-			for d in [fwd, -fwd]:
-				var from: Vector3 = c + d * 25.0
-				var g := space.intersect_ray(PhysicsRayQueryParameters3D.create(from + Vector3.UP * 4.0, from + Vector3.DOWN * 8.0))
-				var q := PhysicsRayQueryParameters3D.create(c + d * 3.0 + Vector3.UP * 0.8, from + Vector3.UP * 0.8)
-				q.exclude = [streamer.parked_body.get_rid()]
-				if g.is_empty() or absf(g["position"].y - c.y) > 1.5 or not space.intersect_ray(q).is_empty():
-					continue
-				var dd := c.distance_to(car.global_position)
-				if dd < bd:
-					bd = dd
-					best = {"c": c, "start": Vector3(from.x, g["position"].y + 0.6, from.z), "d": -d}
+		var shape_count := 0
+		for prid in streamer.parked_rids:
+			shape_count += PhysicsServer3D.body_get_shape_count(prid)
+		for prid in streamer.parked_rids:
+			for si in PhysicsServer3D.body_get_shape_count(prid):
+				var sxf := PhysicsServer3D.body_get_shape_transform(prid, si)
+				var c: Vector3 = sxf.origin
+				var fwd: Vector3 = sxf.basis.z.normalized()
+				for d in [fwd, -fwd]:
+					var from: Vector3 = c + d * 25.0
+					var g := space.intersect_ray(PhysicsRayQueryParameters3D.create(from + Vector3.UP * 4.0, from + Vector3.DOWN * 8.0))
+					var q := PhysicsRayQueryParameters3D.create(c + d * 3.0 + Vector3.UP * 0.8, from + Vector3.UP * 0.8)
+					q.exclude = streamer.parked_rids.keys()
+					if g.is_empty() or absf(g["position"].y - c.y) > 1.5 or not space.intersect_ray(q).is_empty():
+						continue
+					var dd := c.distance_to(car.global_position)
+					if dd < bd:
+						bd = dd
+						best = {"c": c, "start": Vector3(from.x, g["position"].y + 0.6, from.z), "d": -d}
 		if best.is_empty():
-			print("PARKEDTEST none found among %d shapes" % streamer.parked_body.get_child_count())
+			print("PARKEDTEST none found among %d shapes" % shape_count)
 			get_tree().quit()
 			return
 		_pk["target"] = best
 		_pk["t"] = 0.0
 		_pk["money0"] = fines.sim.money
-		_pk["shapes"] = streamer.parked_body.get_child_count()
+		_pk["shapes"] = shape_count
 		car.repair()
 		car.global_transform = Transform3D(Basis.looking_at(-best["d"], Vector3.UP), best["start"])
 		car.linear_velocity = Vector3.ZERO

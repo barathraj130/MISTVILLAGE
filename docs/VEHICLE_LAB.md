@@ -316,4 +316,15 @@ Bugs found on the way:
 - **A hole 4 mm over the road lost the depth test:** they now sit 2 cm up.
 - **The new self-tests (crash, people, parked, pothole) wrote to the real save file:** wallet payments, test challans, the rain. Every self-test mode now leaves the save alone (checked: the file is unchanged after a test). The save was repaired: the 20 test challans removed, the weather clear, ₹18,500 (the payments that can be proven) put back. A backup of the file as it was is in the same folder.
 
-Still to do: the two-wheelers parked in rows on the pavements have no collision.
+The two-wheelers parked in rows on the pavements are solid too now (`parked_bikes`).
+
+**What it costs** (`--testdrive --long`, 40 s on the M1, mean fps from 10 to 40 s):
+
+| Version | fps | physics ms a frame | scene nodes |
+|---|---|---|---|
+| a CollisionShape3D node for each parked vehicle, under one body | 11.1 | 26–56 | 37,800 |
+| one physics-server body a tile, no nodes (now) | 14.2 | 16–22 | 23,000 |
+| without parked collision or potholes | 14.3–14.7 | 20–66 (noisy) | 23,000 |
+
+One body holding thousands of shapes was rebuilt whenever a tile came or went. Each tile now has its own body made
+straight on the physics server; crashes still see it as `ParkedVehicles`, so the owner's claim works as before.
