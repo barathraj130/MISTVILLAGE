@@ -140,7 +140,7 @@ func _ready() -> void:
 	streamer.target = cam
 	var play := not auto and not "--fly" in args and not "--top" in args
 	for a in args:
-		if a.begins_with("--survey=") or a.begins_with("--view="):
+		if a.begins_with("--survey=") or a.begins_with("--view=") or a.begins_with("--flyover="):
 			play = false
 	if play:
 		for pair in [["accelerate", [KEY_W, KEY_UP]], ["brake", [KEY_S, KEY_DOWN]], ["steer_left", [KEY_A, KEY_LEFT]],
@@ -239,6 +239,7 @@ func _ready() -> void:
 		map.target = car
 		if not "--nomap" in args:
 			add_child(map)
+		_nohud = "--nohud" in args                  # (trailers: the picture only; the story's own subtitles stay)
 		if "--story" in args or Engine.has_meta("story"):
 			story = Story.new()
 			story.name = "Story"
@@ -256,6 +257,15 @@ func _ready() -> void:
 		if a.begins_with("--view="):
 			for v in a.get_slice("=", 1).split(","):
 				view.append(float(v))
+		if a.begins_with("--clock="):
+			if fines == null:                          # (a flyover has no car or wallet: only the clock is wanted)
+				fines = Fines.new()
+			var hm := a.get_slice("=", 1).split(":")
+			fines.sim.minute = float(hm[0]) * 60.0 + (float(hm[1]) if hm.size() > 1 else 0.0)
+			_free_clock = true
+		if a.begins_with("--flyover="):
+			for v in a.get_slice("=", 1).split(","):
+				flyover.append(float(v))
 		if a.begins_with("--survey="):
 			_survey_setup(int(a.get_slice("=", 1)))
 		if a.begins_with("--policeat="):                    # x,y,z,dx,dz: a police checkpoint there (views)
@@ -286,6 +296,7 @@ func _environment() -> void:
 	env.fog_enabled = true
 	env.fog_density = 0.0003
 	env.fog_aerial_perspective = 0.5
+	env.fog_sky_affect = 0.3                     # (haze lies over the city, not across the whole sky)
 	var we := WorldEnvironment.new()
 	we.environment = env
 	add_child(we)
@@ -303,7 +314,7 @@ func _environment() -> void:
 ## dawn and dusk, a faint blue moon at night, the sky and ambient light dimming with it; the headlights come on
 ## by themselves after dusk (L still switches them).
 func _daylight() -> void:
-	if story == null or fines == null:
+	if fines == null or (story == null and not _free_clock):
 		return
 	if indoors:                                 # in a room: lit by its own lights, the sun can't reach it
 		sun.light_energy = 0.0
@@ -329,6 +340,20 @@ func _daylight() -> void:
 	env.background_energy_multiplier = lerpf(0.1, 1.0, day)
 	env.ambient_light_energy = lerpf(0.16, 0.45, day)          # a city's night: street lights and shops keep it grey, not black
 	env.fog_light_color = Color(0.74, 0.76, 0.8) * lerpf(0.05, 1.0, day)
+	# the sky with the sun: blue by day; at sunset the horizon goes orange and the haze warm; then deep blue night
+	# (cloud greys it: the weather's share, city_weather.gd)
+	var dusk := (1.0 - smoothstep(0.04, 0.4, sd.y)) * smoothstep(-0.14, 0.0, sd.y)
+	var night := 1.0 - smoothstep(-0.14, 0.04, sd.y)
+	var cloud: float = float(fines.sim.wx.get("cloud", 0.0))
+	var sm := env.sky.sky_material as ProceduralSkyMaterial if env.sky else null
+	if sm:
+		var top := Color(0.32, 0.5, 0.78).lerp(Color(0.27, 0.34, 0.56), dusk).lerp(Color(0.02, 0.035, 0.08), night)
+		var hor := Color(0.72, 0.78, 0.85).lerp(Color(0.98, 0.58, 0.32), dusk).lerp(Color(0.07, 0.08, 0.12), night)
+		var grey := Color(0.5, 0.52, 0.55) * lerpf(1.0, 0.15, night)
+		sm.sky_top_color = top.lerp(grey * 0.9, cloud * 0.85)
+		sm.sky_horizon_color = hor.lerp(grey, cloud * 0.85)
+		sm.ground_horizon_color = sm.sky_horizon_color * 0.8
+		env.fog_light_color = env.fog_light_color.lerp(Color(0.95, 0.66, 0.45), dusk * (1.0 - cloud) * 0.7)
 	var up := sd.y > -0.04
 	var light_dir: Vector3 = sd if up else Vector3(-sd.x, maxf(-sd.y, 0.25), sd.z).normalized()
 	if absf(light_dir.dot(Vector3.UP)) < 0.999:
@@ -450,6 +475,13 @@ func _survey(dt: float) -> void:
 
 ## --view=x,y,z,yaw_deg,pitch_deg: hold the camera there, save view.jpg after 25 s and quit (comparisons)
 var view := PackedFloat32Array()
+## --flyover=x,y,z,yaw,pitch, x2,y2,z2,yaw2,pitch2, secs: a camera flight for trailers (tools/trailer). It waits at
+## the start until the city round it has loaded, prints "TRAILER_MARK frame=N" as it sets off (the clip is cut
+## from there), eases to the end over secs and quits a second after.
+var flyover := PackedFloat32Array()
+var _nohud := false                         # --nohud: no minimap or speedometer, ever (the story turns them on again)
+var _free_clock := false                    # --clock=HH:MM outside the story: the sun at that hour, held there (trailers)
+var _fly_t := -1.0
 
 
 ## Put the car on the nearest main road to `near`, keeping left, facing along the road.
@@ -873,6 +905,9 @@ func _drive_camera(dt: float) -> void:
 
 func _process(dt: float) -> void:
 	t += dt
+	if _nohud:
+		hud.visible = false
+		map.visible = false
 	if water:
 		water.target = streamer.target
 	if driving:
@@ -984,6 +1019,22 @@ func _process(dt: float) -> void:
 				get_viewport().get_texture().get_image().save_jpg(shots_dir + "/map.jpg", 0.85)
 				get_tree().quit()
 		_log_and_shots(dt)
+		return
+	if _free_clock and story == null:
+		_daylight()
+	if flyover.size() >= 11:
+		var f := clampf(_fly_t / flyover[10], 0.0, 1.0) if _fly_t >= 0.0 else 0.0
+		var e := f * f * (3.0 - 2.0 * f)
+		cam.position = Vector3(flyover[0], flyover[1], flyover[2]).lerp(Vector3(flyover[5], flyover[6], flyover[7]), e)
+		cam.basis = Basis.from_euler(Vector3(deg_to_rad(lerpf(flyover[4], flyover[9], e)), deg_to_rad(lerpf(flyover[3], flyover[8], e)), 0))
+		if _fly_t < 0.0:
+			if Engine.get_frames_drawn() > 90 and streamer.pending.is_empty() and streamer.ready_q.is_empty() and streamer.loaded.size() > 20:
+				_fly_t = 0.0
+				print("TRAILER_MARK frame=%d" % Engine.get_frames_drawn())
+		else:
+			_fly_t += 1.0 / 30.0                    # (by frames, as the movie is recorded: a slow frame can't skip the flight)
+			if _fly_t > flyover[10] + 1.0:
+				get_tree().quit()
 		return
 	if not view.is_empty():
 		cam.position = Vector3(view[0], view[1], view[2])

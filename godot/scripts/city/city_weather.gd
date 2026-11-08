@@ -94,10 +94,11 @@ func apply(env: Environment, sun: DirectionalLight3D, cam: Camera3D) -> void:
 		sun.shadow_enabled = sun.shadow_enabled and sun.light_energy > 0.4
 		env.fog_density = 0.0003 + float(sim.wx["fog"]) * 0.0012 + r * 0.0018
 		env.background_energy_multiplier *= lerpf(1.0, 0.55, cloud)
-		var sm := env.sky.sky_material as ProceduralSkyMaterial if env.sky else null
-		if sm:
-			sm.sky_top_color = Color(0.32, 0.5, 0.78).lerp(Color(0.46, 0.49, 0.53), cloud)
-			sm.sky_horizon_color = Color(0.72, 0.78, 0.85).lerp(Color(0.62, 0.64, 0.66), cloud)
+		if city.story == null and not city._free_clock:       # (otherwise the sky is the clock's: city_test._daylight)
+			var sm := env.sky.sky_material as ProceduralSkyMaterial if env.sky else null
+			if sm:
+				sm.sky_top_color = Color(0.32, 0.5, 0.78).lerp(Color(0.46, 0.49, 0.53), cloud)
+				sm.sky_horizon_color = Color(0.72, 0.78, 0.85).lerp(Color(0.62, 0.64, 0.66), cloud)
 	_wet_look(wet)
 	_rain.emitting = r > 0.05 and not city.indoors
 	if _rain.emitting and cam:

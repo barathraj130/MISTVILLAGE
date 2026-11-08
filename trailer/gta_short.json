@@ -1,0 +1,190 @@
+{
+ "name": "mist_village_short",
+ "formats": {
+  "vertical": [
+   1080,
+   1920
+  ]
+ },
+ "langs": [
+  "en",
+  "ta"
+ ],
+ "fonts": {
+  "en": [
+   "Avenir Next Condensed",
+   "Helvetica Neue"
+  ],
+  "ta": [
+   "Tamil Sangam MN"
+  ],
+  "name": [
+   "Avenir Next Condensed",
+   "Impact"
+  ],
+  "name_ta": [
+   "Tamil Sangam MN"
+  ]
+ },
+ "letterbox": 0,
+ "bpm": 94,
+ "music": "mist_village_short_score.wav",
+ "game_audio": 0.3,
+ "segments": [
+  {
+   "clip": "clips/fly_dusk_high.avi",
+   "from": 2.0,
+   "dur": 2.55,
+   "music": "calm",
+   "fade": 0.4,
+   "crop_x": 0.55,
+   "text": {
+    "en": "He drove the same man\nfor six years.",
+    "ta": "ஆறு வருஷம்\nஒரே முதலாளிக்கு ஓட்டினான்."
+   },
+   "text_at": "mid"
+  },
+  {
+   "clip": {
+    "en": "clips/funeral_en.avi",
+    "ta": "clips/funeral_ta.avi"
+   },
+   "from": 8.0,
+   "dur": 1.92,
+   "music": "build",
+   "vfit": "blur",
+   "text_at": "top",
+   "text": {
+    "en": "Then that man was found dead.",
+    "ta": "அப்புறம் அவர் இறந்து கிடந்தார்."
+   },
+   "lift": 0.12
+  },
+  {
+   "clip": {
+    "en": "clips/court_en.avi",
+    "ta": "clips/court_ta.avi"
+   },
+   "from": 2.0,
+   "dur": 1.92,
+   "music": "build",
+   "vfit": "blur",
+   "text_at": "top",
+   "text": {
+    "en": "Every trace points at him.",
+    "ta": "எல்லா தடயமும் அவனையே காட்டுது."
+   },
+   "fill": true,
+   "lift": 0.12
+  },
+  {
+   "clip": "clips/drive_dusk.avi",
+   "from": 8.0,
+   "dur": 2.55,
+   "music": "build",
+   "fill": false,
+   "name": {
+    "en": "KARTHIK",
+    "ta": "கார்த்திக்"
+   },
+   "role": {
+    "en": "The driver. The accused.",
+    "ta": "டிரைவர். குற்றம் சாட்டப்பட்டவன்."
+   }
+  },
+  {
+   "clip": {
+    "en": "clips/chase_en.avi",
+    "ta": "clips/chase_ta.avi"
+   },
+   "from": 2.4,
+   "dur": 1.28,
+   "music": "tense",
+   "flash": true,
+   "fill": true,
+   "fade": 0.15,
+   "lift": 0.12,
+   "vfit": "blur"
+  },
+  {
+   "clip": "clips/drive_rain_night.avi",
+   "from": 18.0,
+   "dur": 1.28,
+   "music": "tense",
+   "flash": true,
+   "fade": 0.1
+  },
+  {
+   "clip": {
+    "en": "clips/court_en.avi",
+    "ta": "clips/court_ta.avi"
+   },
+   "from": 4.0,
+   "dur": 1.28,
+   "music": "tense",
+   "flash": true,
+   "fade": 0.1,
+   "vfit": "blur",
+   "lift": 0.12
+  },
+  {
+   "clip": "clips/drive_dusk.avi",
+   "from": 30.0,
+   "dur": 1.28,
+   "music": "tense",
+   "flash": true,
+   "fade": 0.1
+  },
+  {
+   "clip": {
+    "en": "clips/court_en.avi",
+    "ta": "clips/court_ta.avi"
+   },
+   "from": 28.0,
+   "dur": 1.28,
+   "music": "tense",
+   "flash": true,
+   "fade": 0.1,
+   "vfit": "blur",
+   "lift": 0.12
+  },
+  {
+   "card": {
+    "en": " ",
+    "ta": " "
+   },
+   "dur": 0.64,
+   "music": "quiet",
+   "fade": 0.0
+  },
+  {
+   "card": {
+    "en": "THE MIST VILLAGE",
+    "ta": "தி மிஸ்ட் வில்லேஜ்"
+   },
+   "sub": {
+    "en": "PART 1 · THE WRONG ACCUSATION",
+    "ta": "பாகம் 1 · தவறான குற்றச்சாட்டு"
+   },
+   "dur": 3.83,
+   "music": "hit",
+   "hit": true,
+   "fade": 0.6,
+   "scale": 1.7
+  },
+  {
+   "card": {
+    "en": "Coming soon on Steam",
+    "ta": "விரைவில் Steam-இல்"
+   },
+   "sub": {
+    "en": "English · தமிழ்",
+    "ta": "English · தமிழ்"
+   },
+   "dur": 2.55,
+   "music": "build",
+   "fade": 0.6,
+   "scale": 0.9
+  }
+ ]
+}

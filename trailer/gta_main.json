@@ -1,0 +1,239 @@
+{
+ "name": "mist_village_trailer",
+ "formats": {
+  "wide": [
+   1920,
+   1080
+  ]
+ },
+ "langs": [
+  "en",
+  "ta"
+ ],
+ "fonts": {
+  "en": [
+   "Avenir Next Condensed",
+   "Helvetica Neue"
+  ],
+  "ta": [
+   "Tamil Sangam MN"
+  ],
+  "name": [
+   "Avenir Next Condensed",
+   "Impact"
+  ],
+  "name_ta": [
+   "Tamil Sangam MN"
+  ]
+ },
+ "letterbox": 2.39,
+ "bpm": 94,
+ "music": "mist_village_trailer_score.wav",
+ "game_audio": 0.3,
+ "segments": [
+  {
+   "clip": "clips/fly_dusk_high.avi",
+   "from": 0.0,
+   "dur": 6.38,
+   "music": "calm",
+   "fade": 1.0,
+   "crop_x": 0.55,
+   "text": {
+    "en": "Coimbatore.",
+    "ta": "கோயம்புத்தூர்."
+   }
+  },
+  {
+   "clip": "clips/fly_dusk_low.avi",
+   "from": 2.0,
+   "dur": 5.1,
+   "music": "calm",
+   "crop_x": 0.4,
+   "text": {
+    "en": "He drove the same man for six years.",
+    "ta": "ஆறு வருஷம் ஒரே முதலாளிக்கு ஓட்டினான்."
+   }
+  },
+  {
+   "clip": "clips/drive_dusk.avi",
+   "from": 8.0,
+   "dur": 3.83,
+   "music": "build",
+   "fill": true,
+   "name": {
+    "en": "KARTHIK",
+    "ta": "கார்த்திக்"
+   },
+   "role": {
+    "en": "The driver. The accused.",
+    "ta": "டிரைவர். குற்றம் சாட்டப்பட்டவன்."
+   }
+  },
+  {
+   "clip": {
+    "en": "clips/funeral_en.avi",
+    "ta": "clips/funeral_ta.avi"
+   },
+   "from": 8.0,
+   "dur": 3.83,
+   "music": "build",
+   "vfit": "blur",
+   "text_at": "top",
+   "text": {
+    "en": "A week after his promotion, that man was dead.",
+    "ta": "பதவி உயர்வு கிடைச்சு ஒரு வாரத்துல, அவர் இறந்துட்டார்."
+   },
+   "lift": 0.12
+  },
+  {
+   "clip": {
+    "en": "clips/court_en.avi",
+    "ta": "clips/court_ta.avi"
+   },
+   "from": 2.0,
+   "dur": 3.19,
+   "music": "build",
+   "vfit": "blur",
+   "text_at": "top",
+   "text": {
+    "en": "Every trace points at him.",
+    "ta": "எல்லா தடயமும் அவனையே காட்டுது."
+   },
+   "lift": 0.12
+  },
+  {
+   "clip": {
+    "en": "clips/watchman_en.avi",
+    "ta": "clips/watchman_ta.avi"
+   },
+   "from": 2.2,
+   "dur": 2.55,
+   "music": "build",
+   "vfit": "blur",
+   "lift": 0.12
+  },
+  {
+   "clip": "clips/drive_rain_night.avi",
+   "from": 4.0,
+   "dur": 3.83,
+   "music": "build",
+   "text": {
+    "en": "Sign at the station. Every evening.\nDon't leave the city.",
+    "ta": "தினமும் சாயங்காலம் ஸ்டேஷன்ல கையெழுத்து.\nஊரை விட்டு போகக் கூடாது."
+   }
+  },
+  {
+   "card": {
+    "en": "So he drives it.",
+    "ta": "அதனால ஊரையே ஓட்டுறான்."
+   },
+   "dur": 1.92,
+   "music": "quiet",
+   "scale": 1.0
+  },
+  {
+   "clip": {
+    "en": "clips/chase_en.avi",
+    "ta": "clips/chase_ta.avi"
+   },
+   "from": 2.4,
+   "dur": 2.55,
+   "music": "tense",
+   "flash": true,
+   "fill": true,
+   "fade": 0.15,
+   "lift": 0.12
+  },
+  {
+   "clip": "clips/drive_rain_night.avi",
+   "from": 18.0,
+   "dur": 1.92,
+   "music": "tense",
+   "flash": true,
+   "fade": 0.1
+  },
+  {
+   "clip": {
+    "en": "clips/court_en.avi",
+    "ta": "clips/court_ta.avi"
+   },
+   "from": 4.0,
+   "dur": 1.92,
+   "music": "tense",
+   "flash": true,
+   "fade": 0.1,
+   "vfit": "blur",
+   "lift": 0.12
+  },
+  {
+   "clip": "clips/drive_dusk.avi",
+   "from": 30.0,
+   "dur": 1.92,
+   "music": "tense",
+   "flash": true,
+   "fade": 0.1
+  },
+  {
+   "clip": {
+    "en": "clips/court_en.avi",
+    "ta": "clips/court_ta.avi"
+   },
+   "from": 28.0,
+   "dur": 2.55,
+   "music": "tense",
+   "flash": true,
+   "fade": 0.1,
+   "vfit": "blur",
+   "lift": 0.12
+  },
+  {
+   "clip": "clips/drive_rain_night.avi",
+   "from": 9.0,
+   "dur": 3.83,
+   "music": "tense",
+   "fade": 0.3,
+   "text": {
+    "en": "The city remembers where he was.",
+    "ta": "அவன் எங்க இருந்தான்னு ஊருக்குத் தெரியும்."
+   }
+  },
+  {
+   "card": {
+    "en": " ",
+    "ta": " "
+   },
+   "dur": 1.28,
+   "music": "quiet",
+   "fade": 0.0
+  },
+  {
+   "card": {
+    "en": "THE MIST VILLAGE",
+    "ta": "தி மிஸ்ட் வில்லேஜ்"
+   },
+   "sub": {
+    "en": "PART 1 · THE WRONG ACCUSATION",
+    "ta": "பாகம் 1 · தவறான குற்றச்சாட்டு"
+   },
+   "dur": 5.1,
+   "music": "hit",
+   "hit": true,
+   "fade": 0.6,
+   "scale": 2.6
+  },
+  {
+   "card": {
+    "en": "Coming soon on Steam",
+    "ta": "விரைவில் Steam-இல்"
+   },
+   "sub": {
+    "en": "English · தமிழ்",
+    "ta": "English · தமிழ்"
+   },
+   "dur": 3.83,
+   "music": "build",
+   "fade": 0.6,
+   "scale": 0.9
+  }
+ ]
+}

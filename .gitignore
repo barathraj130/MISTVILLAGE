@@ -27,3 +27,11 @@ previews/**/*.log
 godot/assets/city_props/*.png
 godot/assets/city_props/*.jpg
 godot/assets/city_props/tex/
+
+# trailer footage and renders (the edits in trailer/*.json are kept)
+trailer/clips/
+trailer/out/
+trailer/*.wav
+trailer/*.skill
+trailer/*.log
+trailer/clips/
