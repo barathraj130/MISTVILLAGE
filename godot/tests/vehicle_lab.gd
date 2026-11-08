@@ -29,6 +29,8 @@ func _ready() -> void:
 	ground.add_child(gs)
 	add_child(ground)
 	_breaker(Vector3(400, 0, 0))                          # the bump lane: x = 400
+	_patch(Vector3(1000, 0, 0), "gravel")                 # surface lanes (tagged as the city's collision is)
+	_patch(Vector3(1100, 0, 0), "mud")
 	_breaker(Vector3(400, 0, 120))
 	var light := DirectionalLight3D.new()
 	add_child(light)
@@ -37,6 +39,20 @@ func _ready() -> void:
 		if a.begins_with("--vehicles="):
 			vehicles = a.get_slice("=", 1).split(",")
 	_run(vehicles)
+
+
+## A 20 × 600 m lane of a surface, a hair above the test ground (its CollisionShape3D carries the "surface" meta,
+## as city_streamer.gd's do).
+func _patch(p: Vector3, surface: String) -> void:
+	var b := StaticBody3D.new()
+	var cs := CollisionShape3D.new()
+	var bx := BoxShape3D.new()
+	bx.size = Vector3(20, 0.2, 600)
+	cs.shape = bx
+	cs.set_meta("surface", surface)
+	b.add_child(cs)
+	b.position = p + Vector3(0, -0.09, 0)
+	add_child(b)
 
 
 ## A speed breaker across the lane at p (the same profile as the city's).
@@ -83,6 +99,9 @@ func _vehicle(kind: String) -> void:
 		if a.begins_with("--labgrip="):
 			wet = float(a.get_slice("=", 1))
 	await _brake(kind, "wet", wet)
+	await _surface_brake(kind, "gravel", 1000.0)
+	await _surface_brake(kind, "mud", 1100.0)
+	await _handbrake(kind)
 	await _turn(kind)
 	await _corner(kind)
 	await _bump(kind, 20.0)
@@ -98,6 +117,7 @@ func _place(at: Vector3) -> void:
 	car.in_brake = 0.0
 	car.in_steer = 0.0
 	car.set_grip(1.0)
+	car.set_surface("asphalt")                            # (the test ground has no surface of its own: back to tarmac)
 	await get_tree().physics_frame
 	car.freeze = false
 	for i in 90:                                          # settle on the springs
@@ -174,6 +194,55 @@ func _brake(kind: String, test: String, grip: float) -> void:
 		pitch = maxf(pitch, rad_to_deg(asin(clampf(-car.global_basis.z.y, -1.0, 1.0))))
 	var dist := Vector2(car.global_position.x - from.x, car.global_position.z - from.z).length()
 	_report(kind, test, {"dist_m": snappedf(dist, 0.1), "time_s": snappedf(tb, 0.01), "nose_dip_deg": snappedf(pitch, 0.1)})
+
+
+## From 60 km/h (40 on mud) to a stop on a surface lane: the distance.
+func _surface_brake(kind: String, surface: String, x: float) -> void:
+	await _place(Vector3(x, 0, -280))
+	var target := (40.0 if surface == "mud" else 60.0) / 3.6
+	var t := 0.0
+	while car.speed < target and t < 40.0:
+		car.in_throttle = 1.0
+		await get_tree().physics_frame
+		t += 1.0 / 60.0
+	if car.speed < target - 0.5:
+		_report(kind, surface, {"note": "never reached %d km/h on %s" % [int(target * 3.6), surface], "top_kmh": snappedf(car.speed * 3.6, 0.1)})
+		return
+	var from: Vector3 = car.global_position
+	car.in_throttle = 0.0
+	car.in_brake = 1.0
+	var tb := 0.0
+	while car.speed > 0.3 and tb < 20.0:
+		await get_tree().physics_frame
+		tb += 1.0 / 60.0
+	_report(kind, surface, {"from_kmh": int(target * 3.6), "dist_m": snappedf(from.distance_to(car.global_position), 0.1), "surface_seen": car.surface})
+
+
+## At 40 km/h, the wheel turned half and the handbrake pulled for 1.5 s: how far round it swings (degrees of
+## heading), and whether the tail came out (its heading off its path by more than 25°).
+func _handbrake(kind: String) -> void:
+	await _place(Vector3(-1500, 0, -1500))
+	var t := 0.0
+	while car.speed < 40.0 / 3.6 - 0.3 and t < 30.0:
+		_cruise(40.0 / 3.6)
+		await get_tree().physics_frame
+		t += 1.0 / 60.0
+	var h0 := atan2(car.global_basis.z.x, car.global_basis.z.z)
+	var slid := false
+	var th := 0.0
+	car.in_throttle = 0.0
+	while th < 2.5:
+		car.in_steer = 0.5
+		car.in_handbrake = th < 1.5
+		await get_tree().physics_frame
+		th += 1.0 / 60.0
+		var v: Vector3 = car.linear_velocity
+		var heading := Vector2(car.global_basis.z.x, car.global_basis.z.z).normalized()
+		if v.length() > 2.0 and heading.dot(Vector2(v.x, v.z).normalized()) < cos(deg_to_rad(25.0)):
+			slid = true
+	car.in_handbrake = false
+	var turned := rad_to_deg(absf(angle_difference(h0, atan2(car.global_basis.z.x, car.global_basis.z.z))))
+	_report(kind, "handbrake", {"turned_deg": snappedf(turned, 0.1), "tail_out": slid})
 
 
 func _turn(kind: String) -> void:

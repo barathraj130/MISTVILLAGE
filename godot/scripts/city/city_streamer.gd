@@ -1975,7 +1975,7 @@ func _instance(k: Vector2i, d: Dictionary) -> void:
 	cs.shape = d["ground_shape"]
 	cs.scale = Vector3(step, 1, step)
 	cs.position = Vector3(k.x * tile + tile * 0.5, 0, k.y * tile + tile * 0.5)
-	_shape(node, cs)
+	_shape(node, cs, "ground")
 	if d.has("road_mesh"):
 		var rmi := MeshInstance3D.new()
 		rmi.mesh = d["road_mesh"]
@@ -1984,7 +1984,7 @@ func _instance(k: Vector2i, d: Dictionary) -> void:
 		node.add_child(rmi)
 		var rcs := CollisionShape3D.new()
 		rcs.shape = d["road_shape"]
-		_shape(node, rcs)
+		_shape(node, rcs, "asphalt")
 	if d.has("near_mesh"):
 		var bmi := MeshInstance3D.new()
 		bmi.mesh = d["near_mesh"]
@@ -2031,7 +2031,7 @@ func _instance(k: Vector2i, d: Dictionary) -> void:
 		node.add_child(jmi)
 		var jcs := CollisionShape3D.new()
 		jcs.shape = d["junc_shape"]
-		_shape(node, jcs)
+		_shape(node, jcs, "asphalt")
 	for pm in d.get("props", []):
 		var pmi := MultiMeshInstance3D.new()
 		pmi.multimesh = _real(pm)
@@ -2040,7 +2040,7 @@ func _instance(k: Vector2i, d: Dictionary) -> void:
 	if d.has("hump_shape"):
 		var hcs := CollisionShape3D.new()
 		hcs.shape = d["hump_shape"]
-		_shape(node, hcs)
+		_shape(node, hcs, "asphalt")
 	for pair in [["pave_mesh", walk_mat, 400.0], ["yard_mesh", yard_mat, 400.0], ["skirt_mesh", kerb_mat, 300.0], ["wall_mesh", wall_mat, 450.0]]:
 		if d.has(pair[0]) and not "--noyards" in OS.get_cmdline_user_args():
 			var ymi := MeshInstance3D.new()
@@ -2051,7 +2051,7 @@ func _instance(k: Vector2i, d: Dictionary) -> void:
 	if d.has("yard_shape"):
 		var ycs := CollisionShape3D.new()
 		ycs.shape = d["yard_shape"]
-		_shape(node, ycs)
+		_shape(node, ycs, "ground")
 	var skip := OS.get_cmdline_user_args()
 	for tr in ([] if "--notrees" in skip else d.get("trees", [])):
 		var tmi := MultiMeshInstance3D.new()
@@ -2222,8 +2222,10 @@ func _landmarks(k: Vector2i, node: Node3D) -> void:
 			sc.add_child(l)
 
 
-## Collision shapes live under one StaticBody3D, and are freed with their tile.
-func _shape(node: Node3D, cs: CollisionShape3D) -> void:
+## Collision shapes live under one StaticBody3D, and are freed with their tile. Each says what it is to drive on
+## (its "surface" meta: asphalt, concrete, ground): jeep.gd feels it under its wheels.
+func _shape(node: Node3D, cs: CollisionShape3D, surface := "concrete") -> void:
+	cs.set_meta("surface", surface)
 	body.add_child(cs)
 	node.tree_exiting.connect(func() -> void:
 		if is_instance_valid(cs):

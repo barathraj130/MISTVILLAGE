@@ -138,3 +138,21 @@ chase was too easy. The sedan's straight-road pace is now 23.5 m/s (85 km/h). It
 - **Through each tight bend:** the scooter, near its grip (about 10 m/s round a 10 m bend, 14 m/s round a 20 m one), gains 3–7 m/s on it.
 
 Lanes win, highways lose, as designed. This is still to be confirmed by driving it at the keyboard (auto-tests teleport).
+
+## Step 3, 2026-11-08: handling
+
+- **Anti-roll:** the bars pushed the wrong way (into the lean). Corrected, roll in the 40 km/h corner falls: auto 14.5° → 12.2°, sedan 2.9° → 2.4°, SUV 2.1° → 1.8°, bus 1.0° → 0.9°.
+- **The road under the wheels:** the city's collision shapes say what they are (city_streamer.gd `_shape`: road, junction and speed humps asphalt; pavements, medians, flyovers, buildings concrete; terrain and yards ground). The car looks ten times a second. Before, in Coimbatore the surface was never set: driving off the road felt like the road. New surfaces: concrete (as asphalt), gravel (grip 0.65), mud (grip 0.4). Surface drag scales with mass: the same drag had held a scooter to a crawl.
+- **Handbrake:** it holds the rear wheels only, and locked they slide (a fixed low grip; Godot's ray wheels don't lose side grip when locked).
+- **Understeer and oversteer:** front-drive petrol cars have a little more grip at the rear (understeer), the rear-drive sports car a little less (oversteer).
+
+| vehicle | 60–0 dry / gravel (m) | 40–0 mud (m) | handbrake turn at 40 km/h |
+|---|---|---|---|
+| hatchback | 16.4 / 20.4 | 13.7 | 105.4° |
+| sedan | 16.4 / 20.4 | 13.7 | 58.2° |
+| luxury_suv | 16.4 / 20.4 | 13.7 | 44.5° |
+| bus | 25.0 / 23.8 | 13.6 | 21.8° |
+| karthik_scooter | 19.0 / 19.6 | 13.2 | rear brake (two-wheeler) |
+| bike | 17.5 / 19.9 | 13.3 | rear brake (two-wheeler) |
+
+Still to do: the generic motorbike and scooter's 1.6 g at full lock; wet roads in the city (no weather there yet); potholes; damage; engine sounds per vehicle.

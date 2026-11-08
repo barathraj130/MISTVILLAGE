@@ -50,9 +50,11 @@ const DRIVE := {
 	"diesel_suv": {"torque": [[780.0, 220.0], [1600.0, 450.0], [2800.0, 450.0], [4500.0, 300.0]], "ratios": [4.46, 2.61, 1.66, 1.24, 1.0, 0.83],
 		"final": 3.6, "reverse": 4.0, "idle": 780.0, "redline": 4500.0, "up": [2000.0, 3600.0], "brake_g": 0.85, "cda": 0.95, "crr": 0.015, "grip": 4.6},
 	"petrol_car": {"torque": [[800.0, 70.0], [2000.0, 100.0], [4200.0, 113.0], [6200.0, 95.0]], "ratios": [3.55, 1.95, 1.29, 0.97, 0.78],
-		"final": 4.1, "reverse": 3.5, "idle": 800.0, "redline": 6200.0, "up": [2600.0, 5600.0], "brake_g": 0.85, "cda": 0.65, "crr": 0.013, "grip": 4.6},
+		"final": 4.1, "reverse": 3.5, "idle": 800.0, "redline": 6200.0, "up": [2600.0, 5600.0], "brake_g": 0.85, "cda": 0.65, "crr": 0.013, "grip": 4.6,
+		"rear_grip": 1.08},
 	"sport": {"torque": [[800.0, 250.0], [1800.0, 420.0], [5000.0, 420.0], [6800.0, 330.0]], "ratios": [3.8, 2.3, 1.6, 1.25, 1.0, 0.82],
-		"final": 3.5, "reverse": 3.5, "idle": 850.0, "redline": 6800.0, "up": [2800.0, 6200.0], "brake_g": 0.95, "cda": 0.6, "crr": 0.012, "grip": 5.0},
+		"final": 3.5, "reverse": 3.5, "idle": 850.0, "redline": 6800.0, "up": [2800.0, 6200.0], "brake_g": 0.95, "cda": 0.6, "crr": 0.012, "grip": 5.0,
+		"rear_grip": 0.94},
 	"auto": {"torque": [[1200.0, 8.0], [3000.0, 12.5], [5000.0, 12.0], [6500.0, 9.0]], "ratios": [3.9, 2.4, 1.6, 1.15],
 		"final": 8.5, "reverse": 3.9, "idle": 1200.0, "redline": 6500.0, "up": [3500.0, 5800.0], "brake_g": 0.6, "cda": 1.2, "crr": 0.02, "grip": 4.0},
 	"scooter": {"torque": [[1500.0, 6.0], [5000.0, 8.8], [7500.0, 8.0], [9000.0, 6.0]], "cvt": [22.0, 8.0], "rpm_band": [3200.0, 7000.0],
@@ -104,6 +106,9 @@ var brake_full := BRAKE            # full braking for this mass
 var cda := 0.95
 var crr := 0.015
 var tyre_grip := 4.6
+var rear_grip := 1.0               # the rear tyres' grip against the front's: over 1 a car understeers, under 1 its tail steps out
+var _feel_t := 0.0                 # (the road under it, looked at ten times a second)
+var _hb_on := false                # (the handbrake's hold on the rear tyres, to let go of)
 var two_wheeler := false           # a scooter or a motorbike: two wheels in line, balanced and leaning (_balance)
 var lean := 0.0                    # its lean now (rad, + to its left) and the lean the turn asks for
 var lean_target := 0.0
@@ -1201,9 +1206,15 @@ func set_surface(kind: String) -> void:
 		return
 	surface = kind
 	match kind:
-		"asphalt":
+		"asphalt", "concrete":
 			_surface_grip = 1.0
 			_surface_drag = 0.0
+		"gravel":
+			_surface_grip = 0.65
+			_surface_drag = 40.0
+		"mud":
+			_surface_grip = 0.4
+			_surface_drag = 100.0
 		"shoulder":
 			_surface_grip = 0.85
 			_surface_drag = 160.0
@@ -1215,7 +1226,8 @@ func set_surface(kind: String) -> void:
 
 func _apply_grip() -> void:
 	for w in _wheels:
-		(w as VehicleWheel3D).wheel_friction_slip = tyre_grip * _weather_grip * _surface_grip
+		var vw := w as VehicleWheel3D
+		vw.wheel_friction_slip = tyre_grip * _weather_grip * _surface_grip * (rear_grip if vw.position.z < 0.0 else 1.0)
 
 
 func gear_name() -> String:
@@ -1370,6 +1382,7 @@ func _set_drive(kind: String) -> void:
 	cda = float(d["cda"])
 	crr = float(d["crr"])
 	tyre_grip = float(d["grip"])
+	rear_grip = float(d.get("rear_grip", 1.0))
 	linear_damp_mode = RigidBody3D.DAMP_MODE_REPLACE
 	linear_damp = 0.0
 	rpm = idle_rpm
@@ -1395,6 +1408,18 @@ func _physics_process(delta: float) -> void:
 
 func _physics_process_body(delta: float) -> void:
 	speed = linear_velocity.dot(forward())
+	_feel_t -= delta
+	if _feel_t <= 0.0:                                  # the road under it: the city's collision says what it is
+		_feel_t = 0.1
+		var q := PhysicsRayQueryParameters3D.create(global_position + Vector3.UP * 0.6, global_position + Vector3.DOWN * 1.2)
+		q.exclude = [get_rid()]
+		var hit := get_world_3d().direct_space_state.intersect_ray(q)
+		if not hit.is_empty() and hit["collider"] is CollisionObject3D:
+			var co := hit["collider"] as CollisionObject3D
+			var owner_id := co.shape_find_owner(int(hit["shape"]))
+			var sn = co.shape_owner_get_owner(owner_id) if owner_id >= 0 else null
+			if sn is Node and (sn as Node).has_meta("surface"):
+				set_surface(str((sn as Node).get_meta("surface")))
 	var target_steer := in_steer
 	if not autopilot:
 		in_throttle = Input.get_action_strength("accelerate")
@@ -1493,6 +1518,16 @@ func _physics_process_body(delta: float) -> void:
 			driven += 1
 	engine_force = drive_force / float(maxi(driven, 1)) * FWD
 	brake = br
+	if in_handbrake and not two_wheeler:                # the handbrake holds the rear wheels only, and locked they
+		for w in _wheels:                               #  slide sideways too: the tail can come round
+			var vw := w as VehicleWheel3D
+			vw.brake = brake_full * 1.6 if vw.position.z < 0.0 else _brk * brake_full
+			if vw.position.z < 0.0 and absf(speed) > 3.0:
+				vw.wheel_friction_slip = 0.35 * _weather_grip * _surface_grip     # (locked: a fixed low grip, not a share of a grippy tyre)
+		_hb_on = true
+	elif _hb_on:
+		_hb_on = false
+		_apply_grip()
 	if two_wheeler:
 		_balance(delta, on_ground)
 	elif on_ground:
@@ -1500,7 +1535,7 @@ func _physics_process_body(delta: float) -> void:
 		var fwd_axis := forward()
 		var roll := asin(clampf(global_transform.basis.x.y, -1.0, 1.0))
 		var roll_rate := angular_velocity.dot(fwd_axis)
-		apply_torque(fwd_axis * (roll * mass * 5.5 + roll_rate * mass * 0.8))
+		apply_torque(-fwd_axis * (roll * mass * 5.5 + roll_rate * mass * 0.8))
 		# yaw stability at speed (a gentle hand, like ESP), off with the handbrake
 		if not in_handbrake and absf(speed) > 8.0:
 			var yaw_rate := angular_velocity.dot(global_transform.basis.y)
@@ -1515,7 +1550,7 @@ func _physics_process_body(delta: float) -> void:
 	var v := linear_velocity.length()
 	if v > 0.3:
 		# rolling resistance and air drag, this vehicle's own (and more of it off the tarmac)
-		apply_central_force(-linear_velocity / v * (crr * mass * 9.81 + 0.6 * cda * v * v + _surface_drag * minf(v, 12.0)))
+		apply_central_force(-linear_velocity / v * (crr * mass * 9.81 + 0.6 * cda * v * v + _surface_drag * mass / 1500.0 * minf(v, 12.0)))
 	# speed-sensitive steering: full lock at a crawl, a few degrees at highway speed
 	# full lock only at a crawl (hairpins, parking); it falls away quickly once you're moving
 	var s := smoothstep(0.0, 18.0, absf(speed))
