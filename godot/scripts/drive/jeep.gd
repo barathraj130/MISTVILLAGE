@@ -77,7 +77,7 @@ const DRIVE_OF := {"luxury_suv": ["diesel_suv", 1.0], "xuv": ["diesel_suv", 1.0]
 	"coupe": ["sport", 1.0], "hatchback": ["petrol_car", 1.0], "sedan": ["petrol_car", 1.15], "taxi": ["petrol_car", 1.15],
 	"auto": ["auto", 1.0], "bus": ["heavy", 1.0], "lorry": ["heavy", 1.1], "delivery": ["light_truck", 1.0], "tractor": ["tractor", 1.0],
 	"bike": ["bike", 1.0], "karthik_scooter": ["scooter", 1.0], "scooter": ["scooter", 1.0]}
-## How each kind of engine sounds (synthesised, _engine_sample): "fires" a revolution (a single-cylinder four-stroke
+## How each kind of engine sounds (synthesised, _fill_engine): "fires" a revolution (a single-cylinder four-stroke
 ## 0.5, a four-cylinder 2, a six 3), the harmonics' weights and a sub-octave, how sharp each firing is ("pulse") and
 ## how much clatter rides on it (idle, full load), a turbo's whistle, a CVT belt's whine, a rattle, and the overall level.
 const ENGINE_SOUND := {
@@ -1821,38 +1821,61 @@ func _process_body(delta: float) -> void:
 
 
 ## Four-cylinder diesel note: firing pulses at 2 × rpm / 60 Hz, harmonics and a load-dependent clatter.
+## (The CPU's: this kind's values are read once a buffer, not once a sample, and the buffer goes in one push.)
 func _fill_engine() -> void:
 	var pb := _engine.get_stream_playback() as AudioStreamGeneratorPlayback
 	if pb == null:
 		return
+	var nf := pb.get_frames_available()
+	if nf <= 0:
+		return
 	var load := clampf(_thr if gear != 0 else _brk, 0.0, 1.0)
-	for i in pb.get_frames_available():
-		var smp := _engine_sample(load)
-		pb.push_frame(Vector2(smp, smp))
-
-
-## One sample (22,050 a second) of this vehicle's engine at its rpm now, under `load` (0..1): its kind's firing
-## rate and harmonics, the clatter on each firing, a turbo's whistle, a CVT's whine, a rattle (ENGINE_SOUND).
-func _engine_sample(load: float) -> float:
 	var es: Dictionary = ENGINE_SOUND.get(drive_kind, ENGINE_SOUND["diesel_suv"])
-	var f := rpm / 60.0 * float(es["fires"])
-	_engine_phase = fmod(_engine_phase + f / 22050.0, 1.0)
-	var p := _engine_phase * TAU
 	var h: Array = es["harm"]
-	var smp := (float(h[0]) * sin(p) + float(h[1]) * sin(2.0 * p + 0.3) + float(h[2]) * sin(3.0 * p + 1.1)
-		+ float(h[3]) * sin(4.0 * p + 0.7) + float(es["sub"]) * sin(0.5 * p)) * 0.5
-	var pulse := pow(maxf(sin(p), 0.0), float(es["pulse"]))
+	var h0 := float(h[0])
+	var h1 := float(h[1])
+	var h2 := float(h[2])
+	var h3 := float(h[3])
+	var sub := float(es["sub"])
+	var pw := float(es["pulse"])
 	var nz: Array = es["noise"]
-	smp += (randf() * 2.0 - 1.0) * pulse * lerpf(float(nz[0]), float(nz[1]), load)
-	if float(es["turbo"]) > 0.0:                         # a faint whistle climbing with revs, only under load
-		_turbo_phase = fmod(_turbo_phase + (900.0 + rpm * 0.6) / 22050.0, 1.0)
-		smp += sin(_turbo_phase * TAU) * float(es["turbo"]) * load * clampf((rpm - idle_rpm * 2.0) / (redline * 0.45), 0.0, 1.0)
-	if float(es["whine"]) > 0.0:                         # the belt of a CVT, rising with the road speed
-		_turbo_phase = fmod(_turbo_phase + (300.0 + absf(speed) * 45.0) / 22050.0, 1.0)
-		smp += sin(_turbo_phase * TAU) * float(es["whine"]) * (0.4 + 0.6 * load)
-	if float(es["rattle"]) > 0.0:                        # loose panels shaken by each firing
-		smp += (randf() * 2.0 - 1.0) * float(es["rattle"]) * pulse * pulse
-	return smp * (0.12 + 0.14 * load + 0.05 * rpm / redline) * float(es["level"])
+	var noise := lerpf(float(nz[0]), float(nz[1]), load)
+	var turbo := float(es["turbo"]) * load * clampf((rpm - idle_rpm * 2.0) / (redline * 0.45), 0.0, 1.0)
+	var has_turbo := float(es["turbo"]) > 0.0
+	var whine := float(es["whine"]) * (0.4 + 0.6 * load)
+	var has_whine := float(es["whine"]) > 0.0
+	var rattle := float(es["rattle"])
+	var gain := (0.12 + 0.14 * load + 0.05 * rpm / redline) * float(es["level"])
+	var step := rpm / 60.0 * float(es["fires"]) / 22050.0
+	var t_step := (900.0 + rpm * 0.6) / 22050.0
+	var w_step := (300.0 + absf(speed) * 45.0) / 22050.0
+	var buf := PackedVector2Array()
+	buf.resize(nf)
+	for i in nf:
+		_engine_phase = fmod(_engine_phase + step, 1.0)
+		var p := _engine_phase * TAU
+		var smp := (h0 * sin(p) + h1 * sin(2.0 * p + 0.3) + h2 * sin(3.0 * p + 1.1) + h3 * sin(4.0 * p + 0.7)
+			+ sub * sin(0.5 * p)) * 0.5
+		var pulse := pow(maxf(sin(p), 0.0), pw)
+		smp += (randf() * 2.0 - 1.0) * pulse * noise
+		if has_turbo:                                     # a faint whistle climbing with revs, only under load
+			_turbo_phase = fmod(_turbo_phase + t_step, 1.0)
+			smp += sin(_turbo_phase * TAU) * turbo
+		if has_whine:                                     # the belt of a CVT, rising with the road speed
+			_turbo_phase = fmod(_turbo_phase + w_step, 1.0)
+			smp += sin(_turbo_phase * TAU) * whine
+		if rattle > 0.0:                                  # loose panels shaken by each firing
+			smp += (randf() * 2.0 - 1.0) * rattle * pulse * pulse
+		smp *= gain
+		buf[i] = Vector2(smp, smp)
+	pb.push_buffer(buf)
+
+
+## Silence for a generator: a buffer of zeros in one push.
+static func _push_silence(pb: AudioStreamGeneratorPlayback, nf: int) -> void:
+	var buf := PackedVector2Array()
+	buf.resize(nf)                                      # (resize fills with zeros)
+	pb.push_buffer(buf)
 
 
 ## Road noise: wind (rising with the square of speed), tyre rumble on the surface (rougher off the tarmac),
@@ -1865,12 +1888,20 @@ func _fill_road() -> void:
 	var pb := _road.get_stream_playback() as AudioStreamGeneratorPlayback
 	if pb == null:
 		return
+	var nf := pb.get_frames_available()
+	if nf <= 0:
+		return
 	var v := absf(speed)
 	var wind_amp := clampf(v * v / 1600.0, 0.0, 0.6)
 	var rough := 1.0 if surface in ["asphalt", "concrete"] else (1.6 if surface == "gravel" else 2.2)
 	var rumble_amp := clampf(v / 30.0, 0.0, 0.5) * rough
 	var sq := slip * clampf(v / 6.0, 0.0, 1.0)
-	for i in pb.get_frames_available():
+	if v < 0.01 and sq <= 0.0 and _thud <= 0.0 and _crash <= 0.0:   # standing still, nothing happening: silence
+		_push_silence(pb, nf)
+		return
+	var buf := PackedVector2Array()
+	buf.resize(nf)
+	for i in nf:
 		var n := randf() * 2.0 - 1.0
 		_road_lp[0] += (n - _road_lp[0]) * 0.08                      # wind: soft hiss
 		_road_lp[1] += (n - _road_lp[1]) * 0.015                     # rumble: low roar
@@ -1887,17 +1918,23 @@ func _fill_road() -> void:
 			_crash = maxf(0.0, _crash - 1.0 / 22050.0 * 2.2)
 			if _crash <= 0.0:
 				_crash_phase = 0.0
-		pb.push_frame(Vector2(smp, smp))
+		buf[i] = Vector2(smp, smp)
+	pb.push_buffer(buf)
 
 
 func _fill_horn(delta: float) -> void:
 	var pb := _horn.get_stream_playback() as AudioStreamGeneratorPlayback
 	if pb == null:
 		return
-	for i in pb.get_frames_available():
-		var smp := 0.0
-		if _horn_time > 0.0:
+	var nf := pb.get_frames_available()
+	if nf > 0 and _horn_time <= 0.0:                     # (most of the time: no horn, silence in one push)
+		_push_silence(pb, nf)
+	elif nf > 0:
+		var buf := PackedVector2Array()
+		buf.resize(nf)
+		for i in nf:
 			_horn_phase += 1.0 / 22050.0
-			smp = (signf(sin(_horn_phase * TAU * 415.0)) + signf(sin(_horn_phase * TAU * 523.0))) * 0.12
-		pb.push_frame(Vector2(smp, smp))
+			var smp := (signf(sin(_horn_phase * TAU * 415.0)) + signf(sin(_horn_phase * TAU * 523.0))) * 0.12
+			buf[i] = Vector2(smp, smp)
+		pb.push_buffer(buf)
 	_horn_time -= delta
