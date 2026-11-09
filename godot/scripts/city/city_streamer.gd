@@ -467,6 +467,7 @@ func _roads(roads: Array, out: Dictionary, k := Vector2i.ZERO) -> void:
 	for r in roads:
 		var p0: PackedFloat32Array = r["p"]
 		rs.append(str(tsurf.get("%d,%d" % [roundi(p0[0] * 2.0), roundi(p0[2] * 2.0)], "")) if p0.size() >= 3 else "")
+	var trans := _transition(roads, rs)                      # {road index: [metres from start, from end] to a change of surface}
 	for surf in ["", "earth", "gravel", "concrete"]:
 		if surf != "" and not surf in rs:
 			continue
@@ -501,7 +502,19 @@ func _roads(roads: Array, out: Dictionary, k := Vector2i.ZERO) -> void:
 			var along: float = r["a0"]
 			var wl := Vector2(r["len"], roundf(float(r["c1"]) * 10.0) * 1000.0 + roundf(float(r["c0"]) * 10.0))
 			var base := v.size()
+			var tr: Array = trans.get(ri, [])
+			var span := float(30.0 if surf == "" else 20.0)
+			var run := 0.0
+			var total := 0.0
+			for q in cnt - 1:
+				total += pts[q].distance_to(pts[q + 1])
 			for q in cnt:
+				if q > 0:
+					run += pts[q].distance_to(pts[q - 1])
+				if not tr.is_empty():                              # (alpha: 0 at the end where the surface changes)
+					var a_s := smoothstep(0.0, span, run) if tr[0] else 1.0
+					var a_e := smoothstep(0.0, span, total - run) if tr[1] else 1.0
+					col.a = minf(a_s, a_e)
 				var t := pts[mini(q + 1, cnt - 1)] - pts[maxi(q - 1, 0)]
 				var sc := 1.0
 				if miter.has(q):                                    # (meeting the next road end to end: one shared edge)
@@ -569,6 +582,33 @@ func _roads(roads: Array, out: Dictionary, k := Vector2i.ZERO) -> void:
 				out["rural"] = []
 			out["rural"].append([surf, rm, shape])
 	_medians(roads, out)
+
+
+## Which ends of which roads meet a road of another surface (asphalt going on as earth, earth leaving a main
+## road): {road index: [at start, at end]}, for the worn, dusty stretch either side of the change.
+static func _transition(roads: Array, rs: Array) -> Dictionary:
+	var ends := {}
+	for i in roads.size():
+		var p: PackedFloat32Array = roads[i]["p"]
+		var n := p.size() / 3
+		if n < 2:
+			continue
+		for at_end in [false, true]:
+			var q := n - 1 if at_end else 0
+			var key := Vector2i(roundi(p[q * 3] * 2.0), roundi(p[q * 3 + 2] * 2.0))
+			if not ends.has(key):
+				ends[key] = []
+			ends[key].append([i, at_end])
+	var out := {}
+	for key in ends:
+		var lst: Array = ends[key]
+		for e in lst:
+			for o in lst:
+				if o[0] != e[0] and rs[o[0]] != rs[e[0]] and (rs[o[0]] == "" or rs[e[0]] == ""):
+					if not out.has(e[0]):
+						out[e[0]] = [false, false]
+					out[e[0]][1 if e[1] else 0] = true
+	return out
 
 
 ## Where two road pieces meet end to end with no junction surface over the place (a road going on as another

@@ -9,6 +9,9 @@ shader_type spatial;
 // with code 0 none · 1 dashed centre · 2 dashed centre + edge lines · 3 four lanes (double centre, lane dashes,
 // edges); UV2.x = the OSM way's length, UV2.y = 1000·round(10·clear_end) + round(10·clear_start): how far the junction
 // surface reaches into the way at each end (0 = no junction): paint stops short of it, a zebra is drawn just outside.
+// City roads also: narrow ones are older asphalt (lighter, dustier, more patched, the paint faded); COLOR.a < 1 near
+// an end where the road goes on as an earth one (city_streamer.gd _transition): the asphalt worn through to dust,
+// in patches, the paint gone.
 
 uniform sampler2D albedo_tex : source_color, filter_linear_mipmap_anisotropic, repeat_enable;
 uniform sampler2D normal_tex : hint_normal, filter_linear_mipmap_anisotropic, repeat_enable;
@@ -49,6 +52,9 @@ void fragment() {
 	bool lanes = COLOR.r < 0.95;
 	float across = UV.x * 6.0 - half_w;              // metres from the centreline
 	float edge = half_w - abs(across);                // metres to the nearest edge
+	float old = city_marks ? 1.0 - smoothstep(3.0, 4.6, half_w) : 0.0;   // a narrow street: older asphalt
+	float toearth = city_marks ? 1.0 - COLOR.a : 0.0;                     // near where it becomes an earth road
+	col *= 1.0 + 0.1 * old;
 	float tracks = 0.0;
 	if (lanes) {
 		float a = abs(across);
@@ -73,7 +79,7 @@ void fragment() {
 	float pick = n2(cell * 0.137);
 	vec2 inner = fract(wpos.xz / vec2(3.1, 2.3) + 0.13 * vec2(n2(wpos.xz / 0.9), n2(wpos.zx / 0.8)));
 	float box = smoothstep(0.1, 0.16, inner.x) * smoothstep(0.9, 0.84, inner.x) * smoothstep(0.14, 0.2, inner.y) * smoothstep(0.86, 0.8, inner.y);
-	float patch = step(0.9, pick) * box * wear;
+	float patch = step(0.9 - 0.12 * old, pick) * box * wear;
 	col = mix(col, col * 0.84, patch);
 	rough = mix(rough, rough + 0.08, patch);
 	// road paint: worn, faded at way ends, zebra crossings where main roads meet a junction
@@ -121,13 +127,19 @@ void fragment() {
 			paint = max(paint, max(zb * step(0.5, fract(across / 1.1)), stop * step(0.3, edge) * (code >= 2 ? 1.0 : 0.0)));
 		}
 		paint *= 0.55 + 0.45 * smoothstep(0.2, 0.6, n2(wpos.xz / 1.7)) * (1.0 - 0.4 * tracks);
+		paint *= (1.0 - 0.45 * old) * (1.0 - smoothstep(0.1, 0.6, toearth));
 		col = mix(col, paint_col, clamp(paint, 0.0, 1.0));
 		rough = mix(rough, 0.55, paint);
 	}
 	// red dust blown in from the verges, thicker in the gutters
 	float dust_amt = lanes ? (1.0 - smoothstep(0.0, 0.45, edge)) * (0.35 + 0.35 * n2(wpos.xz / 4.0)) : 0.0;
-	dust_amt += 0.06 * smoothstep(0.6, 0.8, n2(wpos.xz / 9.0));
+	dust_amt += 0.06 * smoothstep(0.6, 0.8, n2(wpos.xz / 9.0)) + 0.1 * old;
 	col = mix(col, dust * (0.8 + 0.4 * n2(wpos.xz / 1.3)), clamp(dust_amt * wear, 0.0, 0.5));
+	// worn through to the earth under it, in ragged patches, the nearer the earth road the more
+	float worn = smoothstep(0.3, 0.85, toearth + 0.35 * (n2(wpos.xz / 5.5) - 0.5) + 0.1 * (n2(wpos.xz / 1.1) - 0.5));
+	col = mix(col, vec3(0.42, 0.31, 0.23) * (0.88 + 0.24 * n2(wpos.xz / 0.9)), worn * 0.6);
+	dust_amt = max(dust_amt, worn);
+	rough = mix(rough, 0.97, worn);
 	rough = mix(rough, 1.0, dust_amt * 0.6);
 	// rain: darker, glossy, water collects in the wheel tracks first
 	float pool = wet * clamp(0.4 + tracks * 0.8 + (1.0 - dust_amt) * 0.2, 0.0, 1.0);

@@ -55,6 +55,7 @@ void fragment() {
 		paths *= 0.7 + 0.3 * n2(vec2(UV.y * 1.3, across * 0.4));
 		paths = clamp(paths, 0.0, 1.0);
 	}
+	float fromasph = 1.0 - COLOR.a;                     // near where it leaves an asphalt road: packed, gravelly
 	if (kind == 0) {
 		col = mix(soil, sand, smoothstep(0.35, 0.75, big));             // laterite here, sandier there
 		col *= mix(0.88, 1.08, fine);
@@ -68,9 +69,12 @@ void fragment() {
 		float stone = smoothstep(0.78, 0.86, grit) * (1.0 - paths * 0.7);
 		col = mix(col, vec3(0.55, 0.5, 0.45) * mix(0.8, 1.2, fine), stone * 0.7);
 		bump = grit * 0.6 + stone * 0.5 - paths * 0.3;
+		vec3 packed = mix(vec3(0.42, 0.38, 0.34), vec3(0.58, 0.5, 0.42), grit) * mix(0.85, 1.05, fine);   // grit off the tarmac
+		col = mix(col, packed, fromasph * 0.75 * smoothstep(0.3, 0.6, fine + fromasph * 0.4));
+		rough = mix(rough, 0.92, fromasph);
 		// the edge, ragged into the field: dissolved a little way in, with the soil's noise
 		if (!lot) {
-			float ragged = edge - 0.35 * fbm(w / 1.7);
+			float ragged = edge - 0.35 * fbm(w / 1.7) * (1.0 - fromasph * 0.7);
 			if (ragged < 0.05) discard;
 		}
 	} else if (kind == 1) {

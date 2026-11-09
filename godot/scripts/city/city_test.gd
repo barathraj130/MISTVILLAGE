@@ -206,7 +206,66 @@ func _joins_for_test(roads: Array) -> Dictionary:
 	return Streamer._joins_core(roads)
 
 
+## (testing) --surfacetest[=scooter]: the car (or Karthik's scooter) set down on the asphalt street 25 m before it
+## becomes an earth road (x 463, z −1715, near home), driven straight on through the change and along the earth,
+## at about 30 km/h; every half second: the surface its wheels feel, its speed, its height over the road, the
+## wheels touching, and the hardest jolt (change of vertical speed) since the last line.
+func _surfacetest() -> void:
+	var tree := get_tree()
+	while not placed or streamer.loaded.size() < 20 or not streamer.pending.is_empty():
+		await tree.process_frame
+	var scooter := "--surfacetest=scooter" in OS.get_cmdline_user_args()
+	if scooter:
+		car.configure("karthik_scooter")
+	var j := Vector3(463.4, 423.7, -1714.8)
+	var d := Vector3(1.79, 0, 5.72).normalized()
+	var start := j - d * 25.0 + Vector3.UP * 0.8
+	car.global_transform = Transform3D(Basis.looking_at(-d, Vector3.UP), start)
+	car.linear_velocity = Vector3.ZERO
+	car.angular_velocity = Vector3.ZERO
+	car.autopilot = true
+	await tree.create_timer(1.0).timeout
+	var t := 0.0
+	var vy := car.linear_velocity.y
+	var jolt := 0.0
+	var worst := 0.0
+	var last := 0.0
+	var surfaces := {}
+	var airborne := 0
+	while t < 14.0:
+		var dt := get_physics_process_delta_time()
+		await tree.physics_frame
+		t += dt
+		var ahead := car.global_position + d * 8.0
+		var off := (ahead - j)
+		var lat := off.dot(Vector3(d.z, 0, -d.x))               # (keep to the line of the street)
+		var f: Vector3 = car.forward()
+		car.in_steer = clampf(-atan2(f.x * d.z - f.z * d.x, f.x * d.x + f.z * d.z) * 2.0 + lat * 0.15, -1.0, 1.0)
+		car.in_throttle = clampf((30.0 / 3.6 - car.speed) * 0.5, 0.0, 1.0)
+		var a := absf(car.linear_velocity.y - vy) / maxf(dt, 0.001)
+		vy = car.linear_velocity.y
+		jolt = maxf(jolt, a)
+		var touching := 0
+		for w in car.get_children():
+			if w is VehicleWheel3D and (w as VehicleWheel3D).is_in_contact():
+				touching += 1
+		if touching == 0:
+			airborne += 1
+		surfaces[car.surface] = true
+		if t - last >= 0.5:
+			last = t
+			var along := (car.global_position - j).dot(d)
+			print("SURFACETEST %s t=%4.1f along %+6.1f m  %-8s %4.1f km/h  wheels %d  jolt %5.1f m/s²" % ["scooter" if scooter else "car", t, along, car.surface,
+				car.speed * 3.6, touching, jolt])
+			worst = maxf(worst, jolt)
+			jolt = 0.0
+	print("SURFACETEST %s done: surfaces %s, hardest jolt %.1f m/s², frames with no wheel down %d" % ["scooter" if scooter else "car", str(surfaces.keys()), worst, airborne])
+	tree.quit()
+
+
 func _ready() -> void:
+	if " --surfacetest" in " " + " ".join(OS.get_cmdline_user_args()):
+		_surfacetest.call_deferred()
 	if "--profsweep" in OS.get_cmdline_user_args():
 		_profsweep.call_deferred()
 	if "--jointest" in OS.get_cmdline_user_args():
@@ -322,7 +381,7 @@ func _ready() -> void:
 		fines.load_wallet()
 		var self_test := false                      # (a self-test never writes your saved game: wallet, challans, weather)
 		for flag in ["--testdrive", "--carshot", "--trafficshot", "--crashtest", "--peopletest", "--parkedtest",
-				"--potholetest", "--flyover", "--clock=", "--weather=", "--nohud", "--doortest", "--threattest"]:
+				"--potholetest", "--flyover", "--clock=", "--weather=", "--nohud", "--doortest", "--threattest", "--surfacetest", "--jointest"]:
 			self_test = self_test or " ".join(args).contains(flag)
 		fines.persist = not self_test
 		hud = DriveHud.new()
