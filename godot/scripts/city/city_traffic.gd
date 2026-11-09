@@ -26,6 +26,14 @@ var vehicles: Array = []
 var wet := 0.0                             # how soaked the roads are (city_weather.gd): everyone a little slower
 var ends := {}                             # Vector2i (1 m grid) → [[road, at_end(bool)], ...]
 var signals: Array = []
+## Speed (the CPU's): signals and vehicles kept in a grid of GRID-metre cells, so each one looks only at what's
+## near it; and each vehicle thinks (the road's end, the gap ahead, the signals: its target speed) THINK_EVERY
+## physics steps, in turn, while its speed and place move on every step.
+const GRID := 40.0                         # (≥ the 40 m a driver looks ahead: the 3×3 round him holds all of it)
+const THINK_EVERY := 4
+var sig_grid := {}                         # Vector2i → [signal, ...]
+var _veh_grid := {}                        # Vector2i → [vehicle, ...] (this step)
+var _tick := 0
 var _built_seen := -1
 var _rng := RandomNumberGenerator.new()
 
@@ -58,8 +66,31 @@ func _physics_process_timed(delta: float) -> void:
 	while vehicles.size() < want and tries < 8:
 		tries += 1
 		_spawn(me)
+	_tick += 1
+	_veh_grid.clear()
 	for v in vehicles:
-		_drive(v, delta, me)
+		var c := _cell(v["pos"])
+		if not _veh_grid.has(c):
+			_veh_grid[c] = []
+		_veh_grid[c].append(v)
+	for i in vehicles.size():
+		_drive(vehicles[i], delta, me, (i + _tick) % THINK_EVERY == 0 or not vehicles[i].has("target"))
+
+
+static func _cell(p: Vector3) -> Vector2i:
+	return Vector2i(floori(p.x / GRID), floori(p.z / GRID))
+
+
+## What's in the 3×3 cells round a place (a grid of vehicles or signals).
+static func _near(grid: Dictionary, p: Vector3) -> Array:
+	var c := _cell(p)
+	var out: Array = []
+	for dx in [-1, 0, 1]:
+		for dz in [-1, 0, 1]:
+			var k := Vector2i(c.x + dx, c.y + dz)
+			if grid.has(k):
+				out.append_array(grid[k])
+	return out
 
 
 func _index() -> void:
@@ -81,6 +112,12 @@ func _index() -> void:
 					ends[key] = []
 				ends[key].append([r, at_end])
 		signals.append_array(node.get_meta("signals", []))
+	sig_grid.clear()
+	for sg in signals:
+		var c := _cell(sg[0])
+		if not sig_grid.has(c):
+			sig_grid[c] = []
+		sig_grid[c].append(sg)
 
 
 static func _pt(p: PackedFloat32Array, i: int) -> Vector3:
@@ -297,9 +334,14 @@ func _knocked(v: Dictionary, delta: float) -> bool:
 	return false
 
 
-func _drive(v: Dictionary, delta: float, me: Vector3) -> void:
+func _drive(v: Dictionary, delta: float, me: Vector3, think := true) -> void:
 	if _knocked(v, delta):
 		return
+	if not think:
+		var i0: int = v["i"]
+		if i0 != (int((v["road"]["p"] as PackedFloat32Array).size() / 3) - 1 if int(v["dir"]) > 0 else 0):
+			_move(v, float(v["target"]), delta)
+			return
 	var r: Dictionary = v["road"]
 	var p: PackedFloat32Array = r["p"]
 	var n := p.size() / 3
@@ -328,7 +370,7 @@ func _drive(v: Dictionary, delta: float, me: Vector3) -> void:
 		target = minf(target, 6.0 + to_end * 0.35)
 	# vehicles and you ahead in my lane
 	var gap := 999.0
-	for o in vehicles:
+	for o in _near(_veh_grid, pos):
 		if o == v:
 			continue
 		var rel: Vector3 = o["pos"] - pos
@@ -342,7 +384,7 @@ func _drive(v: Dictionary, delta: float, me: Vector3) -> void:
 	if gap < 40.0:
 		target = minf(target, maxf(0.0, (gap - 4.0) * 0.55))
 	# red (or amber, if not already committed) signals facing me, just ahead
-	for s in signals:
+	for s in _near(sig_grid, pos):
 		var sp: Vector3 = s[0]
 		var rel2: Vector3 = sp - pos
 		var ahead2 := rel2.dot(fwd)
@@ -354,6 +396,11 @@ func _drive(v: Dictionary, delta: float, me: Vector3) -> void:
 		var st: int = Streamer.signal_state(float(s[2]))
 		if st == 2 or (st == 1 and ahead2 > 12.0):
 			target = minf(target, maxf(0.0, (ahead2 - 6.0) * 0.5))
+	v["target"] = target
+	_move(v, target, delta)
+
+
+func _move(v: Dictionary, target: float, delta: float) -> void:
 	var spd: float = v["speed"]
 	spd = move_toward(spd, target, delta * (5.0 if target < spd else 1.8))
 	v["speed"] = spd
