@@ -979,6 +979,11 @@
    "trust": {
     "meenakshi": 5
    }
+  },
+  "priya_missed": {
+   "trust": {
+    "priya": -5
+   }
   }
  },
  "standing_notices": [
@@ -7548,7 +7553,7 @@
     {
      "to": "karthik_room",
      "wait": 0,
-     "until": "12:15",
+     "until": "12:35",
      "goal": {
       "en": "Wait till it's time to go to the hospital",
       "ta": "மருத்துவமனைக்கு போற நேரம் வரைக்கும் காத்திருங்க"
@@ -7578,7 +7583,10 @@
    "goal": {
     "en": "Kongu Multispeciality Hospital, Avinashi Road, by 1 PM",
     "ta": "கொங்கு மல்டிஸ்பெஷாலிட்டி மருத்துவமனை, அவிநாசி ரோடு, மதியம் 1 மணிக்குள்ள"
-   }
+   },
+   "realtime": true,
+   "ontime_flag": "priya_met",
+   "late_flag": "priya_missed"
   },
   {
    "do": "meet",
@@ -7599,7 +7607,8 @@
    "goal": {
     "en": "Priya, at the side gate",
     "ta": "சைட் கேட்ல பிரியா"
-   }
+   },
+   "unless": "priya_missed"
   },
   {
    "do": "talk",
@@ -7613,6 +7622,50 @@
      "who": "priya",
      "en": "His hand. Green ink. I'd know it anywhere. ...Read it.",
      "ta": "அவர் கையெழுத்து. பச்ச மை. எங்க பாத்தாலும் தெரியும். ...படி."
+    }
+   ],
+   "unless": "priya_missed"
+  },
+  {
+   "do": "meet",
+   "when": "priya_missed",
+   "who": "security",
+   "cast": {
+    "security": {
+     "world": [
+      7860.6,
+      -2842.2
+     ],
+     "look_world": [
+      7854.1,
+      -2842.2
+     ],
+     "anim": "Idle"
+    }
+   },
+   "goal": {
+    "en": "The side gate. Priya isn't there. The guard is",
+    "ta": "சைட் கேட். பிரியா இல்ல. செக்யூரிட்டி இருக்காரு"
+   }
+  },
+  {
+   "do": "talk",
+   "when": "priya_missed",
+   "lines": [
+    {
+     "who": "security",
+     "en": "You're the driver? Doctor waited twenty minutes. Then she went up to scrub in.",
+     "ta": "நீங்க தான் டிரைவரா? டாக்டர் இருபது நிமிஷம் காத்திருந்தாங்க. அப்புறம் சர்ஜரிக்கு ரெடியாக மேல போயிட்டாங்க."
+    },
+    {
+     "who": "security",
+     "en": "(An envelope, sealed with tape.) She said: 'Tell him I don't wait for anyone. Not even for this.'",
+     "ta": "(டேப் ஒட்டின ஒரு கவர்.) அவங்க சொன்னாங்க: 'நான் யாருக்காகவும் காத்திருக்க மாட்டேன்னு சொல்லுங்க. இதுக்காக கூட.'"
+    },
+    {
+     "who": "karthik",
+     "en": "(Her copy of sir's note. In green ink, his hand. I read it standing at the gate.)",
+     "ta": "(சார் குறிப்போட அவங்க நகல். பச்ச மையில, அவர் கையெழுத்து. கேட்லயே நின்னு படிக்கறேன்.)"
     }
    ]
   },
@@ -7654,7 +7707,8 @@
      "en": "Your Sundaram has a copy. Take this one to those farmers. They should know he meant it.",
      "ta": "உன் சுந்தரம் கிட்ட ஒரு நகல் இருக்கு. இத அந்த விவசாயிங்க கிட்ட கொண்டு போ. அவர் உண்மையா தான் சொன்னாருன்னு அவங்களுக்கு தெரியணும்."
     }
-   ]
+   ],
+   "unless": "priya_missed"
   },
   {
    "do": "choose",
@@ -7677,7 +7731,8 @@
      },
      "set": "priya_warned"
     }
-   ]
+   ],
+   "unless": "priya_missed"
   },
   {
    "do": "talk",
