@@ -20,6 +20,11 @@ Values marked **(in game)** are already built; everything else is to build.
 - A new game starts on **day 1 at 6:30 AM (in game)**. A **week** is 7 game days, starting on Monday; weekly bills
   fall due on Monday morning.
 - The clock **runs** while you drive or walk. It **pauses** in menus, on the phone screen and in cutscenes.
+- **At the wheel it runs slower: 5 game minutes a real minute** (decided 2026-11-09; story.gd `DRIVE_CLOCK`). At 30
+  a 4-minute ride to the station cost two game hours and the evening signing was always missed; at 5 a ride costs
+  about what it would in Coimbatore traffic (home → Nagar station ≈ 20 game minutes, Pudhur Vayal → the station
+  ≈ 1½–2½ hours depending on how you drive). A few timed scenes run at **1:1** ("realtime": the night delivery, Divya's
+  practical, the hospital gate) so their real travel times are the deadline.
   Conversations take fixed game time (most of them 10–30 minutes).
 - **Sleep, food and stress** (built 2026-10-29: `scripts/city/life.gd`, GAME_DESIGN.md §3):
   - **Tiredness** climbs about 5.5 a game hour (faster driving). Only sleep clears it, and a sleep lasts **at least

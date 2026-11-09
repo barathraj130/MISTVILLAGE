@@ -91,6 +91,7 @@ var _skip := false
 var _shots := ""
 var _jumped := false
 var on_time := true                 # the last deadline ("by") was met
+const DRIVE_CLOCK := 5.0            # game minutes a real minute at the wheel (30 on foot and waiting): GAME_RULES.md §1
 var _skip_minutes := 0.0            # (testing) game minutes a skipped real-time drive would have taken
 var _shot_n := 0
 var _gig := {}                       # the delivery shift ("gigs"): the order on offer or under way
@@ -348,6 +349,8 @@ func _process(dt: float) -> void:
 				city.phone.answer()
 			if city.phone.ringing.is_empty():
 				_next()
+		"finale":                                        # (handed over once, from _next)
+			pass
 		"free":
 			_tick_clock(dt)
 			if _skip and t_step > 4.0 and (_chapters > 0 or not "--jailtest" in OS.get_cmdline_user_args()):
@@ -654,14 +657,21 @@ func _next() -> void:
 			table.lang = lang
 			table.life = city.life
 			table.start(cur, lang, _skip, pick)
+		"finale":                                        # Part 1 done: the ride up the ghat, in the mountain world
+			flags["part1_done"] = true
+			_story_save()
+			print("STORY finale: to the ghat (%s)" % _clock12())
+			Engine.set_meta("finale", {"lang": lang, "minute": 6.0 * 60.0 + 5.0})   # (the climb is at dawn, as written)
+			get_tree().change_scene_to_file.call_deferred("res://scenes/drive.tscn")
 		"drive":
 			_tail_end()
 			if cur.has("tail"):
 				_tail_start(cur["tail"])
 			var p := place_pos(cur["to"])
 			map.pin = Vector2(p.x, p.z)
-			if cur.get("realtime", false):              # (testing: a skipped drive takes its road time at 30 km/h)
-				_skip_minutes = Vector2(car.global_position.x - p.x, car.global_position.z - p.z).length() * 1.3 / 500.0
+			# (testing: a skipped drive takes its road time at 30 km/h, on the clock it would run at)
+			_skip_minutes = Vector2(car.global_position.x - p.x, car.global_position.z - p.z).length() * 1.3 / 500.0 \
+				* (1.0 if cur.get("realtime", false) else DRIVE_CLOCK)
 			_beam.visible = true
 			if cur.get("comfort", false):
 				_pen = 0.0
@@ -3677,6 +3687,8 @@ func _tick_clock(dt: float) -> void:
 		return
 	if cur.get("realtime", false):
 		fines.sim.minute += dt / 60.0                    # one game minute a real minute: real travel times
+	elif city.driving and city.walker == null:
+		fines.sim.advance(dt * DRIVE_CLOCK / 30.0, 0.0)   # at the wheel: 5 game minutes a real minute (GAME_RULES.md §1)
 	else:
 		fines.sim.advance(dt, 0.0)
 

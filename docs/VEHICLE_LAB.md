@@ -328,3 +328,6 @@ The two-wheelers parked in rows on the pavements are solid too now (`parked_bike
 
 One body holding thousands of shapes was rebuilt whenever a tile came or went. Each tile now has its own body made
 straight on the physics server; crashes still see it as `ParkedVehicles`, so the owner's claim works as before.
+
+Test note (2026-11-09): two-wheelers lose their balance when a test runs the engine faster than real time
+(`--timescale=4`: the balance controller's steps get too big and the scooter falls). Test them at `--timescale=1`.

@@ -385,7 +385,7 @@ The slice grew into the whole of Part 1. Day by day, as it plays now:
 | 17 | The court orders; Pandi at the Gandhipuram bus stand: pick him out of the crowd by Selvi's description (black cap, dark jacket, grey trousers) before the Salem bus leaves; a wrong man costs time; miss it and the patrol stops the bus at a signal | E10, E13, E19 |
 | 18 | Joseph at the CODISSIA fair (the Kovai Agri Expo): record him on the phone at the red tractor without looking at him; stare and he walks off, leaving only his pages | E15 |
 | 19 | The trial in the Principal Sessions Court: the prosecution's six points answered with the evidence found (bought evidence objected to, and the job card too unless the programmer's log backs it), the night replayed on the map; Pandi's testimony; Suresh arrested; Karthik discharged | |
-| 20 | Meenakshi and Priya at the door: the keys of The Mist Village; the Kotagiri road at dawn | |
+| 20 | Meenakshi and Priya at the door: the keys of The Mist Village; at dawn he rides north on his scooter to the ghat, and the game hands over to the mountain world: the nine hairpins at sunrise, ridden, not watched, to The Mist Village's gate, where Part 1 ends on its title ("Part 2 begins here") and he can walk in | |
 
 ## 8. The vertical slice (20–30 minutes of play)
 The slice compresses Act 1 into one day and night, then plays the accusation morning and the first lead. It's built

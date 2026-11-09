@@ -95,6 +95,7 @@ var lateral := 0.0                 # + = left of centre
 var stage_id := ""
 var ready_to_drive := false
 var checkpost := "closed"          # closed → open | skipped
+var _finale := {}                  # Part 1's last ride, handed over by the story (story.gd "finale"): {lang, minute}
 var stop_time := 0.0
 var elephant_warn_at := -10.0
 var too_close := 0
@@ -499,7 +500,17 @@ func _start() -> void:
 	var start_d := 12.0
 	sim.distance_scale = route.real_length / route.length if route.is_real else 1.0
 	var saved := -1.0
-	if Engine.has_meta("continue_game") or "--continue" in args:
+	if "--finale" in args and not Engine.has_meta("finale"):   # (testing the finale on its own)
+		Engine.set_meta("finale", {"lang": "ta" if "--storyta" in args else "en", "minute": 365.0})
+	if Engine.has_meta("finale"):                       # Part 1's end: the ghat at dawn, from its foot
+		_finale = Engine.get_meta("finale")
+		Engine.remove_meta("finale")
+		start_d = route.marks["ghat_start"] - 300.0      # (the foot of the ghat: all nine hairpins ahead)
+		checkpost = "open"                                 # (the forest check post up the road waves him through)
+		sim.minute = float(_finale.get("minute", 350.0))
+		sim.weather = "clear"
+		sim.wx = Sim.WEATHER["clear"].duplicate()
+	elif Engine.has_meta("continue_game") or "--continue" in args:
 		Engine.remove_meta("continue_game")
 		saved = _load_game()
 	for a in args:
@@ -557,9 +568,14 @@ func _start() -> void:
 		var jt := jeep.global_transform
 		var lat: float = (best[0] - route.pts[pi]).dot(route.left(pi))
 		jeep.global_transform = Transform3D(jt.basis, jt.origin + route.left(pi) * (lat - Route.LANE))
+	if not _finale.is_empty() and Jeep._available("karthik_scooter"):   # his own scooter, up the hills
+		jeep.configure("karthik_scooter")
+		_place_jeep(start_d)
+		jeep.set_lights(true)
+		_message("Dawn. The Kotagiri ghat." if str(_finale.get("lang", "en")) == "en" else "விடியற்காலை. கோத்தகிரி மலைப்பாதை.", 5.0)
 	# your second car waits on the shoulder just behind you: get out (F), walk over, F again
 	var spare := "coupe" if jeep.vehicle != "coupe" else "luxury_suv"
-	if Jeep._available(spare) and not "--nospare" in args:
+	if Jeep._available(spare) and not "--nospare" in args and _finale.is_empty():
 		var jf: Transform3D = jeep.global_transform
 		_park_left_behind(spare, Transform3D(jf.basis, jf.origin - jf.basis.z * 9.0 + jf.basis.x * 2.6 + Vector3(0, -0.3, 0)))
 	if route.is_real and not "--nomap" in args:
@@ -1395,6 +1411,16 @@ func _arrive(skipped: bool) -> void:
 	if arrived:
 		return
 	arrived = true
+	if resort and not _finale.is_empty():              # Part 1's end, at the gate he was given
+		var ta := str(_finale.get("lang", "en")) == "ta"
+		_show_title("தி மிஸ்ட் வில்லேஜ்" if ta else "The Mist Village",
+			"பகுதி 1: தவறான குற்றச்சாட்டு · முடிவு.  பகுதி 2 இங்கே தொடங்குது." if ta
+			else "Part 1: The Wrong Accusation · the end.  Part 2 begins here.")
+		_message("நிறுத்திட்டு, F அழுத்தி இறங்கி சுத்தி பாருங்க." if ta else "Park, then press F to get out and walk in.", 8.0)
+		print("STORY finale: arrived at The Mist Village d=%.0f" % d)
+		if "--quit-at-end" in args:
+			get_tree().quit()
+		return
 	if resort:
 		# same world: you drive straight in, and can get out and walk around
 		_show_title("The Mist Village", "Where the mist slows you down.")

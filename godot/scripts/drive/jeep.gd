@@ -1826,7 +1826,7 @@ func _engine_sample(load: float) -> float:
 ## Road noise: wind (rising with the square of speed), tyre rumble on the surface (rougher off the tarmac),
 ## tyre squeal when sliding, and a thud when the suspension hits a bump or a speed breaker.
 func _fill_road() -> void:
-	if _road == null:
+	if _road == null or not _road.is_inside_tree():      # (leaving the scene: nothing to play into)
 		return
 	if not _road.playing:
 		_road.play()

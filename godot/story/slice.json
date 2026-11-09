@@ -12752,7 +12752,7 @@
    "to": "codissia",
    "radius": 70,
    "vehicle": "karthik_scooter",
-   "by": "14:00",
+   "by": "14:30",
    "goal": {
     "en": "CODISSIA Trade Fair Complex, Hall B, by 2 PM",
     "ta": "கொடிசியா வர்த்தக கண்காட்சி வளாகம், ஹால் B, மதியம் 2-க்குள்ள"
@@ -13955,29 +13955,13 @@
     },
     {
      "who": "karthik",
-     "en": "(The road climbs into the mist.)",
-     "ta": "(ரோடு பனிக்குள்ள ஏறுது.)"
+     "en": "(The road climbs into the mist. Nine hairpins to Kotagiri, sir used to say. He counted them every time.)",
+     "ta": "(ரோடு பனிக்குள்ள ஏறுது. கோத்தகிரிக்கு ஒன்பது கொண்டை ஊசி வளைவு, சார் சொல்லுவாரு. ஒவ்வொரு தடவையும் எண்ணுவாரு.)"
     }
    ]
   },
   {
-   "do": "card",
-   "big": {
-    "en": "Part 1: The Wrong Accusation",
-    "ta": "பகுதி 1: தவறான குற்றச்சாட்டு"
-   },
-   "small": {
-    "en": "Part 2: The Mist Village",
-    "ta": "பகுதி 2: தி மிஸ்ட் வில்லேஜ்"
-   }
-  },
-  {
-   "do": "free",
-   "goal": {
-    "en": "Free drive. Coimbatore is yours (for now).",
-    "ta": "சுதந்திரமா ஓட்டுங்க. கோவை உங்களுது (இப்போதைக்கு)."
-   },
-   "vehicle": "luxury_suv"
+   "do": "finale"
   }
  ]
 }
