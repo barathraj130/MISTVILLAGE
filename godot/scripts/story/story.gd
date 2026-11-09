@@ -2642,7 +2642,8 @@ func _wait_step() -> void:
 
 ## "gate": someone won't let him by, and two ways round it, both done, not chosen from a list: take out his wallet
 ## and hold a note out to them (a "bribe" or more: "sets"["bribe"]); or go to the stall nearby ("cast"'s "seller"),
-## buy tea and vadai ("price") and bring them back ("sets"["tea"]).
+## buy tea and vadai ("price") and bring them back ("sets"["tea"]). "no_note": {en, ta}: money won't do any more (a
+## second night, after he's been treated as a man and not a lock): the wallet only gets that thought, tea is the way.
 var _has_tea := false
 
 
@@ -2660,7 +2661,7 @@ func _gate() -> void:
 		if arg.begins_with("--storychoose="):
 			pick = int(arg.get_slice("=", 1))
 	if _skip and t_step > 1.0:                           # (testing: 1 the note, 2 the tea)
-		if pick != 2:
+		if pick != 2 and not cur.has("no_note"):
 			_gate_note(int(cur.get("bribe", 300)))
 			return
 		var to: Node3D = a if _has_tea else sl
@@ -2684,6 +2685,9 @@ func _gate() -> void:
 			print("STORY gate → tea")
 			_next()
 			return
+		elif near_him and cur.has("no_note"):
+			_say({"who": "karthik", "en": cur["no_note"]["en"], "ta": cur["no_note"]["ta"]}, false)
+			get_tree().create_timer(2.5).timeout.connect(func(): box.visible = false)
 		elif near_him:
 			city.hands.give({"id": "wallet", "kind": "wallet", "title": {"en": "Wallet", "ta": "பர்ஸ்"}})
 			if not city.hands.note_given.is_connected(_gate_note):
@@ -2694,7 +2698,7 @@ func _gate() -> void:
 		hint = ("E: tea and vadai, ₹%d" if lang == "en" else "E: டீ, வடை, ₹%d") % int(cur.get("price", 40))
 	elif near_him and _has_tea:
 		hint = "E: give him the tea" if lang == "en" else "E: அவருக்கு டீ குடுங்க"
-	elif near_him:
+	elif near_him and not cur.has("no_note"):
 		hint = "E: your wallet" if lang == "en" else "E: உங்க பர்ஸ்"
 	goal.text = tr_(cur["goal"]) + ("\n" + hint if hint != "" else "")
 

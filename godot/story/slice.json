@@ -3627,7 +3627,7 @@
   {
    "do": "gate",
    "who": "muniyandi",
-   "bribe": 300,
+   "bribe": 500,
    "price": 40,
    "sets": {
     "bribe": "bribed_watchman",
@@ -3700,10 +3700,669 @@
     },
     {
      "who": "muniyandi",
+     "en": "(He drinks the tea to the last drop and hands back the glass.) Tea is tea, thambi. The stair is police business.",
+     "ta": "(டீய கடைசி சொட்டு வரைக்கும் குடிச்சுட்டு கிளாஸ திருப்பி குடுக்கறார்.) டீ டீ தான் தம்பி. படி போலீஸ் விஷயம்."
+    },
+    {
+     "who": "muniyandi",
+     "en": "...Less sugar, next time. My sugar is high.",
+     "ta": "...அடுத்த தடவ சக்கர கம்மியா. எனக்கு சுகர் இருக்கு."
+    },
+    {
+     "who": "karthik",
+     "en": "(Next time. He said next time.)",
+     "ta": "(அடுத்த தடவ. அடுத்த தடவன்னு சொன்னாரு.)"
+    }
+   ]
+  },
+  {
+   "do": "drive",
+   "to": "home",
+   "radius": 45,
+   "goal": {
+    "en": "Home. He'll be at the gate tomorrow night",
+    "ta": "வீடு. நாளைக்கு ராத்திரியும் அவர் கேட்ல இருப்பாரு"
+   },
+   "when": "honest_watchman"
+  },
+  {
+   "do": "home",
+   "room": "home",
+   "at": "home",
+   "start": "door",
+   "cast": {
+    "amma": {
+     "mark": "amma_kitchen"
+    }
+   },
+   "keep": true,
+   "visits": [
+    {
+     "to": "karthik_room",
+     "sleep_until": "07:00",
+     "goal": {
+      "en": "Sleep",
+      "ta": "தூங்குங்க"
+     },
+     "prompt": {
+      "en": "lie down",
+      "ta": "படுங்க"
+     }
+    }
+   ],
+   "when": "honest_watchman"
+  },
+  {
+   "do": "talk",
+   "cast": {
+    "amma": {
+     "mark": "amma",
+     "anim": "Sit"
+    },
+    "divya": {
+     "mark": "divya",
+     "anim": "Idle"
+    }
+   },
+   "lines": [
+    {
+     "who": "amma",
+     "en": "Eleven o'clock you came in last night. Where were you?",
+     "ta": "நேத்து ராத்திரி பதினொரு மணிக்கு வந்த. எங்க போயிருந்த?"
+    },
+    {
+     "who": "karthik",
+     "en": "Drinking tea with a watchman, Amma.",
+     "ta": "ஒரு வாட்ச்மேன் கூட டீ குடிச்சுட்டு இருந்தேன் அம்மா."
+    },
+    {
+     "who": "amma",
+     "en": "(She looks at me for a long time.) ...Then eat something before you drink more tea.",
+     "ta": "(ரொம்ப நேரம் என்னையே பாக்கறாங்க.) ...அப்போ இன்னும் டீ குடிக்கறதுக்கு முன்னாடி ஏதாவது சாப்பிடு."
+    },
+    {
+     "who": "divya",
+     "en": "Anna's making friends. Good. He needs some.",
+     "ta": "அண்ணாவுக்கு ஃப்ரெண்ட்ஸ் கிடைக்கறாங்க. நல்லது. அவனுக்கு வேணும்."
+    }
+   ],
+   "when": "honest_watchman"
+  },
+  {
+   "do": "home",
+   "room": "home",
+   "at": "home",
+   "start": "here",
+   "visits": [
+    {
+     "to": "door",
+     "auto": true,
+     "reach": 1.4,
+     "goal": {
+      "en": "Out",
+      "ta": "வெளியே"
+     }
+    }
+   ],
+   "when": "honest_watchman"
+  },
+  {
+   "do": "wait",
+   "until": "17:30",
+   "goal": {
+    "en": "The day is yours. Sign at the station by 7 PM; the watchman comes on at nine",
+    "ta": "இன்னைக்கு நாள் உங்களுது. 7 மணிக்குள்ள ஸ்டேஷன்ல கையெழுத்து; வாட்ச்மேன் ஒன்பது மணிக்கு வருவாரு"
+   },
+   "when": "honest_watchman"
+  },
+  {
+   "do": "drive",
+   "to": "police",
+   "radius": 45,
+   "vehicle": "karthik_scooter",
+   "by": "19:00",
+   "goal": {
+    "en": "Sign at the station by 7 PM",
+    "ta": "7 மணிக்குள்ள ஸ்டேஷன்ல கையெழுத்து"
+   },
+   "when": "honest_watchman"
+  },
+  {
+   "do": "home",
+   "room": "police",
+   "at": "police",
+   "start": "door",
+   "cast": {
+    "murugesan": {
+     "mark": "inspector",
+     "anim": "Idle"
+    },
+    "selvi": {
+     "mark": "constable",
+     "anim": "Idle"
+    }
+   },
+   "keep": true,
+   "visits": [
+    {
+     "to": "selvi",
+     "task": "sign",
+     "goal": {
+      "en": "Sign the bail register at Selvi's desk",
+      "ta": "செல்வி மேஜையில ஜாமீன் பதிவேட்டுல கையெழுத்து"
+     },
+     "prompt": {
+      "en": "sign the register",
+      "ta": "பதிவேட்டுல கையெழுத்து"
+     },
+     "header": {
+      "en": "Nagar Police Station",
+      "ta": "நகர் காவல் நிலையம்"
+     },
+     "form": {
+      "en": "BAIL ATTENDANCE REGISTER",
+      "ta": "ஜாமீன் வருகை பதிவேடு"
+     },
+     "fields": [
+      [
+       {
+        "en": "Crime No.",
+        "ta": "குற்ற எண்"
+       },
+       "412"
+      ],
+      [
+       {
+        "en": "Name",
+        "ta": "பெயர்"
+       },
+       {
+        "en": "Karthik M.",
+        "ta": "கார்த்திக் ம."
+       }
+      ],
+      [
+       {
+        "en": "Day",
+        "ta": "நாள்"
+       },
+       "1"
+      ]
+     ],
+     "sign_label": {
+      "en": "Signature of the accused",
+      "ta": "குற்றம் சாட்டப்பட்டவர் கையொப்பம்"
+     },
+     "seal": {
+      "en": "STATION SEAL",
+      "ta": "நிலைய முத்திரை"
+     }
+    }
+   ],
+   "when": "honest_watchman"
+  },
+  {
+   "do": "home",
+   "room": "police",
+   "at": "police",
+   "start": "here",
+   "visits": [
+    {
+     "to": "door",
+     "auto": true,
+     "reach": 1.4,
+     "goal": {
+      "en": "Out",
+      "ta": "வெளியே"
+     }
+    }
+   ],
+   "when": "honest_watchman"
+  },
+  {
+   "do": "drive",
+   "to": "office_building",
+   "radius": 45,
+   "goal": {
+    "en": "The night watchman at Raghavan Developers' building",
+    "ta": "ராகவன் டெவலப்பர்ஸ் கட்டிடத்து நைட் வாட்ச்மேன்"
+   },
+   "when": "honest_watchman"
+  },
+  {
+   "do": "wait",
+   "until": "21:00",
+   "goal": {
+    "en": "The night watchman comes on at nine",
+    "ta": "நைட் வாட்ச்மேன் ஒன்பது மணிக்கு வருவாரு"
+   },
+   "when": "honest_watchman"
+  },
+  {
+   "do": "meet",
+   "who": "muniyandi",
+   "cast": {
+    "muniyandi": {
+     "pos": [
+      -3.2,
+      1.5
+     ],
+     "look": [
+      0,
+      0
+     ],
+     "anim": "Idle"
+    }
+   },
+   "goal": {
+    "en": "The night watchman, at the building's gate",
+    "ta": "கட்டிடத்து கேட்ல நைட் வாட்ச்மேன்"
+   },
+   "when": "honest_watchman"
+  },
+  {
+   "do": "talk",
+   "lines": [
+    {
+     "who": "muniyandi",
+     "en": "You again. (This time he leaves the grill gate open.)",
+     "ta": "நீ திரும்பவுமா. (இந்த தடவ கிரில் கேட்ட திறந்தே விடறார்.)"
+    }
+   ],
+   "when": "honest_watchman"
+  },
+  {
+   "do": "gate",
+   "who": "muniyandi",
+   "price": 40,
+   "sets": {
+    "tea": "watch_n2"
+   },
+   "cast": {
+    "seller": {
+     "pos": [
+      3.5,
+      16.0
+     ],
+     "look": [
+      -3.2,
+      1.5
+     ],
+     "model": "crowd_m3",
+     "anim": "Idle"
+    }
+   },
+   "goal": {
+    "en": "Tea again, less sugar. The stall across the road",
+    "ta": "திரும்ப டீ, சக்கர கம்மியா. ரோட்டுக்கு அந்த பக்கம் கடை"
+   },
+   "when": "honest_watchman",
+   "no_note": {
+    "en": "(Not money. Not with him, not now.)",
+    "ta": "(காசு இல்ல. அவர்கிட்ட இல்ல, இப்போ இல்ல.)"
+   }
+  },
+  {
+   "do": "talk",
+   "add_minutes": 30,
+   "lines": [
+    {
+     "who": "karthik",
+     "en": "Less sugar, anna.",
+     "ta": "சக்கர கம்மி, அண்ணா."
+    },
+    {
+     "who": "muniyandi",
+     "en": "(For the first time, he smiles.) You remembered.",
+     "ta": "(முதல் தடவையா சிரிக்கறார்.) ஞாபகம் வச்சிருக்க."
+    },
+    {
+     "who": "muniyandi",
+     "en": "Twenty-two years at this gate. Forty people in and out every day, and not one knows my name. Your sir knew it.",
+     "ta": "இந்த கேட்ல இருபத்திரெண்டு வருஷம். தினமும் நாப்பது பேர் உள்ள வெளிய போறாங்க, ஒருத்தருக்கும் என் பேர் தெரியாது. உங்க சாருக்கு தெரியும்."
+    },
+    {
+     "who": "karthik",
+     "en": "That night, anna. Did you see me?",
+     "ta": "அன்னைக்கு ராத்திரி அண்ணா. என்ன பாத்தீங்களா?"
+    },
+    {
+     "who": "muniyandi",
+     "en": "I saw a man. ...Not tonight, thambi. A jeep from the station has gone past twice already.",
+     "ta": "ஒருத்தன பாத்தேன். ...இன்னைக்கு வேண்டாம் தம்பி. ஸ்டேஷன் ஜீப் ஏற்கனவே ரெண்டு தடவ போயிருச்சு."
+    },
+    {
+     "who": "karthik",
+     "en": "(Twice. They're watching him. Or me.)",
+     "ta": "(ரெண்டு தடவ. அவர பாக்கறாங்க. இல்ல என்ன.)"
+    }
+   ],
+   "when": "honest_watchman"
+  },
+  {
+   "do": "drive",
+   "to": "home",
+   "radius": 45,
+   "goal": {
+    "en": "Home. One more night",
+    "ta": "வீடு. இன்னும் ஒரு ராத்திரி"
+   },
+   "when": "honest_watchman"
+  },
+  {
+   "do": "home",
+   "room": "home",
+   "at": "home",
+   "start": "door",
+   "cast": {
+    "amma": {
+     "mark": "amma_kitchen"
+    }
+   },
+   "keep": true,
+   "visits": [
+    {
+     "to": "karthik_room",
+     "sleep_until": "07:00",
+     "goal": {
+      "en": "Sleep",
+      "ta": "தூங்குங்க"
+     },
+     "prompt": {
+      "en": "lie down",
+      "ta": "படுங்க"
+     }
+    }
+   ],
+   "when": "honest_watchman"
+  },
+  {
+   "do": "talk",
+   "cast": {
+    "amma": {
+     "mark": "amma",
+     "anim": "Sit"
+    },
+    "divya": {
+     "mark": "divya",
+     "anim": "Idle"
+    }
+   },
+   "lines": [
+    {
+     "who": "divya",
+     "en": "Sundaram sir called at seven. He says: don't do anything clever.",
+     "ta": "சுந்தரம் சார் ஏழு மணிக்கு கூப்பிட்டாரு. ஏதும் புத்திசாலித்தனம் பண்ண வேண்டாம்னு சொன்னாரு."
+    },
+    {
+     "who": "karthik",
+     "en": "Tell him I'm only drinking tea.",
+     "ta": "நான் டீ மட்டும் தான் குடிக்கறேன்னு சொல்லு."
+    },
+    {
+     "who": "amma",
+     "en": "(A steel tiffin box, wrapped in a cloth.) Two dosas, chutney. For your watchman. Nobody should eat alone at night.",
+     "ta": "(துணியில சுத்தின ஒரு எவர்சில்வர் டிஃபன் பாக்ஸ்.) ரெண்டு தோசை, சட்னி. உன் வாட்ச்மேனுக்கு. ராத்திரியில யாரும் தனியா சாப்பிடக்கூடாது."
+    }
+   ],
+   "when": "honest_watchman"
+  },
+  {
+   "do": "give",
+   "item": {
+    "id": "tiffin",
+    "kind": "note",
+    "title": {
+     "en": "Amma's tiffin box",
+     "ta": "அம்மாவோட டிஃபன் பாக்ஸ்"
+    },
+    "body": {
+     "en": "Two dosas and chutney, for the watchman.",
+     "ta": "வாட்ச்மேனுக்கு ரெண்டு தோசை, சட்னி."
+    }
+   },
+   "when": "honest_watchman"
+  },
+  {
+   "do": "home",
+   "room": "home",
+   "at": "home",
+   "start": "here",
+   "visits": [
+    {
+     "to": "door",
+     "auto": true,
+     "reach": 1.4,
+     "goal": {
+      "en": "Out",
+      "ta": "வெளியே"
+     }
+    }
+   ],
+   "when": "honest_watchman"
+  },
+  {
+   "do": "wait",
+   "until": "17:30",
+   "goal": {
+    "en": "The day is yours. Sign at the station by 7 PM; the watchman comes on at nine",
+    "ta": "இன்னைக்கு நாள் உங்களுது. 7 மணிக்குள்ள ஸ்டேஷன்ல கையெழுத்து; வாட்ச்மேன் ஒன்பது மணிக்கு வருவாரு"
+   },
+   "when": "honest_watchman"
+  },
+  {
+   "do": "drive",
+   "to": "police",
+   "radius": 45,
+   "vehicle": "karthik_scooter",
+   "by": "19:00",
+   "goal": {
+    "en": "Sign at the station by 7 PM",
+    "ta": "7 மணிக்குள்ள ஸ்டேஷன்ல கையெழுத்து"
+   },
+   "when": "honest_watchman"
+  },
+  {
+   "do": "home",
+   "room": "police",
+   "at": "police",
+   "start": "door",
+   "cast": {
+    "murugesan": {
+     "mark": "inspector",
+     "anim": "Idle"
+    },
+    "selvi": {
+     "mark": "constable",
+     "anim": "Idle"
+    }
+   },
+   "keep": true,
+   "visits": [
+    {
+     "to": "selvi",
+     "task": "sign",
+     "goal": {
+      "en": "Sign the bail register at Selvi's desk",
+      "ta": "செல்வி மேஜையில ஜாமீன் பதிவேட்டுல கையெழுத்து"
+     },
+     "prompt": {
+      "en": "sign the register",
+      "ta": "பதிவேட்டுல கையெழுத்து"
+     },
+     "header": {
+      "en": "Nagar Police Station",
+      "ta": "நகர் காவல் நிலையம்"
+     },
+     "form": {
+      "en": "BAIL ATTENDANCE REGISTER",
+      "ta": "ஜாமீன் வருகை பதிவேடு"
+     },
+     "fields": [
+      [
+       {
+        "en": "Crime No.",
+        "ta": "குற்ற எண்"
+       },
+       "412"
+      ],
+      [
+       {
+        "en": "Name",
+        "ta": "பெயர்"
+       },
+       {
+        "en": "Karthik M.",
+        "ta": "கார்த்திக் ம."
+       }
+      ],
+      [
+       {
+        "en": "Day",
+        "ta": "நாள்"
+       },
+       "1"
+      ]
+     ],
+     "sign_label": {
+      "en": "Signature of the accused",
+      "ta": "குற்றம் சாட்டப்பட்டவர் கையொப்பம்"
+     },
+     "seal": {
+      "en": "STATION SEAL",
+      "ta": "நிலைய முத்திரை"
+     }
+    }
+   ],
+   "when": "honest_watchman"
+  },
+  {
+   "do": "home",
+   "room": "police",
+   "at": "police",
+   "start": "here",
+   "visits": [
+    {
+     "to": "door",
+     "auto": true,
+     "reach": 1.4,
+     "goal": {
+      "en": "Out",
+      "ta": "வெளியே"
+     }
+    }
+   ],
+   "when": "honest_watchman"
+  },
+  {
+   "do": "drive",
+   "to": "office_building",
+   "radius": 45,
+   "goal": {
+    "en": "The night watchman at Raghavan Developers' building",
+    "ta": "ராகவன் டெவலப்பர்ஸ் கட்டிடத்து நைட் வாட்ச்மேன்"
+   },
+   "when": "honest_watchman"
+  },
+  {
+   "do": "wait",
+   "until": "21:00",
+   "goal": {
+    "en": "The night watchman comes on at nine",
+    "ta": "நைட் வாட்ச்மேன் ஒன்பது மணிக்கு வருவாரு"
+   },
+   "when": "honest_watchman"
+  },
+  {
+   "do": "meet",
+   "who": "muniyandi",
+   "cast": {
+    "muniyandi": {
+     "pos": [
+      -3.2,
+      1.5
+     ],
+     "look": [
+      0,
+      0
+     ],
+     "anim": "Idle"
+    }
+   },
+   "goal": {
+    "en": "The night watchman, at the building's gate",
+    "ta": "கட்டிடத்து கேட்ல நைட் வாட்ச்மேன்"
+   },
+   "when": "honest_watchman"
+  },
+  {
+   "do": "talk",
+   "lines": [
+    {
+     "who": "muniyandi",
+     "en": "(Two plastic chairs are already out by the gate.) Sit.",
+     "ta": "(கேட் பக்கத்துல ஏற்கனவே ரெண்டு பிளாஸ்டிக் சேர் போட்டிருக்கு.) உக்காரு."
+    }
+   ],
+   "when": "honest_watchman"
+  },
+  {
+   "do": "gate",
+   "who": "muniyandi",
+   "price": 40,
+   "sets": {
+    "tea": "watch_n3"
+   },
+   "cast": {
+    "seller": {
+     "pos": [
+      3.5,
+      16.0
+     ],
+     "look": [
+      -3.2,
+      1.5
+     ],
+     "model": "crowd_m3",
+     "anim": "Idle"
+    }
+   },
+   "goal": {
+    "en": "Tea, less sugar. Amma's dosa is in your bag",
+    "ta": "டீ, சக்கர கம்மியா. அம்மாவோட தோசை உங்க பையில இருக்கு"
+   },
+   "when": "honest_watchman",
+   "no_note": {
+    "en": "(Not money. Not with him, not now.)",
+    "ta": "(காசு இல்ல. அவர்கிட்ட இல்ல, இப்போ இல்ல.)"
+   }
+  },
+  {
+   "do": "take",
+   "when": "honest_watchman",
+   "id": "tiffin"
+  },
+  {
+   "do": "talk",
+   "add_minutes": 30,
+   "lines": [
+    {
+     "who": "karthik",
+     "en": "Tea, less sugar. And Amma sent dosa.",
+     "ta": "டீ, சக்கர கம்மியா. அம்மா தோசையும் குடுத்து விட்டாங்க."
+    },
+    {
+     "who": "muniyandi",
+     "en": "(He eats slowly, the box on his knees.) Three nights. A man who killed somebody doesn't come back three nights with tea. He runs to Kerala.",
+     "ta": "(பாக்ஸ மடியில வச்சு மெதுவா சாப்பிடறார்.) மூணு ராத்திரி. ஒருத்தன கொன்னவன் மூணு ராத்திரி டீயோட திரும்ப வர மாட்டான். கேரளாவுக்கு ஓடிடுவான்."
+    },
+    {
+     "who": "muniyandi",
      "en": "(A long breath.) ...Your sir gave me his newspaper every evening, after he read it. Go up. I'll look at the fuse box, the current keeps going.",
      "ta": "(பெருமூச்சு.) ...உங்க சார் தினமும் சாயங்காலம், படிச்சுட்டு, அவரோட பேப்பர என் கிட்ட குடுப்பாரு. மேல போ. நான் ஃப்யூஸ் பாக்ஸ் பாக்கறேன், கரண்ட் போயிட்டே இருக்கு."
     }
-   ]
+   ],
+   "when": "honest_watchman"
   },
   {
    "do": "climb",

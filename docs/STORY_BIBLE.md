@@ -370,7 +370,7 @@ The slice grew into the whole of Part 1. Day by day, as it plays now:
 | 1 | Morning at home; Raghavan to the office; the promotion; the bank and the four lakhs; the refused file; the phone left at the office; the night delivery to Ashwin (the doorbell records the minute he really arrives) | E03, E04 |
 | 2 | The knock; the station and the case file; Sundaram; bail (sign 6–7 PM every evening, no leaving the district); the account frozen, the bills | E01, E02 |
 | 2 (aft.) | The funeral at the Race Course gate (go: Priya slaps him; or stay home) | |
-| 3–4 | Selvi's note, the watchman (three nights of tea, or ₹500), the dark stair; the calls at midnight | E06 |
+| 3 (–5) | Selvi's note; the watchman at nine. ₹500 opens the grill gate that night (his word is then a bought one: E06 paid, and no nephew, only Kathir's sticker). Tea and vadai from the stall across the road, three nights running: the first he drinks it and says the stair is police business, "less sugar next time"; the second (less sugar: he smiles) he says he saw a man, not tonight, the station's jeep has gone past twice; the third Amma has sent dosa in a tiffin, and he takes him up. Money is no use after the first night. The days between are his own until the 7 PM signing. Then the dark stair; the calls at midnight | E06 |
 | 5 | Kathir's shop and the lobby camera (pay ₹5,000, or Sundaram's letter after Divya reads the recorder's ID) | E07 |
 | 6 | The doorbell clip, a day before it deletes itself: Ashwin, then Lakshmi aunty, who gives it only to his advocate | E05 |
 | 7 | Sekar's tea stall at the Pudhur Vayal turn; Amma's albums: never a cap | E08, E14 |
