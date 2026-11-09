@@ -144,8 +144,8 @@ func _remove(v: Dictionary) -> void:
 ## Lane offset to the driver's left: half a carriageway's lane on two-way roads, the left lane on one-ways.
 static func _lane(r: Dictionary) -> float:
 	var half: float = float(r["w"]) * 0.5
-	if int(r["o"]) == 1:
-		return -half + minf(1.75, half * 0.5)
+	if int(r["o"]) == 1:                                  # (+ is left: the left lane, by the kerb, not the median)
+		return half - minf(1.75, half * 0.5)
 	return minf(half * 0.5, 1.75 if half < 5.0 else 3.5 * 0.5 + (1.75 if half > 6.5 else 0.0))
 
 

@@ -948,6 +948,8 @@ def run(cfg, roads_cfg):
     resignal.main()
     import clearprops                                   # signals and shelters that landed on a road: to the kerb
     clearprops.main()
+    import onewaysignals                                # a one-way's signal facing the traffic leaving: out
+    onewaysignals.main()
     size = sum(os.path.getsize(os.path.join(out, "chunks", n)) for n in os.listdir(os.path.join(out, "chunks")))
     print("CHUNK %d tiles, %d road pieces, %d buildings (%d designed), %.1f MB, %ds" % (
         len(tiles), n_pieces, sum(len(t["blds"]) for t in tiles.values()), n_kit, size / 1e6, time.time() - t0))

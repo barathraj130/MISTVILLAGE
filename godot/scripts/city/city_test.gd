@@ -47,6 +47,7 @@ var pitch := -0.05
 var cam_y := 420.0
 var path := PackedVector3Array()            # the road being driven (auto mode)
 var path_i := 0
+var path_lane := 1.8                         # how far left of the road's line its lane is (city_traffic.gd _lane)
 var landed := false
 var used := {}                              # road pieces already driven (by first point)
 var car: Jeep                               # your car (play mode)
@@ -1296,7 +1297,7 @@ func _process(dt: float) -> void:
 				var a2 := path[maxi(path_i - 1, 0)]
 				var b2 := path[path_i]
 				var d2 := Vector3(b2.x - a2.x, 0, b2.z - a2.z).normalized()
-				var aim := b2 + Vector3(d2.z, 0, -d2.x) * 1.8
+				var aim := b2 + Vector3(d2.z, 0, -d2.x) * path_lane   # (keep left, India: the traffic's own lane)
 				var to := (aim - car.global_position)
 				var f2: Vector3 = car.forward()
 				var ang := atan2(f2.x * to.z - f2.z * to.x, f2.x * to.x + f2.z * to.z)
@@ -1423,10 +1424,13 @@ func _next_piece(from: Vector3) -> PackedVector3Array:
 			if used.has(key):
 				continue
 			for flip in [false, true]:
+				if flip and int(r.get("o", 0)) == 1:     # (a one-way only the way it goes)
+					continue
 				var e := last if flip else first
 				var dd := Vector2(e.x - from.x, e.z - from.z).length()
 				if dd < bd:
 					bd = dd
+					path_lane = CityTraffic._lane(r)
 					best = PackedVector3Array()
 					for i in n:
 						var j := n - 1 - i if flip else i
@@ -1443,6 +1447,7 @@ func _next_piece(from: Vector3) -> PackedVector3Array:
 					var dd := Vector2(a[0] - from.x, a[2] - from.z).length()
 					if dd < bd:
 						bd = dd
+						path_lane = CityTraffic._lane(r)
 						best = PackedVector3Array()
 						for i in a.size() / 3:
 							best.append(Vector3(a[i * 3], a[i * 3 + 1], a[i * 3 + 2]))
