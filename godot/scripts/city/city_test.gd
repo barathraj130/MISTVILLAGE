@@ -94,6 +94,14 @@ var _hit_seen := {}                         # what you hit → when (a crash is 
 
 
 func _ready() -> void:
+	for a in OS.get_cmdline_user_args():            # --upscale=fsr2|metalfx|metalfx_spatial|fsr,SCALE: render fewer pixels, rebuild
+		if a.begins_with("--upscale="):
+			var v := a.get_slice("=", 1).split(",")
+			var modes := {"fsr": Viewport.SCALING_3D_MODE_FSR, "fsr2": Viewport.SCALING_3D_MODE_FSR2,
+				"metalfx_spatial": Viewport.SCALING_3D_MODE_METALFX_SPATIAL, "metalfx": Viewport.SCALING_3D_MODE_METALFX_TEMPORAL}
+			get_viewport().scaling_3d_mode = modes.get(v[0], Viewport.SCALING_3D_MODE_BILINEAR)
+			get_viewport().scaling_3d_scale = float(v[1]) if v.size() > 1 else 0.67
+			print("UPSCALE %s at %.2f" % [v[0], get_viewport().scaling_3d_scale])
 	var args := OS.get_cmdline_user_args()
 	auto = "--auto" in args
 	for a in args:
