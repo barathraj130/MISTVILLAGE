@@ -39,7 +39,8 @@ extends Node
 ##             follows takes place; walking past Mark_cut the power fails (as it does in Coimbatore): the lights die
 ##             and the phone's torch comes on
 ##   free      free drive with a goal line, the end of the chapter
-## Any step may have "when": flag / "unless": flag (results of earlier tasks) and is skipped otherwise; any line
+## Any step may have "when": flag / "unless": flag / "unless_any": [flags] (results of earlier tasks) and is skipped
+## otherwise; any line
 ## may "pay" an amount into the wallet when it's shown (a tip from the owner, a customer).
 ## T switches English / Tamil at any time. The clock runs (GAME_RULES.md §1) while you drive, pauses on cards
 ## and in talk.
@@ -457,6 +458,7 @@ func _next() -> void:
 	_settle()
 	cur = data["steps"][step]
 	while (cur.has("when") and not flags.get(cur["when"], false)) or (cur.has("unless") and flags.get(cur["unless"], false)) \
+			or (cur.has("unless_any") and (cur["unless_any"] as Array).any(func(f): return flags.get(f, false))) \
 			or (cur.has("if_standing") and not standing.allows(cur["if_standing"])):
 		step += 1
 		if step >= data["steps"].size():
@@ -1628,7 +1630,9 @@ func _spot_step(dt: float) -> void:
 ## his stress makes quicker); holding Space he breathes and it eases. What he does is the answer: walk away (more than
 ## "walk" metres: "walked"), E at him ("grab"), E at the bag on the bonnet ("bag", in the car's frame: "took"); his
 ## anger full, his hands go to the collar by themselves ("grab"). Looking at "watch" (the police jeep, in the car's
-## frame) shows his "watch_line" thought once. Testing: --storychoose=1 walks, 2 grabs, 3 takes.
+## frame) shows his "watch_line" thought once. With a "calm" flag (people he must hear out: the farmers), staying
+## near and under 70% anger for "calm_secs" once everything has been said ends it calmly ("calm").
+## Testing: --storychoose=1 walks, 2 grabs, 3 takes; with a "calm" flag 1 is calm, 2 walks, 3 grabs.
 func _provoke_step(dt: float) -> void:
 	var a: Node3D = cast.get(str(cur["who"]))
 	var w: Node3D = city.walker
@@ -1638,8 +1642,9 @@ func _provoke_step(dt: float) -> void:
 	var life = city.life if "life" in city else null
 	var quick := 1.0 + (float(life.stress) / 200.0 if life else 0.0)      # (a worn man's temper is shorter)
 	var breathing := Input.is_key_pressed(KEY_SPACE)
-	if _skip and not "--storychoose=2" in OS.get_cmdline_user_args():
-		breathing = true                                  # (testing: a calm player breathes through it)
+	var grab_pick := "--storychoose=3" if cur["flags"].has("calm") else "--storychoose=2"
+	if _skip and not grab_pick in OS.get_cmdline_user_args():
+		breathing = true                                  # (testing: a calm player breathes through it; the grab test doesn't)
 	_prov["anger"] = clampf(float(_prov["anger"]) - dt * (0.12 if breathing else 0.01), 0.0, 1.0)
 	_prov["t"] = float(_prov["t"]) + dt
 	var i: int = _prov["i"]
@@ -1674,8 +1679,9 @@ func _provoke_step(dt: float) -> void:
 	for arg in OS.get_cmdline_user_args():
 		if arg.begins_with("--storychoose="):
 			pick = int(arg.get_slice("=", 1))
+	var ways: Array = ["calm", "walk", "grab"] if cur["flags"].has("calm") else ["walk", "grab", "take"]
 	if _skip and _prov["i"] >= lines.size():
-		_provoke_end(["walk", "grab", "take"][clampi(pick - 1, 0, 2)])
+		_provoke_end(ways[clampi(pick - 1, 0, 2)])
 		return
 	if float(_prov["anger"]) >= 1.0:
 		_provoke_end("grab")
@@ -1687,6 +1693,13 @@ func _provoke_step(dt: float) -> void:
 	if d > float(cur.get("walk", 9.0)):
 		_provoke_end("walk")
 		return
+	if cur["flags"].has("calm") and _prov["i"] >= lines.size() and float(_prov["anger"]) < 0.7:
+		_prov["calm_t"] = float(_prov.get("calm_t", 0.0)) + dt          # (heard out: they run out of words)
+		if float(_prov["calm_t"]) > float(cur.get("calm_secs", 5.0)):
+			_provoke_end("calm")
+			return
+	else:
+		_prov["calm_t"] = 0.0
 	if cur.has("watch") and not _prov["seen"]:            # the jeep down the field road, if he looks
 		var jp: Vector3 = _w2(cur["watch"])
 		var fwd: Vector3 = -w.camera.global_basis.z
@@ -1702,7 +1715,7 @@ func _provoke_step(dt: float) -> void:
 	if near_bag:
 		hint = "E: take the bag" if lang == "en" else "E: பைய எடு"
 	elif d < 2.2:
-		hint = "E: grab his collar" if lang == "en" else "E: காலர பிடி"
+		hint = tr_(cur["grab_hint"]) if cur.has("grab_hint") else ("E: grab his collar" if lang == "en" else "E: காலர பிடி")
 	goal.text = tr_(cur["goal"]) + ("\n" + hint if hint != "" else "")
 	var e := Input.is_key_pressed(KEY_E)
 	if e and not _e_down:

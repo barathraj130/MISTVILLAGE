@@ -374,7 +374,7 @@ The slice grew into the whole of Part 1. Day by day, as it plays now:
 | 5 | Kathir's shop and the lobby camera (pay ₹5,000, or Sundaram's letter after Divya reads the recorder's ID) | E07 |
 | 6 | The doorbell clip, a day before it deletes itself: Ashwin, then Lakshmi aunty, who gives it only to his advocate | E05 |
 | 7 | Sekar's tea stall at the Pudhur Vayal turn; Amma's albums: never a cap | E08, E14 |
-| 8 | Bala at the door (tell him the leads, or don't); the farmers ("Bring us paper"); Divya bullied | |
+| 8 | Bala at the door (tell him the leads, or don't); the farmers surround him, shouting, and he has to hear them out without answering anger with anger (Space: breathe): calm, and he may speak (tell them again what sir said, or hold out his wallet); walk off, and they call him a thief; lose his temper, and he shoves Ponnusamy (the police hear of it: suspicion +6, reputation −8); "Bring us paper"; Divya bullied | |
 | 9 | Perur temple: Meenakshi lets him speak; Suresh's visit to Amma; the market (Valliammai sells to him) | |
 | 10 | Priya and Revathi find the green-ink note; the farmers will testify | E09 |
 | 11 | The Collectorate, done not chosen: fill in the Tamil Nilam application on his phone (Perur taluk, Pudhur Vayal, survey nos. 214–226 from Sundaram's message; wrong details: "no records", ₹50 gone), call Priya about Revathi's office copy, or walk up to the tout and pay ₹2,000 | E16 |

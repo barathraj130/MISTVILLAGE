@@ -946,6 +946,18 @@
    "trust": {
     "sundaram": 5
    }
+  },
+  "farmers_calm": {
+   "trust": {
+    "farmers": 5
+   }
+  },
+  "farmers_shoved": {
+   "suspicion": 6,
+   "reputation": -8,
+   "trust": {
+    "farmers": -25
+   }
   }
  },
  "standing_notices": [
@@ -5882,6 +5894,58 @@
    ]
   },
   {
+   "do": "provoke",
+   "who": "ponnusamy",
+   "walk": 12.0,
+   "anger0": 0.25,
+   "calm_secs": 5.0,
+   "goal": {
+    "en": "Let them say it. Don't answer anger with anger",
+    "ta": "சொல்ல விடுங்க. கோபத்துக்கு கோபம் காட்டாதீங்க"
+   },
+   "grab_hint": {
+    "en": "E: shove him away",
+    "ta": "E: தள்ளி விடு"
+   },
+   "lines": [
+    {
+     "who": "farmer1",
+     "en": "Forty families! My father's land, for a fifth of its price, and not even that paid!",
+     "ta": "நாப்பது குடும்பம்! என் அப்பாவோட நிலம், அஞ்சுல ஒரு பங்கு விலைக்கு, அதுவும் குடுக்கல!",
+     "anger": 0.14
+    },
+    {
+     "who": "farmer2",
+     "en": "Look at him. A helmet, a scooter. Like a gentleman. On our money.",
+     "ta": "இவனப் பாரு. ஹெல்மெட், ஸ்கூட்டர். பெரிய மனுஷன் மாதிரி. எங்க காசுல.",
+     "anger": 0.14
+    },
+    {
+     "who": "ponnusamy",
+     "en": "My daughter's wedding was to come out of that money. The hall is booked. Tell me where it is, driver.",
+     "ta": "என் பொண்ணு கல்யாணம் அந்த பணத்துல தான். மண்டபம் புக் பண்ணியாச்சு. எங்கன்னு சொல்லு, டிரைவர்.",
+     "anger": 0.18
+    },
+    {
+     "who": "farmer1",
+     "en": "His dog. That's all you were. Raghavan's dog, carrying his bags.",
+     "ta": "அவனோட நாய். அதான் நீ. ராகவனோட நாய், அவன் பையத் தூக்கிட்டு.",
+     "anger": 0.3
+    }
+   ],
+   "taunts": [
+    {
+     "en": "Say something, then! Or have you no words without your master?",
+     "ta": "ஏதாவது சொல்லு அப்போ! முதலாளி இல்லாம பேச்சே வராதா?"
+    }
+   ],
+   "flags": {
+    "walk": "farmers_left",
+    "grab": "farmers_shoved",
+    "calm": "farmers_calm"
+   }
+  },
+  {
    "do": "choose",
    "prompt": {
     "en": "They're all around the scooter.",
@@ -5911,7 +5975,8 @@
      "set": "farmers_left",
      "stress": 6
     }
-   ]
+   ],
+   "when": "farmers_calm"
   },
   {
    "do": "talk",
@@ -5942,6 +6007,22 @@
      "who": "karthik",
      "en": "(I stop at the end of the field. He's still standing in the road. I walk back.)",
      "ta": "(வயல் முடியற இடத்துல நிறுத்தறேன். அவர் இன்னும் ரோட்டுலயே நிக்கறாரு. திரும்பி நடந்து வர்றேன்.)"
+    }
+   ]
+  },
+  {
+   "do": "talk",
+   "when": "farmers_shoved",
+   "lines": [
+    {
+     "who": "karthik",
+     "en": "(My hands are on his chest before I know it. He staggers. The other two grab my arms.)",
+     "ta": "(என்ன செய்யறேன்னு தெரியறதுக்குள்ள என் கை அவர் நெஞ்சுல. அவர் தடுமாறுறாரு. மத்த ரெண்டு பேரும் என் கைய பிடிக்கறாங்க.)"
+    },
+    {
+     "who": "ponnusamy",
+     "en": "There. Now we know what you are. Hit an old man in his own field. ...The police will hear of this, bail-man.",
+     "ta": "அவ்வளவு தான். இப்போ நீ யாருன்னு தெரிஞ்சு போச்சு. சொந்த வயல்ல ஒரு வயசானவன அடிக்கறியா. ...போலீசுக்கு தெரியும் இது, ஜாமீன் ஆளே."
     }
    ]
   },
@@ -7537,6 +7618,17 @@
      "who": "ponnusamy",
      "en": "And the money you held out that day. I'll forget it. You were frightened.",
      "ta": "அன்னைக்கு நீ நீட்டின காசு. மறந்துடறேன். பயந்துட்ட நீ."
+    }
+   ]
+  },
+  {
+   "do": "talk",
+   "when": "farmers_shoved",
+   "lines": [
+    {
+     "who": "ponnusamy",
+     "en": "And that day in the field, your hands on me. ...I've had worse from men with more reason. Forget it.",
+     "ta": "அன்னைக்கு வயல்ல, என் மேல உன் கை. ...காரணம் இருந்தவங்க கிட்ட இதைவிட மோசமா வாங்கியிருக்கேன். விடு."
     }
    ]
   },
