@@ -13,6 +13,7 @@ extends Node
 ## hours pass while we see him there (the stand, the cot), the clock and the light running on; sleep is his eyes
 ## closing and opening again. No caption, no numbers (GAME_DESIGN.md §8): body.gd shows what it did to him, and
 ## F1 brings back the bars (show_meters).
+const Prof := preload("res://scripts/drive/prof.gd")
 
 const Sim := preload("res://scripts/drive/sim.gd")
 const STRESS0 := 55.0                # where the story finds him: a lot on his mind
@@ -117,6 +118,12 @@ func _clock_now() -> float:
 
 
 func _process(dt: float) -> void:
+	var _p0 := Time.get_ticks_usec()
+	_process_timed(dt)
+	Prof.add("life", _p0)
+
+
+func _process_timed(dt: float) -> void:
 	var f = city.fines
 	if f == null:
 		return

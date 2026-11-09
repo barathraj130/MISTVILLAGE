@@ -4,6 +4,7 @@ extends Control
 ## mouse tilts it, the wheel brings it closer, E (or Enter, or a click outside it) puts it in his pocket. I opens the
 ## pocket: what he carries, along the bottom; click one to take it out again.
 ## His hands are his: the more stressed he is, the more the paper shakes (life.gd's stress).
+const Prof := preload("res://scripts/drive/prof.gd")
 
 signal put_away(id: String)
 signal note_given(amount: int)              # the wallet: a note taken out and held out to someone
@@ -114,6 +115,12 @@ func _refresh_mouse() -> void:
 
 
 func _process(dt: float) -> void:
+	var _p0 := Time.get_ticks_usec()
+	_process_timed(dt)
+	Prof.add("hands", _p0)
+
+
+func _process_timed(dt: float) -> void:
 	_t += dt
 	_rise = move_toward(_rise, 1.0, dt * 4.0)
 	var ik := Input.is_key_pressed(KEY_I)

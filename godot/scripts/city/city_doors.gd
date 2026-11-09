@@ -13,6 +13,7 @@ extends Node3D
 ## rooms have people in them (crowd.gd: on the benches, in the queues, in the pews and the stand; room_walkers.gd:
 ## walking through) and the sound of them (room_sound.gd).
 ## E by the doorway inside (or walking out through it) brings you back out where you went in.
+const Prof := preload("res://scripts/drive/prof.gd")
 
 const ROOMS := "res://assets/interiors/room_%s.glb"
 const Crowd := preload("res://scripts/city/crowd.gd")
@@ -94,6 +95,12 @@ func _ready() -> void:
 
 
 func _process(dt: float) -> void:
+	var _p0 := Time.get_ticks_usec()
+	_process_timed(dt)
+	Prof.add("doors", _p0)
+
+
+func _process_timed(dt: float) -> void:
 	var w: Node3D = city.walker if city else null
 	var e := Input.is_key_pressed(KEY_E)
 	var pressed := e and not _e_down

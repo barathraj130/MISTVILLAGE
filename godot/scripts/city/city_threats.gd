@@ -10,6 +10,7 @@ extends Node
 ##                          25, tiredness over 85): then the man catches him up and it's 1 after all
 ## Once a lane a night. And a scooter left parked within 30 m of one at night for over twenty game minutes is got at
 ## (the seat box: ₹300 of what's in it, the helmet's visor scratched) unless the disc lock is on it (goods.gd).
+const Prof := preload("res://scripts/drive/prof.gd")
 
 const Goods := preload("res://scripts/city/goods.gd")
 const SPOT_R := 14.0
@@ -61,6 +62,12 @@ func _night() -> bool:
 
 
 func _physics_process(dt: float) -> void:
+	var _p0 := Time.get_ticks_usec()
+	_physics_process_timed(dt)
+	Prof.add("threats_phys", _p0)
+
+
+func _physics_process_timed(dt: float) -> void:
 	if city == null or city.fines == null or city.streamer == null:
 		return
 	_t -= dt

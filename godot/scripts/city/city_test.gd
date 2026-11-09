@@ -1249,6 +1249,12 @@ func _drive_camera(dt: float) -> void:
 
 
 func _process(dt: float) -> void:
+	var _p0 := Time.get_ticks_usec()
+	_process_timed(dt)
+	Prof.add("city", _p0)
+
+
+func _process_timed(dt: float) -> void:
 	t += dt
 	_shift_keys(dt)
 	var lk := Input.is_key_pressed(KEY_L)

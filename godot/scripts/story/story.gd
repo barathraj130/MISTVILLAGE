@@ -52,6 +52,7 @@ extends Node
 ##   --storychoose=N testing: at every choice, option N (1, 2...)
 ##   --storyfrom=N   testing: start the chapter at step N
 ##   --storyclock=HH:MM testing: the clock it starts at
+const Prof := preload("res://scripts/drive/prof.gd")
 
 const Sim := preload("res://scripts/drive/sim.gd")
 const Tasks := preload("res://scripts/story/tasks.gd")
@@ -271,6 +272,12 @@ func tr_(d) -> String:
 
 # ---- the flow ----
 func _process(dt: float) -> void:
+	var _p0 := Time.get_ticks_usec()
+	_process_timed(dt)
+	Prof.add("story", _p0)
+
+
+func _process_timed(dt: float) -> void:
 	if data.is_empty() or city == null:
 		return
 	if step < 0:

@@ -5,6 +5,7 @@ extends CharacterBody3D
 ## the way you walk, as a person does: it gets going and slows down over a few steps, turns at a
 ## person's pace (slowing to turn sharply, leaning a little into a curve), stands facing where it
 ## stopped while you look about, and rises onto a step rather than jumping up it.
+const Prof := preload("res://scripts/drive/prof.gd")
 
 const STEP_HEIGHT := 0.35          # stone steps and kerbs are 15–25 cm
 
@@ -138,6 +139,12 @@ func _unhandled_input(event: InputEvent) -> void:
 
 
 func _physics_process(delta: float) -> void:
+	var _p0 := Time.get_ticks_usec()
+	_physics_process_timed(delta)
+	Prof.add("walker_phys", _p0)
+
+
+func _physics_process_timed(delta: float) -> void:
 	if not is_on_floor():
 		velocity.y -= gravity * delta
 	if active:

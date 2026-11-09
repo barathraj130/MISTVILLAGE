@@ -7,6 +7,7 @@ extends Node3D
 ## In the story the day is the story's: clear unless a step says "weather": "rain" (or "cloudy", "clear"), so a
 ## scene never meets rain it wasn't written for. In free play it changes by itself as on the plains.
 ## --weather=rain (or cloudy) for tests: the roads already soaked.
+const Prof := preload("res://scripts/drive/prof.gd")
 
 const Sim := preload("res://scripts/drive/sim.gd")
 const SOAKED_GRIP := 0.72                    # (sim.gd WEATHER "rain": the same tyres on the same wet asphalt)
@@ -46,6 +47,12 @@ func set_weather(w: String) -> void:
 
 
 func _physics_process(delta: float) -> void:
+	var _p0 := Time.get_ticks_usec()
+	_physics_process_timed(delta)
+	Prof.add("weather_phys", _p0)
+
+
+func _physics_process_timed(delta: float) -> void:
 	if city == null or city.fines == null:
 		return
 	var sim = _sim()

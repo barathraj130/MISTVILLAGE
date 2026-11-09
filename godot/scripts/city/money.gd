@@ -20,6 +20,7 @@ extends Node
 ##            the bike   when the scooter's taken, Bala's old motorbike is left for him; the scooter comes back when
 ##                   everything owed on it and ₹3,000 more are paid (to Amma, who takes it to the finance company).
 ## Saved in the save file's "accounts" (fines._save_data), beside bail's ("money" there is the wallet itself).
+const Prof := preload("res://scripts/drive/prof.gd")
 
 const Actor := preload("res://scripts/story/actor.gd")
 const Tasks := preload("res://scripts/story/tasks.gd")
@@ -198,6 +199,12 @@ func handover() -> bool:
 
 # ---- the days ----
 func _process(_dt: float) -> void:
+	var _p0 := Time.get_ticks_usec()
+	_process_timed(_dt)
+	Prof.add("money", _p0)
+
+
+func _process_timed(_dt: float) -> void:
 	if city == null or city.fines == null:
 		return
 	_amma_at_home()

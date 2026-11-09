@@ -6,6 +6,7 @@ extends Node
 ##   suspension thuds, a little speed is lost; on a two-wheeler the bars twitch. Hit hard and fast (over ~45 km/h)
 ##   the front takes a little damage, as a rim or an alignment would.
 ## After rain they hold water (the material's `wet`, from city_weather.gd).
+const Prof := preload("res://scripts/drive/prof.gd")
 
 var city
 var _inside := {}                          # wheel index → the pothole it's in (so one hole is one hit)
@@ -13,6 +14,12 @@ var _hits := 0
 
 
 func _physics_process(_delta: float) -> void:
+	var _p0 := Time.get_ticks_usec()
+	_physics_process_timed(_delta)
+	Prof.add("potholes_phys", _p0)
+
+
+func _physics_process_timed(_delta: float) -> void:
 	if city == null or city.car == null or city.streamer == null or not city.driving:
 		return
 	var st = city.streamer

@@ -11,6 +11,7 @@ extends Node
 ##                                  inspector's suspicion rises a good deal.
 ##   a crawl (under ~11 km/h)       they just step aside
 ## Each person is the same instance in every MultiMesh of its cell (near, far, the shadow), moved together.
+const Prof := preload("res://scripts/drive/prof.gd")
 
 const Fines := preload("res://scripts/city/fines.gd")
 const HOSPITAL := 3000                        # paid there and then, to the person (as it is settled on the street)
@@ -27,6 +28,12 @@ var _doomed := {}                             # "id:i" → true: noticed too lat
 
 
 func _physics_process(delta: float) -> void:
+	var _p0 := Time.get_ticks_usec()
+	_physics_process_timed(delta)
+	Prof.add("bystanders_phys", _p0)
+
+
+func _physics_process_timed(delta: float) -> void:
 	_animate(delta)
 	if city == null or city.car == null or not city.driving or city.streamer == null:
 		return

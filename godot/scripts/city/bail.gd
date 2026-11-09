@@ -12,6 +12,7 @@ extends Node
 ##             checkposts where any other road leaves the built world (borders.json); the second time is a strike.
 ## Nothing of this is written on the screen: the phone, the people and the register say it. F1's bars show the count.
 ## While the story is playing one of its own steps the evening is the story's (an excuse, as the rules say).
+const Prof := preload("res://scripts/drive/prof.gd")
 
 const Tasks := preload("res://scripts/story/tasks.gd")
 const Actor := preload("res://scripts/story/actor.gd")
@@ -208,6 +209,12 @@ func _story_owns() -> bool:
 
 
 func _process(dt: float) -> void:
+	var _p0 := Time.get_ticks_usec()
+	_process_timed(dt)
+	Prof.add("bail", _p0)
+
+
+func _process_timed(dt: float) -> void:
 	if not active or city.fines == null:
 		return
 	_station_people()

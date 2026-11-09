@@ -13,6 +13,7 @@ extends Control
 ##              patta extract, district, taluk and village from its lists, the survey numbers typed in, ₹50 by UPI
 ## A buzz and a dot on the phone's corner when something new arrives; a ringing call slides it up by itself
 ## (Enter or Answer). Nothing on the phone is narration: it is what is on the phone.
+const Prof := preload("res://scripts/drive/prof.gd")
 
 signal photo_taken(tag: String)
 signal recording_stopped(clip: Dictionary)
@@ -352,6 +353,12 @@ func hold(up: bool) -> void:
 
 
 func _process(dt: float) -> void:
+	var _p0 := Time.get_ticks_usec()
+	_process_timed(dt)
+	Prof.add("phone", _p0)
+
+
+func _process_timed(dt: float) -> void:
 	_t += dt
 	_slide = move_toward(_slide, 1.0 if is_open else 0.0, dt * 5.0)
 	_flash = maxf(_flash - dt * 3.0, 0.0)

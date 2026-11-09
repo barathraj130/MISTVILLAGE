@@ -7,6 +7,7 @@ extends Node3D
 ##     are collected from the wallet
 ##   * drive through without stopping: fined on the spot (fines.gd SKIP_CHECK)
 ## The set is taken down once you are well past it, or after five minutes.
+const Prof := preload("res://scripts/drive/prof.gd")
 
 const Fines := preload("res://scripts/city/fines.gd")
 const Streamer := preload("res://scripts/city/city_streamer.gd")
@@ -44,6 +45,12 @@ func _ready() -> void:
 
 
 func _process(dt: float) -> void:
+	var _p0 := Time.get_ticks_usec()
+	_process_timed(dt)
+	Prof.add("police", _p0)
+
+
+func _process_timed(dt: float) -> void:
 	if _set != null and not _grounded:
 		_ground()
 	if car == null or _mesh == null:

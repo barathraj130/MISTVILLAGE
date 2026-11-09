@@ -7,6 +7,7 @@ extends CanvasLayer
 ##   hungry     his stomach, now and then, under 25
 ## The bars come back with F1 (life.gd show_meters). Eyes closing are also used by sleep (lids), and by
 ## life.gd when he's dozing at the wheel.
+const Prof := preload("res://scripts/drive/prof.gd")
 
 const SHADER := """
 shader_type canvas_item;
@@ -56,6 +57,12 @@ func _ready() -> void:
 
 
 func _process(dt: float) -> void:
+	var _p0 := Time.get_ticks_usec()
+	_process_timed(dt)
+	Prof.add("bodies", _p0)
+
+
+func _process_timed(dt: float) -> void:
 	if life == null:
 		return
 	_t += dt
