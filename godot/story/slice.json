@@ -968,6 +968,17 @@
    "trust": {
     "divya": -3
    }
+  },
+  "temple_offering": {
+   "reputation": 2,
+   "trust": {
+    "meenakshi": 10
+   }
+  },
+  "temple_archanai": {
+   "trust": {
+    "meenakshi": 5
+   }
   }
  },
  "standing_notices": [
@@ -6581,6 +6592,57 @@
    }
   },
   {
+   "do": "shop",
+   "wear": false,
+   "smart_need": 1,
+   "flag": "temple_offering",
+   "left": "temple_no_offering",
+   "shop": {
+    "en": "Flower and archanai stall · Perur temple gate",
+    "ta": "பூ, அர்ச்சனை கடை · பேரூர் கோயில் வாசல்"
+   },
+   "rows": [
+    {
+     "label": {
+      "en": "For the prayers",
+      "ta": "பிரார்த்தனைக்கு"
+     },
+     "items": [
+      {
+       "name": {
+        "en": "Nothing. Just go in",
+        "ta": "ஒண்ணும் வேண்டாம். அப்படியே உள்ள போங்க"
+       },
+       "price": 0,
+       "smart": 0,
+       "colour": "#bbbbbb"
+      },
+      {
+       "name": {
+        "en": "A string of jasmine",
+        "ta": "ஒரு முழம் மல்லிகை"
+       },
+       "price": 40,
+       "smart": 1,
+       "colour": "#f4f1e6"
+      },
+      {
+       "name": {
+        "en": "Coconut, flowers and an archanai ticket in sir's name",
+        "ta": "தேங்காய், பூ, சார் பேர்ல அர்ச்சனை சீட்டு"
+       },
+       "price": 120,
+       "smart": 2,
+       "colour": "#e0a030"
+      }
+     ]
+    }
+   ],
+   "smart_flags": {
+    "2": "temple_archanai"
+   }
+  },
+  {
    "do": "meet",
    "who": "meenakshi",
    "cast": {
@@ -6611,6 +6673,39 @@
     "en": "Meenakshi amma, coming out of the temple, and Priya",
     "ta": "கோயில்ல இருந்து வர்ற மீனாட்சி அம்மா, கூட பிரியா"
    }
+  },
+  {
+   "do": "talk",
+   "when": "temple_archanai",
+   "lines": [
+    {
+     "who": "karthik",
+     "en": "(Inside, the priest reads the name off my ticket for the archanai. R. Raghavan. Three women at the next shrine turn to look.)",
+     "ta": "(உள்ள, அர்ச்சனைக்கு அய்யர் என் சீட்டுல இருக்கற பேர படிக்கறாரு. ஆர். ராகவன். பக்கத்து சன்னதியில மூணு பொம்பளைங்க திரும்பி பாக்கறாங்க.)"
+    },
+    {
+     "who": "meenakshi",
+     "en": "(She has seen it. The plate with the camphor, in my hands, with his name.) ...Who told you to do that?",
+     "ta": "(பாத்துட்டாங்க. என் கையில கற்பூர தட்டு, அவர் பேரோட.) ...யாரு உன்ன அப்படி பண்ண சொன்னா?"
+    },
+    {
+     "who": "karthik",
+     "en": "Nobody, amma. Six years I drove him here every Pradosham.",
+     "ta": "யாரும் இல்ல, அம்மா. ஆறு வருஷம் ஒவ்வொரு பிரதோஷத்துக்கும் அவர இங்க கூட்டிட்டு வந்தேன்."
+    }
+   ]
+  },
+  {
+   "do": "talk",
+   "when": "temple_offering",
+   "unless": "temple_archanai",
+   "lines": [
+    {
+     "who": "karthik",
+     "en": "(I leave the jasmine at the shrine, by the pillar where sir always stood. Meenakshi amma sees where I put it.)",
+     "ta": "(மல்லிகைய சன்னதியில வைக்கறேன், சார் எப்பவும் நிக்கற தூண் பக்கத்துல. எங்க வச்சேன்னு மீனாட்சி அம்மா பாக்கறாங்க.)"
+    }
+   ]
   },
   {
    "do": "talk",

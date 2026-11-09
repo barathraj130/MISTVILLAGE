@@ -1823,7 +1823,8 @@ func _act_pay() -> void:
 
 ## "shop": at a counter ("shop", its name), one thing from each of its "rows" (shop.gd); paid from his account. If
 ## everything bought is "smart" enough ("smart_need") the "flag" is set (a hotel door lets him in). He wears it:
-## the shirt's colour on him from then until he's home. Esc leaves with nothing ("left" flag).
+## the shirt's colour on him from then until he's home ("wear": false for things that aren't clothes). Esc leaves
+## with nothing ("left" flag).
 func _shop_done(bought: Array) -> void:
 	if str(cur.get("do", "")) != "shop":
 		return
@@ -1843,7 +1844,11 @@ func _shop_done(bought: Array) -> void:
 		fines.sim.money -= cost
 	if smart >= int(cur.get("smart_need", 1)):
 		flags[str(cur["flag"])] = true
-	_outfit = {"top": str(bought[0].get("colour", "#ffffff"))}
+	for lvl in cur.get("smart_flags", {}):              # (more for more: {"2": "temple_archanai"})
+		if smart >= int(lvl):
+			flags[str(cur["smart_flags"][lvl])] = true
+	if cur.get("wear", true):                          # (clothes; not a temple offering)
+		_outfit = {"top": str(bought[0].get("colour", "#ffffff"))}
 	print("STORY shop: ₹%d, smart %d" % [cost, smart])
 	_next()
 
@@ -1854,13 +1859,14 @@ func _shop_skip() -> void:
 		if arg.begins_with("--storyshop="):
 			pick = int(arg.get_slice("=", 1))
 	var rows: Array = cur["rows"]
-	for r in rows.size():                                 # 1: the cheapest that's smart enough; 2: the cheapest of all
+	for r in rows.size():                                 # 1: the cheapest that's smart enough; 2: the cheapest of all; 3: the dearest
 		var best := -1
 		for i in rows[r]["items"].size():
 			var it: Dictionary = rows[r]["items"][i]
 			if pick == 1 and int(it.get("smart", 0)) < int(cur.get("smart_need", 1)):
 				continue
-			if best < 0 or int(it["price"]) < int(rows[r]["items"][best]["price"]):
+			if best < 0 or (int(it["price"]) > int(rows[r]["items"][best]["price"]) if pick == 3 \
+					else int(it["price"]) < int(rows[r]["items"][best]["price"])):
 				best = i
 		shop.picked[r] = best
 	_shot()
