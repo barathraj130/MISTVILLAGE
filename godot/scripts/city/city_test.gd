@@ -151,9 +151,66 @@ func _profsweep() -> void:
 	tree.quit()
 
 
+## (testing) --jointest: where road pieces meet end to end without a junction surface (city_streamer.gd _joins),
+## rays down at points in every patch and at both outer corners of every mitred join, in the tiles round the start:
+## a ray that falls more than 5 cm below the road there found a hole (the ground). With --nojoins: the old roads.
+func _jointest() -> void:
+	var tree := get_tree()
+	while not placed or streamer.loaded.size() < 20 or not streamer.pending.is_empty():
+		await tree.process_frame
+	await tree.create_timer(2.0).timeout
+	var space := get_world_3d().direct_space_state
+	var n := 0
+	var holes := 0
+	var worst := []
+	for k in streamer.loaded:
+		var roads: Array = (streamer.loaded[k] as Node3D).get_meta("roads", [])
+		var j := _joins_for_test(roads)                       # (the same places either way: where the fix finds joins)
+		var probes: Array = []                                # [point xz, road y]
+		for pt in j["patches"]:
+			var hull: PackedVector2Array = pt[1]
+			var cen := Vector2.ZERO
+			for q in hull:
+				cen += q
+			cen /= hull.size()
+			for q in hull:
+				probes.append([cen.lerp(q, 0.85), float(pt[0]) - 0.01])
+		for ri in j["miter"]:
+			var r: Dictionary = roads[ri]
+			var pp: PackedFloat32Array = r["p"]
+			for vq in j["miter"][ri]:
+				var tdir: Vector3 = j["miter"][ri][vq][0]
+				var sc: float = j["miter"][ri][vq][1]
+				var c := Vector3(pp[vq * 3], pp[vq * 3 + 1], pp[vq * 3 + 2])
+				var l := Vector3(tdir.z, 0, -tdir.x).normalized() * float(r["w"]) * 0.5 * sc * 0.9
+				for side in [1.0, -1.0]:
+					probes.append([Vector2(c.x + l.x * side, c.z + l.z * side), c.y + RANK_LIFT])
+		for pr in probes:
+			var at: Vector2 = pr[0]
+			var y: float = pr[1]
+			var hit := space.intersect_ray(PhysicsRayQueryParameters3D.create(Vector3(at.x, y + 4.0, at.y), Vector3(at.x, y - 4.0, at.y)))
+			n += 1
+			if hit.is_empty() or float(hit["position"].y) < y - 0.05:
+				holes += 1
+				if worst.size() < 8:
+					worst.append([roundi(at.x), roundi(at.y), snappedf(y - (float(hit["position"].y) if not hit.is_empty() else y - 9.0), 0.01)])
+	print("JOINTEST %s: %d probes, %d over a hole %s" % ["old roads" if "--nojoins" in OS.get_cmdline_user_args() else "joins fixed", n, holes, str(worst)])
+	tree.quit()
+
+
+const RANK_LIFT := 0.09                                  # (= city_streamer.gd RANK + 0.06: a ribbon over its points)
+
+
+## The joins the fix would find, without the --nojoins switch (for the before run's probes).
+func _joins_for_test(roads: Array) -> Dictionary:
+	return Streamer._joins_core(roads)
+
+
 func _ready() -> void:
 	if "--profsweep" in OS.get_cmdline_user_args():
 		_profsweep.call_deferred()
+	if "--jointest" in OS.get_cmdline_user_args():
+		_jointest.call_deferred()
 	for a in OS.get_cmdline_user_args():            # --upscale=fsr2|metalfx|metalfx_spatial|fsr,SCALE: render fewer pixels, rebuild
 		if a.begins_with("--upscale="):
 			var v := a.get_slice("=", 1).split(",")

@@ -443,7 +443,10 @@ func _roads(roads: Array, out: Dictionary) -> void:
 	var faces := PackedVector3Array()
 	_mark_overlaps(roads)
 	_flyovers(roads, out)
-	for r in roads:
+	var joins := _joins(roads)
+	var patches: Array = joins["patches"]
+	for ri in roads.size():
+		var r: Dictionary = roads[ri]
 		var p: PackedFloat32Array = r["p"]
 		var cnt := p.size() / 3
 		if cnt < 2:
@@ -453,6 +456,7 @@ func _roads(roads: Array, out: Dictionary) -> void:
 		var pts := PackedVector3Array()
 		for q in cnt:
 			pts.append(Vector3(p[q * 3], p[q * 3 + 1] + lift, p[q * 3 + 2]))
+		var miter: Dictionary = joins["miter"].get(ri, {})          # {0 or cnt-1: [tangent, width scale]}
 		var code: int = MARK.get(r["c"], 0)
 		if code > 0 and half >= 6.0:
 			code = 3
@@ -465,11 +469,15 @@ func _roads(roads: Array, out: Dictionary) -> void:
 		var base := v.size()
 		for q in cnt:
 			var t := pts[mini(q + 1, cnt - 1)] - pts[maxi(q - 1, 0)]
+			var sc := 1.0
+			if miter.has(q):                                    # (meeting the next road end to end: one shared edge)
+				t = miter[q][0]
+				sc = miter[q][1]
 			var l := Vector3(t.z, 0, -t.x).normalized()
 			if q > 0:
 				along += pts[q].distance_to(pts[q - 1])
-			v.append(pts[q] + l * half)
-			v.append(pts[q] - l * half)
+			v.append(pts[q] + l * half * sc)
+			v.append(pts[q] - l * half * sc)
 			nm.append(Vector3.UP)
 			nm.append(Vector3.UP)
 			cl.append(col)
@@ -482,6 +490,26 @@ func _roads(roads: Array, out: Dictionary) -> void:
 			var a := base + q * 2
 			idx.append_array([a, a + 2, a + 1, a + 1, a + 2, a + 3])
 			faces.append_array([v[a], v[a + 2], v[a + 1], v[a + 1], v[a + 2], v[a + 3]])
+	for pt in patches:                                        # a sharp or uneven meeting: a patch over it (convex: a fan)
+		var y: float = pt[0]
+		var hull: PackedVector2Array = pt[1]
+		var c := Vector3(hull[0].x, y, hull[0].y)
+		for k in range(1, hull.size() - 2):
+			var a0 := Vector3(hull[k].x, y, hull[k].y)
+			var a1 := Vector3(hull[k + 1].x, y, hull[k + 1].y)
+			if (a0 - c).cross(a1 - c).y > 0.0:                 # (facing up)
+				var tmp := a0
+				a0 = a1
+				a1 = tmp
+			var base2 := v.size()
+			for q3 in [c, a0, a1]:
+				v.append(q3)
+				nm.append(Vector3.UP)
+				cl.append(Color(1, 0, 0))                    # (a junction's look: no lanes, just wear)
+				uv.append(Vector2(q3.x, q3.z) / 6.0)
+				uv2.append(Vector2.ZERO)
+			idx.append_array([base2, base2 + 1, base2 + 2])
+			faces.append_array([v[base2], v[base2 + 1], v[base2 + 2]])
 	if v.is_empty():
 		return
 	var ra := []
@@ -499,6 +527,82 @@ func _roads(roads: Array, out: Dictionary) -> void:
 	shape.set_faces(faces)
 	out["road_shape"] = shape
 	_medians(roads, out)
+
+
+## Where two road pieces meet end to end with no junction surface over the place (a road going on as another
+## way, a bend where the map splits a way), each ribbon would end square to itself: a wedge of bare ground open on
+## the outside of the bend (a wheel drops into it) and the two ends overlapping on the inside. A gentle bend
+## (up to 60°, about the same width) gets a mitred join: both ends on the bisector, the half-width stretched to
+## keep the road's width, one shared edge, the paint going on through it. A sharper one, or a change of width, gets
+## a round patch over the meeting (a small junction surface, solid like the road). Returns {"miter": {road index:
+## {vertex: [tangent, scale]}}, "patches": [[centre, radius]]}.
+static func _joins(roads: Array) -> Dictionary:
+	if "--nojoins" in OS.get_cmdline_user_args():           # (testing: the roads as they were, for a before picture)
+		return {"miter": {}, "patches": []}
+	return _joins_core(roads)
+
+
+static func _joins_core(roads: Array) -> Dictionary:
+	var ends := {}
+	for i in roads.size():
+		var r: Dictionary = roads[i]
+		var p: PackedFloat32Array = r["p"]
+		var n := p.size() / 3
+		if n < 2 or r.get("fly", false) or (r.get("b", 0) and float(r["len"]) >= 250.0):
+			continue                                             # (a flyover's ends are on their ramps)
+		for at_end in [false, true]:
+			if float(r["c1"] if at_end else r["c0"]) > 0.0:
+				continue                                         # (a junction surface covers this end)
+			var e := Vector3(p[(n - 1) * 3], p[(n - 1) * 3 + 1], p[(n - 1) * 3 + 2]) if at_end else Vector3(p[0], p[1], p[2])
+			var o := Vector3(p[(n - 2) * 3], p[(n - 2) * 3 + 1], p[(n - 2) * 3 + 2]) if at_end else Vector3(p[3], p[4], p[5])
+			var key := Vector2i(roundi(e.x * 2.0), roundi(e.z * 2.0))
+			if not ends.has(key):
+				ends[key] = []
+			ends[key].append([i, at_end, Vector3(e.x - o.x, 0, e.z - o.z).normalized(), e])
+	var miter := {}
+	var patches: Array = []
+	for key in ends:
+		var lst: Array = ends[key]
+		if lst.size() != 2 or lst[0][0] == lst[1][0]:
+			continue
+		var ra: Dictionary = roads[lst[0][0]]
+		var rb: Dictionary = roads[lst[1][0]]
+		var da: Vector3 = lst[0][2]
+		var db: Vector3 = lst[1][2]
+		var straight := -da.dot(db)                             # 1: straight on
+		if straight > 0.996:
+			continue                                             # (straight on: the ends already meet)
+		var lift: float = RANK.get(ra["c"], 0.02) + 0.06
+		if straight >= 0.5 and absf(float(ra["w"]) - float(rb["w"])) < 0.6:
+			var m := (da - db).normalized()                     # out of a, into b
+			var sc := 1.0 / maxf(m.dot(da), 0.5)
+			for e in [lst[0], lst[1]]:
+				var ri: int = e[0]
+				var rr: Dictionary = roads[ri]
+				var nn: int = (rr["p"] as PackedFloat32Array).size() / 3
+				var own_dir: Vector3 = m if bool(e[1]) == (e == lst[0]) else -m
+				if not miter.has(ri):
+					miter[ri] = {}
+				miter[ri][nn - 1 if e[1] else 0] = [own_dir, sc]
+		else:                                                    # the two ends' edges and a disc round the joint, as one shape
+			var c: Vector3 = lst[0][3]
+			var rad := maxf(float(ra["w"]), float(rb["w"])) * 0.5 + 0.3
+			var hull_pts := PackedVector2Array()
+			for e in [lst[0], lst[1]]:
+				var rr: Dictionary = roads[e[0]]
+				var pp: PackedFloat32Array = rr["p"]
+				var nn := pp.size() / 3
+				var q0 := nn - 1 if e[1] else 0
+				var q1 := nn - 2 if e[1] else 1
+				var tt := Vector2(pp[q0 * 3] - pp[q1 * 3], pp[q0 * 3 + 2] - pp[q1 * 3 + 2]).normalized()
+				var ll := Vector2(tt.y, -tt.x) * float(rr["w"]) * 0.5
+				var ep := Vector2(pp[q0 * 3], pp[q0 * 3 + 2])
+				hull_pts.append(ep + ll)
+				hull_pts.append(ep - ll)
+			for k in 20:
+				hull_pts.append(Vector2(c.x, c.z) + Vector2(cos(TAU * k / 20.0), sin(TAU * k / 20.0)) * rad)
+			patches.append([maxf(c.y, (lst[1][3] as Vector3).y) + lift + 0.01, Geometry2D.convex_hull(hull_pts)])
+	return {"miter": miter, "patches": patches}
 
 
 ## Where the map has several roads on top of each other (each direction, slip lanes, a service lane mapped
