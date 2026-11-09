@@ -16,6 +16,8 @@ const SPEEDS := [1.0, 8.0, 32.0]
 const SITE := "RAGHAVAN DEV  GPM  NVR-1"
 const ROOM := "res://assets/interiors/room_office_stairs.glb"
 const Actor := preload("res://scripts/story/actor.gd")
+const Kit := preload("res://scripts/ui/ui_kit.gd")
+const Hud := preload("res://scripts/ui/hud_style.gd")
 const IN := 21.0 * 3600 + 2388.0           # 21:39:48 the cap man at the gate
 const OUT := 21.0 * 3600 + 3470.0          # 21:57:50 out of the office door again
 # The man in the cap, in the room's frame (Godot: x, up, z; the gate at +z, the stair up the left wall to the
@@ -33,6 +35,8 @@ var playing := true
 var speed_i := 1
 var _drag := false
 var _noise := 0.0
+var _mouse := Vector2(-1, -1)
+var _held := false
 # The office door's card reader, as the recorder logs it: [time, door, card, result]
 var card_log := [[19.0 * 3600 + 1860, "1F-OFFICE", "#03", "OK"], [20.0 * 3600 + 720, "1F-OFFICE", "#11", "OK"],
 	[IN + 27.0, "1F-OFFICE", "#07", "OK"], [OUT - 1.0, "1F-OFFICE", "#07", "EXIT"]]
@@ -274,26 +278,102 @@ void fragment() {
 
 
 # ---- layout ----
+## The playback software on Kathir's monitor: a title bar; the picture (4:3) with the camera list and recording
+## details beside it; the transport and the timeline under it.
+func _k() -> float:
+	return Hud.s(self)
+
+
 func _monitor() -> Rect2:
 	var vs := get_viewport_rect().size
-	var w := minf(vs.x * 0.72, (vs.y - 170.0) * 4.0 / 3.0)
-	return Rect2(vs.x * 0.5 - w * 0.5, 50.0, w, w * 0.75)
+	var k := _k()
+	var side := 330.0 * k
+	var top := 64.0 * k
+	var bottom := 150.0 * k
+	var h := minf(vs.y - top - bottom, (vs.x - side - 80.0 * k) * 0.75)
+	var w := h * 4.0 / 3.0
+	var x := (vs.x - (w + 16.0 * k + side)) * 0.5
+	return Rect2(x, top + 8.0 * k, w, h)
+
+
+func _side() -> Rect2:
+	var m := _monitor()
+	var k := _k()
+	return Rect2(m.end.x + 16.0 * k, m.position.y, 330.0 * k, m.size.y)
 
 
 func _bar() -> Rect2:
 	var m := _monitor()
-	return Rect2(m.position.x, m.end.y + 34.0, m.size.x, 14.0)
+	var k := _k()
+	return Rect2(m.position.x + 352.0 * k, m.end.y + 44.0 * k, m.size.x + 16.0 * k - 352.0 * k + _side().size.x, 8.0 * k)
+
+
+## The transport's buttons: [rect, action] – back ten seconds, play / pause, on ten seconds, the three speeds.
+func _transport() -> Array:
+	var m := _monitor()
+	var k := _k()
+	var y := m.end.y + 28.0 * k
+	var out := []
+	var x := m.position.x
+	for a in ["back", "play", "fwd"]:
+		out.append([Rect2(x, y, 52.0 * k, 40.0 * k), a])
+		x += 58.0 * k
+	x += 12.0 * k
+	for i in SPEEDS.size():
+		out.append([Rect2(x, y + 4.0 * k, 46.0 * k, 32.0 * k), "speed%d" % i])
+		x += 50.0 * k
+	return out
+
+
+## The card log's lines inside the copy, as rows in the side panel: [rect, time]
+func _event_rows() -> Array:
+	var sd := _side()
+	var k := _k()
+	var out := []
+	var y := sd.position.y + 300.0 * k
+	for c in card_log:
+		if float(c[0]) >= T0 and float(c[0]) <= T1:
+			out.append([Rect2(sd.position.x + 12.0 * k, y, sd.size.x - 24.0 * k, 44.0 * k), float(c[0]), c])
+			y += 50.0 * k
+	return out
 
 
 # ---- input ----
 func _gui_input(e: InputEvent) -> void:
+	if e is InputEventMouseMotion:
+		_mouse = e.position
 	if e is InputEventMouseButton and e.button_index == MOUSE_BUTTON_LEFT:
-		_drag = e.pressed and _bar().grow(10.0).has_point(e.position)
+		_held = e.pressed
+		_drag = e.pressed and _bar().grow(12.0 * _k()).has_point(e.position)
 		if _drag:
 			_seek(e.position.x)
+		elif e.pressed:
+			for b in _transport():
+				if (b[0] as Rect2).has_point(e.position):
+					_act(str(b[1]))
+			for r in _event_rows():
+				if (r[0] as Rect2).has_point(e.position):
+					t = maxf(float(r[1]) - 5.0, T0)              # (a little before it, to see it happen)
+					playing = true
 	elif e is InputEventMouseMotion and _drag:
 		_seek(e.position.x)
 	accept_event()
+
+
+func _act(a: String) -> void:
+	match a:
+		"back":
+			t = maxf(t - 10.0, T0)
+		"fwd":
+			t = minf(t + 10.0, T1)
+		"play":
+			playing = not playing
+			if playing and t >= T1:
+				t = T0
+		_:
+			if a.begins_with("speed"):
+				speed_i = int(a.substr(5))
+				playing = true
 
 
 func _seek(x: float) -> void:
@@ -306,14 +386,13 @@ func _unhandled_key_input(e: InputEvent) -> void:
 		return
 	match e.keycode:
 		KEY_SPACE:
-			playing = not playing
+			_act("play")
 		KEY_LEFT:
-			t = maxf(t - 10.0, T0)
+			_act("back")
 		KEY_RIGHT:
-			t = minf(t + 10.0, T1)
+			_act("fwd")
 		KEY_1, KEY_2, KEY_3:
-			speed_i = e.keycode - KEY_1
-			playing = true
+			_act("speed%d" % (e.keycode - KEY_1))
 		KEY_E, KEY_ESCAPE:
 			if e.echo:
 				return
@@ -345,7 +424,7 @@ func _process(dt: float) -> void:
 			_watch.rotation.y = -PI / 2.0 + PI          # (his chair faces across the lobby, to the gate side)
 		_prev_man = mp
 		_prev_watch = wp
-		var f := _monitor().grow(-18.0)
+		var f := _monitor()
 		_feed.position = f.position
 		_feed.size = f.size
 		_over.position = f.position
@@ -360,24 +439,101 @@ func _text(ci: CanvasItem, pos: Vector2, s: String, size: int, col: Color, w := 
 	ci.draw_string(font, pos, s, align, w, size, col)
 
 
+static func _ampm(s: float) -> String:
+	var i := int(s)
+	var h := (i / 3600) % 24
+	return "%d:%02d:%02d %s" % [(h + 11) % 12 + 1, (i / 60) % 60, i % 60, "PM" if h >= 12 else "AM"]
+
+
 func _draw() -> void:
 	var vs := get_viewport_rect().size
-	draw_rect(Rect2(Vector2.ZERO, vs), Color(0.07, 0.065, 0.06))            # Kathir's dark counter
+	var k := _k()
+	draw_rect(Rect2(Vector2.ZERO, vs), Color(0.045, 0.048, 0.055))          # the software's window, full screen
+	draw_rect(Rect2(0, 0, vs.x, 52.0 * k), Color(0.075, 0.08, 0.09))          # its title bar
+	draw_line(Vector2(0, 52.0 * k), Vector2(vs.x, 52.0 * k), Color(1, 1, 1, 0.06), k)
 	var m := _monitor()
-	draw_rect(m.grow(16.0), Color(0.05, 0.05, 0.055))                       # the bezel
-	draw_rect(m, Color(0.02, 0.02, 0.02))
-	var b := _bar()                                                          # the timeline under the screen
-	draw_rect(b, Color(0.2, 0.2, 0.22))
-	var k := (t - T0) / (T1 - T0)
-	draw_rect(Rect2(b.position, Vector2(b.size.x * k, b.size.y)), Color(0.75, 0.3, 0.25))
-	draw_circle(Vector2(b.position.x + b.size.x * k, b.get_center().y), 10.0, Color(0.95, 0.95, 0.95))
-	for mark in [21.5, 21.75, 22.0]:
-		var x: float = b.position.x + b.size.x * (mark * 3600.0 - T0) / (T1 - T0)
-		_text(self, Vector2(x - 40, b.position.y - 6), "%d:%02d PM" % [int(mark) - 12, int(fmod(mark, 1.0) * 60.0)], 13, Color(1, 1, 1, 0.5), 80.0, HORIZONTAL_ALIGNMENT_CENTER)
-	_text(self, Vector2(b.position.x, b.end.y + 26.0), ("▶ ×%d" % int(SPEEDS[speed_i])) if playing else "❚❚", 16, Color(1, 1, 1, 0.8))
-	_text(self, Vector2(0, vs.y - 18.0), L("Space: play / pause  ·  ← →: ten seconds  ·  1 2 3: speed  ·  drag the bar  ·  P: your phone  ·  E: step back",
-		"Space: ஓட்டு / நிறுத்து  ·  ← →: பத்து வினாடி  ·  1 2 3: வேகம்  ·  கோட்ட இழுங்க  ·  P: உங்க ஃபோன்  ·  E: பின்னால"),
-		14, Color(1, 1, 1, 0.45), vs.x, HORIZONTAL_ALIGNMENT_CENTER)
+	Hud.text(self, Vector2(m.position.x, 34.0 * k), L("NVR Playback", "NVR பிளேபேக்"), 18.0 * k, Kit.INK, 700)
+	Hud.text(self, Vector2(m.position.x + Hud.width_of(L("NVR Playback", "NVR பிளேபேக்"), 18.0 * k, 700) + 14.0 * k, 34.0 * k),
+		SITE + "  ·  " + L("Kathir's copy, on his drive", "கதிர் காப்பி, அவர் டிரைவ்ல"), 15.0 * k, Kit.DIM, 500)
+	var st := (L("PLAYING  ×%d", "ஓடுது  ×%d") % int(SPEEDS[speed_i])) if playing else L("PAUSED", "நிறுத்தம்")
+	var sd := _side()
+	Hud.text(self, Vector2(sd.end.x - 200.0 * k, 34.0 * k), st, 14.0 * k, Kit.GREEN if playing else Kit.AMBER, 700, HORIZONTAL_ALIGNMENT_RIGHT, 200.0 * k)
+	draw_rect(m.grow(2.0 * k), Color(0, 0, 0))                                 # the picture's frame
+	draw_rect(m.grow(2.0 * k), Color(1, 1, 1, 0.08), false, k)
+	_draw_side(sd, k)
+	_draw_transport(k)
+	Hud.text(self, Vector2(0, vs.y - 18.0 * k), L("Space play / pause  ·  ← → ten seconds  ·  1 2 3 speed  ·  drag the timeline  ·  P your phone's camera  ·  E step back",
+		"Space ஓட்டு / நிறுத்து  ·  ← → பத்து வினாடி  ·  1 2 3 வேகம்  ·  கோட்ட இழுங்க  ·  P உங்க ஃபோன் கேமரா  ·  E பின்னால"),
+		Kit.T_LABEL * k, Hud.fade(Kit.DIM, 0.75), 500, HORIZONTAL_ALIGNMENT_CENTER, vs.x)
+
+
+## Beside the picture: the camera (the only one Kathir copied), the recording, the time now, the door's card events.
+func _draw_side(sd: Rect2, k: float) -> void:
+	Hud.panel(self, sd, k, 1.2)
+	var x := sd.position.x + 16.0 * k
+	var y := sd.position.y + 34.0 * k
+	Hud.text(self, Vector2(x, y), L("CAMERA", "கேமரா"), Kit.T_LABEL * k, Kit.DIM, 700)
+	var cam := Rect2(sd.position.x + 12.0 * k, y + 12.0 * k, sd.size.x - 24.0 * k, 48.0 * k)
+	Kit.card(self, cam, k, true)
+	draw_circle(Vector2(cam.position.x + 18.0 * k, cam.get_center().y), 5.0 * k, Kit.RED if playing else Kit.GREY)
+	Hud.text(self, Vector2(cam.position.x + 34.0 * k, cam.get_center().y + 6.0 * k), "CH02  " + L("Lobby", "லாபி"), Kit.T_BODY * k, Kit.INK, 600)
+	Hud.text(self, Vector2(cam.position.x, cam.get_center().y + 6.0 * k), L("the only one copied", "காப்பி இது மட்டும்"), Kit.T_LABEL * k, Kit.DIM, 500,
+		HORIZONTAL_ALIGNMENT_RIGHT, cam.size.x - 12.0 * k)
+	y += 100.0 * k
+	Hud.text(self, Vector2(x, y), L("RECORDING", "பதிவு"), Kit.T_LABEL * k, Kit.DIM, 700)
+	Hud.text(self, Vector2(x, y + 28.0 * k), L("Copy  %s – %s", "காப்பி  %s – %s") % [_ampm(T0).replace(":00 ", " "), _ampm(T1).replace(":00 ", " ")], Kit.T_CAPTION * k, Kit.INK, 500)
+	Hud.text(self, Vector2(x, y + 72.0 * k), _ampm(t), Kit.T_FIGURE * k, Kit.INK, 600)
+	Hud.text(self, Vector2(x, y + 96.0 * k), L("on the recorder's clock", "ரெக்கார்டர் கடிகாரத்துல"), Kit.T_LABEL * k, Kit.DIM, 500)
+	var ey := sd.position.y + 282.0 * k
+	Hud.text(self, Vector2(x, ey), L("DOOR EVENTS · 1F OFFICE", "கதவு நிகழ்வுகள் · 1F ஆஃபீஸ்"), Kit.T_LABEL * k, Kit.DIM, 700)
+	for row in _event_rows():
+		var r: Rect2 = row[0]
+		var c: Array = row[2]
+		var past: bool = t >= float(row[1])
+		var hover := r.has_point(_mouse)
+		Kit.card(self, r, k, false, hover)
+		draw_rect(Rect2(r.position.x, r.position.y + 8.0 * k, 3.0 * k, r.size.y - 16.0 * k), Kit.AMBER if past else Kit.GREY)
+		Hud.text(self, Vector2(r.position.x + 14.0 * k, r.position.y + 28.0 * k), _ampm(float(row[1])), Kit.T_CAPTION * k, Kit.INK if past else Kit.DIM, 600)
+		Hud.text(self, Vector2(r.position.x, r.position.y + 28.0 * k), "%s  %s" % [L("CARD", "கார்டு") + " " + str(c[2]), str(c[3])], Kit.T_CAPTION * k,
+			Kit.AMBER if past else Kit.DIM, 600, HORIZONTAL_ALIGNMENT_RIGHT, r.size.x - 14.0 * k)
+	Hud.text(self, Vector2(x, sd.end.y - 18.0 * k), L("Click an event to go to it", "போக ஒரு நிகழ்வ கிளிக் பண்ணுங்க"), Kit.T_LABEL * k, Hud.fade(Kit.DIM, 0.7), 500)
+
+
+## Under the picture: the transport, then the timeline with its hours, the door events marked, and the playhead.
+func _draw_transport(k: float) -> void:
+	for b in _transport():
+		var r: Rect2 = b[0]
+		var a := str(b[1])
+		var on: bool = a.begins_with("speed") and int(a.substr(5)) == speed_i
+		var stt := Kit.state_of(r, _mouse, true, false, _held)
+		var label: String = {"back": "−10s", "play": "❚❚" if playing else "▶", "fwd": "+10s"}.get(a, "×%d" % int(SPEEDS[int(a.substr(5))]) if a.begins_with("speed") else "")
+		Kit.button(self, r, label, k * (0.85 if a != "play" else 1.0), stt, "primary" if (a == "play" or on) else "secondary")
+	var b := _bar()
+	var kk := (t - T0) / (T1 - T0)
+	Kit.progress(self, b, kk, k, Kit.RED.lightened(0.1))
+	for h in [21.5, 21.75, 22.0]:
+		var x: float = b.position.x + b.size.x * (h * 3600.0 - T0) / (T1 - T0)
+		draw_line(Vector2(x, b.end.y + 4.0 * k), Vector2(x, b.end.y + 10.0 * k), Kit.DIM, k)
+		Hud.text(self, Vector2(x - 40.0 * k, b.end.y + 28.0 * k), "%d:%02d PM" % [int(h) - 12, int(fmod(h, 1.0) * 60.0)], Kit.T_LABEL * k, Kit.DIM, 500,
+			HORIZONTAL_ALIGNMENT_CENTER, 80.0 * k)
+	for c in card_log:
+		if float(c[0]) >= T0 and float(c[0]) <= T1:               # the door's events, as the recorder marks them
+			var x: float = b.position.x + b.size.x * (float(c[0]) - T0) / (T1 - T0)
+			draw_rect(Rect2(x - 1.5 * k, b.position.y - 8.0 * k, 3.0 * k, b.size.y + 16.0 * k), Kit.AMBER)
+	var px := b.position.x + b.size.x * kk
+	draw_circle(Vector2(px, b.get_center().y), 9.0 * k, Kit.INK)
+	var tl := _ampm(t)
+	var tw := Hud.width_of(tl, Kit.T_LABEL * k, 600) + 16.0 * k
+	var tag := Rect2(clampf(px - tw * 0.5, b.position.x, b.end.x - tw), b.position.y - 38.0 * k, tw, 24.0 * k)
+	draw_style_box(_tagbox(k), tag)
+	Hud.text(self, Vector2(tag.position.x, tag.position.y + 17.0 * k), tl, Kit.T_LABEL * k, Kit.INK, 600, HORIZONTAL_ALIGNMENT_CENTER, tw)
+
+
+func _tagbox(k: float) -> StyleBoxFlat:
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = Color(0.16, 0.17, 0.19)
+	sb.set_corner_radius_all(int(4.0 * k))
+	return sb
 
 
 ## The recorder's own writing over its picture: channel, clock, its name, the card log.

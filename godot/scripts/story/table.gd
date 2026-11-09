@@ -13,6 +13,8 @@ extends Control
 signal said(line: Dictionary)
 signal finished(result: Dictionary)
 
+const Kit := preload("res://scripts/ui/ui_kit.gd")
+const Hud := preload("res://scripts/ui/hud_style.gd")
 const WOOD := Color(0.36, 0.22, 0.12)
 const WOOD2 := Color(0.3, 0.18, 0.1)
 const PAPER := Color(0.96, 0.95, 0.9)
@@ -48,7 +50,7 @@ func start(spec: Dictionary, language: String, testing: bool, pick: int) -> void
 	skip = testing
 	choice = pick
 	lines = spec.get("lines", [])
-	font = ThemeDB.fallback_font
+	font = Hud.font(500)
 	set_anchors_preset(Control.PRESET_FULL_RECT)
 	mouse_filter = Control.MOUSE_FILTER_STOP
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
@@ -101,7 +103,7 @@ func _ex_rect(id: String) -> Rect2:
 	var i := _on_table.find(id)
 	var n := maxi(_on_table.size(), 3)
 	var w := minf(260.0, vs.x * 0.16)
-	var x0 := vs.x * 0.5 - (n * (w + 30.0)) * 0.5 - 60.0
+	var x0 := vs.x * 0.5 - (n * (w + 30.0)) * 0.5 + 60.0     # (right of his answer, on the left)
 	var y := _top() + 70.0 - (1.0 - _ease(float(_arrive.get(id, 1.0)))) * 120.0
 	return Rect2(x0 + i * (w + 30.0), y, w, w * 1.15)
 
@@ -122,7 +124,17 @@ func _show_zone() -> Rect2:
 
 func _say_btn() -> Rect2:
 	var vs := get_viewport_rect().size
-	return Rect2(60.0, vs.y - 110.0, 420.0, 64.0)
+	var k := Hud.s(self)
+	var ap := Rect2(40.0 * k, vs.y - 320.0 * k, 480.0 * k, 290.0 * k)
+	return Rect2(ap.position.x + 20.0 * k, ap.end.y - 56.0 * k - 14.0 * k, ap.size.x - 40.0 * k, 56.0 * k)
+
+
+## His answer, set out on the left once the inspector waits: the three things he can do, the one he can say a
+## button, and how long the inspector will wait.
+func _answer_panel() -> Rect2:
+	var vs := get_viewport_rect().size
+	var k := Hud.s(self)
+	return Rect2(40.0 * k, vs.y - 320.0 * k, 480.0 * k, 290.0 * k)
 
 
 func _ease(x: float) -> float:
@@ -258,10 +270,18 @@ func _draw() -> void:
 		draw_line(Vector2(0, y), Vector2(vs.x, y + sin(k * 1.7) * 8.0), WOOD2, 2.0)
 	draw_rect(Rect2(0, top - 6.0, vs.x, 8.0), Color(0.22, 0.13, 0.07))
 	# Selvi's tray, his phone in it
-	var tr := _tray()
-	draw_rect(tr, Color(0.55, 0.57, 0.6))
-	draw_rect(tr.grow(-10.0), Color(0.45, 0.47, 0.5))
-	_text(Vector2(tr.position.x, tr.end.y + 22.0), L("Selvi's tray", "செல்வியோட தட்டு"), 14, Color(1, 1, 1, 0.6), tr.size.x, HORIZONTAL_ALIGNMENT_CENTER)
+	var kk := Hud.s(self)
+	var tr := _tray()                                      # Selvi's steel tray, his phone in it
+	var tsb := StyleBoxFlat.new()
+	tsb.bg_color = Color(0.5, 0.52, 0.55)
+	tsb.set_corner_radius_all(int(10.0 * kk))
+	tsb.border_color = Color(0.68, 0.7, 0.73)
+	tsb.set_border_width_all(maxi(2, int(3.0 * kk)))
+	tsb.shadow_color = Color(0, 0, 0, 0.35)
+	tsb.shadow_size = int(10.0 * kk)
+	draw_style_box(tsb, tr)
+	Hud.text(self, Vector2(tr.position.x, tr.end.y + 24.0 * kk), L("Selvi's tray · your phone", "செல்வியோட தட்டு · உங்க ஃபோன்"), Kit.T_LABEL * kk, Kit.DIM, 600,
+		HORIZONTAL_ALIGNMENT_CENTER, tr.size.x)
 	for id in _on_table:
 		if id != _hover:
 			_draw_exhibit(id, _ex_rect(id), 1.0)
@@ -270,20 +290,49 @@ func _draw() -> void:
 		var big := Rect2(r.get_center() - r.size * 0.9, r.size * 1.8)
 		big.position.y = minf(big.position.y, vs.y - big.size.y - 10.0)
 		_draw_exhibit(_hover, big, 1.8)
+	elif not _on_table.is_empty() and not _waiting:
+		Hud.text(self, Vector2(0, top + 40.0 * kk), L("Point at a thing on the table to read it  ·  Enter or a click: go on", "படிக்க மேசையில ஒண்ண சுட்டுங்க  ·  Enter அல்லது கிளிக்: அடுத்து"),
+			Kit.T_LABEL * kk, Hud.fade(Kit.INK, 0.6), 500, HORIZONTAL_ALIGNMENT_CENTER, vs.x)
 	_draw_own_phone(_phone_pos())
 	if not _waiting:
 		return
 	if _drag:
 		var z := _show_zone()
-		draw_rect(z, Color(1, 1, 1, 0.06 + 0.06 * sin(_t * 4.0)))
-		draw_arc(_phone_pos() + Vector2(0, -120), 26.0, -PI * 0.5, -PI * 0.5 + TAU * _steady, 32, Color(1, 0.85, 0.35), 5.0)
+		var zsb := StyleBoxFlat.new()
+		zsb.bg_color = Color(1, 1, 1, 0.05 + 0.04 * sin(_t * 4.0))
+		zsb.set_corner_radius_all(int(14.0 * kk))
+		zsb.border_color = Hud.fade(Kit.AMBER, 0.5 if not z.has_point(_phone_pos()) else 0.95)
+		zsb.set_border_width_all(maxi(1, int(2.0 * kk)))
+		draw_style_box(zsb, z)
+		Hud.text(self, Vector2(z.position.x, z.position.y - 12.0 * kk), L("Hold it up to him, steady", "அவர்கிட்ட நீட்டிப் பிடிங்க, அசையாம"), Kit.T_LABEL * kk, Kit.AMBER, 600,
+			HORIZONTAL_ALIGNMENT_CENTER, z.size.x)
+		draw_arc(_phone_pos() + Vector2(0, -124), 24.0, 0, TAU, 32, Color(1, 1, 1, 0.15), 5.0)
+		draw_arc(_phone_pos() + Vector2(0, -124), 24.0, -PI * 0.5, -PI * 0.5 + TAU * _steady, 32, Kit.AMBER, 5.0, true)
+	var ap := _answer_panel()                              # his answer: what he can do, and how long he has
+	Hud.panel(self, ap, kk, 1.3, Kit.AMBER)
+	Hud.text(self, ap.position + Vector2(24.0 * kk, 34.0 * kk), L("THE INSPECTOR WAITS FOR AN ANSWER", "இன்ஸ்பெக்டர் பதிலுக்கு காத்திருக்கார்"), Kit.T_LABEL * kk, Kit.AMBER, 700)
+	var opts := [[L("Show him", "காட்டுங்க"), L("drag your phone up to him, hold it", "ஃபோன இழுத்து அவர்கிட்ட பிடிங்க")],
+		[L("Say it", "சொல்லுங்க"), L("the words below", "கீழ இருக்கற வார்த்தை")],
+		[L("Say nothing", "பேசாதீங்க"), L("and he loses his patience", "அவர் பொறுமை போகும்")]]
+	for i in opts.size():
+		var y := ap.position.y + 70.0 * kk + i * 40.0 * kk
+		Hud.text(self, Vector2(ap.position.x + 24.0 * kk, y), opts[i][0], Kit.T_CAPTION * kk, Kit.INK, 700)
+		Hud.text(self, Vector2(ap.position.x + 160.0 * kk, y), opts[i][1], Kit.T_LABEL * kk, Kit.DIM, 500, HORIZONTAL_ALIGNMENT_LEFT, ap.size.x - 180.0 * kk)
+	var pat := clampf(1.0 - _wait_t / PATIENCE, 0.0, 1.0)
+	Kit.progress(self, Rect2(ap.position.x + 24.0 * kk, ap.position.y + 196.0 * kk, ap.size.x - 48.0 * kk, 4.0 * kk), pat, kk,
+		Kit.GREY if pat > 0.45 else Kit.AMBER)
+	Hud.text(self, Vector2(ap.position.x + 24.0 * kk, ap.position.y + 186.0 * kk), L("His patience", "அவர் பொறுமை"), Kit.T_LABEL * kk, Hud.fade(Kit.DIM, 0.8), 500)
 	var sb := _say_btn()                                   # the one thing he can only say
-	draw_rect(sb, Color(0.05, 0.05, 0.07, 0.8))
-	_text(sb.position + Vector2(18, 40), "“" + L("I was at home, sir. All night.", "நான் வீட்லதான் இருந்தேன் சார். ராத்திரி முழுக்க.") + "”",
-		19, Color(1, 1, 1, 0.92), sb.size.x - 30.0)
-	if _breath > 0.0:                                      # his breath
-		var c := Vector2(vs.x - 90.0, vs.y - 80.0)
-		draw_circle(c, 18.0 + 30.0 * sin(_breath * PI), Color(0.7, 0.85, 1.0, 0.25))
+	sb.position.y = ap.end.y - sb.size.y - 14.0 * kk
+	sb.position.x = ap.position.x + 20.0 * kk
+	sb.size.x = ap.size.x - 40.0 * kk
+	Kit.button(self, sb, "“" + L("I was at home, sir. All night.", "நான் வீட்லதான் இருந்தேன் சார். ராத்திரி முழுக்க.") + "”", kk,
+		Kit.state_of(sb, _held), "secondary")
+	if _breath > 0.0 or _stress() > 60.0:                  # his breath (Space), when his hand shakes
+		var c := Vector2(vs.x - 90.0 * kk, vs.y - 80.0 * kk)
+		draw_circle(c, (18.0 + 30.0 * sin(_breath * PI)) * kk, Color(0.7, 0.85, 1.0, 0.25))
+		Hud.text(self, Vector2(c.x - 160.0 * kk, c.y + 64.0 * kk), L("Hold Space: breathe", "Space அழுத்திப் பிடிங்க: மூச்சு"), Kit.T_LABEL * kk, Kit.DIM, 500,
+			HORIZONTAL_ALIGNMENT_CENTER, 320.0 * kk)
 
 
 func _draw_own_phone(p: Vector2) -> void:
@@ -302,6 +351,11 @@ func _draw_own_phone(p: Vector2) -> void:
 
 func _draw_exhibit(id: String, r: Rect2, k: float) -> void:
 	draw_rect(Rect2(r.position + Vector2(6, 8) * k, r.size), Color(0, 0, 0, 0.35))
+	var n := _on_table.find(id) + 1                       # the station's exhibit tag, tied on
+	var tw := Hud.width_of(L("EXH. %d", "சான்று %d") % n, 11.0 * k, 700) + 14.0 * k
+	var tag := Rect2(r.position.x + r.size.x - tw - 6.0 * k, r.position.y - 14.0 * k, tw, 22.0 * k)
+	if id == _hover:
+		draw_rect(r.grow(4.0), Kit.AMBER, false, 2.0)
 	match id:
 		"workphone":                                       # his work phone, the message open
 			draw_rect(r, Color(0.05, 0.05, 0.06))
@@ -338,6 +392,10 @@ func _draw_exhibit(id: String, r: Rect2, k: float) -> void:
 			_text(Vector2(s.position.x, s.end.y), L("Authorised: Karthik M.", "அனுமதி: கார்த்திக் ம."), int(10 * k), Color(0.35, 0.35, 0.4))
 		_:
 			draw_rect(r, PAPER)
+	draw_rect(tag, Color(0.93, 0.88, 0.72))
+	draw_rect(tag, Color(0.5, 0.42, 0.3), false, 1.0)
+	Hud.text(self, Vector2(tag.position.x, tag.position.y + 16.0 * k), L("EXH. %d", "சான்று %d") % n, 11.0 * k, Color(0.25, 0.2, 0.15), 700,
+		HORIZONTAL_ALIGNMENT_CENTER, tag.size.x)
 
 
 static func _knuckle() -> AudioStreamWAV:

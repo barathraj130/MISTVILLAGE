@@ -86,6 +86,9 @@ static func button(c: CanvasItem, r: Rect2, label: String, k: float, state := NO
 	if state == FOCUS:
 		c.draw_style_box(_box(Color(0, 0, 0, 0), (R_S + 3.0) * k, AMBER, 2.0 * k), r.grow(4.0 * k))
 	var size := T_BODY * k
+	var room := r.size.x - 28.0 * k - (Hud.width_of(hint, T_LABEL * k, 500) + SP_S * k if hint != "" else 0.0)
+	while size > 11.0 * k and Hud.width_of(label, size, 600) > room:   # (a long label, a Tamil one: smaller, never cut)
+		size *= 0.93
 	var y := r.position.y + r.size.y * 0.5 + size * 0.36
 	if hint != "":                                          # the key for it, small and dim, after the words
 		var tw := Hud.width_of(label, size, 600)

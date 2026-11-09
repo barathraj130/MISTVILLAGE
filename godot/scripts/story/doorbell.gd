@@ -13,6 +13,8 @@ const FRAMES := 8
 const GAP := 0.45                          # seconds between the clip's frames
 const SIZE := Vector2i(640, 480)
 const APP := "Kaval Doorbell"              # (a made-up company: the landlord's cheap plan)
+const Kit := preload("res://scripts/ui/ui_kit.gd")
+const Hud := preload("res://scripts/ui/hud_style.gd")
 
 var lang := "en"
 var font: Font
@@ -22,6 +24,10 @@ var _t := 0.0
 var _back: Control                         # the tablet and the app, under the clip
 var _feed: TextureRect
 var _over: Control                         # the clip's clock and the list, over it
+var _play := true                          # the clip: playing, or held on a frame (Space; ← → a frame; drag the bar)
+var _pos := 0.0                            # where in the clip, 0..1
+var _drag := false
+var _mouse := Vector2(-1, -1)
 
 
 func L(en: String, ta: String) -> String:
@@ -102,6 +108,8 @@ func open(language: String) -> void:
 		_over.draw.connect(_draw_over)
 		add_child(_over)
 	_t = 0.0
+	_pos = 0.0
+	_play = true
 	visible = true
 
 
@@ -122,11 +130,13 @@ func _process(dt: float) -> void:
 	if not visible:
 		return
 	_t += dt
+	if _play and not _drag:
+		_pos = fmod(_pos + dt / (GAP * FRAMES), 1.0)
 	var r := _screen()
 	_feed.position = r.position
 	_feed.size = r.size
 	if not _frames.is_empty():
-		_feed.texture = _frames[int(_t / GAP) % _frames.size()]
+		_feed.texture = _frames[mini(int(_pos * _frames.size()), _frames.size() - 1)]
 	(_feed.material as ShaderMaterial).set_shader_parameter("t", _t)
 	_back.queue_redraw()
 	_over.queue_redraw()
@@ -135,74 +145,169 @@ func _process(dt: float) -> void:
 
 
 func _gui_input(e: InputEvent) -> void:
+	if e is InputEventMouseMotion:
+		_mouse = e.position
+		if _drag:
+			_seek(e.position.x)
+	elif e is InputEventMouseButton and e.button_index == MOUSE_BUTTON_LEFT:
+		_drag = e.pressed and _scrub().grow(12.0 * _k()).has_point(e.position)
+		if _drag:
+			_seek(e.position.x)
+		elif e.pressed and _play_btn().has_point(e.position):
+			_play = not _play
 	accept_event()
 
 
+func _unhandled_key_input(e: InputEvent) -> void:
+	if not visible or not (e is InputEventKey) or not e.pressed:
+		return
+	var n := maxf(float(_frames.size()), 1.0)
+	match e.keycode:
+		KEY_SPACE:
+			_play = not _play
+		KEY_LEFT:
+			_play = false
+			_pos = fposmod(floorf(_pos * n) / n - 1.0 / n, 1.0)
+		KEY_RIGHT:
+			_play = false
+			_pos = fposmod(floorf(_pos * n) / n + 1.0 / n, 1.0)
+		_:
+			return
+	get_viewport().set_input_as_handled()
+
+
+func _seek(x: float) -> void:
+	var b := _scrub()
+	_pos = clampf((x - b.position.x) / b.size.x, 0.0, 0.999)
+
+
 # ---- the tablet ----
+## Lakshmi aunty's tablet, in landscape, with the doorbell app: its bar (the app, the camera), the clip with its
+## controls under it, the week's clips on the right.
+func _k() -> float:
+	return Hud.s(self)
+
+
 func _tablet() -> Rect2:
 	var vs := get_viewport_rect().size
-	var w := minf(vs.x * 0.78, (vs.y - 120.0) * 1.5)
-	return Rect2(vs.x * 0.5 - w * 0.5, vs.y * 0.5 - w / 3.0 - 20.0, w, w / 1.5)
+	var k := _k()
+	var w := minf(vs.x - 120.0 * k, (vs.y - 150.0 * k) * 1.5)
+	var h := w / 1.5
+	return Rect2(vs.x * 0.5 - w * 0.5, (vs.y - h) * 0.5 - 16.0 * k, w, h)
+
+
+func _app() -> Rect2:
+	return _tablet().grow(-22.0 * _k())
 
 
 func _screen() -> Rect2:                                 # the clip, on the left of the app
-	var tb := _tablet().grow(-26.0)
-	var w := tb.size.x * 0.64
-	return Rect2(tb.position.x + 14.0, tb.position.y + 58.0, w, w * 0.75)
+	var a := _app()
+	var k := _k()
+	var w := a.size.x * 0.64
+	var h := minf(w * 0.75, a.size.y - 64.0 * k - 104.0 * k)
+	return Rect2(a.position.x + 20.0 * k, a.position.y + 64.0 * k, h * 4.0 / 3.0, h)
+
+
+func _scrub() -> Rect2:
+	var s := _screen()
+	var k := _k()
+	return Rect2(s.position.x + 56.0 * k, s.end.y + 26.0 * k, s.size.x - 56.0 * k, 6.0 * k)
+
+
+func _play_btn() -> Rect2:
+	var s := _screen()
+	var k := _k()
+	return Rect2(s.position.x, s.end.y + 10.0 * k, 40.0 * k, 38.0 * k)
 
 
 func _draw_back() -> void:
-	var tb := _tablet()
 	var c := _back
-	c.draw_rect(Rect2(Vector2.ZERO, get_viewport_rect().size), Color(0, 0, 0, 0.45))
-	c.draw_style_box(_rounded(Color(0.07, 0.07, 0.08), 26.0), tb)                    # the tablet, in her hands
-	var sc := tb.grow(-26.0)
-	c.draw_rect(sc, Color(0.96, 0.96, 0.97))                                         # the app
-	c.draw_rect(Rect2(sc.position, Vector2(sc.size.x, 44.0)), Color(0.12, 0.42, 0.55))
-	c.draw_string(font, sc.position + Vector2(16, 29), APP, HORIZONTAL_ALIGNMENT_LEFT, -1, 19, Color.WHITE)
-	c.draw_string(font, sc.position + Vector2(16, 29), L("Front door · 1st floor (Ashwin)", "முன் கதவு · 1வது மாடி (அஷ்வின்)"),
-		HORIZONTAL_ALIGNMENT_RIGHT, sc.size.x - 32.0, 14, Color(0.85, 0.93, 0.97))
+	var k := _k()
+	var tb := _tablet()
+	c.draw_rect(Rect2(Vector2.ZERO, get_viewport_rect().size), Color(0.02, 0.02, 0.03, 0.62))
+	var bez := _rounded(Color(0.06, 0.06, 0.07), 30.0 * k)                            # the tablet, in her hands
+	bez.shadow_color = Color(0, 0, 0, 0.5)
+	bez.shadow_size = int(24.0 * k)
+	bez.border_color = Color(1, 1, 1, 0.08)
+	bez.set_border_width_all(maxi(1, int(k)))
+	c.draw_style_box(bez, tb)
+	c.draw_circle(Vector2(tb.position.x + 11.0 * k, tb.get_center().y), 3.0 * k, Color(0.15, 0.15, 0.17))   # its front camera
+	var a := _app()
+	c.draw_style_box(_rounded(Color(0.09, 0.1, 0.12), 12.0 * k), a)                  # the app, dark
+	c.draw_rect(Rect2(a.position + Vector2(0, 12.0 * k), Vector2(a.size.x, 40.0 * k)), Color(0.11, 0.125, 0.15))
+	c.draw_style_box(_rounded(Color(0.11, 0.125, 0.15), 12.0 * k), Rect2(a.position, Vector2(a.size.x, 52.0 * k)))
+	var logo := a.position + Vector2(30.0 * k, 26.0 * k)                             # its shield
+	var sh := PackedVector2Array([logo + Vector2(-11, -12) * k, logo + Vector2(11, -12) * k, logo + Vector2(11, 2) * k,
+		logo + Vector2(0, 13) * k, logo + Vector2(-11, 2) * k])
+	c.draw_colored_polygon(sh, Color(0.18, 0.6, 0.72))
+	Hud.text(c, logo + Vector2(-11.0 * k, 5.0 * k), "K", 13.0 * k, Color.WHITE, 700, HORIZONTAL_ALIGNMENT_CENTER, 22.0 * k)
+	Hud.text(c, a.position + Vector2(52.0 * k, 33.0 * k), APP, 18.0 * k, Kit.INK, 700)
+	Hud.text(c, a.position + Vector2(0, 33.0 * k), L("Front door · 1st floor (Ashwin)", "முன் கதவு · 1வது மாடி (அஷ்வின்)"), 14.0 * k, Kit.DIM, 500,
+		HORIZONTAL_ALIGNMENT_RIGHT, a.size.x - 20.0 * k)
+	var s := _screen()
+	c.draw_rect(s.grow(1.0 * k), Color(0, 0, 0))
 
 
 func _draw_over() -> void:
-	var tb := _tablet()
 	var c := _over
-	var sc := tb.grow(-26.0)
+	var k := _k()
+	var a := _app()
 	var s := _screen()
 	if _frames.is_empty():
 		c.draw_rect(s, Color(0.1, 0.1, 0.1))
-		c.draw_string(font, s.position + Vector2(20, s.size.y * 0.5), L("Clip not available", "கிளிப் இல்லை"), HORIZONTAL_ALIGNMENT_LEFT, -1, 18, Color(0.8, 0.8, 0.8))
+		Hud.text(c, s.position + Vector2(0, s.size.y * 0.5), L("Clip not available", "கிளிப் இல்லை"), 18.0 * k, Kit.DIM, 500, HORIZONTAL_ALIGNMENT_CENTER, s.size.x)
 	var day := int(_meta.get("day", 1))
 	var m := float(_meta.get("minute", 1341.0))
-	var secs := int(fmod(_t, GAP * FRAMES))
+	var secs := int(_pos * GAP * FRAMES)
 	var stamp := "FRONT DOOR   DAY %d   %02d:%02d:%02d" % [day, int(m) / 60, int(m) % 60, 4 + secs]
-	c.draw_rect(Rect2(s.position + Vector2(8, 8), Vector2(300, 24)), Color(0, 0, 0, 0.45))
-	c.draw_string(font, s.position + Vector2(14, 26), stamp, HORIZONTAL_ALIGNMENT_LEFT, -1, 15, Color(1, 1, 1, 0.95))
-	c.draw_circle(s.position + Vector2(s.size.x - 18, 22), 6.0, Color(0.9, 0.15, 0.1) if fmod(_t, 1.0) < 0.6 else Color(0.4, 0.1, 0.1))
-	c.draw_string(font, s.position + Vector2(s.size.x - 60, 27), "REC", HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Color.WHITE)
-	var prog := fmod(_t, GAP * FRAMES) / (GAP * FRAMES)                              # the clip's bar
-	c.draw_rect(Rect2(s.position.x, s.end.y + 10.0, s.size.x, 5.0), Color(0.8, 0.82, 0.85))
-	c.draw_rect(Rect2(s.position.x, s.end.y + 10.0, s.size.x * prog, 5.0), Color(0.12, 0.42, 0.55))
-	c.draw_string(font, Vector2(s.position.x, s.end.y + 36.0), L("Motion at the door · %s · 0:0%d" % [clock(float(_meta.get("minute", 1341.0))), int(GAP * FRAMES)],
-		"வாசல்ல அசைவு · %s · 0:0%d" % [clock(float(_meta.get("minute", 1341.0))), int(GAP * FRAMES)]), HORIZONTAL_ALIGNMENT_LEFT, -1, 15, Color(0.15, 0.15, 0.18))
+	c.draw_rect(Rect2(s.position + Vector2(10, 10) * k, Vector2(Hud.width_of(stamp, 14.0 * k, 600) + 20.0 * k, 26.0 * k)), Color(0, 0, 0, 0.5))
+	Hud.text(c, s.position + Vector2(20.0 * k, 28.0 * k), stamp, 14.0 * k, Color(1, 1, 1, 0.95), 600)
+	var badge := Rect2(s.end.x - 110.0 * k, s.position.y + 10.0 * k, 100.0 * k, 26.0 * k)
+	c.draw_style_box(_rounded(Color(0, 0, 0, 0.5), 13.0 * k), badge)
+	c.draw_circle(badge.position + Vector2(14.0 * k, 13.0 * k), 4.5 * k, Kit.GREEN if _play else Kit.AMBER)
+	Hud.text(c, badge.position + Vector2(26.0 * k, 18.0 * k), L("PLAYBACK", "பிளேபேக்"), 12.0 * k, Kit.INK, 700)
+	# the controls: play / pause, the bar, the clip's time
+	var pb := _play_btn()
+	Kit.button(c, pb, "❚❚" if _play else "▶", k * 0.85, Kit.state_of(pb, _mouse), "secondary")
+	var sb := _scrub()
+	Kit.progress(c, sb, _pos, k, Color(0.18, 0.6, 0.72))
+	c.draw_circle(Vector2(sb.position.x + sb.size.x * _pos, sb.get_center().y), 7.0 * k, Kit.INK)
+	Hud.text(c, Vector2(sb.position.x, sb.end.y + 30.0 * k), L("Motion at the door", "வாசல்ல அசைவு") + "  ·  " + L("Day %d", "நாள் %d") % day + "  ·  " + clock(m),
+		Kit.T_CAPTION * k, Kit.INK, 600)
+	Hud.text(c, Vector2(sb.position.x, sb.end.y + 30.0 * k), "0:0%d / 0:0%d" % [secs, int(GAP * FRAMES)], Kit.T_CAPTION * k, Kit.DIM, 500,
+		HORIZONTAL_ALIGNMENT_RIGHT, sb.size.x)
 	# the week's clips, newest first; the plan keeps seven days
-	var lx := s.end.x + 18.0
-	var ly := s.position.y + 6.0
-	var lw := sc.end.x - lx - 12.0
-	c.draw_string(font, Vector2(lx, ly + 12.0), L("Clips · kept 7 days", "கிளிப்கள் · 7 நாள்"), HORIZONTAL_ALIGNMENT_LEFT, lw, 15, Color(0.3, 0.32, 0.36))
+	var lx := s.end.x + 20.0 * k
+	var lw := a.end.x - lx - 20.0 * k
+	var ly := s.position.y
+	Hud.text(c, Vector2(lx, ly + 14.0 * k), L("CLIPS · KEPT 7 DAYS", "கிளிப்கள் · 7 நாள்"), Kit.T_LABEL * k, Kit.DIM, 700)
 	var rows := [[day + 5, "6:04 AM", L("Milk delivery", "பால் போடறவர்")], [day + 4, "7:52 PM", L("Courier", "கூரியர்")],
-		[day + 2, "6:02 AM", L("Milk delivery", "பால் போடறவர்")], [day, clock(float(_meta.get("minute", 1341.0))), L("Motion at the door", "வாசல்ல அசைவு")],
+		[day + 2, "6:02 AM", L("Milk delivery", "பால் போடறவர்")], [day, clock(m), L("Motion at the door", "வாசல்ல அசைவு")],
 		[day, "6:03 AM", L("Milk delivery", "பால் போடறவர்")]]
+	var rh := 62.0 * k
 	for i in rows.size():
-		var y := ly + 30.0 + i * 52.0
+		var r := Rect2(lx, ly + 30.0 * k + i * (rh + 8.0 * k), lw, rh)
 		var on: bool = i == 3
-		c.draw_rect(Rect2(lx, y, lw, 46.0), Color(0.86, 0.93, 0.96) if on else Color(0.92, 0.92, 0.94))
-		c.draw_string(font, Vector2(lx + 10, y + 19), "%s %d · %s" % [L("Day", "நாள்"), rows[i][0], rows[i][1]], HORIZONTAL_ALIGNMENT_LEFT, lw - 20, 14, Color(0.1, 0.1, 0.12))
-		c.draw_string(font, Vector2(lx + 10, y + 37), str(rows[i][2]), HORIZONTAL_ALIGNMENT_LEFT, lw - 20, 13, Color(0.35, 0.36, 0.4))
-	c.draw_string(font, Vector2(lx, ly + 30.0 + rows.size() * 52.0 + 18.0), L("Oldest clip deletes tomorrow", "பழைய கிளிப் நாளைக்கு அழியும்"),
-		HORIZONTAL_ALIGNMENT_LEFT, lw, 13, Color(0.75, 0.25, 0.15))
-	c.draw_string(font, Vector2(tb.position.x, tb.end.y + 24.0), L("P on your phone's camera: a picture   ·   Enter: give it back", "ஃபோன் கேமராவுல P: படம்   ·   Enter: திருப்பிக் குடுங்க"),
-		HORIZONTAL_ALIGNMENT_CENTER, tb.size.x, 15, Color(1, 1, 1, 0.85))
+		Kit.card(c, r, k, on, r.has_point(_mouse))
+		var th := Rect2(r.position + Vector2(8, 8) * k, Vector2((rh - 16.0 * k) * 4.0 / 3.0, rh - 16.0 * k))
+		if on and not _frames.is_empty():
+			c.draw_texture_rect(_frames[0], th, false, Color(0.7, 0.7, 0.7))             # (that night's clip: its first frame)
+		else:
+			c.draw_rect(th, Color(0.16, 0.17, 0.2))
+			c.draw_circle(th.get_center(), 6.0 * k, Color(1, 1, 1, 0.12))
+		var tx := th.end.x + 12.0 * k
+		Hud.text(c, Vector2(tx, r.position.y + 26.0 * k), "%s %d · %s" % [L("Day", "நாள்"), rows[i][0], rows[i][1]], Kit.T_CAPTION * k, Kit.INK if on else Kit.DIM, 600,
+			HORIZONTAL_ALIGNMENT_LEFT, r.end.x - tx - 8.0 * k)
+		Hud.text(c, Vector2(tx, r.position.y + 47.0 * k), str(rows[i][2]), Kit.T_LABEL * k, Kit.AMBER if on else Hud.fade(Kit.DIM, 0.8), 500,
+			HORIZONTAL_ALIGNMENT_LEFT, r.end.x - tx - 8.0 * k)
+	var ey := ly + 30.0 * k + rows.size() * (rh + 8.0 * k) + 20.0 * k
+	c.draw_circle(Vector2(lx + 5.0 * k, ey - 5.0 * k), 4.0 * k, Kit.RED)
+	Hud.text(c, Vector2(lx + 16.0 * k, ey), L("Oldest clip deletes tomorrow", "பழைய கிளிப் நாளைக்கு அழியும்"), Kit.T_LABEL * k, Kit.RED.lightened(0.15), 600,
+		HORIZONTAL_ALIGNMENT_LEFT, lw - 16.0 * k)
+	var tb := _tablet()
+	Hud.text(c, Vector2(tb.position.x, tb.end.y + 30.0 * k), L("Space play / pause  ·  ← → a frame  ·  drag the bar  ·  P your phone's camera: a picture  ·  Enter give it back",
+		"Space ஓட்டு / நிறுத்து  ·  ← → ஒரு ஃப்ரேம்  ·  கோட்ட இழுங்க  ·  ஃபோன் கேமராவுல P: படம்  ·  Enter திருப்பிக் குடுங்க"),
+		Kit.T_LABEL * k, Hud.fade(Kit.INK, 0.8), 500, HORIZONTAL_ALIGNMENT_CENTER, tb.size.x)
 
 
 func _rounded(col: Color, r: float) -> StyleBoxFlat:

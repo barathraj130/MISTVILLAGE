@@ -5,6 +5,8 @@ extends Control
 ## pocket: what he carries, along the bottom; click one to take it out again.
 ## His hands are his: the more stressed he is, the more the paper shakes (life.gd's stress).
 const Prof := preload("res://scripts/drive/prof.gd")
+const Kit := preload("res://scripts/ui/ui_kit.gd")
+const Hud := preload("res://scripts/ui/hud_style.gd")
 
 signal put_away(id: String)
 signal note_given(amount: int)              # the wallet: a note taken out and held out to someone
@@ -30,7 +32,7 @@ var font: Font
 
 
 func _ready() -> void:
-	font = ThemeDB.fallback_font
+	font = Hud.font(500)
 	set_anchors_preset(Control.PRESET_FULL_RECT)
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	if "--handsshow" in OS.get_cmdline_user_args():     # (testing: the warrant in his hands after a while)
@@ -205,38 +207,56 @@ func _ease(x: float) -> float:
 
 func _slot(i: int) -> Rect2:
 	var vs := get_viewport_rect().size
-	var w := 150.0
-	var x0 := vs.x * 0.5 - items.size() * (w + 14.0) * 0.5
-	return Rect2(x0 + i * (w + 14.0), vs.y - 170.0, w, 120.0)
+	var k := Hud.s(self)
+	var w := minf(150.0 * k, (vs.x - 80.0 * k) / maxf(items.size(), 1) - 14.0 * k)
+	var x0 := vs.x * 0.5 - items.size() * (w + 14.0 * k) * 0.5
+	return Rect2(x0 + i * (w + 14.0 * k), vs.y - 190.0 * k, w, 110.0 * k)
 
 
 func _draw() -> void:
-	if pocket_open:
+	if pocket_open:                                     # the pocket: what he carries, as a row of cards
 		var vs := get_viewport_rect().size
-		draw_rect(Rect2(0, vs.y - 200.0, vs.x, 200.0), Color(0, 0, 0, 0.45))
+		var k := Hud.s(self)
+		var m := get_viewport().get_mouse_position()
+		var bar := Rect2(40.0 * k, vs.y - 250.0 * k, vs.x - 80.0 * k, 220.0 * k)
+		Hud.panel(self, bar, k, 1.25)
+		Hud.text(self, bar.position + Vector2(24.0 * k, 34.0 * k), L("IN YOUR POCKET", "உங்க பாக்கெட்ல"), Kit.T_LABEL * k, Kit.DIM, 700)
+		Hud.text(self, bar.position + Vector2(0, 34.0 * k), L("Click one to take it out  ·  I or Esc: close", "எடுக்க ஒண்ண கிளிக் பண்ணுங்க  ·  I அல்லது Esc: மூடு"),
+			Kit.T_LABEL * k, Hud.fade(Kit.DIM, 0.75), 500, HORIZONTAL_ALIGNMENT_RIGHT, bar.size.x - 24.0 * k)
 		for i in items.size():
 			var r := _slot(i)
 			var it: Dictionary = items[i]
-			draw_rect(Rect2(r.position + Vector2(4, 5), r.size), Color(0, 0, 0, 0.4))
-			draw_rect(r, _paper_col(str(it.get("kind", "paper"))))
+			var hover := r.has_point(m)
+			if hover:
+				r.position.y -= 4.0 * k
+			Kit.paper(self, r, k * 0.5, _paper_col(str(it.get("kind", "paper"))))
 			if it.has("tex"):
-				draw_texture_rect(it["tex"], r.grow(-6.0), false)
+				draw_texture_rect(it["tex"], r.grow(-6.0 * k), false)
 			else:
-				_lines(r.grow(-14.0), 6, Color(0, 0, 0, 0.18))
-			draw_string(font, Vector2(r.position.x, r.end.y + 20.0), t_(it.get("title", "")), HORIZONTAL_ALIGNMENT_CENTER, r.size.x, 14, Color.WHITE)
+				_lines(r.grow(-14.0 * k), 6, Color(0, 0, 0, 0.18))
+			if hover:
+				draw_rect(r.grow(3.0 * k), Kit.BLUE, false, 2.0 * k)
+			Hud.text(self, Vector2(r.position.x - 6.0 * k, r.end.y + 22.0 * k), t_(it.get("title", "")), Kit.T_LABEL * k, Kit.INK if hover else Kit.DIM, 600,
+				HORIZONTAL_ALIGNMENT_CENTER, r.size.x + 12.0 * k)
 	if held.is_empty():
 		return
 	var vs := get_viewport_rect().size
-	draw_rect(Rect2(Vector2.ZERO, vs), Color(0, 0, 0, 0.35 * _rise))
+	draw_rect(Rect2(Vector2.ZERO, vs), Color(0.02, 0.02, 0.03, 0.55 * _rise))
 	var r := _sheet()
 	var k := str(held.get("kind", "paper"))
-	draw_rect(Rect2(r.position + Vector2(10, 14), r.size), Color(0, 0, 0, 0.35))
-	draw_rect(r, _paper_col(k))
 	var sc: float = r.size.x / {"paper": 560.0, "note": 380.0, "cheque": 820.0, "photo": 720.0, "wallet": 900.0}.get(k, 560.0)
+	Kit.paper(self, r, sc, _paper_col(k))
 	match k:
-		"photo":
+		"photo":                                       # a print: its white border, the picture, a faint gloss
+			var pic := r.grow(-18.0 * sc)
 			if held.has("tex"):
-				draw_texture_rect(held["tex"], r.grow(-14.0 * sc), false)
+				draw_texture_rect(held["tex"], pic, false)
+			else:
+				draw_rect(pic, Color(0.2, 0.2, 0.22))
+			var gl := PackedVector2Array([pic.position, pic.position + Vector2(pic.size.x * 0.45, 0),
+				pic.position + Vector2(pic.size.x * 0.2, pic.size.y), Vector2(pic.position.x, pic.end.y)])
+			draw_colored_polygon(gl, Color(1, 1, 1, 0.05 + 0.03 * _tilt.x))
+			draw_rect(pic, Color(0, 0, 0, 0.15), false, 1.0)
 		"wallet":                                      # open, the notes standing up in it: pick one
 			draw_rect(r, Color(0.28, 0.17, 0.1))
 			draw_rect(r.grow(-10.0 * sc), Color(0.35, 0.22, 0.13))
@@ -271,6 +291,22 @@ func _draw() -> void:
 				draw_arc(c, 62.0 * sc, 0, TAU, 48, Color(0.45, 0.2, 0.6, 0.75), 4.0 * sc)
 				draw_arc(c, 46.0 * sc, 0, TAU, 48, Color(0.45, 0.2, 0.6, 0.6), 2.0 * sc)
 				draw_string(font, c + Vector2(-60, 6) * sc, L("POLICE", "காவல்"), HORIZONTAL_ALIGNMENT_CENTER, 120.0 * sc, int(16 * sc), Color(0.45, 0.2, 0.6, 0.8))
+	_draw_hint()
+
+
+## Under whatever he holds: its title (for a photo, the print's caption) and the keys.
+func _draw_hint() -> void:
+	var vs := get_viewport_rect().size
+	var k := Hud.s(self)
+	var r := _sheet()
+	var a := clampf(_rise * 2.0 - 0.6, 0.0, 1.0)
+	var kind := str(held.get("kind", "paper"))
+	if kind == "photo" and held.has("title"):
+		Hud.text(self, Vector2(0, minf(r.end.y + 44.0 * k, vs.y - 64.0 * k)), t_(held["title"]), 20.0 * k, Hud.fade(Kit.INK, a), 600, HORIZONTAL_ALIGNMENT_CENTER, vs.x)
+	var keys := L("Wheel: closer  ·  E: put it in your pocket", "வீல்: பக்கத்துல  ·  E: பாக்கெட்ல வையுங்க")
+	if kind == "wallet":
+		keys = L("Click a note to hold it out  ·  E: put the wallet away", "காட்ட ஒரு நோட்ட கிளிக் பண்ணுங்க  ·  E: பர்ஸ உள்ள வையுங்க")
+	Hud.text(self, Vector2(0, vs.y - 26.0 * k), keys, Kit.T_LABEL * k, Hud.fade(Kit.DIM, a * 0.9), 500, HORIZONTAL_ALIGNMENT_CENTER, vs.x)
 
 
 const NOTE_COL := {500: Color(0.72, 0.7, 0.62), 200: Color(0.95, 0.75, 0.35), 100: Color(0.72, 0.68, 0.85),
