@@ -17,6 +17,8 @@ signal finished(result: Dictionary)
 signal stage_changed                            # (getting ready: the next chore is up)
 signal dish_chosen(food: String)                # (a meal out: the dish picked from the menu, to put on his leaf)
 
+const Kit := preload("res://scripts/ui/ui_kit.gd")
+const Hud := preload("res://scripts/ui/hud_style.gd")
 const PAPER := Color(0.97, 0.94, 0.86)
 const INK := Color(0.08, 0.15, 0.55)
 const DARK := Color(0.12, 0.12, 0.14)
@@ -34,6 +36,12 @@ var _msg := ""
 var _msg_col := DARK
 var _msg_t := 0.0
 
+# the pointer and the keyboard's choice (the bank slip and the count: hover, pressed, focus)
+var _mouse := Vector2(-1, -1)
+var _held := false
+var _focus := -1                                # bank slip: 0 Clear, 1 Submit; count: 0..7 a bundle, 8 / 9 the answers
+var _closing := 0.0                             # the count: its answer shown a moment before it closes
+var _closing_good := true
 # sign
 var strokes: Array = []                         # Array of PackedVector2Array (box-local)
 var _ink := 0.0
@@ -121,21 +129,54 @@ func _panel() -> Rect2:
 	return Rect2((vs.x - w) * 0.5, (vs.y - h) * 0.5 + 20.0, w, h)
 
 
+func _k() -> float:
+	return Hud.s(self)
+
+
+## The bank slip: a sheet of paper in the middle, and the bar of actions under it.
+func _slip() -> Rect2:
+	var vs := get_viewport_rect().size
+	var k := _k()
+	var w := minf(940.0 * k, vs.x - 64.0 * k)
+	var h := minf(600.0 * k, vs.y - 190.0 * k)
+	return Rect2((vs.x - w) * 0.5, (vs.y - h) * 0.5 - 30.0 * k, w, h)
+
+
 func _sign_box() -> Rect2:
-	var p := _panel()
-	return Rect2(p.position.x + p.size.x * 0.52, p.position.y + p.size.y * 0.62, p.size.x * 0.4, p.size.y * 0.2)
+	var p := _slip()
+	var k := _k()
+	return Rect2(p.end.x - 380.0 * k - 36.0 * k, p.end.y - 150.0 * k, 380.0 * k, 104.0 * k)
+
+
+## The counter: one charcoal panel with the eight bundles on its mat.
+func _counter() -> Rect2:
+	var vs := get_viewport_rect().size
+	var k := _k()
+	var w := minf(1080.0 * k, vs.x - 64.0 * k)
+	var h := minf(640.0 * k, vs.y - 120.0 * k)
+	return Rect2((vs.x - w) * 0.5, (vs.y - h) * 0.5, w, h)
 
 
 func _bundle_rect(i: int) -> Rect2:
-	var p := _panel()
-	var col := i % 4
-	var row := i / 4
-	var w := p.size.x * 0.19
-	var h := p.size.y * 0.19
-	return Rect2(p.position.x + p.size.x * 0.08 + col * (w + p.size.x * 0.03), p.position.y + p.size.y * 0.17 + row * (h + 56.0), w, h)
+	var p := _counter()
+	var k := _k()
+	var mat := Rect2(p.position.x + 32.0 * k, p.position.y + 104.0 * k, p.size.x - 64.0 * k, p.size.y - 230.0 * k)
+	var cw := mat.size.x / 4.0
+	var ch := mat.size.y / 2.0
+	var w := minf(cw - 40.0 * k, 210.0 * k)
+	var h := minf(ch - 70.0 * k, 104.0 * k)
+	return Rect2(mat.position.x + (i % 4) * cw + (cw - w) * 0.5, mat.position.y + (i / 4) * ch + 24.0 * k, w, h)
 
 
 func _button(i: int, n: int) -> Rect2:
+	if kind == "sign" or kind == "count":               # (the redesigned two: their own bar of actions)
+		var k := _k()
+		var area := _slip() if kind == "sign" else _counter()
+		var bw := 300.0 * k
+		var gap := 16.0 * k
+		var y := area.end.y + 24.0 * k if kind == "sign" else area.end.y - 76.0 * k
+		var x0 := area.end.x - (bw * n + gap * (n - 1)) - (0.0 if kind == "sign" else 32.0 * k)
+		return Rect2(x0 + i * (bw + gap), y, bw, 52.0 * k)
 	var p := _panel()
 	var w := 300.0
 	var gap := 24.0
@@ -160,6 +201,16 @@ func _phone() -> Rect2:
 
 # ---- input ----
 func _gui_input(e: InputEvent) -> void:
+	if e is InputEventMouseMotion:
+		_mouse = e.position
+		if kind == "sign" or kind == "count":
+			queue_redraw()
+	elif e is InputEventMouseButton and e.button_index == MOUSE_BUTTON_LEFT:
+		_held = e.pressed
+		if kind == "count":
+			_focus = -1                                   # (the mouse is used: the keyboard's ring goes)
+	if _closing > 0.0:
+		return
 	match kind:
 		"sign":
 			var box := _sign_box()
@@ -191,6 +242,7 @@ func _gui_input(e: InputEvent) -> void:
 					_answer(false)
 				elif _button(1, 2).has_point(e.position):
 					_answer(true)
+				queue_redraw()
 		"hang":
 			if e is InputEventMouseButton and e.button_index == MOUSE_BUTTON_LEFT:
 				if e.pressed and Rect2(_thing - Vector2(50, 50), Vector2(100, 100)).has_point(e.position):
@@ -236,8 +288,20 @@ func _unhandled_key_input(e: InputEvent) -> void:
 		groom.set_zoom(not groom.zoom)                  # the bath: whole, or close on his face
 		queue_redraw()
 		accept_event()
-	elif kind == "sign" and (e.keycode == KEY_ENTER or e.keycode == KEY_KP_ENTER) and _ink > 120.0:
+	elif kind == "sign" and (e.keycode == KEY_ENTER or e.keycode == KEY_KP_ENTER) and _ink > 120.0 and _focus != 0:
 		_done({"signed": true, "strokes": strokes.size()})
+		accept_event()
+	elif kind == "sign" and (e.keycode == KEY_TAB or e.keycode == KEY_LEFT or e.keycode == KEY_RIGHT):
+		_focus = 1 - _focus if _focus >= 0 else 0           # (Tab, arrows: between Clear and Submit)
+		queue_redraw()
+		accept_event()
+	elif kind == "sign" and (e.keycode == KEY_ENTER or e.keycode == KEY_KP_ENTER or e.keycode == KEY_SPACE) and _focus == 0:
+		strokes.clear()
+		_ink = 0.0
+		queue_redraw()
+		accept_event()
+	elif kind == "count" and _closing <= 0.0:
+		_count_key(e.keycode)
 		accept_event()
 
 
@@ -247,14 +311,52 @@ func _say(text: String, col: Color) -> void:
 	_msg_t = 2.5
 
 
+## The count by keyboard: arrows move between the bundles (and down to the answers), Space or E counts the one
+## chosen, Enter answers with the chosen answer; 1 and 2 answer at once.
+func _count_key(code: int) -> void:
+	if _focus < 0 and code in [KEY_LEFT, KEY_RIGHT, KEY_UP, KEY_DOWN, KEY_TAB]:
+		_focus = 0
+	elif code == KEY_LEFT:
+		_focus = maxi(_focus - 1, 0) if _focus < 8 else 8
+	elif code == KEY_RIGHT:
+		_focus = mini(_focus + 1, bundles.size() - 1) if _focus < 8 else 9
+	elif code == KEY_UP:
+		_focus = _focus - 4 if _focus >= 4 and _focus < 8 else (4 if _focus >= 8 else _focus)
+	elif code == KEY_DOWN:
+		_focus = _focus + 4 if _focus < 4 else 8
+	elif code == KEY_TAB:
+		_focus = (_focus + 1) % 10
+	elif (code == KEY_SPACE or code == KEY_E) and _focus >= 0 and _focus < bundles.size() and bundles[_focus]["counted"] < 0.0 and _counting < 0:
+		_counting = _focus
+		bundles[_focus]["counted"] = 0.0
+	elif (code == KEY_ENTER or code == KEY_KP_ENTER) and _focus >= 8:
+		_answer(_focus == 9)
+	elif code == KEY_1:
+		_answer(false)
+	elif code == KEY_2:
+		_answer(true)
+	queue_redraw()
+
+
 func _answer(says_short: bool) -> void:
+	if _closing > 0.0:
+		return
 	var short_i := int(spec.get("short", -1))
 	var found: bool = short_i >= 0 and bundles[short_i]["counted"] >= 1.0
 	var counted := 0
 	for b in bundles:
 		if b["counted"] >= 1.0:
 			counted += 1
-	_done({"short_reported": says_short, "short_found": found and says_short, "counted": counted})
+	var result := {"short_reported": says_short, "short_found": found and says_short, "counted": counted}
+	# what he did, for a moment, before the counter closes (the story's own lines follow it)
+	if says_short:
+		_say(L("You hand back the short bundle.", "குறைஞ்ச கட்ட திருப்பி குடுக்கறீங்க.") if found else L("You say one is short.", "ஒண்ணு குறையுதுன்னு சொல்றீங்க."), GOOD if found else DARK)
+	else:
+		_say(L("%s, taken as counted." % _rupees(bundles.size() * 50000), "%s, எண்ணினதா எடுத்துக்கிட்டீங்க." % _rupees(bundles.size() * 50000)), DARK)
+	_closing = 0.7
+	get_tree().create_timer(0.7).timeout.connect(func():
+		_closing = 0.0
+		_done(result))
 
 
 func _drop() -> void:
@@ -288,7 +390,19 @@ func _otp_key(k: String) -> void:
 	queue_redraw()
 
 
+## (testing) a picture of the task as it is now, into the --storyshots folder.
+func _test_shot(name: String) -> void:
+	for a in OS.get_cmdline_user_args():
+		if a.begins_with("--storyshots="):
+			await RenderingServer.frame_post_draw
+			get_viewport().get_texture().get_image().save_jpg("%s/task_%s%s.jpg" % [a.get_slice("=", 1), name, "_ta" if lang == "ta" else ""], 0.88)
+
+
 func _done(result: Dictionary) -> void:
+	if has_meta("half_shot"):
+		remove_meta("half_shot")
+	if has_meta("answered"):
+		remove_meta("answered")
 	if not visible:
 		return
 	visible = false
@@ -302,6 +416,8 @@ func _process(dt: float) -> void:
 		return
 	_t += dt
 	_msg_t -= dt
+	if _closing > 0.0:
+		_closing = maxf(_closing - dt, 0.0001)
 	if kind == "count" and _counting >= 0:
 		bundles[_counting]["counted"] = minf(bundles[_counting]["counted"] + dt / 1.1, 1.0)
 		if bundles[_counting]["counted"] >= 1.0:
@@ -323,16 +439,27 @@ func _process(dt: float) -> void:
 			"sign":
 				var s := PackedVector2Array()
 				for i in 40:
-					s.append(Vector2(20 + i * 6, 40 + sin(i * 0.7) * 18))
+					s.append(Vector2(40 + i * 7, 52 + sin(i * 0.7) * 20))
 				strokes = [s]
 				_ink = 300.0
-				if _t > 2.2:
+				if _t > 2.2 and not has_meta("answered"):
+					set_meta("answered", true)
+					await _test_shot("sign_done")
 					_done({"signed": true, "strokes": 1})
 			"count":
-				for b in bundles:
-					b["counted"] = 1.0
-				if _t > 2.2:
-					_answer(true)
+				if not has_meta("answered"):
+					var n := clampi(int((_t - 1.5) / 0.12), 0, bundles.size() + 1)   # (one after another, as he would)
+					for i in bundles.size():
+						bundles[i]["counted"] = 1.0 if i < n - 1 else (0.55 if i == n - 1 else -1.0)
+					if _t > 1.5 + 0.12 * 4.5 and not has_meta("half_shot"):
+						set_meta("half_shot", true)
+						_test_shot("count_half")
+					if _t > 2.8:
+						set_meta("answered", true)
+						for b in bundles:
+							b["counted"] = 1.0
+						_answer(true)
+						get_tree().create_timer(0.3).timeout.connect(func(): _test_shot("count_answer"))
 			"hang":
 				var ts: Array = spec.get("targets", [])
 				for i in ts.size():
@@ -370,7 +497,10 @@ func _draw() -> void:
 	if not visible:
 		return
 	var vs := get_viewport_rect().size
-	draw_rect(Rect2(Vector2.ZERO, vs), Color(0, 0, 0, 0.55))
+	if kind == "sign" or kind == "count":
+		Kit.scrim(self, 0.66)
+	else:
+		draw_rect(Rect2(Vector2.ZERO, vs), Color(0, 0, 0, 0.55))
 	var p := _panel()
 	# (a tip is said by whoever gave it, as a subtitle: story.gd _speak_tip)
 	match kind:
@@ -388,7 +518,10 @@ func _draw() -> void:
 			_draw_meal(p)
 		"phone":
 			_draw_phone()
-	if _msg_t > 0.0 and _msg != "":
+	if _msg_t > 0.0 and _msg != "" and (kind == "sign" or kind == "count"):
+		var area := _slip() if kind == "sign" else _counter()
+		Kit.banner(self, Vector2(area.get_center().x, area.position.y - 58.0 * _k()), _msg, _msg_col != BAD, _k(), clampf(_msg_t * 2.0, 0.0, 1.0))
+	elif _msg_t > 0.0 and _msg != "":
 		var mb := Rect2(p.position.x + p.size.x * 0.25, p.end.y + 12.0, p.size.x * 0.5, 40.0)
 		draw_rect(mb, Color(1, 1, 1, 0.95))
 		_text(mb.position + Vector2(0, 27), _msg, 19, _msg_col, mb.size.x, HORIZONTAL_ALIGNMENT_CENTER)
@@ -399,69 +532,193 @@ func _btn(r: Rect2, label: String, on := true) -> void:
 	_text(r.position + Vector2(0, 31), label, 19, Color.WHITE, r.size.x, HORIZONTAL_ALIGNMENT_CENTER)
 
 
-func _draw_sign(p: Rect2) -> void:
-	# the paper, slightly tilted shadow, printed lines and the filled fields
-	draw_rect(Rect2(p.position + Vector2(8, 10), p.size), Color(0, 0, 0, 0.35))
-	draw_rect(p, PAPER)
-	draw_rect(Rect2(p.position, Vector2(p.size.x, 64)), Color(0.12, 0.35, 0.25))
-	_text(p.position + Vector2(24, 40), t_(spec.get("header", "")), 24, Color.WHITE)
-	_text(p.position + Vector2(p.size.x - 260, 40), t_(spec.get("form", "")), 16, Color(0.85, 0.95, 0.88))
-	var y := p.position.y + 110.0
+## The bank slip, as a cooperative bank prints them: the bank's name and monogram, the form's title in a box,
+## the filled fields (the amount in its own box), the bank's seal and the signature box; Clear and Submit below.
+func _draw_sign(_p: Rect2) -> void:
+	var k := _k()
+	var r := _slip()
+	var green := Color(0.1, 0.33, 0.24)
+	Kit.paper(self, r, k)
+	draw_rect(Rect2(r.position, Vector2(r.size.x, 6.0 * k)), green)                     # the printed band at the top
+	var mono := Vector2(r.position.x + 64.0 * k, r.position.y + 64.0 * k)              # the bank's monogram
+	draw_circle(mono, 28.0 * k, green)
+	draw_arc(mono, 23.0 * k, 0.0, TAU, 48, Color(0.95, 0.93, 0.85, 0.8), 1.4 * k, true)
+	var initials := ""
+	var hdr = spec.get("header", "")
+	for w in str(hdr.get("en", "") if hdr is Dictionary else hdr).split(" ", false):   # (the monogram is the bank's, in English, whatever the language)
+		if initials.length() < 4 and w.length() > 0 and w.unicode_at(0) < 128:
+			initials += w.substr(0, 1)
+	Hud.text(self, mono + Vector2(-28.0 * k, 6.0 * k), initials, 14.0 * k, Color(0.97, 0.95, 0.88), 700, HORIZONTAL_ALIGNMENT_CENTER, 56.0 * k)
+	Hud.text(self, Vector2(r.position.x + 108.0 * k, r.position.y + 60.0 * k), t_(spec.get("header", "")), 27.0 * k, green, 700)
+	var form := t_(spec.get("form", ""))
+	var fw := Hud.width_of(form, 15.0 * k, 700) + 32.0 * k
+	var fb := Rect2(r.end.x - fw - 36.0 * k, r.position.y + 42.0 * k, fw, 34.0 * k)
+	draw_rect(fb, green, false, 1.5 * k)
+	Hud.text(self, fb.position + Vector2(0, 23.0 * k), form, 15.0 * k, green, 700, HORIZONTAL_ALIGNMENT_CENTER, fw)
+	draw_line(Vector2(r.position.x + 36.0 * k, r.position.y + 112.0 * k), Vector2(r.end.x - 36.0 * k, r.position.y + 112.0 * k), Kit.PAPER_LINE, k)
+	var y := r.position.y + 158.0 * k
+	var fx := r.position.x + 40.0 * k
+	var fwid := r.size.x - 80.0 * k
 	for f in spec.get("fields", []):
-		_text(Vector2(p.position.x + 30, y), t_(f[0]), 16, Color(0.35, 0.33, 0.3))
-		draw_line(Vector2(p.position.x + 250, y + 6), Vector2(p.end.x - 40, y + 6), Color(0.6, 0.58, 0.52), 1.0)
-		_text(Vector2(p.position.x + 260, y), t_(f[1]), 20, INK)
-		y += 46.0
+		var val := t_(f[1])
+		if val.begins_with("₹"):                                                       # the amount, in its own box
+			Hud.text(self, Vector2(fx, y), t_(f[0]).to_upper(), Kit.T_LABEL * k, Kit.PRINT, 600)
+			var ab := Rect2(fx + 200.0 * k, y - 29.0 * k, 260.0 * k, 42.0 * k)
+			draw_rect(ab, Color(1, 1, 1, 0.5))
+			draw_rect(ab, Kit.PRINT, false, 1.4 * k)
+			Hud.text(self, ab.position + Vector2(14.0 * k, 30.0 * k), val, 24.0 * k, Kit.PEN, 600)
+			y += 56.0 * k
+			continue
+		Kit.field(self, Vector2(fx, y), fwid, t_(f[0]), val, k)
+		y += 46.0 * k
+	Kit.stamp(self, Vector2(r.position.x + 118.0 * k, r.end.y - 92.0 * k), 50.0 * k, t_(spec.get("seal", {"en": "BANK SEAL", "ta": "வங்கி முத்திரை"})), k)
 	var box := _sign_box()
-	draw_rect(box, Color(1, 1, 0.97))
-	draw_rect(box, Color(0.5, 0.48, 0.42), false, 1.5)
-	_text(Vector2(box.position.x, box.end.y + 20), t_(spec.get("sign_label", {"en": "Signature", "ta": "கையொப்பம்"})), 15, Color(0.35, 0.33, 0.3))
+	draw_rect(box, Color(1, 1, 1, 0.55))
+	_dash_rect(box, Kit.PAPER_LINE, k)
+	Hud.text(self, Vector2(box.position.x, box.end.y + 22.0 * k), t_(spec.get("sign_label", {"en": "Signature", "ta": "கையொப்பம்"})).to_upper(),
+		Kit.T_LABEL * k, Kit.PRINT, 600, HORIZONTAL_ALIGNMENT_CENTER, box.size.x)
 	if strokes.is_empty():
-		_text(box.position + Vector2(0, box.size.y * 0.58), L("Sign here with the mouse", "மவுஸால இங்க கையெழுத்து போடுங்க"), 17,
-			Color(0.6, 0.6, 0.6), box.size.x, HORIZONTAL_ALIGNMENT_CENTER)
-	for s in strokes:
-		if (s as PackedVector2Array).size() > 1:
+		Hud.text(self, box.position + Vector2(0, box.size.y * 0.56), L("Sign here with the mouse", "மவுஸால இங்க கையெழுத்து போடுங்க"), 17.0 * k,
+			Color(0.5, 0.5, 0.5, 0.75 + 0.25 * sin(_t * 3.0)), box.size.x, HORIZONTAL_ALIGNMENT_CENTER)
+	elif box.has_point(_mouse):
+		draw_circle(_mouse, 3.0 * k, Kit.PEN)
+	for st in strokes:
+		if (st as PackedVector2Array).size() > 1:
 			var pts := PackedVector2Array()
-			for q in s:
+			for q in st:
 				pts.append(q + box.position)
-			draw_polyline(pts, INK, 3.0, true)
-	draw_circle(Vector2(p.position.x + 120, box.get_center().y), 46.0, Color(0.55, 0.12, 0.2, 0.25))
-	_text(Vector2(p.position.x + 74, box.get_center().y + 6), t_(spec.get("seal", {"en": "BANK SEAL", "ta": "வங்கி முத்திரை"})), 14, Color(0.55, 0.12, 0.2, 0.6))
-	_btn(_button(0, 2), L("Clear", "அழி"))
-	_btn(_button(1, 2), L("Done  (Enter)", "முடிஞ்சது  (Enter)"), _ink > 120.0)
+			draw_polyline(pts, Kit.PEN, 2.6 * k, true)
+	var signed := _ink > 120.0
+	if signed:                                                                         # signed: a tick under the box
+		Hud.text(self, Vector2(box.position.x, box.position.y - 10.0 * k), L("✓ Signed", "✓ கையெழுத்து ஆச்சு"), 16.0 * k, Color(0.15, 0.5, 0.25), 600)
+	var b0 := _button(0, 2)
+	var b1 := _button(1, 2)
+	Kit.button(self, b0, L("Clear", "அழி"), k, Kit.state_of(b0, _mouse, not strokes.is_empty(), _focus == 0, _held), "secondary")
+	Kit.button(self, b1, L("Sign and submit", "சமர்ப்பி"), k, Kit.state_of(b1, _mouse, signed, _focus == 1, _held), "primary", "Enter")
+	if not signed:
+		Hud.text(self, Vector2(r.position.x, b0.get_center().y + 6.0 * k), L("Sign in the box to hand in the slip", "சீட்ட குடுக்க பெட்டியில கையெழுத்து போடுங்க"),
+			Kit.T_CAPTION * k, Kit.DIM, 500)
 
 
-func _draw_count(p: Rect2) -> void:
-	draw_rect(p, Color(0.33, 0.24, 0.16))                      # the counter top
-	draw_rect(Rect2(p.position, Vector2(p.size.x, 50)), Color(0.2, 0.15, 0.1))
-	_text(p.position + Vector2(24, 34), L("Count every bundle: 100 notes of ₹500 each", "ஒவ்வொரு கட்டையும் எண்ணுங்க: ₹500 நோட்டு 100"), 20, Color.WHITE)
+func _dash_rect(r: Rect2, col: Color, k: float) -> void:
+	var corners := [r.position, Vector2(r.end.x, r.position.y), r.end, Vector2(r.position.x, r.end.y)]
+	for side in 4:
+		var a: Vector2 = corners[side]
+		var b: Vector2 = corners[(side + 1) % 4]
+		var n := maxi(int(a.distance_to(b) / (9.0 * k)), 2)
+		for i in range(0, n, 2):
+			draw_line(a.lerp(b, float(i) / n), a.lerp(b, float(i + 1) / n), col, 1.2 * k)
+
+
+## The counter: eight strapped bundles of ₹500 notes on the mat. Click one (or choose it with the arrows, Space)
+## to count it: the notes flick through, a counter runs to its total; a bundle that comes up short says so in
+## red. Below: how many are counted and how much, and the two answers.
+func _draw_count(_p: Rect2) -> void:
+	var k := _k()
+	var r := _counter()
+	Hud.panel(self, r, k, 1.3)
+	Hud.text(self, r.position + Vector2(32.0 * k, 50.0 * k), L("Count the cash", "பணத்த எண்ணுங்க"), Kit.T_TITLE * k, Kit.INK, 700)
+	var expect := bundles.size() * 100 * 500
+	Hud.text(self, r.position + Vector2(32.0 * k, 80.0 * k), L("%d bundles · 100 notes of ₹500 in each · %s on the slip" % [bundles.size(), _rupees(expect)],
+		"%d கட்டு · ஒவ்வொண்ணுலயும் ₹500 நோட்டு 100 · சீட்டுல %s" % [bundles.size(), _rupees(expect)]), Kit.T_CAPTION * k, Kit.DIM, 500)
+	var mat := Rect2(r.position.x + 32.0 * k, r.position.y + 104.0 * k, r.size.x - 64.0 * k, r.size.y - 230.0 * k)
+	draw_style_box(_mat_box(k), mat)
 	var total := 0
+	var done := 0
 	for i in bundles.size():
-		var r := _bundle_rect(i)
 		var b: Dictionary = bundles[i]
-		var c: float = b["counted"]
-		if c < 0.0:
-			for k in 6:                                         # a strapped bundle, edges of notes showing
-				draw_rect(Rect2(r.position + Vector2(k * 1.5, k * -2.0), r.size), NOTE.darkened(0.05 * (5 - k)))
-			draw_rect(Rect2(r.position.x + r.size.x * 0.4, r.position.y - 10, r.size.x * 0.2, r.size.y), Color(0.85, 0.82, 0.7))
-			_text(r.position + Vector2(0, r.size.y * 0.55), "₹500 × 100", 18, Color.WHITE, r.size.x, HORIZONTAL_ALIGNMENT_CENTER)
-			_text(r.position + Vector2(0, r.size.y + 22), L("click to count", "எண்ண கிளிக்"), 14, Color(0.9, 0.85, 0.7), r.size.x, HORIZONTAL_ALIGNMENT_CENTER)
-		else:
-			var n := int(round(float(b["n"]) * c))
-			for k in 9:                                         # fanned out while being counted
-				var a := (k - 4) * 0.09 * c
-				var q := r.get_center() + Vector2(0, r.size.y * 0.2)
-				var pts := PackedVector2Array()
-				for v in [Vector2(-r.size.x * 0.4, -r.size.y * 0.7), Vector2(r.size.x * 0.4, -r.size.y * 0.7), Vector2(r.size.x * 0.4, 0), Vector2(-r.size.x * 0.4, 0)]:
-					pts.append(q + (v as Vector2).rotated(a))
-				draw_colored_polygon(pts, NOTE.lightened(0.04 * k))
-			var col := Color.WHITE if c < 1.0 else (GOOD.lightened(0.3) if b["n"] == 100 else Color(1.0, 0.5, 0.4))
-			_text(r.position + Vector2(0, r.size.y + 22), str(n) + (L(" notes", " நோட்டு")), 18, col, r.size.x, HORIZONTAL_ALIGNMENT_CENTER)
-			if c >= 1.0:
-				total += int(b["n"]) * 500
-	_text(Vector2(p.position.x + 24, p.end.y - 92), L("Counted so far: ", "இதுவரை எண்ணியது: ") + _rupees(total), 20, Color.WHITE)
-	_btn(_button(0, 2), L("All correct: ₹4,00,000", "எல்லாம் சரி: ₹4,00,000"))
-	_btn(_button(1, 2), L("A bundle is short", "ஒரு கட்டு குறையுது"))
+		if float(b["counted"]) >= 1.0:
+			total += int(b["n"]) * 500
+			done += 1
+		_draw_bundle(i, k)
+	var bar := Rect2(r.position.x + 32.0 * k, r.end.y - 100.0 * k, r.size.x * 0.3, 8.0 * k)
+	Hud.text(self, Vector2(bar.position.x, bar.position.y - 12.0 * k), L("Counted %d of %d" % [done, bundles.size()], "எண்ணியது %d / %d" % [done, bundles.size()]),
+		Kit.T_CAPTION * k, Kit.DIM, 500)
+	Kit.progress(self, bar, float(done) / maxf(bundles.size(), 1), k, Kit.GREEN, bundles.size())
+	Hud.text(self, Vector2(bar.position.x, bar.end.y + 36.0 * k), _rupees(total), Kit.T_FIGURE * k, Kit.INK, 600)
+	Hud.text(self, Vector2(bar.position.x + Hud.width_of(_rupees(total), Kit.T_FIGURE * k, 600) + 12.0 * k, bar.end.y + 36.0 * k),
+		L("of %s" % _rupees(expect), "/ %s" % _rupees(expect)), Kit.T_BODY * k, Kit.DIM, 500)
+	var b0 := _button(0, 2)
+	var b1 := _button(1, 2)
+	Kit.button(self, b0, L("All correct: %s" % _rupees(expect), "எல்லாம் சரி: %s" % _rupees(expect)), k,
+		Kit.state_of(b0, _mouse, _closing <= 0.0, _focus == 8, _held), "secondary", "1")
+	Kit.button(self, b1, L("A bundle is short", "ஒரு கட்டு குறையுது"), k, Kit.state_of(b1, _mouse, _closing <= 0.0, _focus == 9, _held), "secondary", "2")
+	Hud.text(self, Vector2(r.position.x + 32.0 * k, r.end.y - 14.0 * k), L("Click a bundle to count it  ·  arrows and Space  ·  1 or 2 to answer",
+		"எண்ண ஒரு கட்ட கிளிக் பண்ணுங்க  ·  அம்புக்குறி, Space  ·  பதில் சொல்ல 1 அல்லது 2"), Kit.T_LABEL * k, Hud.fade(Kit.DIM, 0.7), 500)
+
+
+func _mat_box(k: float) -> StyleBoxFlat:
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = Color(0.11, 0.19, 0.16)                      # the counter's green rubber mat
+	sb.set_corner_radius_all(int(8.0 * k))
+	sb.border_color = Color(1, 1, 1, 0.05)
+	sb.set_border_width_all(maxi(1, int(k)))
+	return sb
+
+
+func _note(c: Vector2, size: Vector2, ang: float, shade: float) -> void:
+	var pts := PackedVector2Array()
+	for v in [Vector2(-0.5, -0.5), Vector2(0.5, -0.5), Vector2(0.5, 0.5), Vector2(-0.5, 0.5)]:
+		pts.append(c + (Vector2(v.x * size.x, v.y * size.y)).rotated(ang))
+	draw_colored_polygon(pts, NOTE.lightened(shade))
+	pts.append(pts[0])
+	draw_polyline(pts, NOTE.darkened(0.35), 1.0, true)
+
+
+func _draw_bundle(i: int, k: float) -> void:
+	var r := _bundle_rect(i)
+	var b: Dictionary = bundles[i]
+	var c: float = b["counted"]
+	var hover := r.grow(8.0 * k).has_point(_mouse) and c < 0.0 and _counting < 0 and _closing <= 0.0
+	if (hover or _focus == i) and c < 0.0:
+		r.position.y -= 4.0 * k                               # (picked up a little)
+	if c < 0.0:                                               # strapped: the edges of the notes under the top one
+		_bundle_face(r, k)
+		var band := Rect2(r.position.x + r.size.x * 0.4, r.position.y - 3.0 * k, r.size.x * 0.2, r.size.y + 6.0 * k)
+		draw_rect(band, Color(0.93, 0.9, 0.8))                # the paper band, the bank's own count on it
+		Hud.text(self, Vector2(band.position.x, band.get_center().y - 2.0 * k), "100", 13.0 * k, Kit.PRINT, 700, HORIZONTAL_ALIGNMENT_CENTER, band.size.x)
+		Hud.text(self, Vector2(band.position.x, band.get_center().y + 13.0 * k), "×500", 11.0 * k, Kit.PRINT, 600, HORIZONTAL_ALIGNMENT_CENTER, band.size.x)
+		var tip := L("Count this bundle", "இந்த கட்ட எண்ணுங்க") if hover or _focus == i else L("Click to count", "எண்ண கிளிக்")
+		Hud.text(self, Vector2(r.position.x - 20.0 * k, r.end.y + 32.0 * k), tip, Kit.T_LABEL * k, Kit.AMBER if hover or _focus == i else Kit.DIM, 600,
+			HORIZONTAL_ALIGNMENT_CENTER, r.size.x + 40.0 * k)
+	else:                                                     # counting: the notes flick through; then the total
+		var n := int(round(float(b["n"]) * c))
+		if c < 1.0:
+			var fan := 9
+			for f in fan:
+				_note(r.get_center() + Vector2(0, f * 0.6 * k), r.size * 0.96, (f - fan * 0.5) * 0.06 * sin(c * PI), 0.02 * f)
+		else:                                                 # counted: the band off, the stack squared, its face up
+			_bundle_face(r, k)
+		var short: bool = c >= 1.0 and int(b["n"]) < 100
+		var col := Kit.INK if c < 1.0 else (Kit.GREEN if not short else Kit.RED)
+		var line := ("%d / 100" % n) if c < 1.0 else (L("✓  100 notes", "✓  100 நோட்டு") if not short else L("%d notes · short" % n, "%d நோட்டு · குறைவு" % n))
+		Hud.text(self, Vector2(r.position.x - 20.0 * k, r.end.y + 32.0 * k), line, 17.0 * k, col, 700, HORIZONTAL_ALIGNMENT_CENTER, r.size.x + 40.0 * k)
+		if c < 1.0:
+			Kit.progress(self, Rect2(r.position.x, r.end.y + 42.0 * k, r.size.x, 4.0 * k), c, k, Kit.AMBER)
+		elif short:
+			draw_rect(r.grow(5.0 * k), Kit.RED, false, 2.0 * k)
+	if _focus == i:
+		draw_style_box(_ring(k), r.grow(10.0 * k))
+
+
+## A bundle's stack and its top ₹500 note: the edges of the notes under it, the watermark, the figures.
+func _bundle_face(r: Rect2, k: float) -> void:
+	for e in 4:
+		draw_rect(Rect2(r.position + Vector2(-(3 - e) * 1.2 * k, (4 - e) * 2.2 * k), r.size), NOTE.darkened(0.3 - e * 0.06))
+	draw_rect(r, NOTE.lightened(0.05))
+	draw_rect(r, NOTE.darkened(0.35), false, k)
+	draw_circle(Vector2(r.position.x + r.size.x * 0.76, r.get_center().y), r.size.y * 0.24, NOTE.lightened(0.16))   # the watermark
+	Hud.text(self, r.position + Vector2(10.0 * k, 22.0 * k), "₹500", 15.0 * k, NOTE.darkened(0.5), 700)
+	Hud.text(self, Vector2(r.end.x - 44.0 * k, r.end.y - 10.0 * k), "500", 17.0 * k, NOTE.darkened(0.45), 700)
+
+
+func _ring(k: float) -> StyleBoxFlat:
+	var sb := StyleBoxFlat.new()
+	sb.draw_center = false
+	sb.set_corner_radius_all(int(8.0 * k))
+	sb.border_color = Kit.AMBER
+	sb.set_border_width_all(maxi(2, int(2.0 * k)))
+	return sb
 
 
 func _draw_hang(p: Rect2) -> void:
