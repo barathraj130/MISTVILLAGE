@@ -29,6 +29,8 @@ var pois: Array = []                      # {name, kind, pos, town}
 var parked := 0
 var lives: Array = []                     # street_life.gd per town (parked vehicles you can take)
 var bunks: Array = []                     # fuel forecourts: {name, pos, town}
+var shopfronts: Array = []                # open-fronted shops you can buy at: {kind, town, poly (xz), centre, y}
+const SHOP_KINDS := ["kirana", "kirana", "tea", "medical", "kirana", "hardware", "tea", "medical"]
 var bunk_lights: Array = []
 var lamp_mat: StandardMaterial3D           # streetlight heads: glow after dusk
 var pool_mat: StandardMaterial3D           # the pools of light they throw on the road
@@ -90,6 +92,15 @@ func build(path: String, asphalt: Material, progress: Callable) -> void:
 		for b in tw["buildings"]:
 			if b.get("shop", false):
 				shops.append(Vector2(b["poly"][0][0], b["poly"][0][1]))
+				var pl := PackedVector2Array()
+				for q in b["poly"]:
+					pl.append(Vector2(q[0], q[1]))
+				var c := Vector2.ZERO
+				for q in pl:
+					c += q
+				c /= maxf(pl.size(), 1)
+				shopfronts.append({"kind": SHOP_KINDS[absi(hash(Vector2i(roundi(c.x), roundi(c.y)))) % SHOP_KINDS.size()],
+					"town": names[i], "poly": pl, "centre": c})
 		var life := StreetLife.new()
 		life.name = "%sParked" % names[i]
 		add_child(life)

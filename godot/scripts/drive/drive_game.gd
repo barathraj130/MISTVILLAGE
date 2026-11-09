@@ -95,7 +95,24 @@ var lateral := 0.0                 # + = left of centre
 var stage_id := ""
 var ready_to_drive := false
 var checkpost := "closed"          # closed → open | skipped
-var _finale := {}                  # Part 1's last ride, handed over by the story (story.gd "finale"): {lang, minute}
+var _finale := {}
+const Goods := preload("res://scripts/city/goods.gd")
+const StoreUI := preload("res://scripts/city/store.gd")
+const BagUI := preload("res://scripts/city/bag.gd")
+var store: Control                 # a shop's counter in the hill towns (store.gd, as in the city)
+var bag: Control                   # what he carries (bag.gd), B
+var _b_down := false
+var _shop_at := {}                 # the shopfront being bought at
+var _shop_ui_frame := -10          # last frame the counter or the bag was up (its Esc isn't the menu's)
+## The city's bag works on {fines: {_save_data, sim}, life, story}: here the same save file's goods, no meters.
+class ShopFines:
+	var _save_data := {}
+	var sim
+class ShopCtx:
+	var fines
+	var life = null
+	var story = null
+var _shop_ctx := ShopCtx.new()                  # Part 1's last ride, handed over by the story (story.gd "finale"): {lang, minute}
 var stop_time := 0.0
 var elephant_warn_at := -10.0
 var too_close := 0
@@ -885,6 +902,19 @@ func _interactions() -> void:
 				interiors.enter(dr, walker)
 				_message("%s" % dr["name"], 3.0)
 			return
+	if walker and store and not store.visible:            # a hill town's shop, open to the street: its counter
+		var sh := _shopfront_near(p)
+		if not sh.is_empty():
+			var hk: String = {"kirana": "Kirana", "medical": "Medical", "hardware": "Hardware", "tea": "Tea stall"}[sh["kind"]]
+			var nm: String = Goods.SHOP_NAMES[sh["kind"]]["en"]
+			if not sim.is_open(hk):
+				_prompt = "%s, %s: closed (%s)" % [nm, sh["town"], sim.hours_text(hk)]
+			else:
+				_prompt = "Press E: buy at the %s" % nm.to_lower()
+				if Input.is_action_just_pressed("interact"):
+					_shop_at = sh
+					store.open("%s · %s" % [nm, sh["town"]], Goods.STOCK[sh["kind"]], sim.money)
+			return
 	var still := walker != null or absf(jeep.speed) < 1.0
 	var action := Callable()
 	if towns:
@@ -922,6 +952,47 @@ func _interactions() -> void:
 		_prompt = ""
 
 
+## Started with a test or capture flag (the game itself never is): nothing is saved.
+func _self_test() -> bool:
+	var all := " " + " ".join(args)
+	for f in ["--shoptest", "--finale", "--autodrive", "--snap", "--swaptest", "--enter", "--onfoot", "--bench", "--gps",
+			"--shots", "--validate", "--checkcol", "--timescale", "--start=", "--trace", "--walk", "--time", "--weather"]:
+		if all.contains(" " + f):
+			return true
+	return false
+
+
+## The shopfront he's standing at (within 2.2 m of its walls), if any.
+func _shopfront_near(p: Vector3) -> Dictionary:
+	if towns == null:
+		return {}
+	var q := Vector2(p.x, p.z)
+	for sh in towns.shopfronts:
+		if (sh["centre"] as Vector2).distance_to(q) > 30.0:
+			continue
+		var pl: PackedVector2Array = sh["poly"]
+		for k in pl.size():
+			var a: Vector2 = pl[k]
+			var b: Vector2 = pl[(k + 1) % pl.size()]
+			var t := clampf((q - a).dot(b - a) / maxf((b - a).length_squared(), 0.001), 0.0, 1.0)
+			if (a + (b - a) * t).distance_to(q) < 2.2:
+				return sh
+	return {}
+
+
+func _bought(items: Dictionary) -> void:
+	if items.is_empty():
+		return
+	var cost := 0
+	for id in items:
+		cost += int(Goods.GOODS[id]["price"]) * int(items[id])
+		Goods.add(_shop_ctx.fines._save_data, id, int(items[id]))
+	sim.money -= cost
+	_message("Paid ₹%s at the %s. In your bag (B)." % [_rupees(cost), Goods.SHOP_NAMES[_shop_at.get("kind", "kirana")]["en"].to_lower()], 4.0)
+	print("STORE %s bought %s for %d" % [_shop_at.get("town", "?"), str(items), cost])
+	_save_game(false)
+
+
 static func _rupees(n: int) -> String:
 	# Indian grouping: 1,23,456
 	var neg := n < 0
@@ -938,12 +1009,12 @@ static func _rupees(n: int) -> String:
 
 # ----------------------------------------------------------------------------- save / load
 func _save_game(announce: bool) -> void:
-	if jeep == null or not ready_to_drive:
+	if jeep == null or not ready_to_drive or _self_test():   # (a test never writes the real save)
 		return
 	var y := jeep.global_basis.get_euler().y
 	sim.save({"d": d, "pos": [jeep.global_position.x, jeep.global_position.y, jeep.global_position.z], "yaw": y,
 		"checkpost": checkpost, "tea_break": tea_break, "elephants_done": elephants.state == "done" or d > route.marks["elephants"],
-		"lights": jeep.lights_on, "vehicle": jeep.vehicle})
+		"lights": jeep.lights_on, "vehicle": jeep.vehicle, "goods": Goods.bag(_shop_ctx.fines._save_data) if _shop_ctx.fines else {}})
 	if announce:
 		_message("Game saved · Day %d, %s" % [sim.day, Sim.clock_text(sim.minute)], 3.0)
 
@@ -1210,6 +1281,12 @@ func _process(delta: float) -> void:
 		town_traffic.player = walker if walker else jeep
 	if pedestrians:
 		pedestrians.player = walker if walker else jeep
+	var bk := Input.is_key_pressed(KEY_B)
+	if bk and not _b_down and bag and not store.visible:
+		bag.toggle()
+	_b_down = bk
+	if (store and store.visible) or (bag and bag.visible):
+		_shop_ui_frame = Engine.get_process_frames()
 	_interactions()
 	_autosave_t += delta
 	if _autosave_t > AUTOSAVE_SECS and not arrived:
@@ -1284,7 +1361,7 @@ func _process(delta: float) -> void:
 			_arrive(true)
 	if Input.is_action_just_pressed("back_to_menu") and map_ui and map_ui.full_open and Input.is_key_pressed(KEY_ESCAPE):
 		map_ui.toggle_full()                          # Esc first closes the big map
-	elif Input.is_action_just_pressed("back_to_menu"):
+	elif Input.is_action_just_pressed("back_to_menu") and Engine.get_process_frames() - _shop_ui_frame > 2:
 		_save_game(false)
 		Engine.time_scale = 1.0
 		get_tree().change_scene_to_file("res://scenes/start_menu.tscn")
@@ -1721,6 +1798,60 @@ func _snap() -> void:
 					if walker:
 						_toggle_on_foot()
 					print("SWAP now driving %s (left behind: %d)" % [jeep.vehicle, left_behind.size()])
+	# --shoptest : get out at the nearest hill-town shopfront at 10 AM, press E, buy two of the first thing and one
+	# of the last, pay, open the bag and use one; prints what it cost and what's in the bag (the save isn't written)
+	if " --shoptest" in (" " + " ".join(args)) and towns and not towns.shopfronts.is_empty():
+		var st := int(get_meta("shop_step", 0))
+		var at: float = [3.0, 4.0, 4.1, 5.0, 6.0, 7.0][mini(st, 5)]
+		if _t > at:
+			set_meta("shop_step", st + 1)
+			match st:
+				0:
+					jeep.linear_velocity = Vector3.ZERO
+					jeep.speed = 0.0
+					sim.minute = (23.5 if "--late" in args else 10.0) * 60.0
+					if walker == null:
+						_toggle_on_foot()
+					var best: Dictionary = {}
+					var want := ""
+					for a in args:
+						if a.begins_with("--shoptest="):
+							want = a.get_slice("=", 1)
+					for sh in towns.shopfronts:
+						if want != "" and str(sh["town"]) != want:
+							continue
+						if best.is_empty() or (sh["centre"] as Vector2).distance_to(Vector2(jeep.global_position.x, jeep.global_position.z)) < (best["centre"] as Vector2).distance_to(Vector2(jeep.global_position.x, jeep.global_position.z)):
+							best = sh
+					var pl: PackedVector2Array = best["poly"]
+					var mid: Vector2 = (pl[0] + pl[1]) * 0.5
+					var out: Vector2 = mid + (mid - (best["centre"] as Vector2)).normalized() * 1.2
+					var q := PhysicsRayQueryParameters3D.create(Vector3(out.x, 400, out.y), Vector3(out.x, -200, out.y))
+					var hit := get_world_3d().direct_space_state.intersect_ray(q)
+					var y: float = (hit["position"] as Vector3).y if hit else jeep.global_position.y
+					walker.spawn_at(Vector3(out.x, y + 1.0, out.y), Vector3(mid.x, y + 1.0, mid.y))
+					print("SHOPTEST at a %s in %s, %.0f m from the car; wallet %d" % [best["kind"], best["town"], (best["centre"] as Vector2).distance_to(Vector2(jeep.global_position.x, jeep.global_position.z)), sim.money])
+				1:
+					print("SHOPTEST prompt: %s" % _prompt)
+					Input.action_press("interact")
+					_interactions()                   # (the press is "just pressed" this frame only)
+				2:
+					Input.action_release("interact")
+				3:
+					print("SHOPTEST counter open %s: %s" % [store.visible, store.title])
+					if store.visible:
+						store.change(0, 2)
+						store.change(store.shelf.size() - 1, 1)
+						print("SHOPTEST basket %s total %d" % [str(store.counts), store.total()])
+						store.pay()
+				4:
+					print("SHOPTEST wallet %d, bag %s" % [sim.money, str(Goods.bag(_shop_ctx.fines._save_data))])
+					bag.toggle()
+					var items: Array = bag._items()
+					if not items.is_empty():
+						print("SHOPTEST use: %s" % bag.use(items[0]))
+				5:
+					print("SHOPTEST bag after %s, prompt now: %s" % [str(Goods.bag(_shop_ctx.fines._save_data)), _prompt])
+					get_tree().quit()
 	# --enter : get out, stand at the nearest shop door and go in (tests the interiors)
 	if "--enter" in args and _t > 3.0 and not has_meta("entered") and interiors:
 		set_meta("entered", true)
@@ -1798,6 +1929,20 @@ func _build_ui() -> void:
 	var layer := CanvasLayer.new()
 	layer.layer = 10
 	add_child(layer)
+	var sf := ShopFines.new()
+	sf.sim = sim
+	var saved: Dictionary = sim.load_save() if Sim.has_save() else {}
+	sf._save_data["goods"] = saved.get("goods", {}) if saved.get("goods") is Dictionary else {}
+	_shop_ctx.fines = sf
+	var shop_layer := CanvasLayer.new()
+	shop_layer.layer = 20
+	add_child(shop_layer)
+	store = StoreUI.new()
+	store.finished.connect(_bought)
+	shop_layer.add_child(store)
+	bag = BagUI.new()
+	bag.city = _shop_ctx
+	shop_layer.add_child(bag)
 	var root := Control.new()
 	root.set_anchors_preset(Control.PRESET_FULL_RECT)
 	root.mouse_filter = Control.MOUSE_FILTER_IGNORE

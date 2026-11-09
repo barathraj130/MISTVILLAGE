@@ -36,6 +36,12 @@ Values marked **(in game)** are already built; everything else is to build.
     a quiet sit in a church or temple).
 - **Opening hours (in game):** shops, banks, offices and garages keep real hours. Fuel stations, hospitals and police
   stations never close.
+- **Shops you can buy at (goods.gd, store.gd, bag.gd):** in Coimbatore, the counters inside kiranas, medical shops,
+  hardware shops and fuel-station stores; in Mettupalayam, Kotagiri and the mountain world's Coimbatore edge, every
+  open-fronted shop on the street (walk up to it: E). Kinds and hours: kirana 6 AM–10 PM, medical 8 AM–11 PM,
+  hardware 9:30 AM–8:30 PM, tea stall 5:30 AM–9:30 PM; when one is closed, the prompt shows its hours. What he
+  buys goes in the bag (B) and is kept in the save in both worlds. Tests: `drive.tscn --shoptest=Kotagiri`
+  (`--late` checks it's shut), `city_test.tscn --doortest=1 --doorroom=medical --doorbuy [--clock=11]`.
 - **Story-timed drives run on real time.** On drives where the story's timeline matters (the night of the crime,
   a delivery deadline, a witness's "I saw him at 10:12"), the clock slows to 1 game minute per real minute. The
   objective says so, and the player's drive then really takes the time it would take in Coimbatore.

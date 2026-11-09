@@ -116,6 +116,10 @@ func _process(dt: float) -> void:
 		var counter := _counter_near(w) if store and not at_door else false
 		if counter:
 			var lg: String = city.story.lang if city.story else "en"
+			var hk: String = {"kirana": "Kirana", "medical": "Medical", "hardware": "Hardware", "fuel": "Petrol bunk"}[inside["room"]]
+			if not city.fines.sim.is_open(hk):          # (the shutter half down: the same hours as the hill towns')
+				_label.text = ("கடை மூடியாச்சு (%s)" if lg == "ta" else "Closed now (%s)") % city.fines.sim.hours_text(hk)
+				return
 			_label.text = ("E: கவுண்டர்: வாங்குங்க" if lg == "ta" else "E: the counter: buy things")
 			if pressed:
 				store.lang = lg
@@ -415,7 +419,7 @@ func _door_test(n: int) -> void:
 			var m2 := _room.find_child("Staff", true, false) as Node3D
 			w.global_position = m2.global_position + Vector3(0, 0.1, 0)
 			await tree.create_timer(1.0).timeout
-			print("DOORTEST counter %s: %s" % [d["room"], _counter_near(w)])
+			print("DOORTEST counter %s: %s, says \"%s\" at %s" % [d["room"], _counter_near(w), _label.text, city.fines.sim.clock_text(city.fines.sim.minute)])
 			var st = city.store
 			st.open(str(Goods.SHOP_NAMES[d["room"]]["en"]), Goods.STOCK[d["room"]], city.fines.sim.money)
 			st.change(0, 1)

@@ -28,7 +28,7 @@ const NEXT_HILLS := {"clear": {"clear": 3, "cloudy": 3, "mist": 2}, "cloudy": {"
 ## opening hours in minutes of the day [open, close]; anything not listed never shuts
 const HOURS := {
 	"Petrol bunk": [300, 1380], "Restaurant": [420, 1380], "Café": [420, 1320], "Bank": [600, 960],
-	"Market": [360, 1260], "School": [510, 990], "College": [540, 1020], "Cinema": [600, 1440],
+	"Market": [360, 1260], "Kirana": [360, 1320], "Medical": [480, 1380], "Hardware": [570, 1230], "Tea stall": [330, 1290], "School": [510, 990], "College": [540, 1020], "Cinema": [600, 1440],
 	"Theatre": [600, 1380], "Museum": [600, 1020], "Town hall": [600, 1050], "Temple": [330, 1260],
 	"Viewpoint": [360, 1140],
 }
@@ -143,9 +143,14 @@ func daylight() -> float:
 
 # ----------------------------------------------------------------------------- save / load
 func save(extra: Dictionary) -> void:
-	var data := {"minute": minute, "day": day, "money": money, "fuel": fuel, "weather": weather, "groceries": groceries,
-		"saved_at": Time.get_datetime_string_from_system()}
-	data.merge(extra)
+	var data := {}                                    # (what's in the file already: the other world's keys stay. The
+	if FileAccess.file_exists(SAVE_PATH):             #  mountain drive had written only its own and wiped the city's)
+		var old = JSON.parse_string(FileAccess.get_file_as_string(SAVE_PATH))
+		if old is Dictionary:
+			data = old
+	data.merge(extra, true)
+	data.merge({"minute": minute, "day": day, "money": money, "fuel": fuel, "weather": weather, "groceries": groceries,
+		"saved_at": Time.get_datetime_string_from_system()}, true)
 	var f := FileAccess.open(SAVE_PATH, FileAccess.WRITE)
 	if f:
 		f.store_string(JSON.stringify(data, "  "))
