@@ -54,6 +54,13 @@ const DOINGS := {
 		"offer": "Meals on a leaf (₹90)", "caption": "Meals on a banana leaf, a second helping of rice."}],
 	"fine_dining": [{"mark": "Mark_cook", "cost": 1450, "hours": 1.0, "food": 70.0, "stress": -12.0,
 		"offer": "Lunch at the restaurant (₹1,450)", "caption": "White linen, a quiet room, a meal he'll talk about for weeks."}],
+	"hospital_gov": [{"mark": "Staff", "cost": 0, "hours": 2.0, "heal": true, "stress": 4.0,
+		"offer": "See the duty doctor (free, a long queue)",
+		"caption": "Two hours on a bench, then five minutes with a tired doctor: cleaned, dressed, a strip of tablets."}],
+	"hospital_pvt": [{"mark": "Staff", "cost": 800, "hours": 0.75, "heal": true, "stress": -2.0,
+		"offer": "See a doctor (₹800)", "caption": "A clean room, a quick young doctor, the wound dressed properly."}],
+	"hospital": [{"mark": "Staff", "cost": 800, "hours": 0.75, "heal": true, "stress": -2.0,
+		"offer": "See a doctor (₹800)", "caption": "A clean room, a quick young doctor, the wound dressed properly."}],
 	"hotel": [{"mark": "Staff", "cost": 1800, "sleep": true, "stress": -5.0,
 		"offer": "A room for the night (₹1,800): sleep", "caption": "A clean room, the AC humming. He's asleep in minutes."}],
 	"home": [{"mark": "Mark_karthik_room", "cost": 0, "sleep": true, "stress": -15.0, "seat": "Mark_karthik_room",
@@ -66,6 +73,7 @@ var city                             # city_test.gd: walker, car, fines, hud, st
 var stress := STRESS0
 var energy := 70.0
 var tiredness := 30.0
+var hurt := 0.0                      # bruises and worse (0..100): crashes, falls; first aid, a doctor, time heal it
 var busy := false                    # an outing (or sleep) under way: the doors and the walker wait
 var _money := -1
 var _challans := -1
@@ -83,6 +91,7 @@ func _ready() -> void:
 	stress = float(sd.get("stress", STRESS0))
 	energy = float(sd.get("energy", 70.0))
 	tiredness = float(sd.get("tiredness", 30.0))
+	hurt = float(sd.get("hurt", 0.0))
 	for arg in OS.get_cmdline_user_args():            # (testing: --life=energy,tiredness,stress to start from)
 		if arg.begins_with("--life="):
 			var v := arg.get_slice("=", 1).split(",")
@@ -130,6 +139,9 @@ func _process(dt: float) -> void:
 	tiredness = clampf(tiredness + (TIRED_PER_HOUR + (DRIVING_EXTRA if driving else 0.0)) * hours, 0.0, 100.0)
 	if energy <= 0.0:
 		add_stress(4.0 * hours)
+	hurt = clampf(hurt - 1.5 * hours, 0.0, 100.0)    # (it mends by itself, slowly: a day and a half for a bad fall)
+	if hurt > 30.0:
+		add_stress(1.5 * hours * hurt / 100.0)
 	if f.sim.money != _money:                         # money in or out
 		var d: int = f.sim.money - _money
 		add_stress(-d * PER_RUPEE_LOST if d < 0 else -d * PER_RUPEE_EARNED)
@@ -142,10 +154,11 @@ func _process(dt: float) -> void:
 	var w = city.walker
 	if w:                                             # hungry or worn out: no running
 		var run: float = 4.2 if w.avatar_run_stride else 7.0
-		w.run_speed = w.walk_speed if (energy < 25.0 or stress > 90.0 or tiredness > 90.0) else run
+		w.run_speed = w.walk_speed if (energy < 25.0 or stress > 90.0 or tiredness > 90.0 or hurt > 50.0) else run
 	_nag(dt, "food", energy < 25.0, "Karthik is hungry. Time to eat something.")
 	_nag(dt, "sleep", tiredness > 80.0, "Karthik needs sleep: home, or a hotel.")
 	_nag(dt, "stress", stress > 75.0, "Karthik is stressed. A match or a film?")
+	_nag(dt, "hurt", hurt > 40.0, "Karthik is hurt. First aid (a medical shop), or a doctor.")
 	if tiredness >= 100.0:
 		if city.walker and not _story_busy():           # on his feet: he drops off where he is
 			collapse()
@@ -177,6 +190,12 @@ func _story_busy() -> bool:
 	return st != null and (st.room != null or (st.has_method("claims_e") and city.walker and st.claims_e(city.walker.global_position)))
 
 
+## Hurt in a crash or a fall (city_test._on_impact): how hard, and on two wheels much worse.
+func add_hurt(v: float) -> void:
+	hurt = clampf(hurt + v, 0.0, 100.0)
+	print("LIFE hurt +%.0f → %.0f" % [v, hurt])
+
+
 func add_stress(v: float) -> void:
 	stress = clampf(stress + v, 0.0, 100.0)
 
@@ -186,6 +205,7 @@ func save() -> void:
 	sd["stress"] = snappedf(stress, 0.1)
 	sd["energy"] = snappedf(energy, 0.1)
 	sd["tiredness"] = snappedf(tiredness, 0.1)
+	sd["hurt"] = snappedf(hurt, 0.1)
 	city.fines.save()
 
 
@@ -255,6 +275,8 @@ func _pass(mins: float, caption: String, seat: Node3D, d: Dictionary) -> void:
 	if sleep:
 		tiredness = 25.0 if d.get("rough", false) else 0.0
 	add_stress(float(d.get("stress", 0.0)))
+	if d.get("heal", false):                           # (a doctor: what hurt is seen to)
+		hurt = minf(hurt, 5.0)
 	if sleep:
 		await body.eyes(false, 1.6)                    # and open
 	elif _card.color.a > 0.0:

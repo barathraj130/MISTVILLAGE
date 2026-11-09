@@ -20,7 +20,12 @@ const RoomWalkers := preload("res://scripts/city/room_walkers.gd")
 const RoomSound := preload("res://scripts/city/room_sound.gd")
 const DEPTH := 300.0                 # rooms sit this far below the street
 const REACH := 1.6                   # how near a wall you must be for its door
-const SHOPS := ["kirana", "kirana", "tea", "restaurant", "kirana", "tea", "restaurant", "bank"]
+const SHOPS := ["kirana", "kirana", "tea", "restaurant", "kirana", "tea", "restaurant", "bank", "medical", "hardware", "kirana", "medical"]
+## Shops kept in another room's model (a medical and a hardware shop are a counter like the kirana's).
+const ROOM_MODEL := {"medical": "kirana", "hardware": "kirana"}
+## Rooms with a counter to buy things at (goods.gd STOCK), by the shopkeeper ("Staff").
+const COUNTERS := ["kirana", "medical", "hardware", "fuel"]
+const Goods := preload("res://scripts/city/goods.gd")
 const HOMES := ["house_mid", "house_old", "house_flat", "house_mid", "house_flat"]   # (Karthik's own "home" is the story's)
 const KIT_ROOM := {"apartment": "house_flat", "bungalow": "house", "city_house": "house", "tn_house": "house", "hill_cottage": "house",
 	"commercial": "office", "shop_house": "shop", "hotel": "hotel", "mill_shed": "office"}
@@ -29,6 +34,7 @@ const NAMES := {"home": "Karthik's house", "house_mid": "the house", "house_old"
 	"mall_sathy": "the mall", "church": "the church", "stadium": "the stadium",
 	"collectorate": "the Collectorate", "college": "the college", "trade_fair": "the expo hall",
 	"hospital_gov": "the hospital", "hospital_pvt": "the hospital", "temple_hall": "the temple", "kirana": "the kirana store", "tea": "the tea stall", "restaurant": "the restaurant",
+	"medical": "the medical shop", "hardware": "the hardware shop",
 	"bank": "the bank", "office": "the offices", "hotel": "the hotel", "temple": "the temple", "hospital": "the hospital",
 	"fine_dining": "the restaurant", "mess": "the mess", "police": "the police station", "coopbank": "the bank",
 	"fuel": "the store"}
@@ -103,6 +109,18 @@ func _process(dt: float) -> void:
 			_label.text = ""
 			return
 		var at_door := w.global_position.distance_to(_exit) < 1.8
+		var store = city.store if "store" in city else null
+		if store and store.visible:
+			_label.text = ""
+			return
+		var counter := _counter_near(w) if store and not at_door else false
+		if counter:
+			var lg: String = city.story.lang if city.story else "en"
+			_label.text = ("E: கவுண்டர்: வாங்குங்க" if lg == "ta" else "E: the counter: buy things")
+			if pressed:
+				store.lang = lg
+				store.open(str(Goods.SHOP_NAMES[inside["room"]][lg]), Goods.STOCK[inside["room"]], city.fines.sim.money)
+			return
 		var todo: Dictionary = life.offer(inside["room"], _room, w.global_position) if life and not at_door else {}
 		var bail = city.bail if "bail" in city else null
 		var sign: String = bail.offer(inside["room"], _room, w.global_position) if bail and not at_door else ""
@@ -131,6 +149,14 @@ func _process(dt: float) -> void:
 	_label.text = ("E: go into %s" % NAMES.get(_near.get("room", ""), "the building")) if not _near.is_empty() else ""
 	if pressed and not _near.is_empty():
 		enter(_near, w)
+
+
+## By the shopkeeper of a shop with a counter (COUNTERS).
+func _counter_near(w: Node3D) -> bool:
+	if not inside.get("room", "") in COUNTERS or _room == null:
+		return false
+	var m := _room.find_child("Staff", true, false) as Node3D
+	return m != null and Vector2(m.global_position.x - w.global_position.x, m.global_position.z - w.global_position.z).length() < 2.2
 
 
 ## The story has its own E here (a room of its own, an eatery's door): the doors keep out of its way.
@@ -210,7 +236,7 @@ func _room_for(b: Array, s) -> String:
 
 
 func enter(d: Dictionary, walker: Node3D) -> void:
-	var path: String = ROOMS % d["room"]
+	var path: String = ROOMS % ROOM_MODEL.get(d["room"], d["room"])
 	if not ResourceLoader.exists(path):
 		return
 	inside = d
@@ -385,6 +411,27 @@ func _door_test(n: int) -> void:
 			for j in 4:
 				await tree.create_timer(1.5).timeout
 				await _shot(shots, "door_%02d_watch_%d" % [k, j])
+		if "--doorbuy" in OS.get_cmdline_user_args() and d["room"] in COUNTERS:   # (testing: buy at the counter, use it)
+			var m2 := _room.find_child("Staff", true, false) as Node3D
+			w.global_position = m2.global_position + Vector3(0, 0.1, 0)
+			await tree.create_timer(1.0).timeout
+			print("DOORTEST counter %s: %s" % [d["room"], _counter_near(w)])
+			var st = city.store
+			st.open(str(Goods.SHOP_NAMES[d["room"]]["en"]), Goods.STOCK[d["room"]], city.fines.sim.money)
+			st.change(0, 1)
+			st.change(1, 2)
+			await tree.create_timer(0.6).timeout
+			await _shot(shots, "door_%02d_counter" % k)
+			var before: int = city.fines.sim.money
+			st.pay()
+			print("DOORTEST bought: bag %s, paid %d" % [str(Goods.bag(city.fines._save_data)), before - city.fines.sim.money])
+			if life and Goods.has(city.fines._save_data, "first_aid"):
+				life.hurt = 50.0
+				print("DOORTEST first aid: %s → hurt %.0f" % [city.bag.use("first_aid"), life.hurt])
+			city.bag.toggle()
+			await tree.create_timer(0.6).timeout
+			await _shot(shots, "door_%02d_bag" % k)
+			city.bag.toggle()
 		if "--doordo" in OS.get_cmdline_user_args() and life and life.DOINGS.has(d["room"]):   # (and what's done there)
 			for j in life.DOINGS[d["room"]].size():
 				var m := _room.find_child(life.DOINGS[d["room"]][j]["mark"], true, false) as Node3D

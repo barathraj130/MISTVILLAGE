@@ -3088,6 +3088,7 @@ func _story_save() -> void:
 	var d := {"step": step, "step_sig": _step_sig(step), "day": fines.sim.day, "minute": fines.sim.minute, "money": fines.sim.money, "lang": lang,
 		"flags": flags, "evidence": evidence, "accounts": city.fines._save_data.get("accounts", {}),
 		"bail": city.fines._save_data.get("bail", {}), "stress": city.life.stress if city.life else 0.0,
+		"goods": city.fines._save_data.get("goods", {}), "hurt": city.life.hurt if city.life else 0.0,
 		"contacts": city.phone.contacts, "pins": city.phone.pins, "notes": city.phone.notes,
 		"items": strip.call(city.hands.items), "wall": strip.call(wall.pool), "wall_pins": pins, "threads": wall.state["threads"],
 		"standing": standing.save(), "version": 2}
@@ -3135,6 +3136,9 @@ func _story_load() -> void:
 		city.bail.load_state(d.get("bail", {}))
 	if city.life:
 		city.life.stress = float(d.get("stress", 0.0))
+		city.life.hurt = float(d.get("hurt", 0.0))
+	if d.get("goods") is Dictionary:                    # (his bag, as it was that morning)
+		city.fines._save_data["goods"] = d["goods"]
 	for c in d.get("contacts", []):
 		city.phone.add_contact(c)
 	for pn in d.get("pins", []):

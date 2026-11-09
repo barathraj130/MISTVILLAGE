@@ -20,6 +20,9 @@ const CityPolice := preload("res://scripts/city/city_police.gd")
 const CityWeather := preload("res://scripts/city/city_weather.gd")
 const Bystanders := preload("res://scripts/city/city_bystanders.gd")
 const Dents := preload("res://scripts/drive/dents.gd")
+const Goods := preload("res://scripts/city/goods.gd")
+const Store := preload("res://scripts/city/store.gd")
+const Bag := preload("res://scripts/city/bag.gd")
 const Potholes := preload("res://scripts/city/city_potholes.gd")
 const CityDoors := preload("res://scripts/city/city_doors.gd")
 const Life := preload("res://scripts/city/life.gd")
@@ -81,6 +84,9 @@ var traffic
 var police                                  # the police checking points (city_police.gd)
 var weather                                 # rain and wet roads (city_weather.gd)
 var bystanders                              # the people on the street, and a vehicle coming at them (city_bystanders.gd)
+var store                                   # a shop's counter (store.gd), opened by city_doors.gd
+var bag                                     # what he carries (bag.gd), B
+var _b_down := false
 var _hit_seen := {}                         # what you hit → when (a crash is one complaint, not one per contact)
 
 
@@ -216,6 +222,14 @@ func _ready() -> void:
 		hands.name = "Hands"
 		hands.city = self
 		pl.add_child(hands)
+		store = Store.new()
+		store.name = "Store"
+		store.finished.connect(_bought)
+		pl.add_child(store)
+		bag = Bag.new()
+		bag.name = "Bag"
+		bag.city = self
+		pl.add_child(bag)
 		phone = Phone.new()
 		phone.name = "Phone"
 		phone.city = self
@@ -658,6 +672,8 @@ func _crossed_signal(sp: Vector3, state: int) -> void:
 ## point's barricades: fined on the spot. A parked vehicle: its owner wants the dent paid for, there and then
 ## (a light knock, only words). Walls and kerbs only cost the car.
 func _on_impact(_zone: String, severity: float, other: Object) -> void:
+	if life and severity >= 0.15:                       # (he feels it: on two wheels, far more)
+		life.add_hurt(severity * (45.0 if car.two_wheeler else 16.0))
 	var now := Time.get_ticks_msec() / 1000.0
 	var key := other.get_instance_id() if other else 0
 	var again := now - float(_hit_seen.get(key, -99.0)) < 6.0
@@ -1031,6 +1047,20 @@ var _shift_t := 0.0                         # the "delivery or not?" question is
 
 ## Getting on the scooter: a delivery shift (the bag on his back) or something else (no bag)? A story delivery
 ## answers it itself; otherwise 1 / 2 for a few seconds, and no answer means no shift.
+## Paid at a counter: out of the wallet, into the bag.
+func _bought(items: Dictionary) -> void:
+	if items.is_empty():
+		return
+	var cost := 0
+	for id in items:
+		cost += int(Goods.GOODS[id]["price"]) * int(items[id])
+		Goods.add(fines._save_data, id, int(items[id]))
+	fines.sim.money -= cost
+	fines.save()
+	hud.warn(_t({"en": "Paid ₹%d. In your bag (B)." % cost, "ta": "₹%d கட்டியாச்சு. உங்க பையில (B)." % cost}), 3.0)
+	print("STORE bought %s for %d" % [str(items), cost])
+
+
 func ask_shift() -> void:
 	if car == null or not car.two_wheeler:
 		return
@@ -1125,6 +1155,10 @@ func _drive_camera(dt: float) -> void:
 func _process(dt: float) -> void:
 	t += dt
 	_shift_keys(dt)
+	var bk := Input.is_key_pressed(KEY_B)
+	if bk and not _b_down and bag and not (store and store.visible):
+		bag.toggle()
+	_b_down = bk
 	if _nohud:
 		hud.visible = false
 		map.visible = false
