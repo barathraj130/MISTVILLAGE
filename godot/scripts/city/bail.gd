@@ -60,6 +60,8 @@ func _build() -> void:
 	for arg in OS.get_cmdline_user_args():
 		if arg.begins_with("--bailtest="):
 			_test.call_deferred(arg.get_slice("=", 1))
+		if arg.begins_with("--bailstrikes="):             # (testing: that many strikes already this week)
+			_test_strikes.call_deferred(int(arg.get_slice("=", 1)))
 		if arg == "--jailtest":                          # (testing: bail cancelled at once; with --story --storyskip)
 			_jailtest.call_deferred()
 
@@ -158,6 +160,14 @@ func _test(dir: String) -> void:
 	tree.quit()
 
 
+func _test_strikes(n: int) -> void:
+	while not city.placed:
+		await get_tree().process_frame
+	for i in n:
+		strikes.append(_day())
+	print("BAIL test: %d strikes this week" % strikes.size())
+
+
 func _jailtest() -> void:
 	var tree := get_tree()
 	while not city.placed or city.story == null or city.story.step < 0:
@@ -237,10 +247,15 @@ func _strike(warning: Dictionary) -> void:
 func _cancel() -> void:
 	print("BAIL cancelled")
 	city.phone.call_from({"en": "Sundaram sir (advocate)", "ta": "சுந்தரம் சார் (வக்கீல்)"})
+	if "--storyskip" in OS.get_cmdline_user_args():      # (testing: the call is taken)
+		get_tree().create_timer(1.0).timeout.connect(city.phone.answer)
 	await city.phone.call_answered
 	city.hud.say("Sundaram sir", "Thambi, they've cancelled your bail. Three missed evenings! They're coming for you. Go with them quietly. I'll come with the papers.", 7.0)
 	await get_tree().create_timer(7.5).timeout
 	var st = city.story
+	if st and st.playing() and st.chapter_path != "res://story/jail.json":
+		st.detour("res://story/jail.json")              # (in the middle of Part 1: the jail, then back to the story)
+		return
 	if st and not st.playing() and st.play_chapter("res://story/jail.json"):
 		return                                           # (the jail, played: its last steps restore bail)
 	if city.life:
@@ -300,7 +315,11 @@ func sign_now() -> void:
 	var m := _min()
 	signed_day = _day()
 	var line := ""
-	if m <= WINDOW + 60.0:
+	if m >= LATE_END or m < 5.0 * 60.0:               # past eight (or past midnight): the evening is missed, signed or not
+		line = "%s. That isn't late, Karthik, that's a missed evening. It goes in the book." % city.phone._now()
+		_strike({"en": "Signing after eight counts as not coming. Inspector has noted it. – Selvi",
+			"ta": "எட்டு மணிக்கு அப்புறம் கையெழுத்து போட்டா வராத மாதிரி தான். இன்ஸ்பெக்டர் குறிச்சுட்டாரு. – செல்வி"})
+	elif m <= WINDOW + 60.0:
 		suspicion = maxf(suspicion - 5.0, 0.0)
 		line = "Hm. On time." if suspicion < 50.0 else "On time today. We'll see tomorrow."
 	else:

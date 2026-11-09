@@ -209,11 +209,33 @@ func load_chapter(path := CHAPTER) -> bool:
 	data = JSON.parse_string(f.get_as_text())
 	if data is Dictionary:
 		standing.setup(city, data)
+		chapter_path = path
 	return data is Dictionary
 
 
 ## Another chapter now, from its first step (bail cancelled: the jail, story/jail.json); its last step is free play.
 var _chapters := 0
+var chapter_path := CHAPTER
+## A detour (bail cancelled in the middle of Part 1): the jail chapter plays at the next safe moment (a drive, a wait,
+## free play: nothing half done, no scene in a room) and, at its last step, the story goes back to the step it left.
+var _detour_to := ""
+var _back := {}                     # the way back: {"path", "step"}
+
+
+func detour(path: String) -> void:
+	_detour_to = path
+
+
+func _take_detour() -> void:
+	var back := step
+	if str(cur.get("do", "")) == "wait" and step > 0 and str(data["steps"][step - 1].get("do", "")) == "drive":
+		back = step - 1                                  # (waiting somewhere: after the jail, he has to get there again)
+	_back = {"path": chapter_path, "step": back}
+	print("STORY detour to %s from step %d" % [_detour_to, step])
+	var to := _detour_to
+	_detour_to = ""
+	_in_task = false
+	play_chapter(to)
 
 
 func play_chapter(path: String) -> bool:
@@ -254,6 +276,10 @@ func _process(dt: float) -> void:
 	if step < 0:
 		if city.placed:
 			_next()
+		return
+	if _detour_to != "" and not _in_task and room == null and str(cur.get("do", "")) in ["drive", "wait", "free"] \
+			and (city.doors == null or city.doors.inside.is_empty()):
+		_take_detour()
 		return
 	t_step += dt
 	_keys()
@@ -468,6 +494,15 @@ func _next() -> void:
 		if step >= data["steps"].size():
 			return
 		cur = data["steps"][step]
+	if str(cur.get("do", "")) == "free" and not _back.is_empty():   # the detour's over: back where the story left off
+		load_chapter(str(_back["path"]))
+		step = int(_back["step"]) - 1
+		print("STORY back from the detour at step %d (day %d)" % [step + 1, fines.sim.day])
+		_back = {}
+		_chapters -= 1
+		_clear_cast()
+		_next()
+		return
 	if _slept and _chapters == 0:
 		_slept = false
 		_story_save()
