@@ -126,6 +126,8 @@ func _wet_look(wet: float) -> void:
 		return
 	if st.road_mat is ShaderMaterial:
 		(st.road_mat as ShaderMaterial).set_shader_parameter("wet", wet)     # darker, glossy, pools in the wheel tracks
+	for smk in st.surface_mats:                               # earth to mud, water in the ruts; gravel, concrete darker
+		(st.surface_mats[smk] as ShaderMaterial).set_shader_parameter("wet", wet)
 	if st.ground_mat is ShaderMaterial:
 		(st.ground_mat as ShaderMaterial).set_shader_parameter("wet", wet)
 	for m in [st.walk_mat, st.kerb_mat]:

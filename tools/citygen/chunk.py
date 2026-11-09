@@ -950,6 +950,8 @@ def run(cfg, roads_cfg):
     clearprops.main()
     import onewaysignals                                # a one-way's signal facing the traffic leaving: out
     onewaysignals.main()
+    import surfaces                                     # what each road is made of (earth, gravel, concrete), for the game
+    surfaces.main()
     size = sum(os.path.getsize(os.path.join(out, "chunks", n)) for n in os.listdir(os.path.join(out, "chunks")))
     print("CHUNK %d tiles, %d road pieces, %d buildings (%d designed), %.1f MB, %ds" % (
         len(tiles), n_pieces, sum(len(t["blds"]) for t in tiles.values()), n_kit, size / 1e6, time.time() - t0))

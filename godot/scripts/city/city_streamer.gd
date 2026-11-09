@@ -29,6 +29,12 @@ const MARK := {"motorway": 3, "trunk": 3, "primary": 2, "secondary": 2, "tertiar
 @export var per_frame := 1                 # tiles added to the scene per frame at most
 var target: Node3D
 var index := {}
+## The roads that aren't asphalt (tools/citygen/surfaces.py): {"cx,cz": {"x2,z2" (a piece's first point): "earth" |
+## "gravel" | "concrete"}}. Each is its own mesh with its own material (rural_road.gdshader) and its own collision
+## surface (jeep.gd feels earth and gravel under its wheels). --allasphalt: every road asphalt, as before.
+var surfaces := {}
+const SURFACE_KIND := {"earth": 0, "gravel": 1, "concrete": 2}
+var surface_mats := {}
 var tile := 256.0
 var classes: Array = []
 var loaded := {}                           # Vector2i → Node3D
@@ -92,6 +98,10 @@ var stats := {"loaded": 0, "built": 0, "unloaded": 0, "buildings": 0, "designed"
 
 func _ready() -> void:
 	index = JSON.parse_string(FileAccess.get_file_as_string(DIR + "index.json"))
+	if FileAccess.file_exists(DIR + "surfaces.json"):        # what the roads that aren't asphalt are made of
+		var sj = JSON.parse_string(FileAccess.get_file_as_string(DIR + "surfaces.json"))
+		if sj is Dictionary:
+			surfaces = sj
 	tile = float(index["tile"])
 	classes = index.get("classes", [])
 	body = StaticBody3D.new()
@@ -193,6 +203,20 @@ func set_materials(road: Material, ground: Material, buildings: Material, walk: 
 	building_mat = buildings
 	walk_mat = walk
 	kerb_mat = kerb
+
+
+## The material for a road that isn't asphalt (made once, shared by every tile): rural_road.gdshader, with the
+## asphalt's own noise texture.
+func _surface_mat(surf: String) -> ShaderMaterial:
+	if surface_mats.has(surf):
+		return surface_mats[surf]
+	var sm := ShaderMaterial.new()
+	sm.shader = preload("res://shaders/rural_road.gdshader")
+	sm.set_shader_parameter("kind", SURFACE_KIND.get(surf, 0))
+	if road_mat is ShaderMaterial:
+		sm.set_shader_parameter("noise_tex", (road_mat as ShaderMaterial).get_shader_parameter("noise_tex"))
+	surface_mats[surf] = sm
+	return sm
 
 
 func set_yard_materials(yard: Material, wall: Material) -> void:
@@ -379,7 +403,7 @@ func _build(k: Vector2i) -> void:
 	_raise_flyovers(roads)
 	var out := {}
 	_ground(k, hn, h, out)
-	_roads(roads, out)
+	_roads(roads, out, k)
 	_buildings(blds, out)
 	_walks(walks, out, [k, hn, h, float(index["hstep"]), tile])
 	_junctions(juncs, out)
@@ -433,99 +457,117 @@ func _ground(k: Vector2i, n: int, h: PackedFloat32Array, out: Dictionary) -> voi
 	out["ground_shape"] = hs
 
 
-func _roads(roads: Array, out: Dictionary) -> void:
-	var v := PackedVector3Array()
-	var nm := PackedVector3Array()
-	var cl := PackedColorArray()
-	var uv := PackedVector2Array()
-	var uv2 := PackedVector2Array()
-	var idx := PackedInt32Array()
-	var faces := PackedVector3Array()
+func _roads(roads: Array, out: Dictionary, k := Vector2i.ZERO) -> void:
 	_mark_overlaps(roads)
 	_flyovers(roads, out)
 	var joins := _joins(roads)
 	var patches: Array = joins["patches"]
-	for ri in roads.size():
-		var r: Dictionary = roads[ri]
-		var p: PackedFloat32Array = r["p"]
-		var cnt := p.size() / 3
-		if cnt < 2:
+	var tsurf: Dictionary = surfaces.get("%d,%d" % [k.x, k.y], {}) if not "--allasphalt" in OS.get_cmdline_user_args() else {}
+	var rs := []                                              # each piece's surface ("" asphalt)
+	for r in roads:
+		var p0: PackedFloat32Array = r["p"]
+		rs.append(str(tsurf.get("%d,%d" % [roundi(p0[0] * 2.0), roundi(p0[2] * 2.0)], "")) if p0.size() >= 3 else "")
+	for surf in ["", "earth", "gravel", "concrete"]:
+		if surf != "" and not surf in rs:
 			continue
-		var half: float = float(r["w"]) * 0.5
-		var lift: float = RANK.get(r["c"], 0.02) + 0.06
-		var pts := PackedVector3Array()
-		for q in cnt:
-			pts.append(Vector3(p[q * 3], p[q * 3 + 1] + lift, p[q * 3 + 2]))
-		var miter: Dictionary = joins["miter"].get(ri, {})          # {0 or cnt-1: [tangent, width scale]}
-		var code: int = MARK.get(r["c"], 0)
-		if code > 0 and half >= 6.0:
-			code = 3
-		if r.get("under", false):
-			code = 0                                # runs inside a wider road: that road's paint is the one you see
-		var med := _has_median(r)
-		var col := Color(minf(half, 9.0) / 10.0, (code + 4 * int(r["o"])) / 8.0, 1.0 if med else 0.0)
-		var along: float = r["a0"]
-		var wl := Vector2(r["len"], roundf(float(r["c1"]) * 10.0) * 1000.0 + roundf(float(r["c0"]) * 10.0))
-		var base := v.size()
-		for q in cnt:
-			var t := pts[mini(q + 1, cnt - 1)] - pts[maxi(q - 1, 0)]
-			var sc := 1.0
-			if miter.has(q):                                    # (meeting the next road end to end: one shared edge)
-				t = miter[q][0]
-				sc = miter[q][1]
-			var l := Vector3(t.z, 0, -t.x).normalized()
-			if q > 0:
-				along += pts[q].distance_to(pts[q - 1])
-			v.append(pts[q] + l * half * sc)
-			v.append(pts[q] - l * half * sc)
-			nm.append(Vector3.UP)
-			nm.append(Vector3.UP)
-			cl.append(col)
-			cl.append(col)
-			uv.append(Vector2(0.0, along / 6.0))
-			uv.append(Vector2(half / 3.0, along / 6.0))
-			uv2.append(wl)
-			uv2.append(wl)
-		for q in cnt - 1:
-			var a := base + q * 2
-			idx.append_array([a, a + 2, a + 1, a + 1, a + 2, a + 3])
-			faces.append_array([v[a], v[a + 2], v[a + 1], v[a + 1], v[a + 2], v[a + 3]])
-	for pt in patches:                                        # a sharp or uneven meeting: a patch over it (convex: a fan)
-		var y: float = pt[0]
-		var hull: PackedVector2Array = pt[1]
-		var c := Vector3(hull[0].x, y, hull[0].y)
-		for k in range(1, hull.size() - 2):
-			var a0 := Vector3(hull[k].x, y, hull[k].y)
-			var a1 := Vector3(hull[k + 1].x, y, hull[k + 1].y)
-			if (a0 - c).cross(a1 - c).y > 0.0:                 # (facing up)
-				var tmp := a0
-				a0 = a1
-				a1 = tmp
-			var base2 := v.size()
-			for q3 in [c, a0, a1]:
-				v.append(q3)
+		var v := PackedVector3Array()
+		var nm := PackedVector3Array()
+		var cl := PackedColorArray()
+		var uv := PackedVector2Array()
+		var uv2 := PackedVector2Array()
+		var idx := PackedInt32Array()
+		var faces := PackedVector3Array()
+		for ri in roads.size():
+			if rs[ri] != surf:
+				continue
+			var r: Dictionary = roads[ri]
+			var p: PackedFloat32Array = r["p"]
+			var cnt := p.size() / 3
+			if cnt < 2:
+				continue
+			var half: float = float(r["w"]) * 0.5
+			var lift: float = RANK.get(r["c"], 0.02) + 0.06
+			var pts := PackedVector3Array()
+			for q in cnt:
+				pts.append(Vector3(p[q * 3], p[q * 3 + 1] + lift, p[q * 3 + 2]))
+			var miter: Dictionary = joins["miter"].get(ri, {})          # {0 or cnt-1: [tangent, width scale]}
+			var code: int = MARK.get(r["c"], 0)
+			if code > 0 and half >= 6.0:
+				code = 3
+			if r.get("under", false):
+				code = 0                                # runs inside a wider road: that road's paint is the one you see
+			var med := _has_median(r)
+			var col := Color(minf(half, 9.0) / 10.0, (code + 4 * int(r["o"])) / 8.0, 1.0 if med else 0.0)
+			var along: float = r["a0"]
+			var wl := Vector2(r["len"], roundf(float(r["c1"]) * 10.0) * 1000.0 + roundf(float(r["c0"]) * 10.0))
+			var base := v.size()
+			for q in cnt:
+				var t := pts[mini(q + 1, cnt - 1)] - pts[maxi(q - 1, 0)]
+				var sc := 1.0
+				if miter.has(q):                                    # (meeting the next road end to end: one shared edge)
+					t = miter[q][0]
+					sc = miter[q][1]
+				var l := Vector3(t.z, 0, -t.x).normalized()
+				if q > 0:
+					along += pts[q].distance_to(pts[q - 1])
+				v.append(pts[q] + l * half * sc)
+				v.append(pts[q] - l * half * sc)
 				nm.append(Vector3.UP)
-				cl.append(Color(1, 0, 0))                    # (a junction's look: no lanes, just wear)
-				uv.append(Vector2(q3.x, q3.z) / 6.0)
-				uv2.append(Vector2.ZERO)
-			idx.append_array([base2, base2 + 1, base2 + 2])
-			faces.append_array([v[base2], v[base2 + 1], v[base2 + 2]])
-	if v.is_empty():
-		return
-	var ra := []
-	ra.resize(Mesh.ARRAY_MAX)
-	ra[Mesh.ARRAY_VERTEX] = v
-	ra[Mesh.ARRAY_NORMAL] = nm
-	ra[Mesh.ARRAY_COLOR] = cl
-	ra[Mesh.ARRAY_TEX_UV] = uv
-	ra[Mesh.ARRAY_TEX_UV2] = uv2
-	ra[Mesh.ARRAY_INDEX] = idx
-	var rm := ArrayMesh.new()
-	rm.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, ra)
-	out["road_mesh"] = rm
-	var shape := ConcavePolygonShape3D.new()
-	shape.set_faces(faces)
-	out["road_shape"] = shape
+				nm.append(Vector3.UP)
+				cl.append(col)
+				cl.append(col)
+				uv.append(Vector2(0.0, along / 6.0))
+				uv.append(Vector2(half / 3.0, along / 6.0))
+				uv2.append(wl)
+				uv2.append(wl)
+			for q in cnt - 1:
+				var a := base + q * 2
+				idx.append_array([a, a + 2, a + 1, a + 1, a + 2, a + 3])
+				faces.append_array([v[a], v[a + 2], v[a + 1], v[a + 1], v[a + 2], v[a + 3]])
+		for pt in patches:                                        # a sharp or uneven meeting: a patch over it (convex: a fan)
+			var psurf: String = rs[pt[2]] if rs[pt[2]] == rs[pt[3]] else ""   # (earth only between two earth roads)
+			if psurf != surf:
+				continue
+			var y: float = pt[0]
+			var hull: PackedVector2Array = pt[1]
+			var c := Vector3(hull[0].x, y, hull[0].y)
+			for kk in range(1, hull.size() - 2):
+				var a0 := Vector3(hull[kk].x, y, hull[kk].y)
+				var a1 := Vector3(hull[kk + 1].x, y, hull[kk + 1].y)
+				if (a0 - c).cross(a1 - c).y > 0.0:                 # (facing up)
+					var tmp := a0
+					a0 = a1
+					a1 = tmp
+				var base2 := v.size()
+				for q3 in [c, a0, a1]:
+					v.append(q3)
+					nm.append(Vector3.UP)
+					cl.append(Color(1, 0, 0))                    # (a junction's look: no lanes, just wear)
+					uv.append(Vector2(q3.x, q3.z) / 6.0)
+					uv2.append(Vector2.ZERO)
+				idx.append_array([base2, base2 + 1, base2 + 2])
+				faces.append_array([v[base2], v[base2 + 1], v[base2 + 2]])
+		if v.is_empty():
+			continue
+		var ra := []
+		ra.resize(Mesh.ARRAY_MAX)
+		ra[Mesh.ARRAY_VERTEX] = v
+		ra[Mesh.ARRAY_NORMAL] = nm
+		ra[Mesh.ARRAY_COLOR] = cl
+		ra[Mesh.ARRAY_TEX_UV] = uv
+		ra[Mesh.ARRAY_TEX_UV2] = uv2
+		ra[Mesh.ARRAY_INDEX] = idx
+		var rm := ArrayMesh.new()
+		rm.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, ra)
+		var shape := ConcavePolygonShape3D.new()
+		shape.set_faces(faces)
+		if surf == "":
+			out["road_mesh"] = rm
+			out["road_shape"] = shape
+		else:
+			if not out.has("rural"):
+				out["rural"] = []
+			out["rural"].append([surf, rm, shape])
 	_medians(roads, out)
 
 
@@ -601,7 +643,7 @@ static func _joins_core(roads: Array) -> Dictionary:
 				hull_pts.append(ep - ll)
 			for k in 20:
 				hull_pts.append(Vector2(c.x, c.z) + Vector2(cos(TAU * k / 20.0), sin(TAU * k / 20.0)) * rad)
-			patches.append([maxf(c.y, (lst[1][3] as Vector3).y) + lift + 0.01, Geometry2D.convex_hull(hull_pts)])
+			patches.append([maxf(c.y, (lst[1][3] as Vector3).y) + lift + 0.01, Geometry2D.convex_hull(hull_pts), lst[0][0], lst[1][0]])
 	return {"miter": miter, "patches": patches}
 
 
@@ -2204,6 +2246,15 @@ func _instance(k: Vector2i, d: Dictionary) -> void:
 		var rcs := CollisionShape3D.new()
 		rcs.shape = d["road_shape"]
 		_shape(node, rcs, "asphalt")
+	for rr in d.get("rural", []):                             # earth, gravel, concrete: their own look and feel
+		var smi := MeshInstance3D.new()
+		smi.mesh = rr[1]
+		smi.material_override = _surface_mat(str(rr[0]))
+		smi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		node.add_child(smi)
+		var scs := CollisionShape3D.new()
+		scs.shape = rr[2]
+		_shape(node, scs, {"earth": "earth", "gravel": "gravel", "concrete": "concrete"}[rr[0]])
 	if d.has("near_mesh"):
 		var bmi := MeshInstance3D.new()
 		bmi.mesh = d["near_mesh"]

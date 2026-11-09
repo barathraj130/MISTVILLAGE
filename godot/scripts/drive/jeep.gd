@@ -1292,6 +1292,9 @@ func set_surface(kind: String) -> void:
 		"gravel":
 			_surface_grip = 0.65
 			_surface_drag = 40.0
+		"earth":                                          # a village road's packed earth: nearly a road's grip
+			_surface_grip = 0.85
+			_surface_drag = 25.0
 		"mud":
 			_surface_grip = 0.4
 			_surface_drag = 100.0
@@ -1893,7 +1896,7 @@ func _fill_road() -> void:
 		return
 	var v := absf(speed)
 	var wind_amp := clampf(v * v / 1600.0, 0.0, 0.6)
-	var rough := 1.0 if surface in ["asphalt", "concrete"] else (1.6 if surface == "gravel" else 2.2)
+	var rough := 1.0 if surface in ["asphalt", "concrete"] else (1.6 if surface in ["gravel", "earth"] else 2.2)
 	var rumble_amp := clampf(v / 30.0, 0.0, 0.5) * rough
 	var sq := slip * clampf(v / 6.0, 0.0, 1.0)
 	if v < 0.01 and sq <= 0.0 and _thud <= 0.0 and _crash <= 0.0:   # standing still, nothing happening: silence
