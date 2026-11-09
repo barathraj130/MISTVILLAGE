@@ -513,6 +513,10 @@ func _next() -> void:
 		var want := "bike" if str(cur["vehicle"]) == "karthik_scooter" and city.money and city.money.seized else str(cur["vehicle"])
 		if car.vehicle != want:
 			car.configure(want)
+			if not cur.get("delivery", false):          # (onto the scooter: a delivery shift, or not?)
+				city.ask_shift()
+	if cur.get("delivery", false):                       # (an order on: the bag on his back)
+		car.set_delivery_bag(true)
 	if str(cur["do"]) == "home" and not _outfit.is_empty():   # (home: the rider jacket back on)
 		_outfit = {}
 		if city.walker and city.walker.model:

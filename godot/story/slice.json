@@ -2282,7 +2282,8 @@
    "goal": {
     "en": "Pick up order #4471 at the hotel",
     "ta": "ஹோட்டல்ல ஆர்டர் #4471 எடுங்க"
-   }
+   },
+   "delivery": true
   },
   {
    "do": "meet",
@@ -2328,7 +2329,8 @@
    "goal": {
     "en": "Deliver to Saravanampatti by 10:20 PM",
     "ta": "இரவு 10:20-க்குள் சரவணம்பட்டிக்கு டெலிவரி பண்ணுங்க"
-   }
+   },
+   "delivery": true
   },
   {
    "do": "meet",
@@ -2458,7 +2460,8 @@
     "drop_town_hall",
     "drop_vadavalli",
     "ashwin"
-   ]
+   ],
+   "delivery": true
   },
   {
    "do": "drive",

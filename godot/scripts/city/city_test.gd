@@ -592,6 +592,7 @@ func toggle_on_foot() -> bool:
 	walker.deactivate()
 	walker.queue_free()
 	walker = null
+	ask_shift()
 	cam.make_current()
 	car.freeze = false
 	streamer.target = car
@@ -1025,6 +1026,39 @@ func _peopletest(dt: float) -> void:
 		runs.pop_front()
 
 
+var _shift_t := 0.0                         # the "delivery or not?" question is open (seconds left)
+
+
+## Getting on the scooter: a delivery shift (the bag on his back) or something else (no bag)? A story delivery
+## answers it itself; otherwise 1 / 2 for a few seconds, and no answer means no shift.
+func ask_shift() -> void:
+	if car == null or not car.two_wheeler:
+		return
+	if story and story.cur.get("delivery", false):
+		car.set_delivery_bag(true)
+		return
+	_shift_t = 8.0
+	hud.warn(_t({"en": "1: delivery shift   2: other", "ta": "1: டெலிவரி   2: வேற வேலை"}), 8.0)
+
+
+func _shift_keys(dt: float) -> void:
+	if _shift_t <= 0.0:
+		return
+	_shift_t -= dt
+	var pick := 0
+	if Input.is_key_pressed(KEY_1) or Input.is_key_pressed(KEY_KP_1):
+		pick = 1
+	elif Input.is_key_pressed(KEY_2) or Input.is_key_pressed(KEY_KP_2) or _shift_t <= 0.0:
+		pick = 2
+	if pick == 0:
+		return
+	_shift_t = 0.0
+	car.set_delivery_bag(pick == 1)
+	hud.warn(_t({"en": "Delivery shift: the bag's on." if pick == 1 else "No deliveries now.",
+		"ta": "டெலிவரி வேலை: பை போட்டாச்சு." if pick == 1 else "இப்போ டெலிவரி இல்ல."}), 2.5)
+	print("SHIFT %s" % ("delivery" if pick == 1 else "other"))
+
+
 func _t(d: Dictionary) -> String:
 	var lang: String = story.lang if story else "en"
 	return str(d.get(lang, d.get("en", "")))
@@ -1090,6 +1124,7 @@ func _drive_camera(dt: float) -> void:
 
 func _process(dt: float) -> void:
 	t += dt
+	_shift_keys(dt)
 	if _nohud:
 		hud.visible = false
 		map.visible = false

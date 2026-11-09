@@ -168,6 +168,8 @@ var _steer_in := 0.0               # smoothed steering input
 var _thr := 0.0                    # smoothed pedals
 var _brk := 0.0
 var _driver: MeshInstance3D
+var delivery_bag := false          # a rider's thermal delivery bag on his back: only on a delivery shift
+var _bag: Node3D
 var _glass: MeshInstance3D
 var _steering_wheel: Node3D
 var _screen_speed: Label3D
@@ -393,6 +395,11 @@ func configure(kind: String, paint := Color(0, 0, 0, 0)) -> void:
 		_build_kit(sp)
 	else:
 		kit = null
+	if _rider and _driver:
+		_driver.visible = false
+	_bag = null
+	if delivery_bag:
+		set_delivery_bag(true)
 	_camera_rig(sp)
 	_build_lights()
 	set_lights(lights_on)
@@ -1212,10 +1219,35 @@ func _build_cockpit() -> void:
 	add_child(mirror)
 
 
+## The delivery rider's bag: a square thermal bag on his back, plain (no brand), dark red with a grey lid seam and
+## two straps over his shoulders. Shown on a delivery shift only (city_test.ask_shift, story "delivery" steps).
+func set_delivery_bag(on: bool) -> void:
+	delivery_bag = on
+	if not two_wheeler or _rider == null:
+		return
+	if _bag == null and on:
+		var sp: Dictionary = SPECS[vehicle]
+		var hip: Vector3 = sp.get("hip", Vector3(0, 0.9, -0.15))
+		var mb := MB.new()
+		var c := Vector3(0, hip.y + 0.42, hip.z - 0.27)          # on his back, above the hips
+		mb.box(Transform3D(Basis(), c), Vector3(0.4, 0.42, 0.24), Color(0.55, 0.07, 0.06))
+		mb.box(Transform3D(Basis(), c + Vector3(0, 0.15, 0)), Vector3(0.41, 0.015, 0.245), Color(0.35, 0.35, 0.36))
+		for x in [-0.12, 0.12]:
+			mb.box(Transform3D(Basis(), c + Vector3(x, 0.08, 0.15)), Vector3(0.035, 0.36, 0.02), Color(0.08, 0.08, 0.09))
+		var mi := MeshInstance3D.new()
+		mi.mesh = mb.commit()
+		mi.material_override = MB.vertex_color_material(0.75)
+		mi.name = "DeliveryBag"
+		add_child(mi)
+		_bag = mi
+	if _bag:
+		_bag.visible = on
+
+
 func set_cockpit(on: bool) -> void:
 	cockpit = on
 	if _driver:
-		_driver.visible = not on
+		_driver.visible = not on and _rider == null      # (a two-wheeler has its real rider: the dummy had shown on his back)
 	if _rider:
 		_rider.visible = not on
 	if kit:
