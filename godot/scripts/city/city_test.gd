@@ -94,7 +94,66 @@ var _torch: SpotLight3D                     # his torch, on foot (L), if he has 
 var _hit_seen := {}                         # what you hit → when (a crash is one complaint, not one per contact)
 
 
+## (testing) --profsweep (with --testdrive): where the frame goes. After 40 s, each script whose nodes work every
+## frame or every physics step is switched off for a few seconds, in turn, and the drop in the frame's process and
+## physics time is printed, largest first: what each costs, without timers in every script.
+func _profsweep() -> void:
+	var tree := get_tree()
+	await tree.create_timer(40.0).timeout
+	var by := {}
+	for n in tree.root.find_children("*", "", true, false):
+		var sc: Script = n.get_script()
+		if sc == null or n == self or not (n.is_processing() or n.is_physics_processing()):
+			continue
+		var k := sc.resource_path.get_file() if sc.resource_path != "" else "(built in code: %s)" % n.get_class()
+		if not by.has(k):
+			by[k] = []
+		by[k].append(n)
+	var measure := func(secs: float) -> Vector2:          # (the median frame: one hitch doesn't count)
+		var pr: Array = []
+		var ph: Array = []
+		var t_end := Time.get_ticks_msec() + int(secs * 1000.0)
+		await tree.process_frame
+		while Time.get_ticks_msec() < t_end:
+			await tree.process_frame
+			pr.append(Performance.get_monitor(Performance.TIME_PROCESS))
+			ph.append(Performance.get_monitor(Performance.TIME_PHYSICS_PROCESS))
+		pr.sort()
+		ph.sort()
+		return Vector2(pr[pr.size() / 2], ph[ph.size() / 2]) * 1000.0 if not pr.is_empty() else Vector2.ZERO
+	var out: Array = []
+	for k in by:
+		var d: Array = []                                   # three times off and on: the median difference
+		for rep in 3:
+			var base: Vector2 = await measure.call(2.0)
+			var was := {}
+			for n in by[k]:
+				if is_instance_valid(n):
+					was[n] = [n.is_processing(), n.is_physics_processing()]
+					n.set_process(false)
+					n.set_physics_process(false)
+			await tree.create_timer(0.3).timeout
+			var off: Vector2 = await measure.call(2.0)
+			for n in was:
+				if is_instance_valid(n):
+					n.set_process(was[n][0])
+					n.set_physics_process(was[n][1])
+			await tree.create_timer(0.3).timeout
+			d.append(base - off)
+		d.sort_custom(func(a, b): return a.x + a.y < b.x + b.y)
+		var med: Vector2 = d[1]
+		out.append([k, by[k].size(), med.x, med.y])
+		print("PROFSWEEP %-26s ×%-4d process −%5.1f ms  physics −%5.1f ms  (fps %d)" % [k, by[k].size(), med.x, med.y, Engine.get_frames_per_second()])
+	out.sort_custom(func(a, b): return a[2] + a[3] > b[2] + b[3])
+	print("PROFSWEEP ---- largest first ----")
+	for o in out:
+		print("PROFSWEEP %-26s ×%-4d process %5.1f ms  physics %5.1f ms" % [o[0], o[1], o[2], o[3]])
+	tree.quit()
+
+
 func _ready() -> void:
+	if "--profsweep" in OS.get_cmdline_user_args():
+		_profsweep.call_deferred()
 	for a in OS.get_cmdline_user_args():            # --upscale=fsr2|metalfx|metalfx_spatial|fsr,SCALE: render fewer pixels, rebuild
 		if a.begins_with("--upscale="):
 			var v := a.get_slice("=", 1).split(",")
