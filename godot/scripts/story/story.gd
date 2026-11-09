@@ -39,8 +39,8 @@ extends Node
 ##             follows takes place; walking past Mark_cut the power fails (as it does in Coimbatore): the lights die
 ##             and the phone's torch comes on
 ##   free      free drive with a goal line, the end of the chapter
-## Any step may have "when": flag / "unless": flag / "unless_any": [flags] (results of earlier tasks) and is skipped
-## otherwise; any line
+## Any step may have "when": flag / "unless": flag / "when_any" / "unless_any": [flags] (results of earlier tasks)
+## and is skipped otherwise; any line
 ## may "pay" an amount into the wallet when it's shown (a tip from the owner, a customer).
 ## T switches English / Tamil at any time. The clock runs (GAME_RULES.md §1) while you drive, pauses on cards
 ## and in talk.
@@ -459,6 +459,7 @@ func _next() -> void:
 	cur = data["steps"][step]
 	while (cur.has("when") and not flags.get(cur["when"], false)) or (cur.has("unless") and flags.get(cur["unless"], false)) \
 			or (cur.has("unless_any") and (cur["unless_any"] as Array).any(func(f): return flags.get(f, false))) \
+			or (cur.has("when_any") and not (cur["when_any"] as Array).any(func(f): return flags.get(f, false))) \
 			or (cur.has("if_standing") and not standing.allows(cur["if_standing"])):
 		step += 1
 		if step >= data["steps"].size():
@@ -3064,7 +3065,7 @@ func _story_save() -> void:
 	for k in wall.state["pins"]:
 		var v: Vector2 = wall.state["pins"][k]
 		pins[k] = [v.x, v.y]
-	var d := {"step": step, "day": fines.sim.day, "minute": fines.sim.minute, "money": fines.sim.money, "lang": lang,
+	var d := {"step": step, "step_sig": _step_sig(step), "day": fines.sim.day, "minute": fines.sim.minute, "money": fines.sim.money, "lang": lang,
 		"flags": flags, "evidence": evidence, "accounts": city.fines._save_data.get("accounts", {}),
 		"bail": city.fines._save_data.get("bail", {}), "stress": city.life.stress if city.life else 0.0,
 		"contacts": city.phone.contacts, "pins": city.phone.pins, "notes": city.phone.notes,
@@ -3076,13 +3077,32 @@ func _story_save() -> void:
 		print("STORY saved at step %d (day %d)" % [step, fines.sim.day])
 
 
+## A step's fingerprint (its contents), saved with its number: when steps are added or taken out before it, a save
+## still finds its place.
+func _step_sig(i: int) -> String:
+	var steps: Array = data["steps"]
+	return str(JSON.stringify(steps[i]).hash()) if i >= 0 and i < steps.size() else ""
+
+
+func _find_step(i: int, sig: String) -> int:
+	if sig == "" or _step_sig(i) == sig:
+		return i
+	for off in range(1, 200):                           # (the nearest step that is the same step)
+		for j in [i + off, i - off]:
+			if _step_sig(j) == sig:
+				print("STORY save: step %d is now step %d (the story changed)" % [i, j])
+				return j
+	push_warning("STORY save: step %d not found by its contents; resuming at its number" % i)
+	return i
+
+
 func _story_load() -> void:
 	if not FileAccess.file_exists(SAVE):
 		return
 	var d = JSON.parse_string(FileAccess.get_file_as_string(SAVE))
 	if not d is Dictionary:
 		return
-	step = int(d["step"]) - 1
+	step = _find_step(int(d["step"]), str(d.get("step_sig", ""))) - 1
 	fines.sim.day = int(d.get("day", 1))
 	fines.sim.minute = float(d.get("minute", 420.0))
 	fines.sim.money = int(d.get("money", 0))
@@ -3597,6 +3617,11 @@ func _drive(dt: float) -> void:
 		if cur.has("by") and fines:
 			var hm: PackedStringArray = str(cur["by"]).split(":")
 			on_time = fines.sim.minute <= float(hm[0]) * 60.0 + float(hm[1])
+			var tf := str(cur.get("ontime_flag" if on_time else "late_flag", ""))   # (a deadline that changes what follows)
+			if tf != "":
+				flags[tf] = true
+			print("STORY drive by %s: %s (%02d:%02d)" % [cur["by"], "on time" if on_time else "late",
+				int(fines.sim.minute) / 60, int(fines.sim.minute) % 60])
 		map.pin = null
 		_beam.visible = false
 		if cur.get("comfort", false):

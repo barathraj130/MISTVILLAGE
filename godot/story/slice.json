@@ -958,6 +958,16 @@
    "trust": {
     "farmers": -25
    }
+  },
+  "divya_dropped": {
+   "trust": {
+    "divya": 10
+   }
+  },
+  "divya_dropped_late": {
+   "trust": {
+    "divya": -3
+   }
   }
  },
  "standing_notices": [
@@ -6462,6 +6472,101 @@
       "en": "Out to your scooter",
       "ta": "வெளியே, ஸ்கூட்டருக்கு"
      }
+    }
+   ]
+  },
+  {
+   "do": "talk",
+   "when_any": [
+    "divya_heard",
+    "divya_partner"
+   ],
+   "lines": [
+    {
+     "who": "divya",
+     "en": "(At the gate, her bag on her shoulder.) Anna. You're going out? ...Drop me at college?",
+     "ta": "(கேட்டுல, தோள்ல பை.) அண்ணா. வெளிய போறியா? ...என்ன காலேஜ்ல விட்டுடுறியா?"
+    },
+    {
+     "who": "divya",
+     "en": "Not at the gate. A little before it. ...No, at the gate. Let them see.",
+     "ta": "கேட்டுல வேண்டாம். கொஞ்சம் முன்னாடி. ...இல்ல, கேட்டுலயே. அவங்க பாக்கட்டும்."
+    },
+    {
+     "who": "karthik",
+     "en": "(Her chemistry practical starts at twenty past seven. In two years she has never once been late.)",
+     "ta": "(அவளோட கெமிஸ்ட்ரி பிராக்டிகல் ஏழே இருபதுக்கு. ரெண்டு வருஷத்துல ஒரு நாள் கூட லேட்டா போனதில்ல.)"
+    }
+   ]
+  },
+  {
+   "do": "drive",
+   "when_any": [
+    "divya_heard",
+    "divya_partner"
+   ],
+   "to": "drop_hope_college",
+   "radius": 50,
+   "vehicle": "karthik_scooter",
+   "by": "07:20",
+   "comfort": true,
+   "ontime_flag": "divya_dropped",
+   "late_flag": "divya_dropped_late",
+   "goal": {
+    "en": "Divya to Hope College by 7:20, her practical. Ride gently: she's on the back",
+    "ta": "7:20க்குள்ள திவ்யாவ ஹோப் காலேஜ்ல விடுங்க, அவ பிராக்டிகல். மெதுவா ஓட்டுங்க: அவ பின்னாடி இருக்கா"
+   },
+   "ride_talk": {
+    "after": 20,
+    "lines": [
+     {
+      "who": "divya",
+      "en": "Anna. The boy in the red shirt. He's the one who put the photo on the group.",
+      "ta": "அண்ணா. சிவப்பு சட்டை பையன். அவன் தான் குரூப்ல போட்டோ போட்டது."
+     },
+     {
+      "who": "karthik",
+      "en": "I won't say a word to him. I'll just stop the scooter and take my helmet off.",
+      "ta": "அவன்கிட்ட ஒரு வார்த்த கூட பேச மாட்டேன். ஸ்கூட்டர நிறுத்தி ஹெல்மெட்ட கழட்டுவேன், அவ்வளவு தான்."
+     },
+     {
+      "who": "divya",
+      "en": "(She laughs, the first time in a week.) That's worse, anna.",
+      "ta": "(ஒரு வாரத்துல முதல் தடவ சிரிக்கிறா.) அது இன்னும் மோசம், அண்ணா."
+     }
+    ]
+   },
+   "realtime": true
+  },
+  {
+   "do": "talk",
+   "when": "divya_dropped",
+   "lines": [
+    {
+     "who": "karthik",
+     "en": "(Three of them by the gate. The red shirt sees who's on the scooter. He finds something to look at on his phone.)",
+     "ta": "(கேட்டுகிட்ட மூணு பேர். சிவப்பு சட்டை ஸ்கூட்டர்ல யாருன்னு பாக்கறான். ஃபோன்ல ஏதோ பாக்க ஆரம்பிக்கறான்.)"
+    },
+    {
+     "who": "divya",
+     "en": "(She gets off, straightens her dupatta, and walks in past them, not fast.) Bye, anna.",
+     "ta": "(இறங்கி, துப்பட்டாவ சரி பண்ணி, அவங்கள தாண்டி மெதுவா உள்ள போறா.) பை, அண்ணா."
+    }
+   ]
+  },
+  {
+   "do": "talk",
+   "when": "divya_dropped_late",
+   "lines": [
+    {
+     "who": "karthik",
+     "en": "(The bell has gone. She jumps off before I've stopped and runs in past the three at the gate, head down.)",
+     "ta": "(பெல் அடிச்சாச்சு. நான் நிறுத்தறதுக்குள்ள குதிச்சு, கேட்டுல இருக்கற மூணு பேர தாண்டி, தலைய குனிஞ்சுட்டு ஓடறா.)"
+    },
+    {
+     "who": "karthik",
+     "en": "(A late mark, on top of everything. Because of me.)",
+     "ta": "(எல்லாத்துக்கும் மேல ஒரு லேட் மார்க். என்னால.)"
     }
    ]
   },
