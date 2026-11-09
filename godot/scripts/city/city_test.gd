@@ -23,6 +23,7 @@ const Dents := preload("res://scripts/drive/dents.gd")
 const Goods := preload("res://scripts/city/goods.gd")
 const Store := preload("res://scripts/city/store.gd")
 const Bag := preload("res://scripts/city/bag.gd")
+const Threats := preload("res://scripts/city/city_threats.gd")
 const Potholes := preload("res://scripts/city/city_potholes.gd")
 const CityDoors := preload("res://scripts/city/city_doors.gd")
 const Life := preload("res://scripts/city/life.gd")
@@ -87,6 +88,8 @@ var bystanders                              # the people on the street, and a ve
 var store                                   # a shop's counter (store.gd), opened by city_doors.gd
 var bag                                     # what he carries (bag.gd), B
 var _b_down := false
+var _l_down := false
+var _torch: SpotLight3D                     # his torch, on foot (L), if he has one in the bag
 var _hit_seen := {}                         # what you hit → when (a crash is one complaint, not one per contact)
 
 
@@ -230,6 +233,10 @@ func _ready() -> void:
 		bag.name = "Bag"
 		bag.city = self
 		pl.add_child(bag)
+		var th := Threats.new()
+		th.name = "Threats"
+		th.city = self
+		add_child(th)
 		phone = Phone.new()
 		phone.name = "Phone"
 		phone.city = self
@@ -1047,6 +1054,27 @@ var _shift_t := 0.0                         # the "delivery or not?" question is
 
 ## Getting on the scooter: a delivery shift (the bag on his back) or something else (no bag)? A story delivery
 ## answers it itself; otherwise 1 / 2 for a few seconds, and no answer means no shift.
+## On foot, L: the torch from his bag, a warm-white beam where he looks (nothing without one).
+func _toggle_torch() -> void:
+	if _torch and is_instance_valid(_torch):
+		_torch.queue_free()
+		_torch = null
+		return
+	if not Goods.has(fines._save_data, "torch"):
+		hud.warn(_t({"en": "No torch. A kirana or a hardware shop sells one.", "ta": "டார்ச் இல்ல. மளிகை, ஹார்டுவேர் கடையில கிடைக்கும்."}), 3.0)
+		return
+	var holder: Node3D = walker.camera if "camera" in walker and walker.camera else walker
+	_torch = SpotLight3D.new()
+	_torch.light_color = Color(1.0, 0.94, 0.85)
+	_torch.light_energy = 6.0
+	_torch.spot_range = 28.0
+	_torch.spot_angle = 22.0
+	_torch.spot_attenuation = 0.8
+	_torch.shadow_enabled = true
+	_torch.position = Vector3(0.18, -0.25, -0.2)
+	holder.add_child(_torch)
+
+
 ## Paid at a counter: out of the wallet, into the bag.
 func _bought(items: Dictionary) -> void:
 	if items.is_empty():
@@ -1155,6 +1183,12 @@ func _drive_camera(dt: float) -> void:
 func _process(dt: float) -> void:
 	t += dt
 	_shift_keys(dt)
+	var lk := Input.is_key_pressed(KEY_L)
+	if lk and not _l_down and walker:
+		_toggle_torch()
+	_l_down = lk
+	if _torch and (walker == null or not is_instance_valid(_torch)):
+		_torch = null
 	var bk := Input.is_key_pressed(KEY_B)
 	if bk and not _b_down and bag and not (store and store.visible):
 		bag.toggle()
