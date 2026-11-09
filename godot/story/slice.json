@@ -600,15 +600,15 @@
    "model": "crowd_w5"
   },
   "vendor3": {
-   "en": "",
-   "ta": "",
+   "en": "The banana seller",
+   "ta": "வாழைப்பழக்காரர்",
    "colour": "#cccccc",
    "model": "crowd_m3",
    "top": "#d8d0c0"
   },
   "vendor4": {
-   "en": "",
-   "ta": "",
+   "en": "The flower seller",
+   "ta": "பூக்காரம்மா",
    "colour": "#cccccc",
    "model": "crowd_w2"
   },
@@ -7015,99 +7015,9 @@
    }
   },
   {
-   "do": "meet",
+   "do": "ask",
    "when": "market_went",
-   "who": "vendor1",
-   "cast": {
-    "vendor1": {
-     "pos": [
-      -2.7,
-      1.6
-     ],
-     "look": [
-      0,
-      0
-     ],
-     "anim": "Idle"
-    },
-    "vendor2": {
-     "pos": [
-      -3.2,
-      5.4
-     ],
-     "look": [
-      0,
-      0
-     ],
-     "anim": "Idle"
-    },
-    "shopper1": {
-     "pos": [
-      -2.2,
-      4.6
-     ],
-     "look": [
-      -4.0,
-      4.6
-     ],
-     "anim": "Idle"
-    },
-    "shopper2": {
-     "pos": [
-      -2.0,
-      9.8
-     ],
-     "look": [
-      -4.4,
-      9.8
-     ],
-     "anim": "Idle"
-    },
-    "shopper3": {
-     "pos": [
-      -1.8,
-      -1.6
-     ],
-     "look": [
-      -4.2,
-      -2.2
-     ],
-     "anim": "Idle"
-    },
-    "shopper4": {
-     "pos": [
-      2.6,
-      5.4
-     ],
-     "look": [
-      4.2,
-      5.0
-     ],
-     "anim": "Idle"
-    },
-    "vendor3": {
-     "pos": [
-      -5.4,
-      11.8
-     ],
-     "look": [
-      0,
-      11.8
-     ],
-     "anim": "Idle"
-    },
-    "vendor4": {
-     "pos": [
-      5.4,
-      5.2
-     ],
-     "look": [
-      0,
-      5.2
-     ],
-     "anim": "Idle"
-    }
-   },
+   "who": "vendor2",
    "props": [
     {
      "scene": "res://assets/city_props/market_vegcart.glb",
@@ -7220,39 +7130,131 @@
      ]
     }
    ],
-   "goal": {
-    "en": "The vegetable carts",
-    "ta": "காய்கறி வண்டிகள்"
-   }
-  },
-  {
-   "do": "talk",
-   "when": "market_went",
-   "lines": [
-    {
-     "who": "karthik",
-     "en": "Akka, half a kilo of beans, onions, a bunch of coriander—",
-     "ta": "அக்கா, அரை கிலோ பீன்ஸ், வெங்காயம், ஒரு கட்டு கொத்தமல்லி—"
+   "cast": {
+    "vendor1": {
+     "pos": [
+      -2.7,
+      1.6
+     ],
+     "look": [
+      0,
+      0
+     ],
+     "anim": "Idle"
     },
-    {
-     "who": "vendor1",
-     "en": "(She doesn't look up.) Not for you. Go somewhere else.",
-     "ta": "(நிமிர்ந்து பாக்கல.) உனக்கு இல்ல. வேற எங்கயாவது போ."
+    "vendor2": {
+     "pos": [
+      -3.2,
+      5.4
+     ],
+     "look": [
+      0,
+      0
+     ],
+     "anim": "Idle"
     },
-    {
-     "who": "vendor2",
-     "en": "(From the next cart, an old woman's voice.) Thambi. Come here. Come.",
-     "ta": "(பக்கத்து வண்டியில இருந்து, ஒரு வயசான குரல்.) தம்பி. இங்க வா. வா."
+    "shopper1": {
+     "pos": [
+      -2.2,
+      4.6
+     ],
+     "look": [
+      -4.0,
+      4.6
+     ],
+     "anim": "Idle"
+    },
+    "shopper2": {
+     "pos": [
+      -2.0,
+      9.8
+     ],
+     "look": [
+      -4.4,
+      9.8
+     ],
+     "anim": "Idle"
+    },
+    "shopper3": {
+     "pos": [
+      -1.8,
+      -1.6
+     ],
+     "look": [
+      -4.2,
+      -2.2
+     ],
+     "anim": "Idle"
+    },
+    "shopper4": {
+     "pos": [
+      2.6,
+      5.4
+     ],
+     "look": [
+      4.2,
+      5.0
+     ],
+     "anim": "Idle"
+    },
+    "vendor3": {
+     "pos": [
+      -5.4,
+      11.8
+     ],
+     "look": [
+      0,
+      11.8
+     ],
+     "anim": "Idle"
+    },
+    "vendor4": {
+     "pos": [
+      5.4,
+      5.2
+     ],
+     "look": [
+      0,
+      5.2
+     ],
+     "anim": "Idle"
     }
-   ]
-  },
-  {
-   "do": "meet",
-   "when": "market_went",
-   "who": "vendor2",
+   },
    "goal": {
-    "en": "The old woman at the next cart",
-    "ta": "பக்கத்து வண்டியில வயசான அம்மா"
+    "en": "Amma's list: beans, onions, coriander. Find someone who will still sell to you",
+    "ta": "அம்மா லிஸ்ட்: பீன்ஸ், வெங்காயம், கொத்தமல்லி. உங்களுக்கு இன்னும் விக்கற ஒருத்தர கண்டுபிடிங்க"
+   },
+   "asks": {
+    "vendor1": [
+     {
+      "en": "(She doesn't look up.) Not for you. Go somewhere else.",
+      "ta": "(நிமிர்ந்து பாக்கல.) உனக்கு இல்ல. வேற எங்கயாவது போ."
+     },
+     {
+      "en": "I said go. People are watching my cart.",
+      "ta": "போன்னு சொன்னேன். என் வண்டிய எல்லாரும் பாக்கறாங்க."
+     }
+    ],
+    "vendor3": [
+     {
+      "en": "Bananas, sure, sure... (He sees my face. He starts counting the bananas he has already counted.) Not today, thambi. The whole street is watching.",
+      "ta": "வாழைப்பழமா, கண்டிப்பா... (என் முகத்த பாக்கறாரு. எண்ணின பழத்தையே மறுபடியும் எண்ண ஆரம்பிக்கறாரு.) இன்னைக்கு வேண்டாம், தம்பி. தெரு முழுக்க பாக்குது."
+     },
+     {
+      "en": "Don't stand here, thambi. Please.",
+      "ta": "இங்க நிக்காத, தம்பி. தயவு செஞ்சு."
+     }
+    ],
+    "vendor4": [
+     {
+      "en": "(She keeps threading jasmine.) Kamala won't sell to you, and he won't either. Valliammai might. At the end, under the blue cloth. She isn't afraid of anyone.",
+      "ta": "(மல்லிகைய கோர்த்துட்டே இருக்காங்க.) கமலா உனக்கு விக்க மாட்டா, அவரும் விக்க மாட்டாரு. வள்ளியம்மை விக்கலாம். கடைசில, நீல துணிக்கு கீழ. அவ யாருக்கும் பயப்பட மாட்டா."
+     },
+     {
+      "en": "The blue cloth, I said. Go on.",
+      "ta": "நீல துணின்னு சொன்னேன்ல. போ."
+     }
+    ]
    }
   },
   {
@@ -7271,6 +7273,21 @@
      "pay": -60
     }
    ]
+  },
+  {
+   "do": "act",
+   "when": "market_went",
+   "goal": {
+    "en": "Pay Valliammai: sixty rupees",
+    "ta": "வள்ளியம்மைக்கு அறுபது ரூபா குடுங்க"
+   },
+   "ways": {
+    "pay": {
+     "who": "vendor2",
+     "amount": 60,
+     "flag": "market_paid"
+    }
+   }
   },
   {
    "do": "drive",
