@@ -1546,6 +1546,8 @@ func _process_timed(dt: float) -> void:
 					print("VIEWBENCH %s: %.1f fps, %.1f ms a frame (%d frames), draws %d" % [Graphics.preset(), _bench_frames / _bench_t,
 						_bench_t * 1000.0 / _bench_frames, _bench_frames,
 						RenderingServer.get_rendering_info(RenderingServer.RENDERING_INFO_TOTAL_DRAW_CALLS_IN_FRAME)])
+					print("VIEWBENCH tiles: %d set up, %.1f ms each on average, worst %.1f ms" % [int(streamer.stats.get("inst_n", 0)),
+						float(streamer.stats.get("inst_ms", 0.0)) / maxi(int(streamer.stats.get("inst_n", 0)), 1), float(streamer.stats.get("inst_max", 0.0))])
 					get_tree().quit()
 				return
 			if shots_dir != "":
@@ -1700,6 +1702,9 @@ func _census() -> void:
 func _log_and_shots(dt: float) -> void:
 	if "--census" in OS.get_cmdline_user_args() and int(t) == 14 and int(t - dt) == 13:
 		_census()
+	if int(t) != int(t - dt) and int(t) % 5 == 0 and int(streamer.stats.get("inst_n", 0)) > 0:
+		print("TILES instanced %d, %.1f ms each on average, worst %.1f ms" % [int(streamer.stats["inst_n"]),
+			float(streamer.stats["inst_ms"]) / int(streamer.stats["inst_n"]), float(streamer.stats["inst_max"])])
 	if int(t) != int(t - dt) and int(t) % 5 == 0:
 		print("CITY t=%3ds fps=%3d tiles=%3d built=%4d unloaded=%4d blds=%d designed=%d mem=%dMB vmem=%dMB draws=%d pos=(%.0f,%.0f)" % [
 			int(t), Engine.get_frames_per_second(), streamer.stats["loaded"], streamer.stats["built"], streamer.stats["unloaded"],

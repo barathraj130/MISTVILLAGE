@@ -277,6 +277,7 @@ func _process(_dt: float) -> void:
 
 
 func _process_timed(_dt: float) -> void:
+	_budget_from = Time.get_ticks_usec()
 	if target == null:
 		return
 	var c := Vector2i(floori(target.global_position.x / tile), floori(target.global_position.z / tile))
@@ -306,10 +307,15 @@ func _process_timed(_dt: float) -> void:
 		if item == null:
 			break
 		var ik: Vector2i = item[0]
-		queued.erase(ik)
 		if absi(ik.x - c.x) > radius + 1 or absi(ik.y - c.y) > radius + 1:
+			queued.erase(ik)
 			continue                       # built for a place we have already left: drop it
+		var _t0 := Time.get_ticks_usec()
 		_instance(ik, item[1])
+		var spent := (Time.get_ticks_usec() - _t0) / 1000.0     # (what a tile costs the main thread: TILES / VIEWBENCH lines)
+		stats["inst_ms"] = float(stats.get("inst_ms", 0.0)) + spent
+		stats["inst_n"] = int(stats.get("inst_n", 0)) + 1
+		stats["inst_max"] = maxf(float(stats.get("inst_max", 0.0)), spent)
 		n += 1
 	for k in loaded.keys():
 		if absi(k.x - c.x) > radius + 1 or absi(k.y - c.y) > radius + 1:
@@ -2261,8 +2267,26 @@ func _real(x) -> MultiMesh:
 	return m.real
 
 
+## Setting a tile up costs the main thread most of 100 ms (its meshes, MultiMeshes, collision): spread over frames,
+## it pauses whenever this frame's share (TILE_BUDGET) is spent and goes on in the next; its ground and roads (and
+## their collision) go in first, at once. It stays "queued" until done, and "loaded" (seen by traffic, the story)
+## only when complete. A tile dropped meanwhile stops.
+const TILE_BUDGET := 5000                  # µs of a frame for setting tiles up
+var _budget_from := 0
+
+
+func _due(node: Node3D) -> bool:
+	if not is_inside_tree():
+		return true                                        # (the city is going: stop)
+	if Time.get_ticks_usec() - _budget_from > TILE_BUDGET:
+		await get_tree().process_frame
+		_budget_from = Time.get_ticks_usec()
+	return not is_instance_valid(node) or not node.is_inside_tree()
+
+
 func _instance(k: Vector2i, d: Dictionary) -> void:
 	if loaded.has(k) or d.is_empty():
+		queued.erase(k)
 		return
 	var node := Node3D.new()
 	node.name = "CBE_%d_%d" % [k.x, k.y]
@@ -2295,6 +2319,9 @@ func _instance(k: Vector2i, d: Dictionary) -> void:
 		var scs := CollisionShape3D.new()
 		scs.shape = rr[2]
 		_shape(node, scs, {"earth": "earth", "gravel": "gravel", "concrete": "concrete"}[rr[0]])
+	if await _due(node):
+		queued.erase(k)
+		return
 	if d.has("near_mesh"):
 		var bmi := MeshInstance3D.new()
 		bmi.mesh = d["near_mesh"]
@@ -2307,6 +2334,9 @@ func _instance(k: Vector2i, d: Dictionary) -> void:
 		fmi.visibility_range_begin = KIT_RANGE - 10.0
 		node.add_child(fmi)
 	for km in ([] if "--nokits" in OS.get_cmdline_user_args() else d.get("kits", [])):
+		if await _due(node):
+			queued.erase(k)
+			return
 		var mmi := MultiMeshInstance3D.new()
 		mmi.multimesh = _real(km[0])
 		if km[1] == 0:
@@ -2343,6 +2373,9 @@ func _instance(k: Vector2i, d: Dictionary) -> void:
 		jcs.shape = d["junc_shape"]
 		_shape(node, jcs, "asphalt")
 	for pm in d.get("props", []):
+		if await _due(node):
+			queued.erase(k)
+			return
 		var pmi := MultiMeshInstance3D.new()
 		pmi.multimesh = _real(pm)
 		pmi.visibility_range_end = 350.0
@@ -2364,6 +2397,9 @@ func _instance(k: Vector2i, d: Dictionary) -> void:
 		_shape(node, ycs, "ground")
 	var skip := OS.get_cmdline_user_args()
 	for tr in ([] if "--notrees" in skip else d.get("trees", [])):
+		if await _due(node):
+			queued.erase(k)
+			return
 		var tmi := MultiMeshInstance3D.new()
 		tmi.multimesh = _real(tr[0])
 		if tr[1] == 0:
@@ -2411,6 +2447,9 @@ func _instance(k: Vector2i, d: Dictionary) -> void:
 		mpi.multimesh = _real(d["median_plants"])
 		mpi.visibility_range_end = 250.0
 		node.add_child(mpi)
+	if await _due(node):
+		queued.erase(k)
+		return
 	var no_parked := "--nolife" in OS.get_cmdline_user_args() or "--noparked" in OS.get_cmdline_user_args()
 	var parked_list: Array = [] if no_parked else d.get("parked", []) + d.get("parked_bikes", [])
 	if not parked_list.is_empty():
@@ -2435,6 +2474,9 @@ func _instance(k: Vector2i, d: Dictionary) -> void:
 			for sh in shapes:
 				PhysicsServer3D.free_rid(sh))
 	for lm in ([] if "--nolife" in OS.get_cmdline_user_args() else d.get("life", [])):
+		if await _due(node):
+			queued.erase(k)
+			return
 		var lmi2 := MultiMeshInstance3D.new()
 		lmi2.multimesh = _real(lm[0])
 		lmi2.visibility_range_end = lm[1]
@@ -2505,8 +2547,12 @@ func _instance(k: Vector2i, d: Dictionary) -> void:
 	node.set_meta("roads", d["roads_raw"])
 	node.set_meta("signals", d.get("signals", []))
 	node.set_meta("bldinfo", d.get("bldinfo", []))
+	if await _due(node):
+		queued.erase(k)
+		return
 	_landmarks(k, node)
 	loaded[k] = node
+	queued.erase(k)
 	stats["built"] += 1
 	stats["loaded"] = loaded.size()
 	stats["buildings"] += int(d.get("n_blds", 0))
