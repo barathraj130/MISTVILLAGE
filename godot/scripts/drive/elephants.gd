@@ -133,6 +133,19 @@ func _physics_process_body(delta: float) -> void:
 		finished.emit()
 
 
+## The stretch of road (distances along it) the herd is on or about to walk onto: traffic waits short of it, both
+## ways, until the last of them is clear of the far verge. Empty (x > y) when the road is open.
+func blocked_span() -> Vector2:
+	if state != "crossing":
+		return Vector2(1, 0)
+	var f: Transform3D = route.frame_at(mark)
+	var across: Vector3 = -f.basis.x
+	for e in herd:
+		if (e["body"].global_position - f.origin).dot(across) < 9.0 * float(e["s"]) + 4.0:   # (not yet off the road)
+			return Vector2(mark - 9.0, mark + 9.0)
+	return Vector2(1, 0)
+
+
 func nearest_distance(p: Vector3) -> float:
 	var best := INF
 	if state != "crossing":

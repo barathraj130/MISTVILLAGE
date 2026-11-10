@@ -83,16 +83,25 @@ func play(name: String) -> void:
 ## Stand at (x, z) on the ground, facing towards `look` (a point).
 func place(at: Vector3, look: Vector3) -> void:
 	global_position = Vector3(at.x, _h(at.x, at.z), at.z)
-	face(look)
+	face(look, true)
 	_target = Vector3.INF
 
 
-func face(look: Vector3) -> void:
+## Turn to face a point: at once (put somewhere) or, by default, as a person turns, over a moment (in talk: to
+## whoever speaks, to Karthik coming up).
+var _turn_to := INF
+
+
+func face(look: Vector3, instant := false) -> void:
 	if seated:                               # on a chair: turning would leave the chair behind
 		return
 	var d := Vector3(look.x - global_position.x, 0.0, look.z - global_position.z)
 	if d.length() > 0.01:
-		rotation.y = atan2(d.x, d.z)          # the people models face +Z (as player.gd)
+		if instant:
+			rotation.y = atan2(d.x, d.z)      # the people models face +Z (as player.gd)
+			_turn_to = INF
+		else:
+			_turn_to = atan2(d.x, d.z)
 
 
 func walk_to(at: Vector3, speed := 1.4, then := "Idle") -> void:
@@ -120,6 +129,10 @@ var _reground := 0.0
 
 
 func _process(dt: float) -> void:
+	if _turn_to != INF and _target == Vector3.INF:          # turning, 200° a second
+		rotation.y = rotate_toward(rotation.y, _turn_to, dt * 3.5)
+		if absf(angle_difference(rotation.y, _turn_to)) < 0.01:
+			_turn_to = INF
 	if _target == Vector3.INF:
 		_reground -= dt                                  # standing: now and then, the ground under him again (the
 		if _reground <= 0.0 and is_nan(floor_y):         #  footpath's collision may load after he was put there)

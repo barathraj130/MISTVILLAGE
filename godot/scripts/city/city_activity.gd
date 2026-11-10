@@ -4,7 +4,9 @@ extends Node3D
 ## round Karthik, nearest first (the tiles keep them: city_streamer.gd metas "spots", "shelters", "bldinfo"):
 ##   bus      a bus shelter: one to three waiting, facing the road, now and then a look up the road for the bus
 ##   stall    a stall or a cart: the seller behind it, facing the street; one or two buying in front, talking and
-##            listening by turns; after a while one walks off and another comes
+##            listening by turns; after a while one walks off and another comes. Half the stalls are tea stalls,
+##            with a bench beside them: two sitting on it, drinking their tea or eating, talking, then getting up
+##            and going, and another sitting down in time
 ##   shade    a bazaar shade or a goods display: the seller standing under it
 ##   shop     a shop's front (a building with a shopfront): the shopkeeper at the door, 8 AM to 9 PM
 ##   guard    a tall building with no shop (offices, flats; one in three, the same ones every visit): a security
@@ -18,6 +20,7 @@ const KINDS := ["m1", "m2", "m3", "m4", "m5", "m6", "w1", "w2", "w3", "w4", "w5"
 const STRIDE := 1.25
 const REACH := 90.0
 const NEAR := 50.0
+const BENCH := "res://assets/city_props/life_bench.glb"
 
 var city
 var count := 18
@@ -26,6 +29,8 @@ var _roles := {}                           # spot id → [person indices]
 var _rng := RandomNumberGenerator.new()
 var _scan_t := 0.0
 var _frame := 0
+var _bench_scene: PackedScene
+var _benches := {}                         # tea stall id → its bench (put down while the stall is wanted)
 
 
 func _ready() -> void:
@@ -45,13 +50,15 @@ func _ready() -> void:
 			node.queue_free()
 			continue
 		var ap := aps[0] as AnimationPlayer
-		for a in ["Walk", "Idle", "Talk"]:
+		for a in ["Walk", "Idle", "Talk", "Sit", "SitEat", "SitTalk"]:
 			if ap.has_animation(a):
 				ap.get_animation(a).loop_mode = Animation.LOOP_LINEAR
 		for m in node.find_children("*", "MeshInstance3D", true, false):
 			(m as MeshInstance3D).cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 		node.scale = Vector3.ONE * _rng.randf_range(0.95, 1.04)
 		pool.append({"node": node, "ap": ap, "anim": "", "role": {}, "yaw": 0.0, "want": 0.0, "acc": 0.0})
+	if ResourceLoader.exists(BENCH):
+		_bench_scene = load(BENCH)
 
 
 ## (testing) --activitytest: every 5 s, how many are at each kind of spot; at 30 s a picture of the nearest of
@@ -89,12 +96,12 @@ func _test(dt: float, me: Node3D) -> void:
 		var cam := Camera3D.new()
 		add_child(cam)
 		cam.make_current()
-		for kind in ["bus", "stall", "shade", "shop", "guard"]:
+		for kind in ["bus", "stall", "tea", "shade", "shop", "guard"]:
 			var best: Dictionary = {}
 			var bd := INF
 			for p in pool:
 				var r: Dictionary = p["role"]
-				if not r.is_empty() and r["kind"] == kind:
+				if not r.is_empty() and (r["kind"] == kind or (kind == "tea" and r["state"] == "sit")):
 					var dd: float = (p["node"] as Node3D).global_position.distance_to(me.global_position)
 					if dd < bd:
 						bd = dd
@@ -127,6 +134,8 @@ func _process(dt: float) -> void:
 	if city.indoors or (city.story and city.story.room != null):
 		for p in pool:
 			p["node"].visible = false
+		for id in _benches:
+			_benches[id].visible = false
 		return
 	_frame += 1
 	if "--activitytest" in OS.get_cmdline_user_args():
@@ -170,8 +179,10 @@ func _spots(at: Vector3) -> Array:
 			var pos: Vector3 = sp[1]
 			var kind: String = sp[0]
 			var id := "%s%d,%d" % [kind, roundi(pos.x), roundi(pos.z)]
-			var buyers := absi(hash(id)) % 3 if kind == "stall" else 0
-			out.append({"id": id, "kind": kind, "pos": pos, "yaw": float(sp[2]), "n": 1 + buyers})
+			var tea := kind == "stall" and _bench_scene != null and (absi(hash(id + "tea")) % 2 == 0
+				or "--teatest" in OS.get_cmdline_user_args())     # (testing: every stall a tea stall)
+			var buyers := (2 if tea else absi(hash(id)) % 3) if kind == "stall" else 0
+			out.append({"id": id, "kind": kind, "pos": pos, "yaw": float(sp[2]), "n": 1 + buyers, "tea": tea})
 		for b in node.get_meta("bldinfo", []):
 			var centre: Vector2 = b[1]
 			if centre.distance_to(Vector2(at.x, at.z)) > REACH:
@@ -283,6 +294,14 @@ func _assign(at: Vector3) -> void:
 		if not want.has(r["id"]) and (p["node"] as Node3D).global_position.distance_to(at) > 40.0:
 			p["role"] = {}
 			p["node"].visible = false
+	for id in _benches.keys():                             # the benches of tea stalls no longer wanted, taken up
+		if not want.has(id) and (_benches[id] as Node3D).global_position.distance_to(at) > 40.0:
+			_benches[id].queue_free()
+			_benches.erase(id)
+	for id in want:
+		var sp: Dictionary = want[id][0]
+		if sp.get("tea", false):
+			_bench(sp).visible = true
 	var cam := get_viewport().get_camera_3d()
 	var look := -cam.global_basis.z if cam else Vector3.FORWARD
 	for id in want:                                        # fill the wanted ones not yet full
@@ -309,6 +328,22 @@ func _assign(at: Vector3) -> void:
 			_start(pool[free], sp, slot)
 
 
+## A tea stall's bench: beside it, along the way the stall faces, the ones on it facing the stall.
+func _bench(sp: Dictionary) -> Node3D:
+	if _benches.has(sp["id"]):
+		return _benches[sp["id"]]
+	var f := Vector3(sin(float(sp["yaw"])), 0, cos(float(sp["yaw"])))
+	var side := Vector3(f.z, 0, -f.x)
+	var b := _bench_scene.instantiate() as Node3D
+	add_child(b)
+	b.global_position = (sp["pos"] as Vector3) + side * 2.3 + f * 0.2
+	b.rotation.y = atan2(-side.x, -side.z)                  # (its front, +Z, towards the stall; its length along the street's way)
+	for m in b.find_children("*", "MeshInstance3D", true, false):
+		(m as MeshInstance3D).cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	_benches[sp["id"]] = b
+	return b
+
+
 func _start(p: Dictionary, sp: Dictionary, slot: int) -> void:
 	var f := Vector3(sin(float(sp["yaw"])), 0, cos(float(sp["yaw"])))   # (the spot's front, towards the street)
 	var side := Vector3(f.z, 0, -f.x)
@@ -322,6 +357,14 @@ func _start(p: Dictionary, sp: Dictionary, slot: int) -> void:
 		"stall":
 			if slot == 0:
 				at = pos - f * 0.9                            # behind it, facing the street
+			elif sp.get("tea", false):                       # on the bench, a cup of tea or a bite to eat
+				var b := _bench(sp)
+				var bx := b.global_basis.x
+				var bz := b.global_basis.z
+				at = b.global_position + bx * (0.45 if slot == 1 else -0.45) + bz * 0.12
+				face = b.rotation.y
+				role["state"] = "sit"
+				role["sf"] = f
 			else:
 				var sd := -1.0 if slot == 1 else 1.0          # beside it, a little forward: on the paving, not the road
 				at = pos + side * sd * 1.25 + f * 0.25
@@ -346,7 +389,10 @@ func _start(p: Dictionary, sp: Dictionary, slot: int) -> void:
 	p["yaw"] = face
 	p["want"] = face
 	node.rotation.y = face
-	_anim(p, "Walk" if role["state"] == "beat" else ("Talk" if sp["kind"] == "stall" and slot > 0 else "Idle"), 1.0)
+	if role["state"] == "sit":
+		_anim(p, "SitEat" if _rng.randf() < 0.5 else "SitTalk", 1.0)
+	else:
+		_anim(p, "Walk" if role["state"] == "beat" else ("Talk" if sp["kind"] == "stall" and slot > 0 else "Idle"), 1.0)
 
 
 # ---- what they do there ----
@@ -371,6 +417,22 @@ func _act(p: Dictionary, dt: float, me: Node3D) -> void:
 						r["to"] = node.global_position + away * 9.0
 						p["want"] = atan2(away.x, away.z)
 						_anim(p, "Walk", 1.2 / STRIDE)
+				elif r["state"] == "sit" and float(r["timer"]) <= 0.0:   # eating, then talking, by turns; then up and off
+					r["timer"] = _rng.randf_range(5.0, 10.0)
+					r["turns"] = int(r.get("turns", 0)) + 1
+					if int(r["turns"]) > _rng.randi_range(4, 9):
+						r["state"] = "up"
+						r["timer"] = 0.8
+						_anim(p, "Idle", 1.0)
+						node.global_position += Vector3(sin(float(p["yaw"])), 0, cos(float(p["yaw"]))) * 0.35   # (stood up, off the bench)
+					else:
+						_anim(p, "SitTalk" if p["anim"] == "SitEat" else "SitEat", 1.0)
+				elif r["state"] == "up" and float(r["timer"]) <= 0.0:
+					r["state"] = "leave"
+					var fw := Vector3(sin(float(p["yaw"])), 0, cos(float(p["yaw"])))   # (on past the stall's front: the
+					var away := (fw * 9.0 + (r["sf"] as Vector3) * 0.7)                 #  bench is behind him)
+					r["to"] = node.global_position + away
+					_anim(p, "Walk", 1.2 / STRIDE)
 				elif r["state"] == "leave":
 					if _walk_to(p, r["to"], 1.2, dt):
 						p["role"] = {}                         # (gone; another comes at the next look round)

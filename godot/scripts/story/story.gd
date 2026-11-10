@@ -1168,7 +1168,9 @@ func _auto_frame(who: String, to := "") -> bool:
 		li = cast[to]
 	var head := sp.global_position + Vector3.UP * (1.05 if sp.get("seated") else 1.45)     # (seated: lower)
 	if li != null:
-		sp.face(li.global_position)                      # people talk to each other, not to the camera
+		sp.face(li.global_position, true)                # people talk to each other, not to the camera (at the cut)
+		if not li.get("seated") and li != city.walker:
+			li.face(sp.global_position)                  # and the one listening turns to whoever speaks, as you watch
 	# candidate shots, best first; the first with a clear view of the speaker's face wins
 	var cands: Array = []
 	if li != null and li.global_position.distance_to(sp.global_position) < 6.0:

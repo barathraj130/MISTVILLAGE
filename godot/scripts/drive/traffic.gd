@@ -17,6 +17,7 @@ var jeep_d := 0.0                 # set by the game each frame
 var jeep_lat := 0.0               # + = left of the road's direction
 var jeep_pos := Vector3.ZERO
 var vehicles: Array = []
+var herd_span := Vector2(1, 0)    # set by the game: the road the elephants are crossing (elephants.gd), or x > y
 var mat: StandardMaterial3D
 
 
@@ -164,6 +165,13 @@ func _physics_process_body(delta: float) -> void:
 		var in_lane: bool = jeep_lat * dir > -0.8 and absf(jeep_lat) < 5.0
 		if ahead > -2.0 and ahead < 30.0 and in_lane:
 			target = minf(target, maxf(0.0, (ahead - 7.0) * 0.7))
+		# the elephants crossing: stop short of them, either way, and wait (one already past the line goes on)
+		if herd_span.x <= herd_span.y:
+			var front: float = float(v["d"]) + float(v["half"]) * dir
+			var line: float = herd_span.x - 10.0 if dir > 0 else herd_span.y + 10.0
+			var before: float = (line - front) * dir
+			if before > -1.0 and before < 60.0:
+				target = minf(target, maxf(0.0, before * 0.45))
 		# slow round hairpins
 		var t0: Vector3 = route.frame_at(v["d"]).basis.z
 		var t1: Vector3 = route.frame_at(v["d"] + 25.0 * dir).basis.z

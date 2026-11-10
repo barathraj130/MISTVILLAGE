@@ -97,6 +97,7 @@ var stage_id := ""
 var ready_to_drive := false
 var checkpost := "closed"          # closed → open | skipped
 var _finale := {}
+var _herd_log_t := -10.0             # (testing: --autodrive logs the traffic round the elephants every 3 s)
 const Goods := preload("res://scripts/city/goods.gd")
 const StoreUI := preload("res://scripts/city/store.gd")
 const BagUI := preload("res://scripts/city/bag.gd")
@@ -1373,6 +1374,14 @@ func _track() -> void:
 	traffic.jeep_d = d
 	traffic.jeep_lat = lateral
 	traffic.jeep_pos = p
+	traffic.herd_span = elephants.blocked_span()
+	if "--autodrive" in args and elephants.state == "crossing" and _t - _herd_log_t > 3.0:
+		_herd_log_t = _t
+		var near := []                                     # (testing: the traffic round the herd, waiting or not)
+		for v in traffic.vehicles:
+			if not v["taken"] and absf(float(v["d"]) - route.marks["elephants"]) < 120.0:
+				near.append("%s %+.0f m %.1f m/s" % [v["model"], float(v["d"]) - route.marks["elephants"], float(v["speed"])])
+		print("HERD span %s, traffic near: %s" % [str(traffic.herd_span), ", ".join(near)])
 	var st: Dictionary = route.stage_at(d)
 	if st["id"] != stage_id:
 		stage_id = st["id"]
