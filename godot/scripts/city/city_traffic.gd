@@ -18,7 +18,7 @@ const MASS := {"hatchback": 1050.0, "sedan": 1250.0, "taxi": 1250.0, "auto": 400
 const LIFT := 0.09                         # road surface above its centreline points (= streamer RANK + 0.06)
 
 @export var count := 36                    # out in the suburbs; more in the centre (BUSY)
-const BUSY := 70                           # vehicles around you in central Coimbatore
+var busy := 70                             # vehicles around you in central Coimbatore (graphics.gd "traffic")
 const CENTRE_R := 4500.0                   # metres from the city origin (Gandhipuram) that count as central
 var streamer
 var player: Node3D
@@ -61,7 +61,7 @@ func _physics_process_timed(delta: float) -> void:
 	var want := count
 	var cd := Vector2(me.x, me.z).length()
 	if cd < CENTRE_R:
-		want = int(lerpf(float(BUSY), float(count), smoothstep(CENTRE_R * 0.5, CENTRE_R, cd)))
+		want = int(lerpf(float(busy), float(count), smoothstep(CENTRE_R * 0.5, CENTRE_R, cd)))
 	var tries := 0
 	while vehicles.size() < want and tries < 8:
 		tries += 1
@@ -178,12 +178,20 @@ func _remove(v: Dictionary) -> void:
 	vehicles.erase(v)
 
 
-## Lane offset to the driver's left: half a carriageway's lane on two-way roads, the left lane on one-ways.
+## Lane offset to the driver's left: half a carriageway's lane on two-way roads, the left lane on one-ways. Where
+## there's room, the lane keeps clear of the cars parked along the kerb (city_streamer.gd _park_on_road sets a car's
+## middle 0.45 m in from the edge: its side 1.35 m in), its middle PARK_CLEAR from the edge; a narrow street keeps
+## its own lane (there's no room for both: you squeeze past, as in Coimbatore).
+const PARK_CLEAR := 2.6
+
+
 static func _lane(r: Dictionary) -> float:
 	var half: float = float(r["w"]) * 0.5
 	if int(r["o"]) == 1:                                  # (+ is left: the left lane, by the kerb, not the median)
-		return half - minf(1.75, half * 0.5)
-	return minf(half * 0.5, 1.75 if half < 5.0 else 3.5 * 0.5 + (1.75 if half > 6.5 else 0.0))
+		var l := half - minf(1.75, half * 0.5)
+		return minf(l, half - PARK_CLEAR) if half - PARK_CLEAR >= 0.0 else l
+	var two := minf(half * 0.5, 1.75 if half < 5.0 else 3.5 * 0.5 + (1.75 if half > 6.5 else 0.0))
+	return minf(two, half - PARK_CLEAR) if half - PARK_CLEAR >= 1.2 else two
 
 
 ## Position on the current road piece: segment i → i+dir, fraction t; lane to the left of travel.

@@ -374,6 +374,8 @@ func _ready() -> void:
 		driving = true
 		streamer.target = car
 		traffic = CityTraffic.new()
+		traffic.busy = int(Graphics.value("traffic"))           # (the preset's: fewer on Low, the CPU's biggest share)
+		traffic.count = mini(traffic.count, traffic.busy)
 		traffic.name = "Traffic"
 		traffic.streamer = streamer
 		traffic.player = car
