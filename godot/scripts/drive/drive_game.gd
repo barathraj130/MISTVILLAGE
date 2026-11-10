@@ -97,6 +97,8 @@ var stage_id := ""
 var ready_to_drive := false
 var checkpost := "closed"          # closed → open | skipped
 var _finale := {}
+var _bench_off: PackedStringArray = []
+var _bench_gpu := 0.0                 # (testing: --bench's GPU time per frame, ms)
 var _herd_log_t := -10.0             # (testing: --autodrive logs the traffic round the elephants every 3 s)
 const Goods := preload("res://scripts/city/goods.gd")
 const StoreUI := preload("res://scripts/city/store.gd")
@@ -1218,6 +1220,11 @@ func _bench(delta: float) -> void:
 					print("HIDE %s -> %s" % [n, node])
 					if node:
 						node.visible = false
+			elif a.begins_with("--benchoff="):         # (what a feature costs: ssao, ssil, glow, fog, shadow, sky)
+				_bench_off = a.get_slice("=", 1).split(",")
+		RenderingServer.viewport_set_measure_render_time(get_viewport().get_viewport_rid(), true)
+	if _t > 6.0:
+		_bench_gpu += RenderingServer.viewport_get_measured_render_time_gpu(get_viewport().get_viewport_rid())
 	if _t > 6.0 and Prof.frames == 0:
 		Prof.totals.clear()
 		Prof.frames = 1
@@ -1228,6 +1235,7 @@ func _bench(delta: float) -> void:
 	if _t > 16.0:
 		var vp := get_viewport()
 		var info := func(t: int, k: int) -> int: return vp.get_render_info(t, k)
+		print("BENCH gpu=%.1fms" % (_bench_gpu / maxf(_bench_frames, 1)))
 		print("BENCH d=%.0f fps=%.1f process=%.1fms physics=%.1fms draws=%d (shadow %d) objects=%d (shadow %d) prims=%.2fM vram=%.0fMB" % [d,
 			_bench_frames / (_t - 6.0), _bench_proc / _bench_frames * 1000.0, _bench_phys / _bench_frames * 1000.0,
 			info.call(Viewport.RENDER_INFO_TYPE_VISIBLE, Viewport.RENDER_INFO_DRAW_CALLS_IN_FRAME),
@@ -1271,6 +1279,14 @@ func _process(delta: float) -> void:
 		_update_camera(delta)
 	_update_hud()
 	_update_mist(delta)
+	for k in _bench_off:                                # (testing: --bench --benchoff=…, after the mist has set them)
+		match k:
+			"ssao": env.ssao_enabled = false
+			"ssil": env.ssil_enabled = false
+			"glow": env.glow_enabled = false
+			"fog": env.fog_enabled = false
+			"shadow": sun.shadow_enabled = false
+			"sky": _sky_t = 1e9
 	_stream_far()
 	if town_traffic:
 		town_traffic.player = walker if walker else jeep

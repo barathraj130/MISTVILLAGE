@@ -6,7 +6,9 @@ extends RefCounted
 ## High 12) and anything else on High; Ultra is never chosen for you.
 ##   scale      the 3D resolution, rebuilt to the window's by "upscaler": FSR 1 on Low and Medium (cheap: on the M1
 ##              FSR 2's own pass cost a quarter of the frame, 16 → 22 fps), FSR 2 on High (sharper, anti-aliased)
-##   shadow     the sun's shadow map (px), its soft-edge filter (0 hard … 5 softest), how far shadows reach (m)
+##   shadow     the sun's shadow map (px), its soft-edge filter (0 hard … 5 softest), how far shadows reach (m);
+##              on Low and Medium in two splits, not four (the road up: 21 → 27 fps on Low at the elephant crossing;
+##              High and Ultra keep the world's own)
 ##   ssao       ambient occlusion and its quality (0 very low … 4 ultra); ssil: bounce light (rooms only, as before)
 ##   vfog       volumetric fog (the mountain world's mist banks); rain: share of the raindrops (city_weather.gd)
 ##   lod        mesh level-of-detail threshold (px of error allowed: higher is coarser, cheaper)
@@ -97,6 +99,11 @@ static func apply(vp: Viewport, env: Environment, sun: DirectionalLight3D) -> vo
 			env.volumetric_fog_enabled = false
 	if sun:
 		sun.directional_shadow_max_distance = float(p["shadow_dist"])
+		if not sun.has_meta("splits"):
+			sun.set_meta("splits", sun.directional_shadow_mode)      # (the world's own, for High and Ultra)
+		sun.directional_shadow_mode = DirectionalLight3D.SHADOW_PARALLEL_2_SPLITS if preset() in ["low", "medium"] \
+			and not "--splits4" in OS.get_cmdline_user_args() \
+			else sun.get_meta("splits")
 	var px := DisplayServer.window_get_size()
 	print("GRAPHICS %s (%s, window %d×%d px, screen scale %.1f): scale %.2f, shadows %d px soft %d to %.0f m, ssao %s, lod %.0f" % [preset(),
 		up, px.x, px.y, DisplayServer.screen_get_scale(), float(p["scale"]), int(p["shadow"]), int(p["soft"]), float(p["shadow_dist"]),
