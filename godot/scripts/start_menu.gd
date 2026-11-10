@@ -67,6 +67,7 @@ func _ready() -> void:
 		func(): _go(RESORT_SCENE))
 	_button(box, "Quit", "", func(): get_tree().quit())
 	_buttons[0].grab_focus()
+	_test_hooks()
 
 	var credit := Label.new()
 	credit.text = "Road map data © OpenStreetMap contributors (ODbL) · Elevation: SRTM / Mapzen terrain tiles · Textures: ambientCG · Models: Poly Haven, Kenney (CC0)"
@@ -100,6 +101,26 @@ func _button(parent: Control, title: String, hint: String, action: Callable) -> 
 	if hint != "":
 		var h := _text(parent, hint, 13, Color(0.92, 0.9, 0.85, 0.85))
 		h.custom_minimum_size = Vector2(440, 0)
+
+
+## (testing an exported build, which can't be given a scene on the command line) --menushot=FILE: a picture of
+## this screen; --play=story|drive|resort: start it as its button would (the rest of the arguments go on with it).
+func _test_hooks() -> void:
+	for a in OS.get_cmdline_user_args():
+		if a.begins_with("--menushot="):
+			await get_tree().create_timer(2.0).timeout
+			await RenderingServer.frame_post_draw
+			get_viewport().get_texture().get_image().save_jpg(a.get_slice("=", 1), 0.85)
+			print("MENUSHOT %s" % a.get_slice("=", 1))
+		elif a.begins_with("--play="):
+			match a.get_slice("=", 1):
+				"story":
+					Engine.set_meta("story", true)
+					_go("res://scenes/city_test.tscn")
+				"drive":
+					_go(DRIVE_SCENE)
+				"resort":
+					_go(RESORT_SCENE)
 
 
 func _go(scene: String) -> void:
