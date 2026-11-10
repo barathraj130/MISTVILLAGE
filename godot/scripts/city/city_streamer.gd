@@ -412,6 +412,7 @@ func _build(k: Vector2i) -> void:
 	_roads(roads, out, k)
 	_buildings(blds, out)
 	_walks(walks, out, [k, hn, h, float(index["hstep"]), tile])
+	out["walks_raw"] = walks                                  # (the footpaths' lines, for the people walking them)
 	_junctions(juncs, out)
 	_props(props, out)
 	_yards(yards, out)
@@ -2545,6 +2546,7 @@ func _instance(k: Vector2i, d: Dictionary) -> void:
 		bcs.shape = d["building_shape"]
 		_shape(node, bcs)
 	node.set_meta("roads", d["roads_raw"])
+	node.set_meta("walks", d.get("walks_raw", []))
 	node.set_meta("signals", d.get("signals", []))
 	node.set_meta("bldinfo", d.get("bldinfo", []))
 	if await _due(node):

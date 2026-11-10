@@ -10,6 +10,7 @@ extends Node3D
 const Prof := preload("res://scripts/drive/prof.gd")
 const Streamer := preload("res://scripts/city/city_streamer.gd")
 const Graphics := preload("res://scripts/graphics.gd")
+const CityWalkers := preload("res://scripts/city/city_walkers.gd")
 const MB := preload("res://scripts/drive/mesh_builder.gd")
 const Jeep := preload("res://scripts/drive/jeep.gd")
 const CityMap := preload("res://scripts/city/city_map.gd")
@@ -289,6 +290,12 @@ func _ready() -> void:
 	streamer.radius = int(Graphics.value("tiles"))             # (the view distance: the preset's tiles each way)
 	streamer.name = "City"
 	add_child(streamer)
+	if not "--nowalkers" in args:                         # people walking the footpaths (city_walkers.gd)
+		var cw := CityWalkers.new()
+		cw.name = "Walkers"
+		cw.city = self
+		cw.count = int(Graphics.value("walkers"))
+		add_child(cw)
 	doors = CityDoors.new()                            # every building can be walked into (city_doors.gd)
 	doors.name = "Doors"
 	doors.city = self
@@ -385,7 +392,7 @@ func _ready() -> void:
 		fines.load_wallet()
 		var self_test := false                      # (a self-test never writes your saved game: wallet, challans, weather)
 		for flag in ["--testdrive", "--carshot", "--trafficshot", "--crashtest", "--peopletest", "--parkedtest",
-				"--potholetest", "--flyover", "--clock=", "--weather=", "--nohud", "--doortest", "--threattest", "--surfacetest", "--jointest"]:
+				"--potholetest", "--flyover", "--clock=", "--weather=", "--nohud", "--doortest", "--threattest", "--surfacetest", "--jointest", "--walkertest"]:
 			self_test = self_test or " ".join(args).contains(flag)
 		fines.persist = not self_test
 		hud = DriveHud.new()
