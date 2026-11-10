@@ -1363,6 +1363,7 @@ func _junctions(juncs: Array, out: Dictionary) -> void:
 
 func _props(props: Array, out: Dictionary) -> void:
 	var by := {}
+	var shelters: Array = []                                  # [position, yaw facing the road]
 	for pr in props:
 		var kind: int = pr[0]
 		var pv: PackedFloat32Array = pr[1]
@@ -1374,6 +1375,8 @@ func _props(props: Array, out: Dictionary) -> void:
 		if not by.has(kind):
 			by[kind] = []
 		by[kind].append([xf, signal_phase(pv[0], pv[2], pv[3])])
+		if kind == 2:                                         # a bus shelter: people wait there (city_activity.gd)
+			shelters.append([Vector3(pv[0], pv[1], pv[2]), atan2(f.x, f.z)])
 	var mms := []
 	var hump := PackedVector3Array()
 	for kind in by:
@@ -1392,6 +1395,7 @@ func _props(props: Array, out: Dictionary) -> void:
 					hump.append(hx * q)
 		mms.append(mm)
 	out["props"] = mms
+	out["shelters"] = shelters
 	var sigs: Array = []                          # for traffic: [position, yaw, phase] of every signal head
 	for pr in props:
 		if pr[0] == 1:
@@ -1654,6 +1658,7 @@ void fragment() {
 func _life(life: Array, out: Dictionary, roads: Array = []) -> void:
 	var by := {}
 	var parked: Array = []
+	var spots: Array = []                                     # stalls, carts, shades: [kind, position, yaw] (city_activity.gd)
 	var names0: Array = life_names
 	var segs := _road_segs(roads)
 	for rec in life:
@@ -1683,6 +1688,8 @@ func _life(life: Array, out: Dictionary, roads: Array = []) -> void:
 			if bb.size.length() > 0.1:
 				parked.append([Transform3D(bs, Vector3(v[0], v[1], v[2])), bb])
 		# visibility ranges are measured from each MultiMesh's centre, so the things are grouped in 64 m cells
+		if nm0 in ["stall0", "stall1", "cart", "shade0", "shade1", "shade2", "goods", "flowers"]:   # (where people stand and buy)
+			spots.append(["stall" if nm0.begins_with("stall") or nm0 == "cart" else "shade", Vector3(v[0], v[1], v[2]), v[3]])
 		var key := Vector3i(kind, floori(v[0] / LIFE_CELL), floori(v[2] / LIFE_CELL))
 		if not by.has(key):
 			by[key] = []
@@ -1725,6 +1732,7 @@ func _life(life: Array, out: Dictionary, roads: Array = []) -> void:
 		mms.append([mm, far + LIFE_CELL * 0.71, 0.0])
 	out["life"] = mms
 	out["parked"] = parked
+	out["spots"] = spots
 
 
 ## Potholes along the tile's roads: every 20 m a chance by the road's class (POTHOLES), sometimes two or three
@@ -2547,6 +2555,8 @@ func _instance(k: Vector2i, d: Dictionary) -> void:
 		_shape(node, bcs)
 	node.set_meta("roads", d["roads_raw"])
 	node.set_meta("walks", d.get("walks_raw", []))
+	node.set_meta("spots", d.get("spots", []))
+	node.set_meta("shelters", d.get("shelters", []))
 	node.set_meta("signals", d.get("signals", []))
 	node.set_meta("bldinfo", d.get("bldinfo", []))
 	if await _due(node):

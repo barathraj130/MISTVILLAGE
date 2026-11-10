@@ -11,6 +11,7 @@ const Prof := preload("res://scripts/drive/prof.gd")
 const Streamer := preload("res://scripts/city/city_streamer.gd")
 const Graphics := preload("res://scripts/graphics.gd")
 const CityWalkers := preload("res://scripts/city/city_walkers.gd")
+const CityActivity := preload("res://scripts/city/city_activity.gd")
 const MB := preload("res://scripts/drive/mesh_builder.gd")
 const Jeep := preload("res://scripts/drive/jeep.gd")
 const CityMap := preload("res://scripts/city/city_map.gd")
@@ -296,6 +297,11 @@ func _ready() -> void:
 		cw.city = self
 		cw.count = int(Graphics.value("walkers"))
 		add_child(cw)
+		var ca := CityActivity.new()                      # people at bus stops, stalls, shops, guards (city_activity.gd)
+		ca.name = "Activity"
+		ca.city = self
+		ca.count = int(Graphics.value("activity"))
+		add_child(ca)
 	doors = CityDoors.new()                            # every building can be walked into (city_doors.gd)
 	doors.name = "Doors"
 	doors.city = self
@@ -392,7 +398,7 @@ func _ready() -> void:
 		fines.load_wallet()
 		var self_test := false                      # (a self-test never writes your saved game: wallet, challans, weather)
 		for flag in ["--testdrive", "--carshot", "--trafficshot", "--crashtest", "--peopletest", "--parkedtest",
-				"--potholetest", "--flyover", "--clock=", "--weather=", "--nohud", "--doortest", "--threattest", "--surfacetest", "--jointest", "--walkertest"]:
+				"--potholetest", "--flyover", "--clock=", "--weather=", "--nohud", "--doortest", "--threattest", "--surfacetest", "--jointest", "--walkertest", "--activitytest"]:
 			self_test = self_test or " ".join(args).contains(flag)
 		fines.persist = not self_test
 		hud = DriveHud.new()

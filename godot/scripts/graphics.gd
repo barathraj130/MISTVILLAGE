@@ -10,6 +10,7 @@ extends RefCounted
 ##   ssao       ambient occlusion and its quality (0 very low … 4 ultra); ssil: bounce light (rooms only, as before)
 ##   vfog       volumetric fog (the mountain world's mist banks); rain: share of the raindrops (city_weather.gd)
 ##   lod        mesh level-of-detail threshold (px of error allowed: higher is coarser, cheaper)
+##   activity   people at the bus stops, stalls, shops, and guards (city_activity.gd)
 ##   walkers    people walking the footpaths round you (city_walkers.gd)
 ##   traffic    vehicles round you in central Coimbatore (city_traffic.gd: the CPU's largest share of the frame)
 ##   tiles      the city's view distance: tiles kept loaded each way round you (2: 5 × 5, 1.3 km; 3: 7 × 7, 1.8 km)
@@ -18,13 +19,13 @@ extends RefCounted
 const ORDER := ["low", "medium", "high", "ultra"]
 const PRESETS := {
 	"low": {"scale": 0.5, "shadow": 2048, "soft": 1, "shadow_dist": 80.0, "ssao": false, "ssao_q": 0, "ssil": false,
-		"vfog": false, "rain": 0.4, "lod": 6.0, "tiles": 2, "upscaler": "fsr", "traffic": 40, "walkers": 16},
+		"vfog": false, "rain": 0.4, "lod": 6.0, "tiles": 2, "upscaler": "fsr", "traffic": 40, "walkers": 16, "activity": 14},
 	"medium": {"scale": 0.67, "shadow": 2048, "soft": 2, "shadow_dist": 120.0, "ssao": true, "ssao_q": 1, "ssil": false,
-		"vfog": false, "rain": 0.7, "lod": 3.0, "tiles": 2, "upscaler": "fsr", "traffic": 55, "walkers": 24},
+		"vfog": false, "rain": 0.7, "lod": 3.0, "tiles": 2, "upscaler": "fsr", "traffic": 55, "walkers": 24, "activity": 18},
 	"high": {"scale": 0.8, "shadow": 4096, "soft": 3, "shadow_dist": 160.0, "ssao": true, "ssao_q": 2, "ssil": true,
-		"vfog": true, "rain": 1.0, "lod": 2.0, "tiles": 3, "upscaler": "fsr2", "traffic": 70, "walkers": 36},
+		"vfog": true, "rain": 1.0, "lod": 2.0, "tiles": 3, "upscaler": "fsr2", "traffic": 70, "walkers": 36, "activity": 28},
 	"ultra": {"scale": 1.0, "shadow": 4096, "soft": 4, "shadow_dist": 220.0, "ssao": true, "ssao_q": 3, "ssil": true,
-		"vfog": true, "rain": 1.0, "lod": 1.0, "tiles": 3, "traffic": 70, "walkers": 48},
+		"vfog": true, "rain": 1.0, "lod": 1.0, "tiles": 3, "traffic": 70, "walkers": 48, "activity": 36},
 }
 const CFG := "user://settings.cfg"
 
