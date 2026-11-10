@@ -9,6 +9,7 @@ extends Node3D
 
 const Route := preload("res://scripts/drive/route.gd")
 const Terrain := preload("res://scripts/drive/terrain.gd")
+const Graphics := preload("res://scripts/graphics.gd")
 const Road := preload("res://scripts/drive/road.gd")
 const Props := preload("res://scripts/drive/props.gd")
 const Traffic := preload("res://scripts/drive/traffic.gd")
@@ -616,8 +617,8 @@ func _start() -> void:
 	cam.global_transform = jeep.global_transform.translated_local(Vector3(0, 3, -8))
 	cam.look_at(jeep.global_position + Vector3.UP)
 	cam.make_current()
-	_apply_quality("low" if RenderingServer.get_video_adapter_name().contains("Apple M1")
-		or RenderingServer.get_video_adapter_type() == RenderingDevice.DEVICE_TYPE_INTEGRATED_GPU else "high")
+	Graphics.apply_window()
+	_apply_quality()
 	if "--autodrive" in args:
 		jeep.autopilot = true
 		for s in route.stages:
@@ -695,19 +696,12 @@ func _place_jeep(at_d: float) -> void:
 	idx = route.index_at(at_d)
 
 
-func _apply_quality(level: String) -> void:
-	var low := level == "low"
-	var vp := get_viewport()
-	# FSR 2 renders at a lower resolution and rebuilds a sharp, temporally anti-aliased image: on a
-	# Retina screen that pays for the ambient occlusion, bounce light and longer shadows
-	vp.scaling_3d_mode = Viewport.SCALING_3D_MODE_FSR2
-	vp.scaling_3d_scale = 0.5 if low else 0.67
-	vp.msaa_3d = Viewport.MSAA_DISABLED
-	vp.screen_space_aa = Viewport.SCREEN_SPACE_AA_DISABLED
+## The graphics preset (graphics.gd, shared with the city: Low, Medium, High, Ultra; F2 steps through them).
+func _apply_quality(_level := "") -> void:
+	Graphics.apply(get_viewport(), env, sun)
 	if env:
-		env.ssil_enabled = not low
-		env.ssao_enabled = true
-	set_meta("quality", level)
+		env.ssil_enabled = Graphics.value("ssil")
+	set_meta("quality", Graphics.preset())
 
 
 # ----------------------------------------------------------------------------- per frame
@@ -1351,8 +1345,9 @@ func _process(delta: float) -> void:
 	if Input.is_action_just_pressed("toggle_help"):
 		ui_help.modulate.a = 1.0 - ui_help.modulate.a
 	if Input.is_action_just_pressed("toggle_quality"):
-		_apply_quality("high" if get_meta("quality", "low") == "low" else "low")
-		_message("Quality: %s" % String(get_meta("quality")).to_upper())
+		Graphics.step()
+		_apply_quality()
+		_message("Graphics: %s" % String(get_meta("quality")).capitalize())
 	if Input.is_action_just_pressed("skip_drive") and debug_mode:
 		if resort and walker == null:
 			_place_jeep(route.length - 90.0)          # jump to the approach, the resort is right ahead

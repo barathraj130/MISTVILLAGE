@@ -9,6 +9,7 @@ extends Node3D
 
 const Prof := preload("res://scripts/drive/prof.gd")
 const Streamer := preload("res://scripts/city/city_streamer.gd")
+const Graphics := preload("res://scripts/graphics.gd")
 const MB := preload("res://scripts/drive/mesh_builder.gd")
 const Jeep := preload("res://scripts/drive/jeep.gd")
 const CityMap := preload("res://scripts/city/city_map.gd")
@@ -285,6 +286,7 @@ func _ready() -> void:
 			shots_dir = a.get_slice("=", 1)
 	_environment()
 	streamer = Streamer.new()
+	streamer.radius = int(Graphics.value("tiles"))             # (the view distance: the preset's tiles each way)
 	streamer.name = "City"
 	add_child(streamer)
 	doors = CityDoors.new()                            # every building can be walked into (city_doors.gd)
@@ -487,9 +489,8 @@ func _ready() -> void:
 			var pc := CityPolice.new()
 			add_child(pc)
 			pc.place(Vector3(float(v[0]), float(v[1]), float(v[2])), Vector3(float(v[3]), 0, float(v[4])).normalized())
-	get_viewport().scaling_3d_mode = Viewport.SCALING_3D_MODE_FSR2
-	get_viewport().scaling_3d_scale = 0.67
-	get_viewport().mesh_lod_threshold = 8.0 if "--lod8" in OS.get_cmdline_user_args() else 3.0
+	Graphics.apply_window()
+	Graphics.apply(get_viewport(), env, sun)                  # the graphics preset (graphics.gd: F2 steps through them)
 	RenderingServer.viewport_set_measure_render_time(get_viewport().get_viewport_rid(), true)
 
 
@@ -559,7 +560,7 @@ func _daylight() -> void:
 		env.ambient_light_energy = 0.03 if dark_room else 0.32
 		env.background_energy_multiplier = 0.0
 		env.fog_light_color = Color(0.05, 0.05, 0.05)
-		env.ssil_enabled = true                  # the walls and floor light each other (cheap bounce light)
+		env.ssil_enabled = Graphics.value("ssil")   # the walls and floor light each other (cheap bounce light)
 		env.ssil_intensity = 1.4
 		env.ssao_intensity = 2.4
 		env.glow_enabled = true                  # tube lights and screens glow a little
@@ -1370,9 +1371,21 @@ func _process(dt: float) -> void:
 	Prof.add("city", _p0)
 
 
+var _f2_down := false
+var _bench_t := 0.0
+var _bench_frames := 0
+
+
 func _process_timed(dt: float) -> void:
 	t += dt
 	_shift_keys(dt)
+	var gk := Input.is_key_pressed(KEY_F2)
+	if gk and not _f2_down:                                   # the next graphics preset
+		var g := Graphics.step()
+		Graphics.apply(get_viewport(), env, sun)
+		if hud:
+			hud.warn("Graphics: %s" % g.capitalize(), 2.5)
+	_f2_down = gk
 	var lk := Input.is_key_pressed(KEY_L)
 	if lk and not _l_down and walker:
 		_toggle_torch()
@@ -1524,7 +1537,17 @@ func _process_timed(dt: float) -> void:
 		cam.position = Vector3(view[0], view[1], view[2])
 		cam.basis = Basis.from_euler(Vector3(deg_to_rad(view[4]), deg_to_rad(view[3]), 0))
 		if t > 25.0 and streamer.pending.is_empty() and streamer.ready_q.is_empty() and streamer.loaded.size() > 20:
-			get_viewport().get_texture().get_image().save_jpg(shots_dir + "/view.jpg", 0.85)
+			if "--viewbench" in OS.get_cmdline_user_args():   # (testing: a fixed view's frame rate, 20 s of it)
+				_bench_t += dt
+				_bench_frames += 1
+				if _bench_t >= 20.0:
+					print("VIEWBENCH %s: %.1f fps, %.1f ms a frame (%d frames), draws %d" % [Graphics.preset(), _bench_frames / _bench_t,
+						_bench_t * 1000.0 / _bench_frames, _bench_frames,
+						RenderingServer.get_rendering_info(RenderingServer.RENDERING_INFO_TOTAL_DRAW_CALLS_IN_FRAME)])
+					get_tree().quit()
+				return
+			if shots_dir != "":
+				get_viewport().get_texture().get_image().save_jpg(shots_dir + "/view.jpg", 0.85)
 			get_tree().quit()
 		return
 	if not survey.is_empty():
