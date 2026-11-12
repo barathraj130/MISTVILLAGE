@@ -1,5 +1,8 @@
 """
-Brushing and bathing with the real Karthik (scripts/story/groom.gd): the story cast's body (tools/humans/story_cast.py)
+Brushing and bathing with the real Karthik (scripts/story/groom.gd): by default the game's own Karthik, the story
+cast's body and head exactly as tools/humans/story_cast.py builds him (his face, his hair, his brows; no moustache),
+his faces made with MakeHuman's expression units (CastFace; teeth and a tongue put in for the open mouth). With
+--gnm, the older pictures: the story cast's body (tools/humans/story_cast.py)
 with a GNM head (the face work's scanned-head model, tools/humans/gnm_head.py, fitted on as tools/humans/gnm_heroine.py
 does) in every expression the chores need (a wide smile with the teeth, cheeks blown out, lips funnelled, eyes
 squeezed shut), strand hair, a moustache, brows and lashes, rendered in Cycles in a tiled bathroom; the props as
@@ -14,7 +17,7 @@ cut-outs; the masks and points the game needs to put foam, stains and water in t
         groom.json              the mouth's teeth (brush) and the head (bath), as fractions of the picture
 
 Needs the MPFB add-on (no --factory-startup):
-    Blender -b --python tools/story_groom.py -- [--only brush|bath|props]
+    Blender -b --python tools/story_groom.py -- [--only brush|bath|props] [--gnm]
 """
 import json
 import math
@@ -24,7 +27,7 @@ import sys
 import bpy
 import numpy as np
 from bpy_extras.object_utils import world_to_camera_view
-from mathutils import Vector
+from mathutils import Matrix, Vector
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
@@ -34,7 +37,7 @@ import quality as Q  # noqa: E402
 import story_cast as C  # noqa: E402
 import street_people as SP  # noqa: E402
 
-OUT = os.path.abspath(os.path.join(HERE, "..", "godot", "assets", "story", "groom"))
+OUT = os.environ.get("GROOM_OUT") or os.path.abspath(os.path.join(HERE, "..", "godot", "assets", "story", "groom"))   # (GROOM_OUT: a test folder)
 W, H = 1152, 752                                     # the picture (groom.gd's area is about 1.53 : 1)
 
 # the faces, as GNM Head expression classes (tools/humans/gnm_head.py EXPRESSIONS); BLINK closes both eyes
@@ -55,12 +58,147 @@ BATH = {
     "squeeze": {"COMPRESS_FACE": 1.0, "WINK_LEFT": 1.0, "WINK_RIGHT": 1.0},
     "grin": BRUSH["grin"],
 }
+# the same faces in MakeHuman's expression units (data/targets/expression/units/asian/<unit>.target.gz)
+EYES_SHUT = {"eye-left-closure": 1.0, "eye-right-closure": 1.0}
+CAST_BRUSH = {
+    "idle": {"mouth-corner-puller": 0.15},
+    "blink": {"mouth-corner-puller": 0.15, **EYES_SHUT},
+    "open": {"mouth-open": 0.85, "mouth-corner-puller": 0.4, "mouth-retraction": 0.35, "eyebrows-left-up": 0.3,
+             "eyebrows-right-up": 0.3},
+    "giggle": {"mouth-corner-puller": 0.9, "mouth-open": 0.3, "mouth-upward-retraction": 0.4,
+               "eye-left-slit": 0.6, "eye-right-slit": 0.6},
+    "puff": {"mouth-compression": 0.9, "mouth-eversion": 0.4},
+    "spit": {"mouth-pursing": 0.8, "mouth-protusion": 0.6, "eye-left-slit": 0.4, "eye-right-slit": 0.4},
+    "grin": {"mouth-corner-puller": 1.0, "mouth-retraction": 0.6, "mouth-upward-retraction": 0.3, "mouth-open": 0.12},
+}
+CAST_BATH = {
+    "idle": {"mouth-corner-puller": 0.2},
+    "blink": {"mouth-corner-puller": 0.2, **EYES_SHUT},
+    "shiver": {"mouth-depression": 0.6, "mouth-compression": 0.5, "eye-left-closure": 0.8, "eye-right-closure": 0.8,
+               "eyebrows-left-inner-up": 0.7, "eyebrows-right-inner-up": 0.7},
+    "giggle": {"mouth-corner-puller": 0.8, "mouth-open": 0.25, "eye-left-slit": 0.7, "eye-right-slit": 0.7},
+    "squeeze": {"mouth-compression": 1.0, "nose-compression": 0.5, **EYES_SHUT},
+    "grin": CAST_BRUSH["grin"],
+}
+UNITS = os.path.join(os.path.expanduser("~"), "Library", "Application Support", "Blender", "5.2", "extensions",
+                     "user_default", "mpfb", "data", "targets", "expression", "units", "asian")
 SEED = 404                                                           # Karthik's own head (the story cast's seed)
 ETH = dict(middle_eastern=0.5, black=0.3, asian=0.2)
 TONE = (0.3, 0.17, 0.1)                                              # medium brown
 
 
 # ---- the scene ----
+class CastFace:
+    """Karthik's own head (the game's): MakeHuman's expression units loaded on the posed body as shape keys (their
+    offsets turned with the head, which the pose may have tilted), and the face's separate parts (brows, lashes,
+    teeth, tongue) made to follow the skin they sit on, so a blink closes the lashes too and the jaw takes the
+    lower teeth."""
+
+    FOLLOW = ("eyebrow", "eyelash", "teeth", "tongue")
+
+    def __init__(self, h, arm):
+        from mathutils.kdtree import KDTree
+        self.body = h
+        self.head = h                                                # (wet() and the mask take the face from here)
+        pb = arm.pose.bones.get("head")
+        rot = (pb.matrix @ pb.bone.matrix_local.inverted()).to_3x3() if pb else Matrix.Identity(3)
+        units = sorted({u for f in list(CAST_BRUSH.values()) + list(CAST_BATH.values()) for u in f})
+        if h.data.shape_keys is None:
+            h.shape_key_add(name="Basis", from_mix=False)
+        base = np.empty(len(h.data.vertices) * 3, np.float32)
+        h.data.vertices.foreach_get("co", base)
+        base = base.reshape(-1, 3)
+        self.deltas = {}
+        for u in units:
+            path = os.path.join(UNITS, u + ".target.gz")
+            if not os.path.exists(path):
+                print("GROOM no unit", u, flush=True)
+                continue
+            k = SP.TS.load_target(h, path, weight=0.0, name=u)
+            co = np.empty(len(h.data.vertices) * 3, np.float32)
+            k.data.foreach_get("co", co)
+            d = co.reshape(-1, 3) - base
+            m = np.array(rot, np.float32)
+            d = d @ m.T                                               # (the offsets turned with the head)
+            k.data.foreach_set("co", (base + d).ravel())
+            self.deltas[u] = d
+        mw = h.matrix_world
+        gi = {g.name: g.index for g in h.vertex_groups}
+        member = {}                                                  # vertex group → its vertices
+        for v in h.data.vertices:
+            for g in v.groups:
+                if g.weight > 0.5:
+                    member.setdefault(g.group, []).append(v.index)
+        def tree(names, exclude=None):
+            """The body's vertices a part follows: its helper (MakeHuman's teeth, tongue, lash shells), which the
+            expression units move with the jaw and lids; the brows, the skin itself (no helpers)."""
+            if exclude:
+                bad = set(member.get(gi.get(exclude, -1), []))
+                ids = [i for i in range(len(base)) if i not in bad]
+            else:
+                ids = sorted({i for n in names for i in member.get(gi.get(n, -1), [])})
+            kd = KDTree(len(ids))
+            for j, i in enumerate(ids):
+                kd.insert(mw @ Vector(base[i]), j)
+            kd.balance()
+            return kd, np.array(ids)
+        follow = {"teeth": (["helper-upper-teeth", "helper-lower-teeth"], None), "tongue": (["helper-tongue"], None),
+                  "eyelash": (["helper-l-eyelashes-1", "helper-l-eyelashes-2", "helper-r-eyelashes-1",
+                               "helper-r-eyelashes-2"], None), "eyebrow": ([], "HelperGeometry")}
+        self.parts = []
+        for o in bpy.data.objects:
+            kind = next((k for k in follow if o.type == 'MESH' and o is not h and k in o.name.lower()), None)
+            if kind is None:
+                continue
+            kd, ids = tree(*follow[kind])
+            if len(ids) == 0:
+                kd, ids = tree([], "HelperGeometry")
+            pw = [o.matrix_world @ v.co for v in o.data.vertices]
+            near = ids[np.array([kd.find(p)[1] for p in pw])]
+            o.shape_key_add(name="Basis", from_mix=False)
+            pco = np.array([tuple(v.co) for v in o.data.vertices], np.float32)
+            inv = np.array(o.matrix_world.inverted().to_3x3() @ mw.to_3x3(), np.float32)
+            for u, d in self.deltas.items():
+                k = o.shape_key_add(name=u, from_mix=False)
+                k.data.foreach_set("co", (pco + d[near] @ inv.T).ravel())
+            self.parts.append(o)
+        skin_tone(h)
+        print("GROOM cast face: %d units, parts %s" % (len(self.deltas), [o.name for o in self.parts]), flush=True)
+
+    def grow_hair(self):
+        pass                                                         # (his own, as the cast build fitted it)
+
+    def face(self, weights):
+        for o in [self.body] + self.parts:
+            for k in o.data.shape_keys.key_blocks[1:]:
+                k.value = float(weights.get(k.name, 0.0))
+        bpy.context.view_layer.update()
+
+    def teeth_points(self):
+        pts = []
+        for o in self.parts:
+            if "teeth" in o.name.lower():
+                pts += evaluated_points(o)
+        return pts or [self.body.matrix_world @ Vector((0, -0.1, 1.6))]
+
+
+def skin_tone(h):
+    """His skin as the game shows it, medium brown: the cast's skin texture is light, and Cycles' bright bathroom
+    light washes it out further."""
+    for ms in h.material_slots:
+        m = ms.material
+        b = m.node_tree.nodes.get("Principled BSDF") if m and m.node_tree else None
+        if b is None or not b.inputs["Base Color"].links:
+            continue
+        mixer = m.node_tree.nodes.new("ShaderNodeMix")
+        mixer.data_type = 'RGBA'
+        mixer.blend_type = 'MULTIPLY'
+        mixer.inputs["Factor"].default_value = 1.0
+        mixer.inputs["B"].default_value = (0.66, 0.5, 0.4, 1)
+        m.node_tree.links.new(b.inputs["Base Color"].links[0].from_socket, mixer.inputs["A"])
+        m.node_tree.links.new(mixer.outputs["Result"], b.inputs["Base Color"])
+
+
 class Gnm:
     """Karthik's GNM head on the posed body: built once, then re-shaped for each expression (brows, lashes and the
     moustache regrown on the new face, so they follow it)."""
@@ -482,6 +620,9 @@ def karthik(outfit):
                 p.material_index = 0
         elif "shoes" in o.name and outfit == "bath":
             bpy.data.objects.remove(o, do_unlink=True)
+    if not USE_GNM:                                                  # (the open mouth: teeth and a tongue)
+        add_proxy(h, "teeth", "teeth_base.mhclo", "Teeth")
+        add_proxy(h, "tongue", "tongue01.mhclo", "Tongue")
     if outfit == "bath":                                            # the skin the shirt hid, shown again
         for md in list(h.modifiers):                                # (keep the one hiding MakeHuman's helper shapes)
             if md.type == 'MASK':
@@ -531,8 +672,11 @@ def brush():
     arm, h, _ = karthik("bath")                         # bare-chested, as men brush in the morning
     head = C.head_of(arm, "head")
     bake_pose(arm)
-    drop_face_parts(arm)
-    g = Gnm(h)
+    if USE_GNM:
+        drop_face_parts(arm)
+        g = Gnm(h)
+    else:
+        g = CastFace(h, arm)
     g.grow_hair()
     setup_render()
     bathroom(head.y + 0.55, floor=False)
@@ -543,7 +687,7 @@ def brush():
     light("Rim", (0.3, head.y + 0.5, head.z + 0.4), 14, 0.5, (1, 1, 1), eye)
     meta = {}
     only = os.environ.get("GROOM_FACES", "")                       # (testing: a few faces only)
-    for name, units in BRUSH.items():
+    for name, units in (BRUSH if USE_GNM else CAST_BRUSH).items():
         if only and name not in only.split(","):
             continue
         g.face(units)
@@ -568,8 +712,11 @@ def bath():
     hip = (C.head_of(arm, "thigh_l") + C.head_of(arm, "thigh_r")) / 2
     head = C.head_of(arm, "head")
     bake_pose(arm)
-    drop_face_parts(arm)
-    g = Gnm(h)
+    if USE_GNM:
+        drop_face_parts(arm)
+        g = Gnm(h)
+    else:
+        g = CastFace(h, arm)
     g.grow_hair()
     setup_render()
     bathroom(hip.y + 0.9)
@@ -599,9 +746,9 @@ def bath():
         cam.location = at
         cam.rotation_euler = (Vector(look) - Vector(at)).to_track_quat('-Z', 'Y').to_euler()
         bpy.context.view_layer.update()
-    for state in ("dry", "wet"):
+    for state in ("dry", "wet") if not os.environ.get("GROOM_MASKS_ONLY") else ():   # (masks only: the pictures kept)
         wet(state == "wet", h, [g.head])
-        for name, units in BATH.items():
+        for name, units in (BATH if USE_GNM else CAST_BATH).items():
             g.face(units)
             for key in cams:
                 frame(key)
@@ -718,6 +865,9 @@ def props():
     for k in range(3):
         cube((0, -0.016, -0.03 + k * 0.012), (0.121, 0.002, 0.004), material("Towel line", (0.75, 0.15, 0.12), 0.8), 0)
     shoot("towel", 0.2)
+
+
+USE_GNM = "--gnm" in sys.argv
 
 
 def main():
