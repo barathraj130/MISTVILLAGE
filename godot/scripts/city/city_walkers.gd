@@ -10,6 +10,10 @@ extends Node3D
 ##   talk       two who meet stop and talk a while (one talks, the other listens, then the other way round)
 ##   aside      Karthik walking straight at one: a step to the other side of the path, and on
 ##   clear      a vehicle coming along the footpath at them: they run off it for a moment
+##   cross      at a footpath's end with another across the road (6–22 m): now and then they cross. At the kerb,
+##              facing over, a look one way and the other; when nothing is coming within 28 m (the traffic, his
+##              car), straight over a little quicker than they walk, and on along the far footpath. Nothing comes
+##              for 20 s: they give up and turn back
 ## How many are out follows the city's own clock (fines.sim): most in the morning and the evening, fewest at night.
 ## Far ones (over 50 m) are updated four times less often; past 85 m they're hidden and set down again near him.
 ## Not in a room (a story scene under the street), not while the story has the city in a cutscene of its own.
@@ -29,6 +33,8 @@ var _rng := RandomNumberGenerator.new()
 var _strips: Array = []                        # [{"p": PackedVector3Array, "c": PackedFloat32Array (cumulative m), "hw": half width}]
 var _strips_t := 0.0
 var _frame := 0
+var crossed := 0                               # (testing: crossings made, start to the far kerb)
+var gave_up := 0
 
 
 func _ready() -> void:
@@ -93,13 +99,14 @@ func _test(dt: float, me: Node3D) -> void:
 				var want_y: float = _at(_strips[q["strip"]], float(q["s"])).y
 				if absf(node.global_position.y - want_y) > 0.25:
 					off_ground += 1
-		print("WALKERS t=%.0f out of %d: %s, within 40 m %d, stuck %d, off the path's height %d, footpaths %d, busy %.2f" % [_test_t, people.size(),
-			str(states), near, stuck, off_ground, _strips.size(), _busy()])
-	if _test_t > 30.0 and not has_meta("shot"):
+		print("WALKERS t=%.0f out of %d: %s, within 40 m %d, stuck %d, off the path's height %d, footpaths %d, busy %.2f, crossed %d, gave up %d" % [_test_t,
+			people.size(), str(states), near, stuck, off_ground, _strips.size(), _busy(), crossed, gave_up])
+	var crossing := people.any(func(q): return q["state"] in ["kerb", "cross"])
+	if (_test_t > (90.0 if "--crosstest" in OS.get_cmdline_user_args() else 30.0) or (crossing and "--crosstest" in OS.get_cmdline_user_args() and _test_t > 60.0)) and not has_meta("shot"):
 		var best: Dictionary = {}
 		var bd := INF
 		for q in people:
-			if q["state"] == "walk":
+			if q["state"] == ("cross" if crossing and people.any(func(o): return o["state"] == "cross") else ("kerb" if crossing else "walk")):
 				var dd: float = (q["node"] as Node3D).global_position.distance_to(me.global_position)
 				if dd < bd:
 					bd = dd
@@ -111,8 +118,12 @@ func _test(dt: float, me: Node3D) -> void:
 		var fwd := Vector3(sin(float(best["yaw"])), 0, cos(float(best["yaw"])))
 		var cam := Camera3D.new()                       # (its own: the city moves its camera every frame)
 		add_child(cam)
-		cam.global_position = n.global_position - fwd * 5.5 + Vector3.UP * 2.2 + Vector3(fwd.z, 0, -fwd.x) * 1.5
-		cam.look_at(n.global_position + fwd * 6.0 + Vector3.UP * 0.8)
+		if crossing:                                     # (from the side: the road, and them going over it)
+			cam.global_position = n.global_position + Vector3(fwd.z, 0, -fwd.x) * 9.0 - fwd * 2.0 + Vector3.UP * 2.4
+			cam.look_at(n.global_position + fwd * 2.0 + Vector3.UP * 0.9)
+		else:
+			cam.global_position = n.global_position - fwd * 5.5 + Vector3.UP * 2.2 + Vector3(fwd.z, 0, -fwd.x) * 1.5
+			cam.look_at(n.global_position + fwd * 6.0 + Vector3.UP * 0.8)
 		cam.make_current()
 		var dir := ""
 		for a in OS.get_cmdline_user_args():
@@ -122,6 +133,8 @@ func _test(dt: float, me: Node3D) -> void:
 		await RenderingServer.frame_post_draw
 		if dir != "":
 			get_viewport().get_texture().get_image().save_jpg(dir + "/walkers.jpg", 0.88)
+		if crossing:
+			print("WALKERS picture of one %s" % best["state"])
 		print("WALKERS picture behind one %.0f m from Karthik" % bd)
 		get_tree().quit()
 
@@ -218,7 +231,7 @@ func _gather(at: Vector3) -> void:
 				continue
 			_strips.append({"p": pts, "c": cum, "hw": float(wk[1]) * 0.5, "road_right": (int(wk[0]) & 4) != 0})
 	for q in people:                                   # (the strip numbers have changed: each keeps its own place)
-		if q["state"] != "off" and q.has("pts"):
+		if q["state"] != "off" and q["state"] != "cross" and q.has("pts"):
 			var best := -1
 			for j in _strips.size():
 				if _strips[j]["p"] == q["pts"]:
@@ -319,6 +332,44 @@ func _think(q: Dictionary, i: int, dt: float, me: Node3D, on_foot: bool, vel: Ve
 					_anim(q, "Talk", 1.0)
 					_anim(o, "Idle", 0.9)
 					return
+		"kerb":                                          # at the kerb: a look each way, go when it's clear
+			var cr: Dictionary = q["cross"]
+			cr["looks"] = float(cr["looks"]) + dt
+			var over: Vector3 = cr["to"] - cr["from"]
+			var face := atan2(over.x, over.z)
+			q["want"] = face + sin(float(cr["looks"]) * 1.6) * 0.9   # (left, right, left)
+			if float(cr["looks"]) > 1.8 and _clear_to_cross(cr["from"], cr["to"], me, on_foot):
+				q["state"] = "cross"
+				q["want"] = face
+				_anim(q, "Walk", float(q["speed"]) * 1.15 / STRIDE)
+			elif float(q["timer"]) <= 0.0:                # nothing but traffic: back the way they came
+				gave_up += 1
+				q["state"] = "pause"
+				q["timer"] = 1.0
+				q["dir"] = -float(q["dir"])
+				q["want"] = float(q["yaw"]) + PI
+		"cross":
+			var cr2: Dictionary = q["cross"]
+			var to: Vector3 = cr2["to"]
+			var dd := Vector2(to.x - node.global_position.x, to.z - node.global_position.z)
+			if dd.length() < 0.4:                         # over: on along the far footpath (found again by its points:
+				var j := -1                               #  the strips are gathered afresh every 2 s)
+				for k in _strips.size():
+					if _strips[k]["p"] == cr2["pts"]:
+						j = k
+						break
+				if j < 0:
+					q["state"] = "off"
+					node.visible = false
+					return
+				crossed += 1
+				q["strip"] = j
+				q["pts"] = cr2["pts"]
+				q["s"] = cr2["s"]
+				q["dir"] = cr2["dir"]
+				q["side"] = _road_side(_strips[j])
+				q["state"] = "walk"
+				_anim(q, "Walk", float(q["speed"]) / STRIDE)
 		"pause":
 			if float(q["timer"]) <= 0.0:
 				q["state"] = "walk"
@@ -337,6 +388,16 @@ func _think(q: Dictionary, i: int, dt: float, me: Node3D, on_foot: bool, vel: Ve
 func _move(q: Dictionary, dt: float) -> void:
 	var node: Node3D = q["node"]
 	if q["strip"] < 0 or q["strip"] >= _strips.size():
+		return
+	if q["state"] == "cross":                            # straight over the road
+		var cr: Dictionary = q["cross"]
+		var to: Vector3 = cr["to"]
+		node.global_position = node.global_position.move_toward(to, float(q["speed"]) * 1.15 * dt)
+		var y: float = city.streamer.height_at(node.global_position.x, node.global_position.z)
+		if not is_nan(y):
+			node.global_position.y = y
+		q["yaw"] = rotate_toward(float(q["yaw"]), float(q["want"]), dt * 3.2)
+		node.rotation.y = q["yaw"]
 		return
 	var st: Dictionary = _strips[q["strip"]]
 	var total: float = st["c"][st["c"].size() - 1]
@@ -362,14 +423,30 @@ func _on_end(q: Dictionary, st: Dictionary, total: float) -> void:
 	var at_end: bool = float(q["s"]) > total
 	var here: Vector3 = st["p"][st["p"].size() - 1] if at_end else st["p"][0]
 	var opts: Array = []
+	var across: Array = []                               # footpaths across the road from here
 	for j in _strips.size():
 		if j == q["strip"]:
 			continue
 		var o: Dictionary = _strips[j]
+		for e in [[0, 0.0, 1.0], [o["p"].size() - 1, float(o["c"][o["c"].size() - 1]), -1.0]]:
+			var dd := (o["p"][e[0]] as Vector3).distance_to(here)
+			if dd > 6.0 and dd < 22.0 and absf((o["p"][e[0]] as Vector3).y - here.y) < 1.0:
+				across.append([j, e[1], e[2], o["p"][e[0]]])
 		if (o["p"][0] as Vector3).distance_to(here) < 3.0:
 			opts.append([j, 0.0, 1.0])
 		elif (o["p"][o["p"].size() - 1] as Vector3).distance_to(here) < 3.0:
 			opts.append([j, float(o["c"][o["c"].size() - 1]), -1.0])
+	var p_cross := 1.0 if "--crosstest" in OS.get_cmdline_user_args() else (0.55 if opts.is_empty() else 0.3)
+	if not across.is_empty() and _rng.randf() < p_cross:
+		var c: Array = across[_rng.randi() % across.size()]
+		q["s"] = clampf(float(q["s"]), 0.0, total)
+		q["state"] = "kerb"
+		q["timer"] = 20.0
+		q["cross"] = {"from": _at(st, float(q["s"])), "to": c[3], "pts": _strips[c[0]]["p"], "s": c[1], "dir": c[2], "looks": 0.0}
+		var d: Vector3 = c[3] - _at(st, float(q["s"]))
+		q["want"] = atan2(d.x, d.z)
+		_anim(q, "Idle", 1.0)
+		return
 	if opts.is_empty():
 		q["dir"] = -float(q["dir"])
 		q["s"] = clampf(float(q["s"]), 0.0, total)
@@ -384,6 +461,20 @@ func _on_end(q: Dictionary, st: Dictionary, total: float) -> void:
 	q["s"] = pick[1]
 	q["dir"] = pick[2]
 	q["side"] = _road_side(_strips[pick[0]])
+
+
+## Nothing coming: no vehicle within 28 m of the crossing that's moving (city_traffic.gd's, and his car when he
+## drives it); a car standing still lets them by.
+func _clear_to_cross(a: Vector3, b: Vector3, me: Node3D, on_foot: bool) -> bool:
+	var mid := (a + b) * 0.5
+	if city.get("traffic") and city.traffic:
+		for v in city.traffic.vehicles:
+			var p: Vector3 = v["pos"]
+			if p.distance_to(mid) < 28.0 and float(v.get("speed", 0.0)) > 1.0:
+				return false
+	if not on_foot and city.car and city.car.global_position.distance_to(mid) < 28.0 and absf(city.car.speed) > 1.0:
+		return false
+	return true
 
 
 func _anim(q: Dictionary, name: String, speed: float) -> void:

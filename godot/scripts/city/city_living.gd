@@ -46,12 +46,15 @@ func _process(dt: float) -> void:
 func _tick(dt: float) -> void:
 	if city == null or city.streamer == null:
 		return
-	var off: bool = city.walker == null or city.get("indoors") or (city.story != null and city.story.room != null) \
+	var view_test := "--livingview" in OS.get_cmdline_user_args()   # (testing: round the free camera, a fixed view)
+	var off: bool = (city.walker == null and not view_test) or city.get("indoors") or "--livingbench" in OS.get_cmdline_user_args() or (city.story != null and city.story.room != null) \
 		or "--noliving" in OS.get_cmdline_user_args()      # (on foot is a walker; in the car there's none)
-	if "--livingtest" in OS.get_cmdline_user_args() and city.walker == null and Time.get_ticks_msec() > 8000 and not has_meta("out") \
+	if ("--livingtest" in OS.get_cmdline_user_args() or "--livingbench" in OS.get_cmdline_user_args()) and city.walker == null and Time.get_ticks_msec() > 8000 and not has_meta("out") \
 			and city.car and city.car.global_position.y < 550.0 and absf(city.car.speed) < 0.5:   # (the car set down first)
 		set_meta("out", true)                             # (testing: out of the car, on the footpath)
 		print("LIVING out of the car: %s, driving %s" % [city.toggle_on_foot(), city.driving])
+	if "--livingbench" in OS.get_cmdline_user_args() and city.walker != null:
+		_test(dt)
 	if off:
 		_foot_t = 0.0
 		if not live.is_empty() or not hidden.is_empty():
@@ -67,19 +70,28 @@ func _tick(dt: float) -> void:
 		_behave(live[key], dt)
 	if "--livingtest" in OS.get_cmdline_user_args():
 		_test(dt)
+	elif "--livingbench" in OS.get_cmdline_user_args():   # (testing: the same report with the people off)
+		_test(dt)
 
 
 ## (testing) --livingtest: every 5 s how many are alive and hidden, the frame rate; at 26 s a picture (--shots=DIR).
 var _tt := 0.0
+var _acc_t := 0.0
+var _acc_n := 0
 var _tl := 0.0
 func _test(dt: float) -> void:
 	_tt += dt
 	_tl += dt
+	if _tt > 12.0:
+		_acc_t += dt
+		_acc_n += 1
 	if _tl >= 5.0:
 		_tl = 0.0
 		var talking := 0
 		for k in live:
 			talking += 1 if live[k]["mate"] != "" else 0
+		if _acc_n > 0:
+			print("LIVING average since 12 s: %.1f fps (%.1f ms)" % [_acc_n / _acc_t, _acc_t * 1000.0 / _acc_n])
 		print("LIVING t=%.0f live %d (talking %d) hidden %d, budget %d, nearest figure left %.0f m, %.0f fps" % [_tt, live.size(),
 			talking, hidden.size(), _budget(), _nearest, Engine.get_frames_per_second()])
 	if _tt > 22.0 and not has_meta("shot"):
@@ -96,7 +108,7 @@ func _budget() -> int:
 
 ## Who's near: swap the near ones in (nearest first, within the budget), put the far ones back.
 func _scan() -> void:
-	var me: Vector3 = city.walker.global_position
+	var me: Vector3 = city.walker.global_position if city.walker else get_viewport().get_camera_3d().global_position
 	var cam := get_viewport().get_camera_3d()
 	var names: Array = city.streamer.life_names
 	var seen := {}
