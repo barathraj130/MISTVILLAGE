@@ -5,7 +5,8 @@ extends Node3D
 ## his sight where it can be, and walking them, each at their own pace (the Walk clip played to it: a cycle covers
 ## 1.25 m), a little to one side of the path; at a path's end, on along the next one that starts there, or turning
 ## back; turning smoothly, never in a snap. What they do:
-##   walk       on along the footpath
+##   walk       on along the footpath (one in eight with a phone to the ear, one in eight with a shopping bag:
+##              crowd_clips.gd)
 ##   pause      stop a few seconds, look about (a slow turn), and go on
 ##   talk       two who meet stop and talk a while (one talks, the other listens, then the other way round)
 ##   aside      Karthik walking straight at one: a step to the other side of the path, and on
@@ -22,6 +23,7 @@ extends Node3D
 const CROWD := "res://assets/people/crowd_%s.glb"
 const KINDS := ["m1", "m2", "m3", "m4", "m5", "m6", "w1", "w2", "w3", "w4", "w5", "w6"]
 const STRIDE := 1.25
+const CrowdClips := preload("res://scripts/city/crowd_clips.gd")
 const SPAWN_MIN := 35.0
 const SPAWN_MAX := 85.0
 const NEAR := 50.0
@@ -60,6 +62,11 @@ func _ready() -> void:
 		for a in ["Walk", "Idle", "Talk", "Run"]:
 			if ap.has_animation(a):
 				ap.get_animation(a).loop_mode = Animation.LOOP_LINEAR
+		var habit := ""                                  # one in eight on the phone as they go, one in eight with a bag
+		if CrowdClips.add(node, kk.left(1)):
+			habit = ["phone", "bag", "", "", "", "", "", ""][i % 8]
+			CrowdClips.hold(node, habit)
+		node.set_meta("habit", habit)
 		for m in node.find_children("*", "MeshInstance3D", true, false):
 			(m as MeshInstance3D).cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 		node.scale = Vector3.ONE * _rng.randf_range(0.95, 1.04)
@@ -106,6 +113,8 @@ func _test(dt: float, me: Node3D) -> void:
 		var best: Dictionary = {}
 		var bd := INF
 		for q in people:
+			if "--habittest" in OS.get_cmdline_user_args() and (q["state"] != "walk" or (q["node"] as Node).get_meta("habit", "") == ""):
+				continue                                 # (testing: one on the phone or with a bag)
 			if q["state"] == ("cross" if crossing and people.any(func(o): return o["state"] == "cross") else ("kerb" if crossing else "walk")):
 				var dd: float = (q["node"] as Node3D).global_position.distance_to(me.global_position)
 				if dd < bd:
@@ -124,6 +133,9 @@ func _test(dt: float, me: Node3D) -> void:
 		else:
 			cam.global_position = n.global_position - fwd * 5.5 + Vector3.UP * 2.2 + Vector3(fwd.z, 0, -fwd.x) * 1.5
 			cam.look_at(n.global_position + fwd * 6.0 + Vector3.UP * 0.8)
+			if "--habittest" in OS.get_cmdline_user_args():   # (from the front and side: the hand and what's in it)
+				cam.global_position = n.global_position + fwd * 3.2 + Vector3(fwd.z, 0, -fwd.x) * -1.6 + Vector3.UP * 1.6
+				cam.look_at(n.global_position + Vector3.UP * 1.1)
 		cam.make_current()
 		var dir := ""
 		for a in OS.get_cmdline_user_args():
@@ -479,6 +491,11 @@ func _clear_to_cross(a: Vector3, b: Vector3, me: Node3D, on_foot: bool) -> bool:
 
 func _anim(q: Dictionary, name: String, speed: float) -> void:
 	var ap: AnimationPlayer = q["ap"]
+	var habit: String = (q["node"] as Node).get_meta("habit", "")   # (on the phone, or with a bag: their own clips)
+	if habit == "phone" and name in ["Walk", "Idle"]:
+		name = "crowd/WalkPhone" if name == "Walk" else "crowd/Phone"
+	elif habit == "bag" and name == "Walk":
+		name = "crowd/WalkCarry"
 	if not ap.has_animation(name):
 		name = "Idle" if ap.has_animation("Idle") else ap.get_animation_list()[0]
 	if q["anim"] != name:

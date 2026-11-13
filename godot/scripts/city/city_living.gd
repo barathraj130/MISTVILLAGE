@@ -5,6 +5,7 @@ extends Node
 ## a man for a man, a woman for a woman), on the same spot, facing the same way, alive:
 ##   idle    breathing and shifting their weight (their Idle, each at its own pace and point), now and then a slow
 ##           look to one side and back
+##   phone   a quarter of them on the phone, the phone to the ear or looked at in the hand (crowd_clips.gd)
 ##   talk    two standing within a couple of metres of each other turn to each other and talk by turns
 ## Figures caught mid-stride (the walking ones) are only hidden near him (city_walkers.gd walks people there); the
 ## traffic police and the riders on parked bikes stay as they are. Past ~55 m the figure is put back. Swaps are made
@@ -14,6 +15,7 @@ extends Node
 
 const Prof := preload("res://scripts/drive/prof.gd")
 const Graphics := preload("res://scripts/graphics.gd")
+const CrowdClips := preload("res://scripts/city/crowd_clips.gd")
 const NEAR := 40.0
 const FAR := 55.0
 const SEEN_OK := 30.0                                  # beyond this a swap in view isn't noticed
@@ -202,7 +204,12 @@ func _bring(key: String, mms: Array, i: int, xf: Transform3D, nm: String) -> voi
 	var yaw := atan2(b.z.x, b.z.z)
 	n.global_transform = Transform3D(Basis(Vector3.UP, yaw), xf.origin)
 	var a := n.find_children("*", "AnimationPlayer", true, false)[0] as AnimationPlayer
-	a.play("Idle")
+	var stand := "Idle"                                  # a quarter of them on the phone, or looking at it
+	if CrowdClips.add(n, sex) and randf() < 0.25:
+		stand = "crowd/Phone" if randf() < 0.5 else "crowd/PhoneLook"
+	CrowdClips.hold(n, "phone" if stand != "Idle" else "")
+	n.set_meta("stand", stand)
+	a.play(stand)
 	a.seek(randf() * a.current_animation_length, true)
 	a.speed_scale = randf_range(0.85, 1.15)
 	_set_xf(mms, i, Transform3D(Basis().scaled(Vector3.ZERO), xf.origin))
@@ -269,7 +276,9 @@ func _behave(p: Dictionary, dt: float) -> void:
 					live[mate]["mode"] = "talk" if p["mode"] == "listen" else "listen"
 					live[mate]["t"] = 99.0
 				p["t"] = randf_range(3.0, 6.0)
-		var want := "Talk" if p["mode"] == "talk" else "Idle"
+		var want := "Talk" if p["mode"] == "talk" else str((p["node"] as Node).get_meta("stand", "Idle"))
+		if p["mode"] in ["talk", "listen"] and want != "Talk":
+			want = "Idle"
 		var a: AnimationPlayer = p["anim"]
 		if a.current_animation != want:
 			a.play(want, 0.4)
