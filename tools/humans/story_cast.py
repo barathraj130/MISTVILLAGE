@@ -71,13 +71,18 @@ def clear():
 
 
 # brows and lashes drawn from a texture with alpha, not as strands of geometry (in a close-up on Low's half-resolution
-# render the strands broke up into dots): Karthik, who has close-ups
-TEXTURED_LASHES = ("karthik",)
+# render the strands broke up into dots): the whole cast, who all have close-ups in talk; the strand brows swapped for
+# textured ones
+TEXTURED_LASHES = ("karthik", "raghavan", "suresh", "amma", "divya", "clerk", "cook", "ashwin", "muniyandi", "murugesan",
+                   "selvi", "sundaram")
+BROW_SWAP = {"mindfront_eyebrows_03": "eyebrow004", "mindfront_eyebrows_08": "eyebrow010", "mindfront_eyebrows_10": "eyebrow010"}
 
 
 def build(c):
     """One cast member, rigged (the street people's build() without baking the pose away)."""
     key, g, yrs, w, mu, hgt, skin, hair, brows, outfit, colour, seed = c
+    if key in TEXTURED_LASHES:
+        brows = BROW_SWAP.get(brows, brows)
     rng = random.Random(seed)
     h = SP.HS.create_human()
     h.name = key
@@ -887,7 +892,7 @@ def face_rig(arm, objs):
         return kd, np.array(ids)
     follow = {"teeth": ["helper-upper-teeth", "helper-lower-teeth"], "tongue": ["helper-tongue"],
               "eyelash": ["helper-l-eyelashes-1", "helper-l-eyelashes-2", "helper-r-eyelashes-1", "helper-r-eyelashes-2"],
-              "eyebrow": []}
+              "eyebrow": [], "moustache": []}
     for o in objs:
         kind = next((k for k in follow if o.type == 'MESH' and o is not h and k in o.name.lower()), None)
         if kind is None:
@@ -984,7 +989,7 @@ def export(arm, objs, path):
     bpy.ops.export_scene.gltf(filepath=path, export_format='GLB', use_selection=True, export_apply=True,
                               export_yup=True, export_skins=True, export_animations=True,
                               export_animation_mode='NLA_TRACKS',
-                              export_image_format='AUTO' if os.path.basename(path)[6:-4] in TEXTURED_LASHES else 'JPEG')
+                              export_image_format='WEBP' if os.path.basename(path)[6:-4] in TEXTURED_LASHES else 'JPEG')
     tris = sum(sum(len(p.vertices) - 2 for p in o.data.polygons) for o in objs if o.type == 'MESH')
     print("CAST", os.path.basename(path), "tris %d, %.1f MB" % (tris, os.path.getsize(path) / 1e6), flush=True)
 
@@ -1075,7 +1080,7 @@ def main():
         if "--walkstrip" in args:                          # (look at the walk first, export nothing)
             walk_strip(arm, objs, os.path.abspath(args[args.index("--walkstrip") + 1]))
             continue
-        if c[0] == "karthik":                              # (his face moves: blinks, the jaw, the lips)
+        if c[0] in TEXTURED_LASHES:                       # (their faces move: blinks, the jaw, the lips)
             objs = face_rig(arm, objs)
         animate(arm)
         export(arm, objs, os.path.abspath(os.path.join(OUT, "story_%s.glb" % c[0])))
