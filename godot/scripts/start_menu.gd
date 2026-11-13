@@ -1,12 +1,26 @@
 extends Control
-## Title screen: drive up from Coimbatore, or start straight at The Mist Village.
-## Keyboard: ↑/↓ to choose, Enter to start. Mouse works too.
+## Title screen: Continue, New game, Settings, Credits, Quit, in a column down the left (the background picture
+## carries the title). Keyboard: ↑/↓ to choose, Enter to start. Mouse works too.
+## --dev adds the test starts: the drive up from Coimbatore and the resort alone.
 
 const DRIVE_SCENE := "res://scenes/drive.tscn"
 const RESORT_SCENE := "res://scenes/main.tscn"
 const BACKGROUND := "res://assets/ui/menu_background.jpg"
+const Style := preload("res://scripts/ui/hud_style.gd")
+const SettingsScreen := preload("res://scripts/ui/settings_screen.gd")
+const CREDITS := [
+	["Road map data", "© OpenStreetMap contributors (ODbL)"],
+	["Elevation", "SRTM / Mapzen terrain tiles"],
+	["Textures", "ambientCG (CC0)"],
+	["Models", "Poly Haven, Kenney (CC0)"],
+	["People", "MakeHuman / MPFB2 (CC0 assets)"],
+	["Type", "Inter and Noto Sans Tamil (SIL Open Font License)"],
+	["Engine", "Godot Engine (MIT)"],
+]
 
 var _buttons: Array = []
+var _box: VBoxContainer
+var _new_armed := false
 
 
 func _ready() -> void:
@@ -22,7 +36,7 @@ func _ready() -> void:
 	bg.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	bg.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
 	bg.set_anchors_preset(Control.PRESET_FULL_RECT)
-	bg.modulate = Color(0.75, 0.75, 0.78)
+	bg.modulate = Color(0.88, 0.88, 0.9)
 	add_child(bg)
 	# slow drift so the title screen feels alive
 	var tw := create_tween().set_loops()
@@ -31,76 +45,118 @@ func _ready() -> void:
 	bg.pivot_offset = get_viewport_rect().size * 0.5
 
 	var shade := ColorRect.new()
-	shade.color = Color(0.0, 0.0, 0.0, 0.35)
+	shade.color = Color(0.0, 0.0, 0.0, 0.12)
 	shade.set_anchors_preset(Control.PRESET_FULL_RECT)
 	add_child(shade)
 
+	var k := Style.s(self)
+	theme = SettingsScreen.make_theme(k)
 	var box := VBoxContainer.new()
-	box.set_anchors_preset(Control.PRESET_CENTER)
-	box.alignment = BoxContainer.ALIGNMENT_CENTER
-	box.add_theme_constant_override("separation", 14)
+	box.add_theme_constant_override("separation", int(12 * k))
+	box.position = Vector2(get_viewport_rect().size.x * 0.06, get_viewport_rect().size.y * 0.42)
 	add_child(box)
-	_text(box, "THE MIST VILLAGE", 64, Color(0.98, 0.93, 0.84))
-	_text(box, "K O T A G I R I   ·   N I L G I R I S", 18, Color(0.9, 0.86, 0.78))
-	_text(box, "Where the mist slows you down.", 20, Color(0.9, 0.88, 0.82))
-	var gap := Control.new()
-	gap.custom_minimum_size = Vector2(0, 30)
-	box.add_child(gap)
-	if FileAccess.file_exists("user://savegame.json"):
-		_button(box, "Continue your journey", "Pick up where you saved (F5, or automatically every few minutes)",
-			func():
-				Engine.set_meta("continue_game", true)
-				_go(DRIVE_SCENE))
-	if FileAccess.file_exists("user://story_save.json"):
-		_button(box, "Continue the story", "From the morning it was last saved (every morning, after a night's sleep)",
+	_box = box
+	var story_save := FileAccess.file_exists("user://story_save.json")
+	if story_save:
+		_button(box, "Continue", "From the morning it was last saved (every morning, after a night's sleep)",
 			func():
 				Engine.set_meta("story", true)
 				Engine.set_meta("story_continue", true)
 				_go("res://scenes/city_test.tscn"))
-	_button(box, "Story", "Part 1, The Wrong Accusation, from the beginning. Enter: next line, T: English / தமிழ்",
-		func():
-			Engine.set_meta("story", true)
-			_go("res://scenes/city_test.tscn"))
-	_button(box, "Drive up from Coimbatore", "The real road via NH181 and the Kotagiri ghat, ending at your resort. Get out and walk in",
-		func(): _go(DRIVE_SCENE))
-	_button(box, "Start at The Mist Village", "Just the resort, with its intro film and day/night",
-		func(): _go(RESORT_SCENE))
+	_button(box, "New game", "Part 1, The Wrong Accusation, from the beginning", func():
+		if story_save and not _new_armed:          # (starting over replaces the saved story at the first morning)
+			_new_armed = true
+			_buttons[1].text = "Start over? Press again"
+			return
+		Engine.set_meta("story", true)
+		_go("res://scenes/city_test.tscn"))
+	if "--dev" in OS.get_cmdline_user_args():
+		if FileAccess.file_exists("user://savegame.json"):
+			_button(box, "Continue the drive", "", func():
+				Engine.set_meta("continue_game", true)
+				_go(DRIVE_SCENE))
+		_button(box, "Drive up from Coimbatore", "", func(): _go(DRIVE_SCENE))
+		_button(box, "The Mist Village (resort)", "", func(): _go(RESORT_SCENE))
+	_button(box, "Settings", "", _open_settings)
+	_button(box, "Credits", "", _open_credits)
 	_button(box, "Quit", "", func(): get_tree().quit())
 	_buttons[0].grab_focus()
 	_test_hooks()
 
-	var credit := Label.new()
-	credit.text = "Road map data © OpenStreetMap contributors (ODbL) · Elevation: SRTM / Mapzen terrain tiles · Textures: ambientCG · Models: Poly Haven, Kenney (CC0)"
-	credit.add_theme_font_size_override("font_size", 12)
-	credit.add_theme_color_override("font_color", Color(1, 1, 1, 0.6))
-	add_child(credit)
-	credit.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_LEFT, Control.PRESET_MODE_MINSIZE, 16)
+
+func _open_settings() -> void:
+	_box.visible = false
+	var st := SettingsScreen.new()
+	st.closed.connect(func():
+		_box.visible = true
+		_buttons[_buttons.size() - 3].grab_focus())
+	add_child(st)
 
 
-func _text(parent: Control, t: String, size: int, col: Color) -> Label:
-	var l := Label.new()
-	l.text = t
-	l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	l.add_theme_font_size_override("font_size", size)
-	l.add_theme_color_override("font_color", col)
-	l.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.6))
-	l.add_theme_constant_override("outline_size", 6)
-	parent.add_child(l)
-	return l
+func _open_credits() -> void:
+	_box.visible = false
+	var k := Style.s(self)
+	var layer := Control.new()
+	layer.set_anchors_preset(Control.PRESET_FULL_RECT)
+	add_child(layer)
+	var scrim := ColorRect.new()
+	scrim.color = Color(0, 0, 0, 0.6)
+	scrim.set_anchors_preset(Control.PRESET_FULL_RECT)
+	layer.add_child(scrim)
+	var panel := PanelContainer.new()
+	layer.add_child(panel)
+	var m := MarginContainer.new()
+	for side in ["left", "right", "top", "bottom"]:
+		m.add_theme_constant_override("margin_" + side, int(36 * k))
+	panel.add_child(m)
+	var v := VBoxContainer.new()
+	v.add_theme_constant_override("separation", int(12 * k))
+	m.add_child(v)
+	var t := Label.new()
+	t.text = "Credits"
+	t.add_theme_font_size_override("font_size", int(34 * k))
+	t.add_theme_font_override("font", Style.font(600))
+	v.add_child(t)
+	var g := GridContainer.new()
+	g.columns = 2
+	g.add_theme_constant_override("h_separation", int(36 * k))
+	g.add_theme_constant_override("v_separation", int(10 * k))
+	v.add_child(g)
+	for row in CREDITS:
+		var a := Label.new()
+		a.text = row[0]
+		a.add_theme_color_override("font_color", Style.DIM)
+		g.add_child(a)
+		var b := Label.new()
+		b.text = row[1]
+		g.add_child(b)
+	var back := Button.new()
+	back.text = "Back"
+	back.custom_minimum_size = Vector2(200 * k, 48 * k)
+	back.size_flags_horizontal = Control.SIZE_SHRINK_END
+	v.add_child(back)
+	var close := func():
+		layer.queue_free()
+		_box.visible = true
+		_buttons[_buttons.size() - 2].grab_focus()
+	back.pressed.connect(close)
+	back.grab_focus()
+	panel.reset_size()
+	panel.position = (get_viewport_rect().size - panel.size) * 0.5
 
 
 func _button(parent: Control, title: String, hint: String, action: Callable) -> void:
+	var k := Style.s(self)
 	var b := Button.new()
 	b.text = title
-	b.custom_minimum_size = Vector2(440, 54)
-	b.add_theme_font_size_override("font_size", 22)
+	b.alignment = HORIZONTAL_ALIGNMENT_LEFT
+	b.custom_minimum_size = Vector2(380 * k, 54 * k)
+	b.add_theme_font_size_override("font_size", int(23 * k))
+	b.add_theme_font_override("font", Style.font(500))
 	b.tooltip_text = hint
 	b.pressed.connect(action)
 	parent.add_child(b)
 	_buttons.append(b)
-	if hint != "":
-		var h := _text(parent, hint, 13, Color(0.92, 0.9, 0.85, 0.85))
-		h.custom_minimum_size = Vector2(440, 0)
 
 
 ## (testing an exported build, which can't be given a scene on the command line) --menushot=FILE: a picture of
@@ -108,6 +164,10 @@ func _button(parent: Control, title: String, hint: String, action: Callable) -> 
 func _test_hooks() -> void:
 	for a in OS.get_cmdline_user_args():
 		if a.begins_with("--menushot="):
+			if "--menuopen=settings" in OS.get_cmdline_user_args():
+				_open_settings()
+			elif "--menuopen=credits" in OS.get_cmdline_user_args():
+				_open_credits()
 			await get_tree().create_timer(2.0).timeout
 			await RenderingServer.frame_post_draw
 			get_viewport().get_texture().get_image().save_jpg(a.get_slice("=", 1), 0.85)

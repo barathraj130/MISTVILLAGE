@@ -74,7 +74,7 @@ var car
 var map
 var hud
 var fines
-var lang := "ta" if OS.get_locale_language() == "ta" else "en"
+var lang: String = preload("res://scripts/settings.gd").lang()   # (the settings screen's choice, else the computer's)
 var data := {}
 var step := -1
 var cur := {}

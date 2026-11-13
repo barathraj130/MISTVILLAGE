@@ -10,6 +10,8 @@ extends Node3D
 const Prof := preload("res://scripts/drive/prof.gd")
 const Streamer := preload("res://scripts/city/city_streamer.gd")
 const Graphics := preload("res://scripts/graphics.gd")
+const Grade := preload("res://scripts/city/grade.gd")
+const Settings := preload("res://scripts/settings.gd")
 const CityWalkers := preload("res://scripts/city/city_walkers.gd")
 const CityActivity := preload("res://scripts/city/city_activity.gd")
 const MB := preload("res://scripts/drive/mesh_builder.gd")
@@ -616,6 +618,8 @@ func _daylight() -> void:
 	else:
 		sun.light_color = Color(0.55, 0.65, 1.0)
 		sun.light_energy = 0.07                      # (a city's moon: the street lamps light the street, not it)
+	if "--grade" in OS.get_cmdline_user_args():      # the look by the hour (grade.gd; on trial, waiting for approval)
+		Grade.apply(env, sun, sd, day, dusk, night, cloud, fmod(sim.minute / 60.0, 24.0))
 	sun.shadow_enabled = sun.light_energy > 0.2 and not "--noshadow" in OS.get_cmdline_user_args()
 	if car:
 		car.night = 1.0 - day
@@ -1561,6 +1565,8 @@ func _process_timed(dt: float) -> void:
 						RenderingServer.get_rendering_info(RenderingServer.RENDERING_INFO_TOTAL_DRAW_CALLS_IN_FRAME)])
 					print("VIEWBENCH tiles: %d set up, %.1f ms each on average, worst %.1f ms" % [int(streamer.stats.get("inst_n", 0)),
 						float(streamer.stats.get("inst_ms", 0.0)) / maxi(int(streamer.stats.get("inst_n", 0)), 1), float(streamer.stats.get("inst_max", 0.0))])
+					if shots_dir != "":                   # (and the picture of it)
+						get_viewport().get_texture().get_image().save_jpg(shots_dir + "/view.jpg", 0.85)
 					get_tree().quit()
 				return
 			if shots_dir != "":
@@ -1749,8 +1755,8 @@ func _log_and_shots(dt: float) -> void:
 func _unhandled_input(e: InputEvent) -> void:
 	if car and driving and e is InputEventMouseMotion and (Input.is_mouse_button_pressed(MOUSE_BUTTON_RIGHT)
 			or Input.mouse_mode == Input.MOUSE_MODE_CAPTURED):
-		_orbit.x = clampf(_orbit.x - e.relative.x * 0.004, -PI, PI)
-		_orbit.y = clampf(_orbit.y - e.relative.y * 0.003, -0.25, 0.5)
+		_orbit.x = clampf(_orbit.x - e.relative.x * 0.004 * Settings.look(), -PI, PI)
+		_orbit.y = clampf(_orbit.y - e.relative.y * 0.003 * Settings.look(), -0.25, 0.5)
 		_orbit_idle = 0.0
 		return
 	if car and driving and e is InputEventJoypadButton and e.pressed and e.button_index == JOY_BUTTON_Y:
@@ -1783,7 +1789,7 @@ func _unhandled_input(e: InputEvent) -> void:
 	if e is InputEventMouseButton and e.pressed:
 		Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
 	elif e is InputEventMouseMotion and Input.mouse_mode == Input.MOUSE_MODE_CAPTURED:
-		yaw -= e.relative.x * 0.003
-		pitch = clampf(pitch - e.relative.y * 0.003, -1.3, 1.3)
+		yaw -= e.relative.x * 0.003 * Settings.look()
+		pitch = clampf(pitch - e.relative.y * 0.003 * Settings.look(), -1.3, 1.3)
 	elif e is InputEventKey and e.pressed and e.keycode == KEY_ESCAPE:
 		Input.mouse_mode = Input.MOUSE_MODE_VISIBLE

@@ -6,6 +6,7 @@ extends CharacterBody3D
 ## person's pace (slowing to turn sharply, leaning a little into a curve), stands facing where it
 ## stopped while you look about, and rises onto a step rather than jumping up it.
 const Prof := preload("res://scripts/drive/prof.gd")
+const Settings := preload("res://scripts/settings.gd")
 
 const STEP_HEIGHT := 0.35          # stone steps and kerbs are 15–25 cm
 
@@ -127,8 +128,8 @@ func _unhandled_input(event: InputEvent) -> void:
 	if not active:
 		return
 	if event is InputEventMouseMotion and Input.mouse_mode == Input.MOUSE_MODE_CAPTURED:
-		rotation.y -= event.relative.x * mouse_sensitivity
-		_pitch = clampf(_pitch - event.relative.y * mouse_sensitivity, -1.45, 1.45)
+		rotation.y -= event.relative.x * mouse_sensitivity * Settings.look()
+		_pitch = clampf(_pitch - event.relative.y * mouse_sensitivity * Settings.look(), -1.45, 1.45)
 		head.rotation.x = _pitch
 	elif InputMap.has_action("camera_view") and event.is_action_pressed("camera_view"):
 		_set_view(not third_person)

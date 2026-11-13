@@ -110,8 +110,9 @@ static func apply(vp: Viewport, env: Environment, sun: DirectionalLight3D) -> vo
 		p["ssao"], float(p["lod"])])
 
 
-## The window as saved: fullscreen or not, VSync on or off (on by default).
+## The window as saved: fullscreen or not, VSync on or off (on by default); and the volume (settings.gd).
 static func apply_window() -> void:
+	preload("res://scripts/settings.gd").apply_audio()
 	var cf := ConfigFile.new()
 	if cf.load(CFG) != OK:
 		return

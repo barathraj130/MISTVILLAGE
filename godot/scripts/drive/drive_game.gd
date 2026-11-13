@@ -10,6 +10,7 @@ extends Node3D
 const Route := preload("res://scripts/drive/route.gd")
 const Terrain := preload("res://scripts/drive/terrain.gd")
 const Graphics := preload("res://scripts/graphics.gd")
+const Settings := preload("res://scripts/settings.gd")
 const Road := preload("res://scripts/drive/road.gd")
 const Props := preload("res://scripts/drive/props.gd")
 const Traffic := preload("res://scripts/drive/traffic.gd")
@@ -146,9 +147,7 @@ func _ready() -> void:
 		if a.begins_with("--timescale="):
 			Engine.time_scale = float(a.get_slice("=", 1))
 	_setup_input()
-	var cf := ConfigFile.new()
-	if cf.load("user://settings.cfg") == OK:
-		Jeep.steer_sens = float(cf.get_value("driving", "steer_sens", Jeep.steer_sens))
+	Jeep.steer_sens = float(Settings.get_value("driving", "steer_sens", Jeep.steer_sens))
 	_build_ui()
 	await _build_world()
 	_start()
@@ -1137,8 +1136,8 @@ var _bench_hidden := false
 ## Cockpit head look with the mouse (captured while you're in the cockpit view).
 func _unhandled_input(ev: InputEvent) -> void:
 	if ev is InputEventMouseMotion and cam_mode == 1 and walker == null and Input.mouse_mode == Input.MOUSE_MODE_CAPTURED:
-		_head_yaw = clampf(_head_yaw - ev.relative.x * 0.0035, -2.3, 2.3)
-		_head_pitch = clampf(_head_pitch - ev.relative.y * 0.0035, -0.7, 0.5)
+		_head_yaw = clampf(_head_yaw - ev.relative.x * 0.0035 * Settings.look(), -2.3, 2.3)
+		_head_pitch = clampf(_head_pitch - ev.relative.y * 0.0035 * Settings.look(), -0.7, 0.5)
 
 
 ## Rain beading on the windscreen in the inside views, cleared each time the wipers pass.
@@ -1328,9 +1327,7 @@ func _process(delta: float) -> void:
 		var dv := -0.1 if Input.is_action_just_pressed("steer_less") else 0.1
 		Jeep.steer_sens = clampf(snappedf(Jeep.steer_sens + dv, 0.1), 0.4, 1.5)
 		_message("Steering sensitivity %d%%  ( [ less · ] more )" % roundi(Jeep.steer_sens * 100.0), 2.5)
-		var cf := ConfigFile.new()
-		cf.set_value("driving", "steer_sens", Jeep.steer_sens)
-		cf.save("user://settings.cfg")
+		Settings.set_value("driving", "steer_sens", Jeep.steer_sens)   # (keeping the rest of settings.cfg)
 	if Input.is_action_just_pressed("look_center"):
 		_head_yaw = 0.0
 		_head_pitch = 0.0
