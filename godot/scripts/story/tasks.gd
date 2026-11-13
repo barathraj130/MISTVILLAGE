@@ -69,6 +69,8 @@ var _drag_item := ""
 var _meal_pick := -1                            # the dish chosen (-1: still reading the menu)
 var _eaten := {}
 var groom := preload("res://scripts/story/groom.gd").new()   # brushing and bathing as touch play
+var scene_chore: Node = null                    # a chore done in the 3D room instead (brush3d.gd): its can(), begin()
+var _away := false                              # …while it is: the panel hidden, the mouse the room's
 # otp
 var _code := ""
 var _keys: Array = []                           # [Rect2, label]
@@ -99,6 +101,7 @@ func start(k: String, s: Dictionary, language: String, testing := false) -> void
 		reached_cap = false
 		if not chores.is_empty() and chores[0] in ["brush", "bath"]:
 			groom.start(chores[0], _chore_rects()["area"], lang, self)
+		_hand_over()
 	if kind == "meal":
 		_meal_pick = -1 if not spec.get("home", false) else 0
 		_eaten = {}
@@ -201,6 +204,8 @@ func _phone() -> Rect2:
 
 # ---- input ----
 func _gui_input(e: InputEvent) -> void:
+	if _away:
+		return
 	if e is InputEventMouseMotion:
 		_mouse = e.position
 		if kind == "sign" or kind == "count":
@@ -274,7 +279,7 @@ func _gui_input(e: InputEvent) -> void:
 
 
 func _unhandled_key_input(e: InputEvent) -> void:
-	if not visible or not (e is InputEventKey) or not e.pressed:
+	if not visible or _away or not (e is InputEventKey) or not e.pressed:
 		return
 	if kind == "otp":
 		if e.keycode >= KEY_0 and e.keycode <= KEY_9:
@@ -422,6 +427,8 @@ func _process(dt: float) -> void:
 		bundles[_counting]["counted"] = minf(bundles[_counting]["counted"] + dt / 1.1, 1.0)
 		if bundles[_counting]["counted"] >= 1.0:
 			_counting = -1
+	if _away:
+		return
 	if kind == "ready" and chore < chores.size() and chores[chore] in ["brush", "bath"]:
 		groom.area = _chore_rects()["area"]               # (the window may have changed size)
 		groom.process(dt)
@@ -494,7 +501,7 @@ func _text(pos: Vector2, s: String, size: int, col: Color, w := -1.0, align := H
 
 
 func _draw() -> void:
-	if not visible:
+	if not visible or _away:
 		return
 	var vs := get_viewport_rect().size
 	if kind == "sign" or kind == "count":
@@ -923,6 +930,7 @@ func _next_chore() -> void:
 	stage_changed.emit()
 	if chore < chores.size() and chores[chore] in ["brush", "bath"]:
 		groom.start(chores[chore], _chore_rects()["area"], lang, self)
+	_hand_over()
 	if chore >= chores.size():
 		var res := {"minutes": minutes}                  # (only what this visit did: a later visit mustn't undo it)
 		if "dress" in chores:
@@ -931,6 +939,22 @@ func _next_chore() -> void:
 		if chores.size() == ALL_CHORES.size():
 			res["late_morning"] = minutes > 45
 		_done(res)
+	queue_redraw()
+
+
+## The chore now, done in the room in 3D if the scene can: the panel steps aside until it's finished.
+func _hand_over() -> void:
+	if kind != "ready" or chore >= chores.size() or scene_chore == null or not scene_chore.can(chores[chore]):
+		return
+	_away = true
+	mouse_filter = Control.MOUSE_FILTER_IGNORE
+	scene_chore.lang = lang
+	scene_chore.skip = skip
+	scene_chore.finished.connect(func():
+		_away = false
+		mouse_filter = Control.MOUSE_FILTER_STOP
+		_next_chore(), CONNECT_ONE_SHOT)
+	scene_chore.begin(chores[chore])
 	queue_redraw()
 
 

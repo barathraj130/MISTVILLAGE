@@ -40,6 +40,7 @@ var debug_label: Label              # (development: --movedebug shows how he mov
 const AVATAR := "res://assets/people/person_man_shirt.glb"
 static var avatar := ""            # who you are on foot, when not the default (the story: Karthik himself)
 var avatar_run_stride := false     # a story cast model: its Run covers ~3.9 m/s at speed 1
+var scripted := false              # a scene moves him (brush3d.gd): his clips and facing are its, not the walk's
 
 
 func _init() -> void:
@@ -182,7 +183,7 @@ func _physics_process_timed(delta: float) -> void:
 
 
 func _animate(delta: float) -> void:
-	if model == null:
+	if model == null or scripted:
 		return
 	if _last_pos.distance_to(global_position) > 3.0:
 		_model_yaw = rotation.y + PI

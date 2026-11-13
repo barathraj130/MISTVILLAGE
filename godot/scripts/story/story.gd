@@ -3912,6 +3912,13 @@ func _build_ui() -> void:
 	tasks.stage_changed.connect(_shot)
 	tasks.dish_chosen.connect(_dish)
 	ui.add_child(tasks)
+	if "--brush3d" in OS.get_cmdline_user_args():       # brushing in the bathroom in 3D (brush3d.gd; on trial)
+		var b3 := preload("res://scripts/story/brush3d.gd").new()
+		b3.city = city
+		b3.story = self
+		b3.shots = _shots
+		add_child(b3)
+		tasks.scene_chore = b3
 	prompt = _label(18, Color(1, 1, 1, 0.9))
 	prompt.anchor_left = 0.5
 	prompt.anchor_right = 0.5

@@ -28,7 +28,7 @@ OUT = os.path.join(HERE, "..", "..", "godot", "assets", "people")
 # skin tones across the range you see in Coimbatore: fair (Suresh, Divya, the clerk, Ashwin), medium brown
 # (Karthik, Amma, the hotel owner), dark (Raghavan)
 CAST = [
-    ("karthik", 1.0, 28, 0.5, 0.55, 0.58, "young_asian_male", "sf:hair09", "mindfront_eyebrows_03", "trousers",
+    ("karthik", 1.0, 28, 0.5, 0.55, 0.58, "young_asian_male", "sf:hair09", "eyebrow004", "trousers",
      (0.25, 0.42, 0.7), 404),
     ("raghavan", 1.0, 61, 0.6, 0.45, 0.52, "old_african_male", "short01", "eyebrow004", "veshti",
      (0.95, 0.95, 0.92), 303),
@@ -70,6 +70,11 @@ def clear():
                 coll.remove(d)
 
 
+# brows and lashes drawn from a texture with alpha, not as strands of geometry (in a close-up on Low's half-resolution
+# render the strands broke up into dots): Karthik, who has close-ups
+TEXTURED_LASHES = ("karthik",)
+
+
 def build(c):
     """One cast member, rigged (the street people's build() without baking the pose away)."""
     key, g, yrs, w, mu, hgt, skin, hair, brows, outfit, colour, seed = c
@@ -91,7 +96,8 @@ def build(c):
         SP.HS.set_character_skin(sk, h, skin_type="MAKESKIN")
     objs = [h]
     for sub, fname, typ in (("eyes", "low-poly.mhclo", "Eyes"), ("eyebrows", brows + ".mhclo", "Eyebrows"),
-                            ("eyelashes", ("mindfront_eyelashes_02" if g > 0.5 else "mindfront_eyelashes_04") + ".mhclo", "Eyelashes"),
+                            ("eyelashes", ("eyelashes02" if key in TEXTURED_LASHES else "mindfront_eyelashes_02" if g > 0.5
+                                           else "mindfront_eyelashes_04") + ".mhclo", "Eyelashes"),
                             ("hair", hair + ".mhclo", "Hair")):
         p = SP.asset(fname, sub)
         if p:
@@ -824,6 +830,106 @@ def relax(a):
         curl_fingers(a, side, 18.0, 12.0)
 
 
+# ---- Karthik's face: blinks, the jaw, the lips (MakeHuman's expression units as shape keys) ----
+FACE_UNITS = ("eye-left-closure", "eye-right-closure", "eye-left-slit", "eye-right-slit", "mouth-open", "mouth-pursing",
+              "mouth-corner-puller", "mouth-compression", "mouth-protusion", "eyebrows-left-up", "eyebrows-right-up",
+              "eyebrows-left-inner-up", "eyebrows-right-inner-up")
+UNITS_DIR = os.path.join(os.path.expanduser("~"), "Library", "Application Support", "Blender", "5.2", "extensions",
+                         "user_default", "mpfb", "data", "targets", "expression", "units", "asian")
+
+
+def face_rig(arm, objs):
+    """Teeth and a tongue in his mouth, and the expression units as shape keys on the body (at rest), the parts on
+    the face (brows, lashes, teeth, tongue) following the skin they sit on (the lashes and teeth through MakeHuman's
+    helper shells, which the units move with the lids and jaw): a blink closes the lashes, the jaw takes the lower
+    teeth. Then the body's hidden helpers are cut away (the shape keys kept: the exporter can't apply a mask to a
+    mesh with them). Returns the objects to export."""
+    import numpy as np
+    from mathutils.kdtree import KDTree
+    h = objs[0]
+    for sub, fname, typ in (("teeth", "teeth_base.mhclo", "Teeth"), ("tongue", "tongue01.mhclo", "Tongue")):
+        pth = SP.asset(fname, sub)
+        if pth:
+            objs.append(SP.HS.add_mhclo_asset(pth, h, asset_type=typ, subdiv_levels=0, material_type="MAKESKIN"))
+    if h.data.shape_keys is None:
+        h.shape_key_add(name="Basis", from_mix=False)
+    base = np.empty(len(h.data.vertices) * 3, np.float32)
+    h.data.vertices.foreach_get("co", base)
+    base = base.reshape(-1, 3)
+    deltas = {}
+    for u in FACE_UNITS:
+        path = os.path.join(UNITS_DIR, u + ".target.gz")
+        if not os.path.exists(path):
+            print("CAST no unit", u, flush=True)
+            continue
+        k = SP.TS.load_target(h, path, weight=0.0, name=u)
+        co = np.empty(len(h.data.vertices) * 3, np.float32)
+        k.data.foreach_get("co", co)
+        deltas[u] = co.reshape(-1, 3) - base
+    gi = {g.name: g.index for g in h.vertex_groups}
+    member = {}
+    for v in h.data.vertices:
+        for g in v.groups:
+            if g.weight > 0.5:
+                member.setdefault(g.group, []).append(v.index)
+    mw = h.matrix_world
+
+    def tree(names, exclude=None):
+        if exclude:
+            bad = set(member.get(gi.get(exclude, -1), []))
+            ids = [i for i in range(len(base)) if i not in bad]
+        else:
+            ids = sorted({i for n in names for i in member.get(gi.get(n, -1), [])})
+        kd = KDTree(max(len(ids), 1))
+        for j, i in enumerate(ids):
+            kd.insert(mw @ Vector(base[i]), j)
+        kd.balance()
+        return kd, np.array(ids)
+    follow = {"teeth": ["helper-upper-teeth", "helper-lower-teeth"], "tongue": ["helper-tongue"],
+              "eyelash": ["helper-l-eyelashes-1", "helper-l-eyelashes-2", "helper-r-eyelashes-1", "helper-r-eyelashes-2"],
+              "eyebrow": []}
+    for o in objs:
+        kind = next((k for k in follow if o.type == 'MESH' and o is not h and k in o.name.lower()), None)
+        if kind is None:
+            continue
+        kd, ids = tree(follow[kind]) if follow[kind] else tree([], "HelperGeometry")
+        if len(ids) == 0:
+            kd, ids = tree([], "HelperGeometry")
+        if o.data.shape_keys is None:
+            o.shape_key_add(name="Basis", from_mix=False)
+        pw = [o.matrix_world @ v.co for v in o.data.vertices]
+        near = ids[np.array([kd.find(q)[1] for q in pw])]
+        pco = np.array([tuple(v.co) for v in o.data.vertices], np.float32)
+        inv = np.array(o.matrix_world.inverted().to_3x3() @ mw.to_3x3(), np.float32)
+        for u, d in deltas.items():
+            k = o.shape_key_add(name=u, from_mix=False)
+            k.data.foreach_set("co", (pco + d[near] @ inv.T).ravel())
+        print("CAST face part", o.name, kind, [m.type for m in o.modifiers], flush=True)
+    # the helpers the body's mask hid: cut away for good (bmesh keeps the shape keys)
+    import bmesh
+    anyw = {}                                            # (a mask takes any weight: every vertex in its group)
+    for v in h.data.vertices:
+        for g in v.groups:
+            if g.weight > 0.0:
+                anyw.setdefault(g.group, set()).add(v.index)
+    kill_i = set()                                       # every mask's cut, on the vertices as they are now
+    for md in list(h.modifiers):
+        if md.type == 'MASK':
+            grp = anyw.get(gi.get(md.vertex_group, -1), set())
+            cut = {i for i in range(len(h.data.vertices)) if (i in grp) == md.invert_vertex_group}
+            print("CAST mask", md.name, md.vertex_group, "invert", md.invert_vertex_group, "cut", len(cut), flush=True)
+            kill_i |= cut
+            h.modifiers.remove(md)
+    bm = bmesh.new()
+    bm.from_mesh(h.data)
+    bm.verts.ensure_lookup_table()
+    bmesh.ops.delete(bm, geom=[bm.verts[i] for i in sorted(kill_i)], context='VERTS')
+    bm.to_mesh(h.data)
+    bm.free()
+    print("CAST body modifiers", [m.type for m in h.modifiers], "shape keys", len(h.data.shape_keys.key_blocks), flush=True)
+    return objs
+
+
 def animate(arm):
     clip(arm, "Idle", [(1, lambda a: idle(a, -1)), (37, lambda a: idle(a, 1)), (73, lambda a: idle(a, -1))])
     clip(arm, "Talk", [(1, lambda a: talk(a, -1)), (13, lambda a: talk(a, 1)), (25, lambda a: talk(a, -0.4)),
@@ -877,7 +983,8 @@ def export(arm, objs, path):
     bpy.context.view_layer.objects.active = arm
     bpy.ops.export_scene.gltf(filepath=path, export_format='GLB', use_selection=True, export_apply=True,
                               export_yup=True, export_skins=True, export_animations=True,
-                              export_animation_mode='NLA_TRACKS', export_image_format='JPEG')
+                              export_animation_mode='NLA_TRACKS',
+                              export_image_format='AUTO' if os.path.basename(path)[6:-4] in TEXTURED_LASHES else 'JPEG')
     tris = sum(sum(len(p.vertices) - 2 for p in o.data.polygons) for o in objs if o.type == 'MESH')
     print("CAST", os.path.basename(path), "tris %d, %.1f MB" % (tris, os.path.getsize(path) / 1e6), flush=True)
 
@@ -968,6 +1075,8 @@ def main():
         if "--walkstrip" in args:                          # (look at the walk first, export nothing)
             walk_strip(arm, objs, os.path.abspath(args[args.index("--walkstrip") + 1]))
             continue
+        if c[0] == "karthik":                              # (his face moves: blinks, the jaw, the lips)
+            objs = face_rig(arm, objs)
         animate(arm)
         export(arm, objs, os.path.abspath(os.path.join(OUT, "story_%s.glb" % c[0])))
         if "--preview" in args:
