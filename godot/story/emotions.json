@@ -1,0 +1,25 @@
+{
+ "note": "How people show what they feel (scripts/story/acting.gd): for each emotion, the face (MakeHuman expression units, at 'high' intensity; low is 0.4 of it, medium 0.7), the body while speaking and while listening (clips: the cast's Talk and Idle, the crowd library crowd/... from tools/humans/crowd_clips.py), and the head: pitch (+ down), yaw away from whoever they're with (degrees), how often they glance away (0 never, 1 mostly). Subtle on purpose: real people, not cartoons. A feeling shown is never evidence of anything: the evidence system decides that.",
+ "intensity": {"low": 0.4, "medium": 0.7, "high": 1.0},
+ "emotions": {
+  "neutral":      {"face": {}, "talk": ["Talk"], "listen": ["Idle", "crowd/Nod"], "pitch": 0, "away": 0, "glance": 0.1},
+  "happy":        {"face": {"mouth-corner-puller": 0.5, "eye-left-slit": 0.2, "eye-right-slit": 0.2}, "talk": ["Talk", "crowd/Laugh"], "listen": ["crowd/Nod", "crowd/Laugh", "Idle"], "pitch": -2, "away": 0, "glance": 0.05},
+  "sad":          {"face": {"eyebrows-left-inner-up": 0.55, "eyebrows-right-inner-up": 0.55, "mouth-depression": 0.3, "eye-left-slit": 0.2, "eye-right-slit": 0.2}, "talk": ["Talk"], "listen": ["Idle"], "pitch": 12, "away": 8, "glance": 0.5, "slow": 0.8},
+  "angry":        {"face": {"eyebrows-left-down": 0.6, "eyebrows-right-down": 0.6, "mouth-compression": 0.35, "nose-left-dilatation": 0.3, "nose-right-dilatation": 0.3}, "talk": ["crowd/Argue", "Talk"], "listen": ["crowd/Shake", "Idle"], "pitch": -3, "away": 0, "glance": 0.0, "fast": 1.15},
+  "fear":         {"face": {"eye-left-opened-up": 0.5, "eye-right-opened-up": 0.5, "eyebrows-left-inner-up": 0.4, "eyebrows-right-inner-up": 0.4, "mouth-open": 0.08}, "talk": ["Talk"], "listen": ["Idle"], "pitch": 4, "away": 12, "glance": 0.6},
+  "nervous":      {"face": {"eyebrows-left-inner-up": 0.25, "eyebrows-right-inner-up": 0.25, "mouth-compression": 0.2}, "talk": ["Talk", "crowd/Shrug"], "listen": ["Idle"], "pitch": 6, "away": 15, "glance": 0.7},
+  "confused":     {"face": {"eyebrows-left-up": 0.45, "eyebrows-right-inner-up": 0.2, "mouth-depression": 0.1}, "talk": ["crowd/Shrug", "Talk"], "listen": ["Idle"], "pitch": 0, "away": 0, "glance": 0.2, "tilt": 9},
+  "suspicious":   {"face": {"eye-left-slit": 0.4, "eye-right-slit": 0.4, "eyebrows-left-down": 0.3, "eyebrows-right-down": 0.3}, "talk": ["Talk"], "listen": ["Idle", "crowd/Shake"], "pitch": -2, "away": 0, "glance": 0.0, "tilt": 5},
+  "surprised":    {"face": {"eyebrows-left-up": 0.7, "eyebrows-right-up": 0.7, "eye-left-opened-up": 0.5, "eye-right-opened-up": 0.5, "mouth-open": 0.25}, "talk": ["Talk"], "listen": ["Idle"], "pitch": -4, "away": 0, "glance": 0.0, "step_back": true},
+  "disappointed": {"face": {"mouth-depression": 0.3, "eyebrows-left-inner-up": 0.2, "eyebrows-right-inner-up": 0.2}, "talk": ["Talk"], "listen": ["crowd/Shake", "Idle"], "pitch": 9, "away": 6, "glance": 0.4},
+  "embarrassed":  {"face": {"mouth-corner-puller": 0.2, "eye-left-slit": 0.25, "eye-right-slit": 0.25}, "talk": ["Talk"], "listen": ["Idle"], "pitch": 10, "away": 18, "glance": 0.7},
+  "curious":      {"face": {"eyebrows-left-up": 0.25, "eyebrows-right-up": 0.25}, "talk": ["Talk"], "listen": ["crowd/Nod", "Idle"], "pitch": -1, "away": 0, "glance": 0.0, "tilt": 4},
+  "respectful":   {"face": {"mouth-corner-puller": 0.08}, "talk": ["Talk"], "listen": ["crowd/Nod", "Idle"], "pitch": 4, "away": 0, "glance": 0.0},
+  "confident":    {"face": {"mouth-corner-puller": 0.12}, "talk": ["Talk", "crowd/Point"], "listen": ["Idle", "crowd/Nod"], "pitch": -4, "away": 0, "glance": 0.0},
+  "frustrated":   {"face": {"eyebrows-left-down": 0.3, "eyebrows-right-down": 0.3, "mouth-compression": 0.3}, "talk": ["crowd/Argue", "Talk"], "listen": ["crowd/Shake", "Idle"], "pitch": 2, "away": 6, "glance": 0.3},
+  "relaxed":      {"face": {"mouth-corner-puller": 0.12}, "talk": ["Talk"], "listen": ["crowd/Wobble", "Idle"], "pitch": 0, "away": 0, "glance": 0.25},
+  "grieving":     {"face": {"eyebrows-left-inner-up": 0.6, "eyebrows-right-inner-up": 0.6, "mouth-depression": 0.4, "eye-left-slit": 0.3, "eye-right-slit": 0.3}, "talk": ["Talk"], "listen": ["Idle"], "pitch": 16, "away": 10, "glance": 0.6, "slow": 0.7}
+ },
+ "gestures": {"namaste": "crowd/Namaste", "wave": "crowd/Wave", "nod": "crowd/Nod", "wobble": "crowd/Wobble", "shake": "crowd/Shake",
+  "laugh": "crowd/Laugh", "shrug": "crowd/Shrug", "point": "crowd/Point", "argue": "crowd/Argue", "phone": "crowd/Phone"}
+}

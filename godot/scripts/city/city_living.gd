@@ -16,6 +16,11 @@ extends Node
 const Prof := preload("res://scripts/drive/prof.gd")
 const Graphics := preload("res://scripts/graphics.gd")
 const CrowdClips := preload("res://scripts/city/crowd_clips.gd")
+const HeadLook := preload("res://scripts/story/head_look.gd")
+# a conversation's mood: what the talker does by turns with Talk, and how the other takes it (crowd_clips.gd)
+const MOODS := {"friendly": [["crowd/Laugh", "Talk"], ["crowd/Wobble", "crowd/Laugh", "Idle"]],
+	"serious": [["Talk", "crowd/Point"], ["crowd/Nod", "Idle"]],
+	"arguing": [["crowd/Argue", "Talk"], ["crowd/Shake", "crowd/Argue", "Idle"]]}
 const NEAR := 40.0
 const FAR := 55.0
 const SEEN_OK := 30.0                                  # beyond this a swap in view isn't noticed
@@ -239,6 +244,49 @@ func _put_all_back() -> void:
 	hidden.clear()
 
 
+## Karthik near them: they look at him as he comes up (head_look.gd), and some greet him (a nod, a wave, namaste);
+## if he runs into them they step back and shake their head or throw up their hands.
+func _notice(p: Dictionary, dt: float) -> void:
+	var n: Node3D = p["node"]
+	var w = city.walker
+	if w == null:
+		return
+	if not p.has("hl"):
+		var sks := n.find_children("*", "Skeleton3D", true, false)
+		if sks.is_empty():
+			p["hl"] = null
+			return
+		var hl0: HeadLook = sks[0].get_node_or_null("HeadLook")
+		if hl0 == null:
+			hl0 = HeadLook.new()
+			hl0.name = "HeadLook"
+			sks[0].add_child(hl0)
+		p["hl"] = hl0
+	var hl: HeadLook = p["hl"]
+	if hl == null:
+		return
+	var d: float = n.global_position.distance_to(w.global_position)
+	var near := d < 3.2
+	hl.target = w.global_position + Vector3.UP * 1.6
+	hl.weight = 0.8 if near else 0.0
+	p["react_t"] = maxf(float(p.get("react_t", 0.0)) - dt, 0.0)
+	var spd: float = Vector2(w.velocity.x, w.velocity.z).length() if w is CharacterBody3D else 0.0
+	if d < 0.9 and spd > 3.0 and p["react_t"] <= 0.0:   # barged into
+		p["react"] = "crowd/Argue" if randf() < 0.5 else "crowd/Shake"
+		p["react_t"] = 2.2
+		p["t"] = 0.0
+		var away: Vector3 = n.global_position - w.global_position
+		away.y = 0.0
+		n.global_position += away.normalized() * 0.35   # (a step back)
+		return
+	if near and not p.get("greeted", false) and spd < 2.0:
+		p["greeted"] = true
+		if randf() < 0.45:
+			p["react"] = ["crowd/Nod", "crowd/Wobble", "crowd/Wave", "crowd/Namaste"][randi() % 4]
+			p["react_t"] = 2.0
+			p["t"] = 0.0
+
+
 ## Two standing close together and both free: they turn to each other and talk.
 func _pair_up() -> void:
 	var keys := live.keys()
@@ -255,6 +303,10 @@ func _pair_up() -> void:
 				pb["mate"] = keys[a]
 				pa["mode"] = "talk"
 				pb["mode"] = "listen"
+				var r := randf()                         # (mostly friendly, some serious, now and then an argument)
+				var mood := "friendly" if r < 0.5 else ("serious" if r < 0.85 else "arguing")
+				pa["mood"] = mood
+				pb["mood"] = mood
 				var d: Vector3 = pb["xf"].origin - pa["xf"].origin
 				pa["yaw0"] = atan2(d.x, d.z)
 				pb["yaw0"] = atan2(-d.x, -d.z)
@@ -277,10 +329,17 @@ func _behave(p: Dictionary, dt: float) -> void:
 					live[mate]["t"] = 99.0
 				p["t"] = randf_range(3.0, 6.0)
 		var want := "Talk" if p["mode"] == "talk" else str((p["node"] as Node).get_meta("stand", "Idle"))
-		if p["mode"] in ["talk", "listen"] and want != "Talk":
-			want = "Idle"
+		if p["mode"] in ["talk", "listen"]:              # the mood's gestures, by turns
+			var m: Array = MOODS.get(p.get("mood", "friendly"), MOODS["friendly"])
+			var opts: Array = m[0] if p["mode"] == "talk" else m[1]
+			want = opts[randi() % opts.size()]
+			if p["mode"] == "listen" and want != "Idle":
+				p["t"] = minf(p["t"], 2.0)             # (a nod or a laugh, then listening again)
+		if p.get("react_t", 0.0) > 0.0:
+			want = p["react"]
 		var a: AnimationPlayer = p["anim"]
 		if a.current_animation != want:
 			a.play(want, 0.4)
+	_notice(p, dt)
 	p["look"] = lerpf(p["look"], p["look_to"], 1.0 - exp(-dt * 1.5))
 	n.global_rotation.y = lerp_angle(n.global_rotation.y, p["yaw0"] + p["look"], 1.0 - exp(-dt * 3.0))

@@ -123,6 +123,7 @@ var _ask := {}                         # an "ask" step as it goes: how often eac
 var doorbell: Control                 # Ashwin's doorbell camera: it records him that night, plays on a tablet later (doorbell.gd)
 var _park := ""                       # a place the car is being set down at, out of sight (after a ride)
 var cast := {}                      # story people in the world: key → Actor
+var acting: Node                      # how they act while they talk (acting.gd: feelings, gestures, faces, heads)
 var _o := Vector3.ZERO              # the scene frame: origin (the car), forward, right
 var _f := Vector3.FORWARD
 var _r := Vector3.RIGHT
@@ -464,6 +465,8 @@ func _sync_lang() -> void:
 
 func _next() -> void:
 	_sync_lang()
+	if acting:                                           # (the talk is over: everyone back to what they were doing)
+		acting.stop()
 	if step < 0 and _chapters == 0:
 		for a in OS.get_cmdline_user_args():          # (testing: --storyclock=HH:MM, the time it starts at)
 			if a.begins_with("--storyclock=") and fines:
@@ -3979,6 +3982,26 @@ func _say(line: Dictionary, arrow := true) -> void:
 	box.visible = true
 
 
+## The line acted: its speaker and everyone with them (the cast here, and Karthik on foot near them).
+func _act_line(line: Dictionary) -> void:
+	if acting == null:
+		acting = preload("res://scripts/story/acting.gd").new()
+		add_child(acting)
+	var people := {}
+	for k in cast:
+		if is_instance_valid(cast[k]) and (cast[k] as Node3D).visible:
+			people[k] = cast[k]
+	if not people.has("karthik") and city and city.walker and city.walker.model:
+		var near := false
+		for k in people:
+			near = near or (people[k] as Node3D).global_position.distance_to(city.walker.global_position) < 6.0
+		if near:
+			people["karthik"] = city.walker
+	acting.line(line, people)
+	if _shots != "":                                     # (testing: a picture once the acting has begun)
+		get_tree().create_timer(1.6).timeout.connect(_shot)
+
+
 func _refresh() -> void:
 	if ui == null:
 		return
@@ -4003,6 +4026,7 @@ func _refresh() -> void:
 			small.text = tr_(data["places"][cur["to"]])
 		"talk", "comfort_verdict", "deliver_verdict":
 			_say(cur["lines"][line_i])
+			_act_line(cur["lines"][line_i])
 			if _f2f and kind == "talk":                  # face to face: he talks when it's his line, listens to Karthik's
 				_f2f.play("Talk" if str(cur["lines"][line_i]["who"]) == str(_f2f.get("who")) else "Idle")
 		"drive":
