@@ -458,6 +458,10 @@ func _ready() -> void:
 		bystanders.name = "Bystanders"
 		bystanders.city = self
 		add_child(bystanders)
+		var living := preload("res://scripts/city/city_living.gd").new()   # the standing figures alive near him on foot
+		living.name = "Living"
+		living.city = self
+		add_child(living)
 		weather = CityWeather.new()
 		weather.name = "Weather"
 		weather.city = self
