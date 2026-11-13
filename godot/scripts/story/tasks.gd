@@ -71,6 +71,7 @@ var _eaten := {}
 var groom := preload("res://scripts/story/groom.gd").new()   # brushing and bathing as touch play
 var scene_chore: Node = null                    # a chore done in the 3D room instead (brush3d.gd): its can(), begin()
 var _away := false                              # …while it is: the panel hidden, the mouse the room's
+var scene_meal: Node = null                     # a meal at home eaten at the table in 3D (dine3d.gd): no menu
 # otp
 var _code := ""
 var _keys: Array = []                           # [Rect2, label]
@@ -105,6 +106,16 @@ func start(k: String, s: Dictionary, language: String, testing := false) -> void
 	if kind == "meal":
 		_meal_pick = -1 if not spec.get("home", false) else 0
 		_eaten = {}
+		if scene_meal != null and scene_meal.can(spec):   # at home: Amma's food on the table, eaten there
+			_away = true
+			mouse_filter = Control.MOUSE_FILTER_IGNORE
+			scene_meal.lang = lang
+			scene_meal.skip = testing
+			scene_meal.finished.connect(func(res: Dictionary):
+				_away = false
+				mouse_filter = Control.MOUSE_FILTER_STOP
+				_done(res), CONNECT_ONE_SHOT)
+			scene_meal.begin(spec)
 	if kind == "count":
 		bundles.clear()
 		var short_i := int(spec.get("short", -1))

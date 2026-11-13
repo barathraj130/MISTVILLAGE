@@ -1,0 +1,104 @@
+{
+ "note": "Food (scripts/story/food.gd): every dish once ('dishes': its names, its look in 3D: scripts/story/food_kit.gd, what it does for him), what Amma cooks on which day ('home': a rotation per meal, chosen by the game's day so a loaded save serves the same), and each eatery's own menu ('eateries': categories of dishes with prices). The home never shows a menu or a price.",
+ "dishes": {
+  "idli": {"en": "Idli, sambar and chutney", "ta": "இட்லி", "desc": {"en": "Steamed rice cakes, soft and light", "ta": "ஆவியில் வெந்த மென்மையான இட்லி"}, "energy": 45},
+  "dosa": {"en": "Dosa and chutney", "ta": "தோசை", "desc": {"en": "Crisp rice and lentil crêpe", "ta": "மொறுமொறு தோசை"}, "energy": 45},
+  "masala_dosa": {"en": "Masala dosa", "ta": "மசாலா தோசை", "desc": {"en": "Dosa folded round spiced potato", "ta": "உருளைக்கிழங்கு மசாலாவுடன் தோசை"}, "energy": 55},
+  "pongal": {"en": "Pongal and vada", "ta": "வெண் பொங்கல்", "desc": {"en": "Rice and moong dal with pepper and ghee", "ta": "மிளகு, நெய் சேர்த்த பொங்கல்"}, "energy": 55},
+  "vada": {"en": "Medu vada", "ta": "மெது வடை", "desc": {"en": "Crisp urad dal doughnut", "ta": "மொறுமொறு உளுந்து வடை"}, "energy": 25},
+  "idli_vada": {"en": "Idli vada", "ta": "இட்லி வடை", "desc": {"en": "Two idlis and a vada with sambar", "ta": "இரண்டு இட்லி, ஒரு வடை, சாம்பார்"}, "energy": 55},
+  "poori": {"en": "Poori masala", "ta": "பூரி மசாலா", "desc": {"en": "Puffed fried bread with potato masala", "ta": "பூரி, உருளை மசாலா"}, "energy": 60},
+  "upma": {"en": "Rava upma and chutney", "ta": "ரவா உப்புமா", "desc": {"en": "Semolina with mustard and curry leaves", "ta": "கடுகு, கறிவேப்பிலையுடன் ரவா"}, "energy": 45},
+  "puttu": {"en": "Puttu and kadala curry", "ta": "புட்டு கடலைக் கறி", "desc": {"en": "Steamed rice and coconut, black chickpea curry", "ta": "புட்டு, கருப்பு கடலைக் கறி"}, "energy": 55},
+  "appam": {"en": "Appam and stew", "ta": "ஆப்பம் ஸ்டூ", "desc": {"en": "Lacy fermented rice pancakes, vegetable stew", "ta": "ஆப்பம், காய்கறி ஸ்டூ"}, "energy": 50},
+  "chapati": {"en": "Chapati and kurma", "ta": "சப்பாத்தி குருமா", "desc": {"en": "Wheat flatbread with vegetable kurma", "ta": "சப்பாத்தி, காய்கறி குருமா"}, "energy": 50},
+  "idiyappam": {"en": "Idiyappam and kurma", "ta": "இடியாப்பம் குருமா", "desc": {"en": "String hoppers with vegetable kurma", "ta": "இடியாப்பம், குருமா"}, "energy": 45},
+  "parotta": {"en": "Parotta and salna", "ta": "பரோட்டா சால்னா", "desc": {"en": "Layered flatbread with spicy salna", "ta": "அடுக்கு பரோட்டா, சால்னா"}, "energy": 60},
+  "paniyaram": {"en": "Paniyaram and chutney", "ta": "குழிப் பணியாரம்", "desc": {"en": "Crisp dumplings with chutney", "ta": "குழிப் பணியாரம், சட்னி"}, "energy": 40},
+  "veg_rice": {"en": "Vegetable rice", "ta": "காய்கறி சாதம்", "desc": {"en": "Rice cooked with vegetables and spice", "ta": "காய்கறி சேர்த்த சாதம்"}, "energy": 55},
+  "meals": {"en": "Full meals", "ta": "முழு சாப்பாடு", "desc": {"en": "Rice, sambar, rasam, kootu, poriyal, curd, appalam", "ta": "சாதம், சாம்பார், ரசம், கூட்டு, பொரியல், தயிர், அப்பளம்"}, "energy": 65},
+  "mini_meals": {"en": "Mini meals", "ta": "மினி சாப்பாடு", "desc": {"en": "A smaller plate of rice and two curries", "ta": "சிறிய சாப்பாடு"}, "energy": 50},
+  "home_meals": {"en": "Rice, sambar, rasam and poriyal", "ta": "சாதம், சாம்பார், ரசம், பொரியல்", "desc": {"en": "Amma's lunch", "ta": "அம்மா சாப்பாடு"}, "energy": 60},
+  "lemon_rice": {"en": "Lemon rice", "ta": "எலுமிச்சை சாதம்", "desc": {"en": "Rice with lemon, peanuts and turmeric", "ta": "எலுமிச்சை, வேர்க்கடலை சாதம்"}, "energy": 50},
+  "tomato_rice": {"en": "Tomato rice", "ta": "தக்காளி சாதம்", "desc": {"en": "Tangy tomato rice with appalam", "ta": "தக்காளி சாதம், அப்பளம்"}, "energy": 50},
+  "curd_rice": {"en": "Curd rice", "ta": "தயிர் சாதம்", "desc": {"en": "Cool curd rice with pickle", "ta": "தயிர் சாதம், ஊறுகாய்"}, "energy": 40},
+  "kuzhambu_rice": {"en": "Rice and vathal kuzhambu", "ta": "சாதம் வத்தக் குழம்பு", "desc": {"en": "Tangy tamarind curry with rice", "ta": "புளிக் குழம்புடன் சாதம்"}, "energy": 55},
+  "chicken_curry": {"en": "Chicken curry and parotta", "ta": "சிக்கன் கறி பரோட்டா", "desc": {"en": "Chettinad-style chicken with parotta", "ta": "செட்டிநாடு சிக்கன், பரோட்டா"}, "energy": 70},
+  "malabar_chicken": {"en": "Malabar parotta & chicken curry", "ta": "மலபார் பரோட்டா சிக்கன் கறி", "desc": {"en": "Flaky Malabar parotta, slow-cooked chicken", "ta": "மலபார் பரோட்டா, சிக்கன் கறி"}, "energy": 70},
+  "thali": {"en": "South Indian thali", "ta": "தென்னிந்திய தாளி", "desc": {"en": "Eleven dishes on a silver thali", "ta": "பதினொரு வகை, வெள்ளித் தாளியில்"}, "energy": 75},
+  "exec_lunch": {"en": "Executive lunch", "ta": "எக்ஸிக்யூட்டிவ் லஞ்ச்", "desc": {"en": "The South Indian spread, served at the table", "ta": "மேசையில் பரிமாறும் தென்னிந்திய விருந்து"}, "energy": 75},
+  "dosa_coffee": {"en": "Masala dosa & filter coffee", "ta": "மசாலா தோசை, ஃபில்டர் காபி", "desc": {"en": "Ghee roast dosa and a davara of coffee", "ta": "நெய் ரோஸ்ட், டபரா காபி"}, "energy": 55},
+  "curd_pickle": {"en": "Curd rice & pickle", "ta": "தயிர் சாதம், ஊறுகாய்", "desc": {"en": "With pomegranate and mango pickle", "ta": "மாதுளை, மாங்காய் ஊறுகாயுடன்"}, "energy": 40},
+  "fried_rice": {"en": "Veg fried rice", "ta": "வெஜ் ஃபிரைட் ரைஸ்", "desc": {"en": "Indo-Chinese wok-tossed rice", "ta": "இந்தோ-சைனீஸ் ஃபிரைட் ரைஸ்"}, "energy": 55},
+  "payasam": {"en": "Payasam", "ta": "பாயசம்", "desc": {"en": "Vermicelli in sweet milk with cashews", "ta": "சேமியா பாயசம்"}, "energy": 20},
+  "tea": {"en": "Tea", "ta": "டீ", "desc": {"en": "Strong milk tea", "ta": "பால் டீ"}, "energy": 5},
+  "filter_coffee": {"en": "Filter coffee", "ta": "ஃபில்டர் காபி", "desc": {"en": "In a steel tumbler and davara", "ta": "டம்ளர், டபராவில்"}, "energy": 5},
+  "fresh_lime": {"en": "Fresh lime soda", "ta": "லைம் சோடா", "desc": {"en": "Sweet or salted", "ta": "இனிப்பு அல்லது உப்பு"}, "energy": 5},
+  "kanji": {"en": "Kanji", "ta": "கஞ்சி", "desc": {"en": "Rice gruel", "ta": "அரிசிக் கஞ்சி"}, "energy": 30},
+  "jail_meals": {"en": "Rice and sambar", "ta": "சாதம் சாம்பார்", "desc": {"en": "A steel plate of rice and sambar", "ta": "சாதம், சாம்பார்"}, "energy": 45}
+ },
+ "home": {
+  "breakfast": [
+   {"dish": "idli", "amma": {"en": "Karthik, breakfast is ready. Idli and sambar today, eat while it's hot.", "ta": "கார்த்தி, டிஃபன் ரெடி. இன்னைக்கு இட்லி சாம்பார், சூடா இருக்கும்போதே சாப்பிடு."}},
+   {"dish": "dosa", "amma": {"en": "Come, sit. Dosa with tomato chutney. Eat before you leave.", "ta": "வா, உட்காரு. தோசை, தக்காளி சட்னி. சாப்பிட்டுட்டுப் போ."}},
+   {"dish": "pongal", "amma": {"en": "Pongal and vada today. Don't rush it.", "ta": "இன்னைக்கு பொங்கல் வடை. அவசரப்படாம சாப்பிடு."}},
+   {"dish": "poori", "amma": {"en": "Poori masala, your favourite. Sit down first.", "ta": "பூரி மசாலா, உனக்குப் பிடிச்சது. முதல்ல உட்காரு."}},
+   {"dish": "upma", "amma": {"en": "Only upma today, the milk man came late. Eat.", "ta": "இன்னைக்கு உப்புமா தான், பால்காரன் லேட். சாப்பிடு."}},
+   {"dish": "puttu", "amma": {"en": "Puttu and kadala curry. Eat properly, you look tired.", "ta": "புட்டு கடலைக் கறி. ஒழுங்கா சாப்பிடு, சோர்வா இருக்க."}},
+   {"dish": "appam", "amma": {"en": "Appam and stew today. Come before it goes cold.", "ta": "இன்னைக்கு ஆப்பம் ஸ்டூ. ஆறிப் போறதுக்குள்ள வா."}}
+  ],
+  "lunch": [
+   {"dish": "home_meals", "amma": {"en": "Lunch is ready. Don't skip it like yesterday.", "ta": "சாப்பாடு ரெடி. நேத்து மாதிரி விட்டுடாத."}},
+   {"dish": "lemon_rice", "amma": {"en": "Lemon rice and potato fry. Eat, then go.", "ta": "எலுமிச்சை சாதம், உருளை வறுவல். சாப்பிட்டுட்டுப் போ."}},
+   {"dish": "curd_rice", "amma": {"en": "Curd rice in this heat. Good for you.", "ta": "இந்த வெயிலுக்கு தயிர் சாதம். நல்லது."}},
+   {"dish": "tomato_rice", "amma": {"en": "Tomato rice and appalam.", "ta": "தக்காளி சாதம், அப்பளம்."}},
+   {"dish": "meals", "amma": {"en": "Sit, I've put a leaf. Full meals today.", "ta": "உட்காரு, இலை போட்டிருக்கேன். இன்னைக்கு முழு சாப்பாடு."}},
+   {"dish": "kuzhambu_rice", "amma": {"en": "Vathal kuzhambu today. Your Appa liked it this way.", "ta": "இன்னைக்கு வத்தக் குழம்பு. அப்பாவுக்கு இப்படித்தான் பிடிக்கும்."}},
+   {"dish": "veg_rice", "amma": {"en": "Vegetable rice. Eat it all.", "ta": "காய்கறி சாதம். மிச்சம் வைக்காத."}}
+  ],
+  "dinner": [
+   {"dish": "chapati", "amma": {"en": "Chapati and kurma. Come home early tomorrow.", "ta": "சப்பாத்தி குருமா. நாளைக்கு சீக்கிரம் வா."}},
+   {"dish": "dosa", "amma": {"en": "I kept the dosa warm for you.", "ta": "உனக்கு தோசையை சூடா வெச்சிருக்கேன்."}},
+   {"dish": "idiyappam", "amma": {"en": "Idiyappam and kurma. Sit, eat slowly.", "ta": "இடியாப்பம் குருமா. உட்காரு, நிதானமா சாப்பிடு."}},
+   {"dish": "parotta", "amma": {"en": "The parotta from the corner shop. Eat it while it's soft.", "ta": "கடைசி கடைப் பரோட்டா. மென்மையா இருக்கும்போதே சாப்பிடு."}},
+   {"dish": "idli", "amma": {"en": "Idli and sambar tonight, something light.", "ta": "இன்னைக்கு ராத்திரி இட்லி சாம்பார், லேசா."}},
+   {"dish": "veg_rice", "amma": {"en": "Vegetable rice. You came very late.", "ta": "காய்கறி சாதம். ரொம்ப லேட்டா வந்திருக்க."}},
+   {"dish": "paniyaram", "amma": {"en": "Paniyaram with the leftover batter. Eat.", "ta": "மிச்ச மாவுல பணியாரம். சாப்பிடு."}}
+  ]
+ },
+ "eateries": {
+  "lunch_murugan": {"kind": {"en": "Mess · South Indian meals", "ta": "மெஸ் · சாப்பாடு"},
+   "menu": [
+    {"cat": "meals", "items": [["meals", 120], ["curd_rice", 50], ["lemon_rice", 60]]},
+    {"cat": "tiffin", "items": [["parotta", 70], ["idli", 40], ["dosa", 50]]},
+    {"cat": "drinks", "items": [["tea", 15]]}]},
+  "lunch_gowri": {"kind": {"en": "Meals hall · Vegetarian", "ta": "சாப்பாட்டுக் கூடம் · சைவம்"},
+   "menu": [
+    {"cat": "meals", "items": [["meals", 110], ["mini_meals", 80], ["curd_rice", 45]]},
+    {"cat": "rice", "items": [["lemon_rice", 55], ["tomato_rice", 55]]},
+    {"cat": "drinks", "items": [["filter_coffee", 20]]}]},
+  "lunch_kovai": {"kind": {"en": "Tiffin centre", "ta": "டிஃபன் சென்டர்"},
+   "menu": [
+    {"cat": "tiffin", "items": [["masala_dosa", 65], ["idli_vada", 50], ["pongal", 55], ["poori", 60]]},
+    {"cat": "evening", "items": [["parotta", 75]]},
+    {"cat": "drinks", "items": [["filter_coffee", 20], ["tea", 15]]}]},
+  "hotel": {"kind": {"en": "Mess · Veg and non-veg", "ta": "மெஸ் · சைவம், அசைவம்"},
+   "menu": [
+    {"cat": "meals", "items": [["meals", 130]]},
+    {"cat": "tiffin", "items": [["parotta", 80], ["masala_dosa", 70]]},
+    {"cat": "nonveg", "items": [["chicken_curry", 160]]},
+    {"cat": "drinks", "items": [["tea", 15]]}]},
+  "grand_hotel": {"kind": {"en": "Five-star · The Courtyard restaurant", "ta": "ஐந்து நட்சத்திர உணவகம்"},
+   "menu": [
+    {"cat": "mains", "items": [["thali", 1150], ["exec_lunch", 1450], ["malabar_chicken", 950]]},
+    {"cat": "tiffin", "items": [["dosa_coffee", 650]]},
+    {"cat": "rice", "items": [["curd_pickle", 550]]},
+    {"cat": "desserts", "items": [["payasam", 350]]},
+    {"cat": "drinks", "items": [["fresh_lime", 250], ["filter_coffee", 220]]}]}
+ },
+ "categories": {
+  "meals": {"en": "Meals", "ta": "சாப்பாடு"}, "tiffin": {"en": "Tiffin", "ta": "டிஃபன்"}, "rice": {"en": "Rice varieties", "ta": "சாத வகைகள்"},
+  "evening": {"en": "Evening", "ta": "மாலை"}, "nonveg": {"en": "Non-vegetarian", "ta": "அசைவம்"}, "mains": {"en": "Mains", "ta": "முக்கிய உணவு"},
+  "desserts": {"en": "Desserts", "ta": "இனிப்பு"}, "drinks": {"en": "Beverages", "ta": "பானங்கள்"}
+ }
+}

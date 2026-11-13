@@ -2186,6 +2186,8 @@ func _task_done(result: Dictionary) -> void:
 	_box_at_top(false)
 	if str(cur.get("do", "")) == "home":
 		var v: Dictionary = cur["visits"][_visit]
+		if result.get("energy", 0.0) and city.get("life"):   # what he ate is in him (life.gd energy)
+			city.life.energy = clampf(city.life.energy + float(result["energy"]), 0.0, 100.0)
 		if v.get("home_meal", false) and result.get("ate", false) and fines:   # a meal at home: the groceries
 			fines.sim.groceries = maxi(fines.sim.groceries - 1, 0)
 			_note = ("Groceries: %d meals left this month" if lang == "en" else "மளிகை: இந்த மாசம் இன்னும் %d வேளை") % fines.sim.groceries
@@ -3912,13 +3914,21 @@ func _build_ui() -> void:
 	tasks.stage_changed.connect(_shot)
 	tasks.dish_chosen.connect(_dish)
 	ui.add_child(tasks)
-	if "--brush3d" in OS.get_cmdline_user_args():       # brushing in the bathroom in 3D (brush3d.gd; on trial)
+	if not "--nobrush3d" in OS.get_cmdline_user_args():   # brushing in the bathroom in 3D (brush3d.gd; --nobrush3d: the
+		                                                 # old close-up pictures)
 		var b3 := preload("res://scripts/story/brush3d.gd").new()
 		b3.city = city
 		b3.story = self
 		b3.shots = _shots
 		add_child(b3)
 		tasks.scene_chore = b3
+	if not "--nodine3d" in OS.get_cmdline_user_args():   # meals at home at the table in 3D (dine3d.gd; --nodine3d: the
+		var d3 := preload("res://scripts/story/dine3d.gd").new()   # old leaf picture)
+		d3.city = city
+		d3.story = self
+		d3.shots = _shots
+		add_child(d3)
+		tasks.scene_meal = d3
 	prompt = _label(18, Color(1, 1, 1, 0.9))
 	prompt.anchor_left = 0.5
 	prompt.anchor_right = 0.5

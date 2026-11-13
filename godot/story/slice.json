@@ -1175,6 +1175,7 @@
      "home": true,
      "home_meal": true,
      "food": "idli",
+     "slot": "breakfast",
      "minutes": 12,
      "title": {
       "en": "Breakfast: Amma's idli",
@@ -2490,6 +2491,7 @@
      "home": true,
      "home_meal": true,
      "food": "dosa",
+     "slot": "dinner",
      "minutes": 15,
      "goal": {
       "en": "Dinner: Amma kept it warm in the kitchen",
