@@ -124,6 +124,7 @@ var doorbell: Control                 # Ashwin's doorbell camera: it records him
 var _park := ""                       # a place the car is being set down at, out of sight (after a ride)
 var cast := {}                      # story people in the world: key → Actor
 var acting: Node                      # how they act while they talk (acting.gd: feelings, gestures, faces, heads)
+var _felt := {}                       # the lines whose "feel" has been counted
 var _o := Vector3.ZERO              # the scene frame: origin (the car), forward, right
 var _f := Vector3.FORWARD
 var _r := Vector3.RIGHT
@@ -3997,7 +3998,30 @@ func _act_line(line: Dictionary) -> void:
 			near = near or (people[k] as Node3D).global_position.distance_to(city.walker.global_position) < 6.0
 		if near:
 			people["karthik"] = city.walker
-	acting.line(line, people)
+	var moods := {}                                      # how each feels about Karthik shows (standing.gd), when he's there
+	if people.has("karthik"):
+		line = line.duplicate()
+		var spk := str(line.get("who", ""))
+		for k in people:
+			if k != "karthik":
+				moods[k] = standing.mood(str(k))
+				standing.met(str(k))
+		if spk != "karthik" and not line.has("emotion"):
+			line["emotion"] = moods.get(spk, "neutral")
+			line["intensity"] = "low"
+		if line_i == 0 and spk != "karthik" and not line.has("gesture"):   # (opening a talk: their greeting)
+			var g := standing.greeting(spk)
+			if g != "":
+				line["gesture"] = g
+		if not line.has("to") and spk != "karthik":
+			line["to"] = "karthik"
+	var fk := "%d:%d" % [step, line_i]                   # a line's "feel": {who: {feeling: change}}, once
+	if line.has("feel") and not _felt.has(fk):
+		_felt[fk] = true
+		for k in line["feel"]:
+			for f in line["feel"][k]:
+				standing.feel(str(k), str(f), float(line["feel"][k][f]), "step %d" % step)
+	acting.line(line, people, moods)
 	if _shots != "":                                     # (testing: a picture once the acting has begun)
 		get_tree().create_timer(1.6).timeout.connect(_shot)
 

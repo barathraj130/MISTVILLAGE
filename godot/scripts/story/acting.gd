@@ -58,6 +58,17 @@ func _person(key: String, node: Node3D) -> Dictionary:
 	return p
 
 
+## A listener's feeling: their own (standing.gd's mood toward Karthik), else the line's when it's said to them,
+## else neutral.
+func _listening(key: String) -> Dictionary:
+	var em: Dictionary = data()["emotions"]
+	if _moods.has(key) and em.has(_moods[key]):
+		return em[_moods[key]]
+	if key == str(_line.get("to", "")):
+		return em.get(_emotion, em["neutral"])
+	return em["neutral"]
+
+
 func _seated(p: Dictionary) -> bool:
 	var n: Node = p["node"]
 	if n.get("seated") != null:
@@ -78,7 +89,11 @@ func _play(p: Dictionary, clip: String, blend := 0.35) -> void:
 		p["cur"] = clip
 
 
-func line(ln: Dictionary, people: Dictionary) -> void:
+var _moods := {}                                       # who → their own feeling while listening (standing.gd's mood)
+
+
+func line(ln: Dictionary, people: Dictionary, moods := {}) -> void:
+	_moods = moods
 	_line = ln
 	_speaker = str(ln.get("who", ""))
 	_emotion = str(ln.get("emotion", "neutral"))
@@ -152,7 +167,7 @@ func _process(dt: float) -> void:
 		if hl:
 			hl.target = at
 			hl.weight = 0.85
-			var mine: Dictionary = e if speaking or key == to else data()["emotions"]["neutral"]
+			var mine: Dictionary = e if speaking else _listening(key)
 			hl.pitch = float(mine.get("pitch", 0)) * _k
 			hl.tilt = float(mine.get("tilt", 0)) * _k
 			if p.get("glance_t", 0.0) <= 0.0:          # a glance away now and then (more for the nervous, the sad)
@@ -163,7 +178,7 @@ func _process(dt: float) -> void:
 		# the body: by turns, as the feeling has it
 		p["t"] = float(p["t"]) - dt
 		if p["t"] <= 0.0:
-			var opts: Array = e["talk"] if speaking else (e if key == to else data()["emotions"]["neutral"])["listen"]
+			var opts: Array = e["talk"] if speaking else _listening(key)["listen"]
 			var clip: String = opts[randi() % opts.size()]
 			if speaking and randf() < 0.55:
 				clip = "Talk"                          # (mostly just talking; the gestures come and go)
@@ -174,7 +189,7 @@ func _process(dt: float) -> void:
 		var f: Face = p["face"]
 		if f:
 			var faceu: Dictionary = {}
-			var mine2: Dictionary = e if speaking or key == to else data()["emotions"]["neutral"]
+			var mine2: Dictionary = e if speaking else _listening(key)
 			for u in mine2.get("face", {}):
 				faceu[u] = float(mine2["face"][u]) * _k
 			if speaking:                                 # the mouth with the words (syllables, unevenly)

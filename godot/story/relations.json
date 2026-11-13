@@ -1,0 +1,16 @@
+{
+ "note": "How each person stands with Karthik when the story starts (scripts/story/standing.gd: familiarity, respect, fear, suspicion, anger, 0–100; trust stays standing.gd's own, from 50). Anyone not here starts as a stranger: familiarity 0, the rest 20 (suspicion 30). The story moves them (slice.json 'standing' table: \"people\": {who: {feeling: change}}; a line's \"feel\"), and so does what he does. They show in how people act (acting.gd: a line with no feeling of its own takes the speaker's mood toward him) and may gate steps (\"if_standing\": {\"familiarity.raghavan\": \">=60\"}). A feeling is never evidence: Suresh is his partner and acts like one.",
+ "people": {
+  "amma":      {"trust": 90, "familiarity": 100, "respect": 70, "fear": 0,  "suspicion": 0,  "anger": 0, "elder": true},
+  "divya":     {"trust": 85, "familiarity": 100, "respect": 40, "fear": 0,  "suspicion": 0,  "anger": 0},
+  "raghavan":  {"trust": 60, "familiarity": 60,  "respect": 55, "fear": 0,  "suspicion": 10, "anger": 0, "elder": true},
+  "suresh":    {"trust": 60, "familiarity": 85,  "respect": 45, "fear": 0,  "suspicion": 10, "anger": 0},
+  "clerk":     {"familiarity": 30, "respect": 30, "suspicion": 20},
+  "cook":      {"familiarity": 40, "respect": 30},
+  "ashwin":    {"familiarity": 0},
+  "muniyandi": {"familiarity": 10, "respect": 30, "fear": 20, "suspicion": 30, "elder": true},
+  "murugesan": {"familiarity": 10, "respect": 10, "suspicion": 60, "anger": 15},
+  "selvi":     {"familiarity": 10, "respect": 30, "suspicion": 30},
+  "sundaram":  {"familiarity": 10, "respect": 40, "suspicion": 20, "elder": true}
+ }
+}

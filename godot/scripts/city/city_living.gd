@@ -274,10 +274,19 @@ func _notice(p: Dictionary, dt: float) -> void:
 	if d < 0.9 and spd > 3.0 and p["react_t"] <= 0.0:   # barged into
 		p["react"] = "crowd/Argue" if randf() < 0.5 else "crowd/Shake"
 		p["react_t"] = 2.2
+		p["annoyed"] = true                             # (they remember: no greeting now, a look away)
 		p["t"] = 0.0
 		var away: Vector3 = n.global_position - w.global_position
 		away.y = 0.0
 		n.global_position += away.normalized() * 0.35   # (a step back)
+		return
+	if p.get("annoyed", false):                         # him again: a shake of the head, and they look elsewhere
+		hl.away = 35.0
+		if near and d < 2.0 and p["react_t"] <= 0.0 and not p.get("shook", false):
+			p["shook"] = true
+			p["react"] = "crowd/Shake"
+			p["react_t"] = 1.8
+			p["t"] = 0.0
 		return
 	if near and not p.get("greeted", false) and spd < 2.0:
 		p["greeted"] = true
