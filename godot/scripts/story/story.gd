@@ -2178,6 +2178,8 @@ func _task_done(result: Dictionary) -> void:
 		fines.sim.minute += float(result["minutes"])
 	if int(result.get("paid", 0)) > 0 and fines:         # a meal out, from the wallet
 		fines.sim.money -= int(result["paid"])
+	if result.get("energy", 0.0) and city.get("life"):   # what he ate is in him (life.gd energy)
+		city.life.energy = clampf(city.life.energy + float(result["energy"]), 0.0, 100.0)
 	print("STORY task %s → %s" % [cur.get("task", cur.get("do", "")), str(result)])
 	if result.get("signed", false) and room != null and str(room.get_meta("room", "")) == "police" and city.bail:
 		city.bail.sign_now()                             # (the story's signing is the register's too)
@@ -2186,8 +2188,6 @@ func _task_done(result: Dictionary) -> void:
 	_box_at_top(false)
 	if str(cur.get("do", "")) == "home":
 		var v: Dictionary = cur["visits"][_visit]
-		if result.get("energy", 0.0) and city.get("life"):   # what he ate is in him (life.gd energy)
-			city.life.energy = clampf(city.life.energy + float(result["energy"]), 0.0, 100.0)
 		if v.get("home_meal", false) and result.get("ate", false) and fines:   # a meal at home: the groceries
 			fines.sim.groceries = maxi(fines.sim.groceries - 1, 0)
 			_note = ("Groceries: %d meals left this month" if lang == "en" else "மளிகை: இந்த மாசம் இன்னும் %d வேளை") % fines.sim.groceries
@@ -3460,6 +3460,7 @@ func _eat_out() -> void:
 		map.pin = null
 		var spec: Dictionary = cur.duplicate()
 		spec["title"] = data["places"][near_k]
+		spec["eatery"] = near_k                         # (its own menu: story/food.json eateries)
 		spec["menu"] = cur["menus"].get(near_k, cur["menus"].values()[0])
 		spec.merge(cur.get("tips", {}).get(near_k, {}), true)   # (a place's own tip: the five-star's host)
 		if fines:
@@ -3929,6 +3930,13 @@ func _build_ui() -> void:
 		d3.shots = _shots
 		add_child(d3)
 		tasks.scene_meal = d3
+	if not "--nordering" in OS.get_cmdline_user_args():  # ordering at eateries (order_screen.gd; --nordering: the old card)
+		var os_ := preload("res://scripts/story/order_screen.gd").new()
+		os_.story = self
+		os_.shots = _shots
+		os_.visible = false
+		ui.add_child(os_)
+		tasks.scene_order = os_
 	prompt = _label(18, Color(1, 1, 1, 0.9))
 	prompt.anchor_left = 0.5
 	prompt.anchor_right = 0.5
