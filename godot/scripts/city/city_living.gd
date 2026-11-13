@@ -230,7 +230,18 @@ func _put_back(key: String) -> void:
 		n.visible = false
 		_pool[n.get_meta("sex", "m")].append(n)
 	var mate: String = p.get("mate", "")
-	if mate != "" and live.has(mate):
+	if p.has("group"):                                   # out of the group; one left alone goes back to idling
+		var g: Array = p["group"]
+		g.erase(key)
+		if g.size() < 2:
+			for m in g:
+				if live.has(m):
+					live[m]["mate"] = ""
+					live[m]["mode"] = "idle"
+					live[m].erase("group")
+		elif mate != "" and live.has(mate) and live[mate]["mode"] == "listen" and not g.any(func(m): return live.has(m) and live[m]["mode"] == "talk"):
+			live[g[0]]["mode"] = "talk"
+	elif mate != "" and live.has(mate):
 		live[mate]["mate"] = ""
 		live[mate]["mode"] = "idle"
 	live.erase(key)
@@ -319,6 +330,33 @@ func _pair_up() -> void:
 				var d: Vector3 = pb["xf"].origin - pa["xf"].origin
 				pa["yaw0"] = atan2(d.x, d.z)
 				pb["yaw0"] = atan2(-d.x, -d.z)
+				var g: Array = [keys[a], keys[b]]          # (the group: two, or three when another joins)
+				pa["group"] = g
+				pb["group"] = g
+				break
+	for k in keys:                                       # a third standing close to a pair joins them
+		var pc: Dictionary = live[k]
+		if pc["mate"] != "":
+			continue
+		for k2 in keys:
+			var pg: Dictionary = live[k2]
+			if not pg.has("group") or (pg["group"] as Array).size() >= 3 or k2 == k:
+				continue
+			if pc["xf"].origin.distance_to(pg["xf"].origin) < 2.4:
+				var g2: Array = pg["group"]
+				g2.append(k)
+				pc["group"] = g2
+				pc["mate"] = k2
+				pc["mode"] = "listen"
+				pc["mood"] = pg.get("mood", "friendly")
+				var c := Vector3.ZERO
+				for m in g2:
+					c += live[m]["xf"].origin if live.has(m) else pc["xf"].origin
+				c /= float(g2.size())
+				for m in g2:                                # all three turn to the middle of the group
+					if live.has(m):
+						var dd: Vector3 = c - live[m]["xf"].origin
+						live[m]["yaw0"] = atan2(dd.x, dd.z)
 				break
 
 
@@ -330,13 +368,20 @@ func _behave(p: Dictionary, dt: float) -> void:
 			"idle":                                      # a look to one side, then back
 				p["look_to"] = randf_range(-0.7, 0.7) if absf(p["look_to"]) < 0.05 else 0.0
 				p["t"] = randf_range(4.0, 10.0)
-			"talk", "listen":                            # by turns
-				var mate: String = p["mate"]
-				p["mode"] = "listen" if p["mode"] == "talk" else "talk"
-				if live.has(mate):
-					live[mate]["mode"] = "talk" if p["mode"] == "listen" else "listen"
-					live[mate]["t"] = 99.0
-				p["t"] = randf_range(3.0, 6.0)
+			"talk":                                      # the turn passes: someone else in the group speaks
+				var g: Array = p.get("group", [p["mate"]])
+				var others := []
+				for m in g:
+					if live.has(m) and live[m] != p:
+						others.append(m)
+				if not others.is_empty():
+					p["mode"] = "listen"
+					var nxt: Dictionary = live[others[randi() % others.size()]]
+					nxt["mode"] = "talk"
+					nxt["t"] = randf_range(3.0, 6.0)
+				p["t"] = randf_range(1.5, 3.0)
+			"listen":                                    # (a listener's own reactions come and go: below)
+				p["t"] = randf_range(1.5, 3.0)
 		var want := "Talk" if p["mode"] == "talk" else str((p["node"] as Node).get_meta("stand", "Idle"))
 		if p["mode"] in ["talk", "listen"]:              # the mood's gestures, by turns
 			var m: Array = MOODS.get(p.get("mood", "friendly"), MOODS["friendly"])

@@ -89,6 +89,7 @@ func _play(p: Dictionary, clip: String, blend := 0.35) -> void:
 		p["cur"] = clip
 
 
+var _thought := false                                  # this line is a thought or an action (no speech)
 var _moods := {}                                       # who → their own feeling while listening (standing.gd's mood)
 
 
@@ -101,6 +102,8 @@ func line(ln: Dictionary, people: Dictionary, moods := {}) -> void:
 		_emotion = "neutral"
 	_k = float(data()["intensity"].get(str(ln.get("intensity", "medium")), 0.7))
 	_t = 0.0
+	var en := str(ln.get("en", "")).strip_edges()       # a line wholly in brackets is a thought or an action, not words:
+	_thought = en.begins_with("(") and en.ends_with(")") and en.count("(") == 1   # no talking, no lips
 	for key in people:
 		if is_instance_valid(people[key]):
 			_person(str(key), people[key])
@@ -110,7 +113,9 @@ func line(ln: Dictionary, people: Dictionary, moods := {}) -> void:
 		if not is_instance_valid(p["node"]) or not people.has(key):
 			continue
 		p["t"] = randf_range(0.6, 1.6)
-		if key == _speaker:
+		if key == _speaker and _thought:                 # thinking: still, the feeling only
+			_play(p, "Idle")
+		elif key == _speaker:
 			var g := str(ln.get("gesture", ""))
 			_play(p, str(data()["gestures"].get(g, e["talk"][0])) if g != "" else str(e["talk"][0]))
 			if g != "":
@@ -147,7 +152,7 @@ func _process(dt: float) -> void:
 		var p: Dictionary = _who[key]
 		if not is_instance_valid(p["node"]):
 			continue
-		var speaking: bool = key == _speaker
+		var speaking: bool = key == _speaker and not _thought
 		# where they look: the speaker at whom it's said to (else the nearest other), the rest at the speaker
 		var at := Vector3.INF
 		if speaking:

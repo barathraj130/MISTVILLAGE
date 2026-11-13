@@ -119,12 +119,16 @@ def shake(a, k):
 
 
 def laugh(a, k):
+    """k -1..1: the laugh's beat. The chest jumps with each breath of it, the head goes back, one hand to the
+    stomach, the other half up as if to say "stop"."""
     SC.idle(a, 0.3)
-    SC.turn(a, "spine_02", 'X', -4.0 + 3.0 * k)          # shaking with it
-    SC.turn(a, "head", 'X', -10.0 + 5.0 * k)
-    SC.turn(a, "spine_03", 'Y', 2.0 * k)
-    c = SC.head_of(a, "spine_01") + Vector((-0.06, -0.16, 0.06))
-    _hands_to(a, None, c, None, c + Vector((0.08, 0.0, 0.0)))
+    SC.turn(a, "spine_02", 'X', -7.0 + 5.0 * k)          # shaking with it
+    SC.turn(a, "spine_03", 'X', -4.0 + 3.0 * k)
+    SC.turn(a, "head", 'X', -18.0 + 8.0 * k)
+    SC.turn(a, "spine_03", 'Y', 4.0 * k)
+    st = SC.head_of(a, "spine_02") + Vector((-0.04, -0.17, 0.0))
+    up = SC.head_of(a, "spine_03") + Vector((0.2, -0.28, -0.02 + 0.03 * k))
+    _hands_to(a, up, st, up + Vector((0.04, -0.06, 0.12)), st + Vector((0.1, 0.0, 0.0)))
 
 
 def shrug(a, k):
@@ -154,17 +158,51 @@ def argue(a, k):
 
 
 def fold(a, k):
+    """Arms folded across the chest: each hand at the other arm's elbow (the chest, not the navel: spine_03)."""
     SC.idle(a, k)
-    c = SC.head_of(a, "spine_02") + Vector((0.0, -0.17, 0.0))
-    _hands_to(a, c + Vector((-0.11, 0.0, 0.0)), c + Vector((0.11, 0.0, 0.02)), c + Vector((-0.22, 0.0, 0.0)), c + Vector((0.22, 0.0, 0.02)))
+    c = SC.head_of(a, "spine_03") + Vector((0.0, -0.19, -0.08))
+    for side, sg, dz in (("l", 1.0, 0.0), ("r", -1.0, 0.025)):
+        w = c + Vector((-sg * 0.12, 0.0, dz))
+        SM.arm_to(a, side, w, Vector((sg * 0.9, -0.2, -0.9)), w + Vector((-sg * 0.1, 0.02, 0.0)))
+
+
+def handshake(a, k):
+    """The right hand out, waist high, a little to his left (to the other's right hand), shaking up and down."""
+    SC.idle(a, 0.3)
+    SC.turn(a, "spine_02", 'X', 3.0)
+    sh = SC.head_of(a, "upperarm_r")
+    w = sh + Vector((0.1, -0.46, -0.26 + 0.03 * k))
+    SM.arm_to(a, "r", w, Vector((-0.6, 0.3, -1.0)), w + Vector((0.02, -0.12, 0.0)))
+    SC.curl_fingers(a, "r", 35.0, 20.0)
+
+
+def comfort(a, k):
+    """A hand on the other's shoulder (their left, before him), the head a little down, the other arm easy."""
+    SC.idle(a, 0.4)
+    SC.turn(a, "head", 'X', 8.0)
+    SC.turn(a, "spine_02", 'X', 4.0)
+    sh = SC.head_of(a, "upperarm_r")
+    w = sh + Vector((0.08, -0.45, -0.05 + 0.01 * k))
+    SM.arm_to(a, "r", w, Vector((-0.8, 0.2, -0.8)), w + Vector((0.0, -0.1, -0.04)))
+    SC.curl_fingers(a, "r", 25.0, 10.0)
+
+
+def give(a, k):
+    """Holding something out in both hands at the chest, (k 1) a little further forward: handing it over."""
+    SC.idle(a, 0.3)
+    SC.turn(a, "spine_02", 'X', 3.0 + 3.0 * k)
+    c = SC.head_of(a, "spine_03") + Vector((0.0, -0.32 - 0.06 * k, -0.12))
+    _hands_to(a, c + Vector((0.07, 0.0, 0.0)), c + Vector((-0.07, 0.0, 0.0)), c + Vector((0.07, -0.1, 0.02)), c + Vector((-0.07, -0.1, 0.02)))
 
 
 def clips(arm):
     for name, fn, keys in (("Namaste", namaste, (0, 1, 1, 0)), ("Wave", wave, (-1, 1, -1, 1, -1)), ("Nod", nod, (0, 1, 0, 1, 0)),
                            ("Wobble", wobble, (0, 1, -1, 1, 0)), ("Shake", shake, (0, 1, -1, 1, -1, 0)), ("Laugh", laugh, (-1, 1, -1, 1, -1, 1, -1)),
                            ("Shrug", shrug, (0, 1, 1, 0)), ("Point", point, (0, 1, 1, 1)), ("Argue", argue, (-1, 1, -1, 1, -1)),
-                           ("Fold", fold, (-1, 1, -1))):
-        step = 12 if name not in ("Fold", "Namaste", "Shrug", "Point") else 24
+                           ("Fold", fold, (-1, 1, -1)), ("Handshake", handshake, (-1, 1, -1, 1, -1, 0)),
+                           ("Comfort", comfort, (-1, 1, -1)), ("Give", give, (0, 1, 1, 0))):
+        step = 12 if name not in ("Fold", "Namaste", "Shrug", "Point", "Comfort", "Give") else 24
+        step = 6 if name == "Handshake" else step
         SC.clip(arm, name, [(1 + i * step, (lambda ff, kk: (lambda a: ff(a, kk)))(fn, k)) for i, k in enumerate(keys)])
     SC.clip(arm, "Phone", [(1, lambda a: phone(a, -1)), (49, lambda a: phone(a, 1)), (97, lambda a: phone(a, -1))])
     SC.clip(arm, "PhoneLook", [(1, lambda a: phone_look(a, -1)), (37, lambda a: phone_look(a, 1)), (73, lambda a: phone_look(a, -1))])
@@ -194,7 +232,8 @@ def strip(arm, out_dir):
                      ("walkphone", lambda a: walk_phone(a, 0.25)), ("carry", lambda a: walk_carry(a, 0.25)),
                      ("namaste", lambda a: namaste(a, 1)), ("wave", lambda a: wave(a, 1)), ("laugh", lambda a: laugh(a, 1)),
                      ("shrug", lambda a: shrug(a, 1)), ("point", lambda a: point(a, 1)), ("argue", lambda a: argue(a, 1)),
-                     ("fold", lambda a: fold(a, 1)), ("wobble", lambda a: wobble(a, 1))):
+                     ("fold", lambda a: fold(a, 1)), ("wobble", lambda a: wobble(a, 1)), ("handshake", lambda a: handshake(a, 1)),
+                     ("comfort", lambda a: comfort(a, 1)), ("give", lambda a: give(a, 1))):
         SC.rest(arm)
         SC.arms_down(arm)
         fn(arm)

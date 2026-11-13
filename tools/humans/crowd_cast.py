@@ -20,6 +20,7 @@ import bpy
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 import story_cast as SC  # noqa: E402
+SC.CROWD_WEAVES = True                               # (the crowd's sarees: a weave each, story_cast.saree_material)
 
 OUT = os.path.join(HERE, "..", "..", "godot", "assets", "people")
 THIN = 0.28                          # the share of each mesh's faces kept

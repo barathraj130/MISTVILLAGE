@@ -25,6 +25,14 @@ const SCENES := [
 	["friends", {"karthik": ["story_karthik", -0.8, 0.3], "divya": ["story_divya", 0.8, 0.3], "amma": ["story_amma", 0.0, -0.7]}, [
 		{"who": "divya", "en": "And then he fell right into the water!", "emotion": "happy", "intensity": "high", "gesture": "laugh"},
 		{"who": "amma", "en": "Aiyo, that boy.", "emotion": "happy", "intensity": "medium", "gesture": "wobble"}]],
+	["handshake", {"karthik": ["story_karthik", -0.55, 0.0], "stranger": ["crowd_m3", 0.55, 0.0]}, [
+		{"who": "karthik", "en": "Nice to meet you, sir.", "gesture": "handshake", "emotion": "respectful", "to": "stranger"}]],
+	["comfort", {"karthik": ["story_karthik", -0.5, 0.0], "divya": ["story_divya", 0.5, 0.0]}, [
+		{"who": "karthik", "en": "It'll be all right. I promise.", "gesture": "comfort", "emotion": "sad", "intensity": "medium", "to": "divya"}]],
+	["give", {"karthik": ["story_karthik", -0.6, 0.0], "kathir": ["crowd_m2", 0.6, 0.0]}, [
+		{"who": "karthik", "en": "From my advocate.", "gesture": "give", "emotion": "respectful", "to": "kathir"}]],
+	["laugh", {"divya": ["story_divya", -0.6, 0.0], "amma": ["story_amma", 0.6, 0.0]}, [
+		{"who": "divya", "en": "And then he fell in!", "gesture": "laugh", "emotion": "happy", "intensity": "high", "to": "amma"}]],
 	["argue", {"m": ["crowd_m1", -0.65, 0.0], "w": ["crowd_w2", 0.65, 0.0]}, [
 		{"who": "m", "en": "I paid you yesterday!", "emotion": "angry", "intensity": "medium", "gesture": "argue", "to": "w"},
 		{"who": "w", "en": "No, you didn't.", "emotion": "frustrated", "intensity": "high", "gesture": "shake", "to": "m"}]],

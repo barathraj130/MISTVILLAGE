@@ -742,21 +742,47 @@
  },
  "standing": {
   "told_truth": {
-   "suspicion": -10
+   "suspicion": -10,
+   "people": {
+    "murugesan": {
+     "suspicion": -10,
+     "respect": 5
+    }
+   }
   },
   "lied_home": {
-   "suspicion": 15
+   "suspicion": 15,
+   "people": {
+    "murugesan": {
+     "suspicion": 10,
+     "anger": 5
+    }
+   }
   },
   "funeral_went": {
    "reputation": -5,
    "trust": {
     "priya": -15,
     "meenakshi": 5
+   },
+   "people": {
+    "priya": {
+     "anger": 15
+    },
+    "meenakshi": {
+     "familiarity": 10
+    }
    }
   },
   "honest_watchman": {
    "trust": {
     "muniyandi": 25
+   },
+   "people": {
+    "muniyandi": {
+     "respect": 15,
+     "fear": -10
+    }
    }
   },
   "bribed_watchman": {
@@ -764,6 +790,12 @@
    "reputation": -2,
    "trust": {
     "muniyandi": -10
+   },
+   "people": {
+    "muniyandi": {
+     "suspicion": 15,
+     "respect": -10
+    }
    }
   },
   "kathir_paid": {
@@ -776,76 +808,149 @@
   "lakshmi_lawyer": {
    "trust": {
     "lakshmi": 15
+   },
+   "people": {
+    "lakshmi": {
+     "respect": 10
+    }
    }
   },
   "lakshmi_offered": {
    "suspicion": 3,
    "trust": {
     "lakshmi": -15
+   },
+   "people": {
+    "lakshmi": {
+     "suspicion": 15,
+     "respect": -10
+    }
    }
   },
   "sekar_tea": {
    "trust": {
     "sekar": 15
+   },
+   "people": {
+    "sekar": {
+     "familiarity": 15
+    }
    }
   },
   "sekar_pushed": {
    "reputation": -2,
    "trust": {
     "sekar": -15
+   },
+   "people": {
+    "sekar": {
+     "anger": 20,
+     "fear": 10
+    }
    }
   },
   "told_bala": {
    "trust": {
     "bala": 10
+   },
+   "people": {
+    "bala": {
+     "familiarity": 10
+    }
    }
   },
   "kept_from_bala": {
    "trust": {
     "bala": -5
+   },
+   "people": {
+    "bala": {
+     "suspicion": 10
+    }
    }
   },
   "farmers_heard": {
    "reputation": 5,
    "trust": {
     "farmers": 20
+   },
+   "people": {
+    "farmers": {
+     "respect": 15
+    }
    }
   },
   "farmers_offered": {
    "reputation": -3,
    "trust": {
     "farmers": -10
+   },
+   "people": {
+    "farmers": {
+     "suspicion": 10
+    }
    }
   },
   "farmers_left": {
    "trust": {
     "farmers": -10
+   },
+   "people": {
+    "farmers": {
+     "anger": 10
+    }
    }
   },
   "divya_partner": {
    "trust": {
     "divya": 15
+   },
+   "people": {
+    "divya": {
+     "respect": 15
+    }
    }
   },
   "divya_angry": {
    "trust": {
     "divya": -10
+   },
+   "people": {
+    "divya": {
+     "anger": 20
+    }
    }
   },
   "meenakshi_plain": {
    "trust": {
     "meenakshi": 15
+   },
+   "people": {
+    "meenakshi": {
+     "respect": 10
+    }
    }
   },
   "meenakshi_cap": {
    "trust": {
     "meenakshi": 10
+   },
+   "people": {
+    "meenakshi": {
+     "familiarity": 10
+    }
    }
   },
   "meenakshi_money": {
    "reputation": -2,
    "trust": {
     "meenakshi": -10
+   },
+   "people": {
+    "meenakshi": {
+     "suspicion": 10,
+     "respect": -10
+    }
    }
   },
   "market_went": {
@@ -854,6 +959,12 @@
   "priya_thanked": {
    "trust": {
     "priya": 10
+   },
+   "people": {
+    "priya": {
+     "anger": -10,
+     "familiarity": 5
+    }
    }
   },
   "patta_online": {
@@ -874,6 +985,11 @@
   "grand_dressed": {
    "trust": {
     "ganesan": 15
+   },
+   "people": {
+    "ganesan": {
+     "respect": 10
+    }
    }
   },
   "pm_paid": {
@@ -888,17 +1004,33 @@
   "bala_forgiven": {
    "trust": {
     "bala": 20
+   },
+   "people": {
+    "bala": {
+     "anger": -20,
+     "familiarity": 10
+    }
    }
   },
   "bala_walked": {
    "trust": {
     "bala": -10
+   },
+   "people": {
+    "bala": {
+     "anger": 10
+    }
    }
   },
   "trap_called": {
    "suspicion": -5,
    "trust": {
     "sundaram": 15
+   },
+   "people": {
+    "sundaram": {
+     "respect": 10
+    }
    }
   },
   "trap_went": {
@@ -918,6 +1050,11 @@
    "suspicion": -5,
    "trust": {
     "selvi": 15
+   },
+   "people": {
+    "selvi": {
+     "respect": 10
+    }
    }
   },
   "pandi_blocked": {
@@ -929,27 +1066,53 @@
   "pandi_bus_left": {
    "trust": {
     "selvi": -5
+   },
+   "people": {
+    "selvi": {
+     "respect": -5
+    }
    }
   },
   "joseph_taped": {
    "trust": {
     "joseph": 10
+   },
+   "people": {
+    "joseph": {
+     "familiarity": 10
+    }
    }
   },
   "joseph_spooked": {
    "trust": {
     "joseph": -20
+   },
+   "people": {
+    "joseph": {
+     "fear": 20,
+     "suspicion": 15
+    }
    }
   },
   "pm_sundaram": {
    "reputation": 1,
    "trust": {
     "sundaram": 5
+   },
+   "people": {
+    "sundaram": {
+     "familiarity": 5
+    }
    }
   },
   "farmers_calm": {
    "trust": {
     "farmers": 5
+   },
+   "people": {
+    "farmers": {
+     "anger": -10
+    }
    }
   },
   "farmers_shoved": {
@@ -957,22 +1120,43 @@
    "reputation": -8,
    "trust": {
     "farmers": -25
+   },
+   "people": {
+    "farmers": {
+     "anger": 30,
+     "fear": 15
+    }
    }
   },
   "divya_dropped": {
    "trust": {
     "divya": 10
+   },
+   "people": {
+    "divya": {
+     "anger": -10
+    }
    }
   },
   "divya_dropped_late": {
    "trust": {
     "divya": -3
+   },
+   "people": {
+    "divya": {
+     "anger": 5
+    }
    }
   },
   "temple_offering": {
    "reputation": 2,
    "trust": {
     "meenakshi": 10
+   },
+   "people": {
+    "meenakshi": {
+     "respect": 5
+    }
    }
   },
   "temple_archanai": {
@@ -983,6 +1167,11 @@
   "priya_missed": {
    "trust": {
     "priya": -5
+   },
+   "people": {
+    "priya": {
+     "anger": 5
+    }
    }
   }
  },
@@ -1134,19 +1323,26 @@
    "lines": [
     {
      "who": "divya",
-     "emotion": "nervous", "intensity": "low", "to": "karthik",
+     "emotion": "nervous",
+     "intensity": "low",
+     "to": "karthik",
      "en": "Anna, Friday. Fees. Forty-two thousand. Just reminding.",
      "ta": "அண்ணா, வெள்ளிக்கிழமை. ஃபீஸ். நாப்பத்தி ரெண்டாயிரம். சும்மா ஞாபகப்படுத்தறேன்."
     },
     {
      "who": "karthik",
-     "emotion": "frustrated", "intensity": "low", "to": "divya",
+     "emotion": "frustrated",
+     "intensity": "low",
+     "to": "divya",
      "en": "I know, I know. I'll ask sir.",
      "ta": "தெரியும், தெரியும். சார்கிட்ட கேக்கறேன்."
     },
     {
      "who": "amma",
-     "emotion": "relaxed", "intensity": "low", "to": "karthik", "gesture": "wobble",
+     "emotion": "relaxed",
+     "intensity": "low",
+     "to": "karthik",
+     "gesture": "wobble",
      "en": "Go, go. And come home for dinner tonight.",
      "ta": "போ, போ. ராத்திரி சாப்பாட்டுக்கு வீட்டுக்கு வா."
     }
@@ -1256,12 +1452,16 @@
     {
      "who": "raghavan",
      "en": "You're late, thambi. The traffic doesn't wait for anyone, and neither do bankers.",
-     "ta": "லேட்டா வந்திருக்க தம்பி. டிராஃபிக் யாருக்காகவும் காத்திருக்காது, பேங்க்காரங்களும் அப்படித்தான்."
+     "ta": "லேட்டா வந்திருக்க தம்பி. டிராஃபிக் யாருக்காகவும் காத்திருக்காது, பேங்க்காரங்களும் அப்படித்தான்.",
+     "emotion": "frustrated",
+     "intensity": "low"
     },
     {
      "who": "karthik",
      "en": "Sorry, sir. It won't happen again.",
-     "ta": "சாரி சார். மறுபடி நடக்காது."
+     "ta": "சாரி சார். மறுபடி நடக்காது.",
+     "emotion": "embarrassed",
+     "intensity": "medium"
     }
    ]
   },
@@ -1271,7 +1471,9 @@
     {
      "who": "raghavan",
      "en": "Good morning, thambi. Traffic?",
-     "ta": "குட் மார்னிங் தம்பி. டிராஃபிக் எப்படி?"
+     "ta": "குட் மார்னிங் தம்பி. டிராஃபிக் எப்படி?",
+     "emotion": "relaxed",
+     "intensity": "low"
     },
     {
      "who": "karthik",
@@ -1281,7 +1483,9 @@
     {
      "who": "raghavan",
      "en": "Gently, gently. My back is sixty-one years old.",
-     "ta": "மெதுவா, மெதுவா. என் முதுகுக்கு அறுபத்தி ஒரு வயசு."
+     "ta": "மெதுவா, மெதுவா. என் முதுகுக்கு அறுபத்தி ஒரு வயசு.",
+     "emotion": "happy",
+     "intensity": "low"
     }
    ]
   },
@@ -1380,17 +1584,23 @@
     {
      "who": "raghavan",
      "en": "Sit, Karthik. From today you're not only my driver. Calls, bank, documents: you'll handle them.",
-     "ta": "உட்காரு கார்த்திக். இன்னையிலிருந்து நீ என் டிரைவர் மட்டும் இல்ல. கால், பேங்க், டாக்குமென்ட் எல்லாம் நீ பாத்துக்க."
+     "ta": "உட்காரு கார்த்திக். இன்னையிலிருந்து நீ என் டிரைவர் மட்டும் இல்ல. கால், பேங்க், டாக்குமென்ட் எல்லாம் நீ பாத்துக்க.",
+     "emotion": "confident",
+     "intensity": "medium"
     },
     {
      "who": "raghavan",
      "en": "Same trust. Better salary.",
-     "ta": "அதே நம்பிக்கை. நல்ல சம்பளம்."
+     "ta": "அதே நம்பிக்கை. நல்ல சம்பளம்.",
+     "emotion": "happy",
+     "intensity": "low"
     },
     {
      "who": "karthik",
      "en": "Sir... I won't let you down.",
-     "ta": "சார்... உங்க நம்பிக்கையை கெடுக்க மாட்டேன்."
+     "ta": "சார்... உங்க நம்பிக்கையை கெடுக்க மாட்டேன்.",
+     "emotion": "happy",
+     "intensity": "medium"
     }
    ]
   },
@@ -1406,12 +1616,17 @@
     {
      "who": "suresh",
      "en": "Congratulations, boss! Here. Company phone, in your name. Rules are rules.",
-     "ta": "வாழ்த்துக்கள் பாஸ்! இந்தா. கம்பெனி ஃபோன், உன் பேர்லதான். ரூல்ஸ் ரூல்ஸ்தான்."
+     "ta": "வாழ்த்துக்கள் பாஸ்! இந்தா. கம்பெனி ஃபோன், உன் பேர்லதான். ரூல்ஸ் ரூல்ஸ்தான்.",
+     "emotion": "happy",
+     "intensity": "medium",
+     "gesture": "give"
     },
     {
      "who": "suresh",
      "en": "(turning his ring) So. Where are you taking sir tomorrow?",
-     "ta": "(மோதிரத்தைச் சுழற்றிக்கொண்டு) சரி. நாளைக்கு சாரை எங்க கூட்டிட்டு போற?"
+     "ta": "(மோதிரத்தைச் சுழற்றிக்கொண்டு) சரி. நாளைக்கு சாரை எங்க கூட்டிட்டு போற?",
+     "emotion": "curious",
+     "intensity": "low"
     }
    ]
   },
@@ -1421,12 +1636,16 @@
     {
      "who": "raghavan",
      "en": "Your first job as my assistant. Take this cheque to the cooperative bank. Four lakhs, in cash.",
-     "ta": "அசிஸ்டன்டா உன் முதல் வேலை. இந்த செக்கை கூட்டுறவு வங்கிக்கு எடுத்துட்டு போ. நாலு லட்சம், கேஷா."
+     "ta": "அசிஸ்டன்டா உன் முதல் வேலை. இந்த செக்கை கூட்டுறவு வங்கிக்கு எடுத்துட்டு போ. நாலு லட்சம், கேஷா.",
+     "emotion": "confident",
+     "intensity": "low"
     },
     {
      "who": "raghavan",
      "en": "It's for the Pudhur Vayal farmers. They were paid a fifth of what their land is worth. I'm putting that right on Friday.",
-     "ta": "புதூர் வயல் விவசாயிகளுக்கு. அவங்க நிலத்துக்கு அஞ்சுல ஒரு பங்குதான் கொடுத்தாங்க. வெள்ளிக்கிழமை அதை சரி பண்றேன்."
+     "ta": "புதூர் வயல் விவசாயிகளுக்கு. அவங்க நிலத்துக்கு அஞ்சுல ஒரு பங்குதான் கொடுத்தாங்க. வெள்ளிக்கிழமை அதை சரி பண்றேன்.",
+     "emotion": "confident",
+     "intensity": "medium"
     }
    ]
   },
@@ -1451,12 +1670,16 @@
     {
      "who": "raghavan",
      "en": "(writing in a file) I'm noting it down. No one should be able to say this money went anywhere else.",
-     "ta": "(ஃபைல்ல எழுதிக்கொண்டு) எழுதி வைக்கறேன். இந்த பணம் வேற எங்கயோ போச்சுன்னு யாரும் சொல்லக்கூடாது."
+     "ta": "(ஃபைல்ல எழுதிக்கொண்டு) எழுதி வைக்கறேன். இந்த பணம் வேற எங்கயோ போச்சுன்னு யாரும் சொல்லக்கூடாது.",
+     "emotion": "confident",
+     "intensity": "low"
     },
     {
      "who": "karthik",
      "en": "I'll go and come straight back, sir.",
-     "ta": "போயிட்டு நேரா வந்துடறேன் சார்."
+     "ta": "போயிட்டு நேரா வந்துடறேன் சார்.",
+     "emotion": "respectful",
+     "intensity": "low"
     }
    ]
   },
@@ -1634,12 +1857,16 @@
     {
      "who": "clerk",
      "en": "Short? Let me see... Aiyo, yes, ninety-nine in this one. Sorry, brother. Here's the note.",
-     "ta": "குறையுதா? பாக்கறேன்... ஐயோ, ஆமா, இதுல தொண்ணூத்தி ஒம்பதுதான். சாரி அண்ணா. இந்தாங்க நோட்டு."
+     "ta": "குறையுதா? பாக்கறேன்... ஐயோ, ஆமா, இதுல தொண்ணூத்தி ஒம்பதுதான். சாரி அண்ணா. இந்தாங்க நோட்டு.",
+     "emotion": "embarrassed",
+     "intensity": "medium"
     },
     {
      "who": "karthik",
      "en": "Thank you. Four lakhs exactly now.",
-     "ta": "நன்றி. இப்போ சரியா நாலு லட்சம்."
+     "ta": "நன்றி. இப்போ சரியா நாலு லட்சம்.",
+     "emotion": "relaxed",
+     "intensity": "low"
     }
    ]
   },
@@ -1716,22 +1943,30 @@
     {
      "who": "suresh",
      "en": "Sir, just a signature. The Green Valley buyers are waiting since March.",
-     "ta": "சார், ஒரு கையெழுத்து மட்டும். கிரீன் வேலி பையர்ஸ் மார்ச்லிருந்து காத்திருக்காங்க."
+     "ta": "சார், ஒரு கையெழுத்து மட்டும். கிரீன் வேலி பையர்ஸ் மார்ச்லிருந்து காத்திருக்காங்க.",
+     "emotion": "frustrated",
+     "intensity": "low"
     },
     {
      "who": "raghavan",
      "en": "Not until those farmers are paid what the land is worth. Not one signature, Suresh.",
-     "ta": "அந்த விவசாயிகளுக்கு நிலத்தோட சரியான விலை கொடுக்கற வரைக்கும் இல்ல. ஒரு கையெழுத்தும் இல்ல, சுரேஷ்."
+     "ta": "அந்த விவசாயிகளுக்கு நிலத்தோட சரியான விலை கொடுக்கற வரைக்கும் இல்ல. ஒரு கையெழுத்தும் இல்ல, சுரேஷ்.",
+     "emotion": "angry",
+     "intensity": "low"
     },
     {
      "who": "suresh",
      "en": "(a short laugh, turning his ring) Of course, sir. Your company. Your rules.",
-     "ta": "(சின்ன சிரிப்பு, மோதிரத்தைச் சுழற்றிக்கொண்டு) சரி சார். உங்க கம்பெனி. உங்க ரூல்ஸ்."
+     "ta": "(சின்ன சிரிப்பு, மோதிரத்தைச் சுழற்றிக்கொண்டு) சரி சார். உங்க கம்பெனி. உங்க ரூல்ஸ்.",
+     "emotion": "confident",
+     "intensity": "low"
     },
     {
      "who": "karthik",
      "en": "Sir, the cash. Four lakhs.",
-     "ta": "சார், பணம். நாலு லட்சம்."
+     "ta": "சார், பணம். நாலு லட்சம்.",
+     "emotion": "nervous",
+     "intensity": "low"
     }
    ]
   },
@@ -1743,7 +1978,10 @@
      "who": "raghavan",
      "en": "You caught the bank's mistake? Good. Careful hands are worth more than fast ones. Here, buy your sister something.",
      "ta": "வங்கி தப்பை நீ கண்டுபிடிச்சியா? நல்லது. வேகமான கையை விட கவனமான கை மதிப்பு. இந்தா, தங்கச்சிக்கு ஏதாவது வாங்கு.",
-     "pay": 200
+     "pay": 200,
+     "emotion": "happy",
+     "intensity": "medium",
+     "gesture": "give"
     }
    ]
   },
@@ -1754,7 +1992,9 @@
     {
      "who": "raghavan",
      "en": "(counting) Three lakh ninety-nine thousand five hundred. Thambi... count every bundle. Always. Next time it could be your name on the shortfall.",
-     "ta": "(எண்ணிக்கொண்டு) மூணு லட்சத்து தொண்ணூத்தி ஒம்பதாயிரத்து ஐநூறு. தம்பி... ஒவ்வொரு கட்டையும் எண்ணு. எப்பவும். அடுத்த தடவை குறைஞ்சா உன் பேர்தான் வரும்."
+     "ta": "(எண்ணிக்கொண்டு) மூணு லட்சத்து தொண்ணூத்தி ஒம்பதாயிரத்து ஐநூறு. தம்பி... ஒவ்வொரு கட்டையும் எண்ணு. எப்பவும். அடுத்த தடவை குறைஞ்சா உன் பேர்தான் வரும்.",
+     "emotion": "confident",
+     "intensity": "low"
     }
    ]
   },
@@ -1764,7 +2004,9 @@
     {
      "who": "raghavan",
      "en": "Keep it in my brown bag, thambi. It comes home with me tonight.",
-     "ta": "என் பிரவுன் பேக்ல வை தம்பி. இன்னைக்கு ராத்திரி என்கூட வீட்டுக்கு வருது."
+     "ta": "என் பிரவுன் பேக்ல வை தம்பி. இன்னைக்கு ராத்திரி என்கூட வீட்டுக்கு வருது.",
+     "emotion": "relaxed",
+     "intensity": "low"
     }
    ]
   },
@@ -2026,12 +2268,16 @@
     {
      "who": "suresh",
      "en": "Boss! Leave the company phone here tonight. The IT boy is installing the new billing app.",
-     "ta": "பாஸ்! இன்னைக்கு ராத்திரி கம்பெனி ஃபோனை இங்கயே வச்சுட்டு போ. ஐடி பையன் புது பில்லிங் ஆப் போடறான்."
+     "ta": "பாஸ்! இன்னைக்கு ராத்திரி கம்பெனி ஃபோனை இங்கயே வச்சுட்டு போ. ஐடி பையன் புது பில்லிங் ஆப் போடறான்.",
+     "emotion": "happy",
+     "intensity": "low"
     },
     {
      "who": "suresh",
      "en": "Good man. Tomorrow you'll have it back, good as new.",
-     "ta": "நல்ல பையன். நாளைக்கு புதுசு மாதிரி திரும்ப கிடைக்கும்."
+     "ta": "நல்ல பையன். நாளைக்கு புதுசு மாதிரி திரும்ப கிடைக்கும்.",
+     "emotion": "happy",
+     "intensity": "low"
     }
    ]
   },
@@ -2115,7 +2361,9 @@
     {
      "who": "raghavan",
      "en": "Come, thambi. Home. Gently.",
-     "ta": "வா தம்பி. வீட்டுக்கு. மெதுவா."
+     "ta": "வா தம்பி. வீட்டுக்கு. மெதுவா.",
+     "emotion": "relaxed",
+     "intensity": "low"
     }
    ]
   },
@@ -2315,12 +2563,17 @@
     {
      "who": "cook",
      "en": "Four-four-seven-one, Saravanampatti! Two parottas, one chicken. Hot, hot, go!",
-     "ta": "நாலு நாலு ஏழு ஒண்ணு, சரவணம்பட்டி! ரெண்டு பரோட்டா, ஒரு சிக்கன். சூடா இருக்கு, போங்க!"
+     "ta": "நாலு நாலு ஏழு ஒண்ணு, சரவணம்பட்டி! ரெண்டு பரோட்டா, ஒரு சிக்கன். சூடா இருக்கு, போங்க!",
+     "emotion": "confident",
+     "intensity": "high",
+     "gesture": "point"
     },
     {
      "who": "cook",
      "en": "And thambi: get the OTP before you hand it over. No OTP, no parotta.",
-     "ta": "அப்புறம் தம்பி: கொடுக்கறதுக்கு முன்னாடி ஓடிபி வாங்கு. ஓடிபி இல்லன்னா பரோட்டா இல்ல."
+     "ta": "அப்புறம் தம்பி: கொடுக்கறதுக்கு முன்னாடி ஓடிபி வாங்கு. ஓடிபி இல்லன்னா பரோட்டா இல்ல.",
+     "emotion": "confident",
+     "intensity": "medium"
     }
    ]
   },
@@ -2362,7 +2615,9 @@
     {
      "who": "ashwin",
      "en": "Finally! The OTP? Five, five, one, two.",
-     "ta": "வந்துட்டீங்களா! ஓடிபி? அஞ்சு, அஞ்சு, ஒண்ணு, ரெண்டு."
+     "ta": "வந்துட்டீங்களா! ஓடிபி? அஞ்சு, அஞ்சு, ஒண்ணு, ரெண்டு.",
+     "emotion": "frustrated",
+     "intensity": "low"
     }
    ],
    "doorbell": true
@@ -2521,7 +2776,9 @@
     {
      "who": "karthik",
      "en": "Hello? ...Hello? Who is this?",
-     "ta": "ஹலோ? ...ஹலோ? யாரு?"
+     "ta": "ஹலோ? ...ஹலோ? யாரு?",
+     "emotion": "confused",
+     "intensity": "medium"
     },
     {
      "who": "karthik",
@@ -2597,18 +2854,25 @@
     {
      "who": "murugesan",
      "en": "Karthik? Raghavan sir was found dead this morning, at a site off the Thondamuthur road. You're coming with us.",
-     "ta": "கார்த்திக்? ராகவன் சார் இன்னைக்கு காலையில தொண்டாமுத்தூர் ரோடு பக்கம் ஒரு சைட்ல இறந்து கிடந்தாரு. நீ எங்களோட வரணும்."
+     "ta": "கார்த்திக்? ராகவன் சார் இன்னைக்கு காலையில தொண்டாமுத்தூர் ரோடு பக்கம் ஒரு சைட்ல இறந்து கிடந்தாரு. நீ எங்களோட வரணும்.",
+     "emotion": "confident",
+     "intensity": "high"
     },
     {
      "who": "karthik",
      "en": "Sir... dead? I dropped him home last night. He was...",
-     "ta": "சார்... இறந்துட்டாரா? நேத்து ராத்திரி நான் தான் வீட்ல விட்டேன். அவர் நல்லா..."
+     "ta": "சார்... இறந்துட்டாரா? நேத்து ராத்திரி நான் தான் வீட்ல விட்டேன். அவர் நல்லா...",
+     "emotion": "surprised",
+     "intensity": "high"
     },
     {
      "who": "murugesan",
      "en": "Here. The warrant. Read it, if you like.",
      "ta": "இந்தா. வாரண்ட். படிச்சுக்கோ.",
-     "to": "karthik"
+     "to": "karthik",
+     "emotion": "suspicious",
+     "intensity": "medium",
+     "gesture": "give"
     }
    ]
   },
@@ -2638,7 +2902,10 @@
     {
      "who": "amma",
      "en": "What are you saying? He was home all night!",
-     "ta": "என்ன சொல்றீங்க? அவன் ராத்திரி முழுக்க வீட்லதான் இருந்தான்!"
+     "ta": "என்ன சொல்றீங்க? அவன் ராத்திரி முழுக்க வீட்லதான் இருந்தான்!",
+     "emotion": "fear",
+     "intensity": "high",
+     "gesture": "argue"
     },
     {
      "who": "karthik",
@@ -2648,7 +2915,9 @@
     {
      "who": "divya",
      "en": "Anna? Anna, what's happening?",
-     "ta": "அண்ணா? அண்ணா, என்ன நடக்குது?"
+     "ta": "அண்ணா? அண்ணா, என்ன நடக்குது?",
+     "emotion": "fear",
+     "intensity": "high"
     }
    ]
   },
@@ -2658,7 +2927,9 @@
     {
      "who": "murugesan",
      "en": "Everyone in the lane is watching, amma. Let him come quietly.",
-     "ta": "தெரு முழுக்க பாக்குது அம்மா. அமைதியா வரட்டும்."
+     "ta": "தெரு முழுக்க பாக்குது அம்மா. அமைதியா வரட்டும்.",
+     "emotion": "confident",
+     "intensity": "medium"
     }
    ]
   },
@@ -2753,7 +3024,10 @@
     {
      "who": "selvi",
      "en": "Your phone. Give it here. And sit there, where I can see you.",
-     "ta": "உன் ஃபோன். இங்க குடு. அங்க உட்காரு, நான் பாக்கற மாதிரி."
+     "ta": "உன் ஃபோன். இங்க குடு. அங்க உட்காரு, நான் பாக்கற மாதிரி.",
+     "emotion": "confident",
+     "intensity": "medium",
+     "gesture": "point"
     }
    ]
   },
@@ -2885,22 +3159,32 @@
     {
      "who": "karthik",
      "en": "My phone was at the office! Suresh sir told me to leave it there for the new app. At ten I was in Saravanampatti with a parcel. The app will show it.",
-     "ta": "என் ஃபோன் ஆஃபீஸ்லதான் இருந்துச்சு! புது ஆப்புக்காக சுரேஷ் சார்தான் அங்க வச்சுட்டு போகச் சொன்னாரு. பத்து மணிக்கு நான் சரவணம்பட்டியில ஒரு பார்சலோட இருந்தேன். ஆப்ல தெரியும்."
+     "ta": "என் ஃபோன் ஆஃபீஸ்லதான் இருந்துச்சு! புது ஆப்புக்காக சுரேஷ் சார்தான் அங்க வச்சுட்டு போகச் சொன்னாரு. பத்து மணிக்கு நான் சரவணம்பட்டியில ஒரு பார்சலோட இருந்தேன். ஆப்ல தெரியும்.",
+     "emotion": "fear",
+     "intensity": "high",
+     "gesture": "argue"
     },
     {
      "who": "murugesan",
      "en": "Apps. Phones. Anyone can carry a phone, thambi.",
-     "ta": "ஆப். ஃபோன். ஃபோன யார் வேணும்னாலும் தூக்கிட்டு போகலாம் தம்பி."
+     "ta": "ஆப். ஃபோன். ஃபோன யார் வேணும்னாலும் தூக்கிட்டு போகலாம் தம்பி.",
+     "emotion": "suspicious",
+     "intensity": "medium",
+     "gesture": "shrug"
     },
     {
      "who": "selvi",
      "en": "(quietly) Sir, the app record has an OTP at 10:20. The customer typed it.",
-     "ta": "(மெதுவா) சார், ஆப் ரெக்கார்ட்ல 10:20-க்கு ஓடிபி இருக்கு. கஸ்டமர் தான் போட்டாரு."
+     "ta": "(மெதுவா) சார், ஆப் ரெக்கார்ட்ல 10:20-க்கு ஓடிபி இருக்கு. கஸ்டமர் தான் போட்டாரு.",
+     "emotion": "nervous",
+     "intensity": "low"
     },
     {
      "who": "murugesan",
      "en": "Write it down, Selvi. Everything gets written down.",
-     "ta": "எழுதிக்கோ செல்வி. எல்லாம் எழுதணும்."
+     "ta": "எழுதிக்கோ செல்வி. எல்லாம் எழுதணும்.",
+     "emotion": "confident",
+     "intensity": "low"
     }
    ]
   },
@@ -2911,17 +3195,23 @@
     {
      "who": "karthik",
      "en": "I was at home, sir. All night. Ask my mother.",
-     "ta": "நான் வீட்லதான் இருந்தேன் சார். ராத்திரி முழுக்க. அம்மாவ கேளுங்க."
+     "ta": "நான் வீட்லதான் இருந்தேன் சார். ராத்திரி முழுக்க. அம்மாவ கேளுங்க.",
+     "emotion": "nervous",
+     "intensity": "high"
     },
     {
      "who": "murugesan",
      "en": "(He turns a page in the file.) Your own delivery app. Gandhipuram at 9:50. Saravanampatti at 10:20.",
-     "ta": "(ஃபைல்ல ஒரு பக்கத்த திருப்பறார்.) உன்னோட டெலிவரி ஆப். 9:50-க்கு காந்திபுரம். 10:20-க்கு சரவணம்பட்டி."
+     "ta": "(ஃபைல்ல ஒரு பக்கத்த திருப்பறார்.) உன்னோட டெலிவரி ஆப். 9:50-க்கு காந்திபுரம். 10:20-க்கு சரவணம்பட்டி.",
+     "emotion": "suspicious",
+     "intensity": "medium"
     },
     {
      "who": "murugesan",
      "en": "Your mother lies for you. Now you lie for yourself. Why, if you have nothing to hide?",
-     "ta": "உன் அம்மா உனக்காக பொய் சொல்றாங்க. இப்போ நீ உனக்காக பொய் சொல்ற. ஒளிக்க ஒண்ணும் இல்லன்னா ஏன்?"
+     "ta": "உன் அம்மா உனக்காக பொய் சொல்றாங்க. இப்போ நீ உனக்காக பொய் சொல்ற. ஒளிக்க ஒண்ணும் இல்லன்னா ஏன்?",
+     "emotion": "angry",
+     "intensity": "medium"
     }
    ]
   },
@@ -2932,12 +3222,16 @@
     {
      "who": "karthik",
      "en": "Sir, I'll say nothing without a lawyer.",
-     "ta": "சார், வக்கீல் இல்லாம நான் ஒண்ணும் சொல்ல மாட்டேன்."
+     "ta": "சார், வக்கீல் இல்லாம நான் ஒண்ணும் சொல்ல மாட்டேன்.",
+     "emotion": "nervous",
+     "intensity": "medium"
     },
     {
      "who": "murugesan",
      "en": "Hm. Then you can wait. Selvi, put him on the bench.",
-     "ta": "ம்ம். அப்போ காத்திரு. செல்வி, அவன பெஞ்சுல உக்கார வை."
+     "ta": "ம்ம். அப்போ காத்திரு. செல்வி, அவன பெஞ்சுல உக்கார வை.",
+     "emotion": "frustrated",
+     "intensity": "low"
     }
    ]
   },
@@ -2947,17 +3241,24 @@
     {
      "who": "sundaram",
      "en": "Muthu's son? Karthik. Not another word, thambi. I knew your father on the buses for twenty years.",
-     "ta": "முத்துவோட பையனா? கார்த்திக். இனிமே ஒரு வார்த்தையும் வேண்டாம் தம்பி. உங்க அப்பாவ பஸ்ல இருபது வருஷமா தெரியும்."
+     "ta": "முத்துவோட பையனா? கார்த்திக். இனிமே ஒரு வார்த்தையும் வேண்டாம் தம்பி. உங்க அப்பாவ பஸ்ல இருபது வருஷமா தெரியும்.",
+     "emotion": "confident",
+     "intensity": "medium"
     },
     {
      "who": "sundaram",
      "en": "Inspector. A fact needs two legs. Right now this one is standing on one.",
-     "ta": "இன்ஸ்பெக்டர். ஒரு உண்மைக்கு ரெண்டு கால் வேணும். இது இப்போ ஒத்தக் கால்ல நிக்குது."
+     "ta": "இன்ஸ்பெக்டர். ஒரு உண்மைக்கு ரெண்டு கால் வேணும். இது இப்போ ஒத்தக் கால்ல நிக்குது.",
+     "emotion": "confident",
+     "intensity": "high",
+     "gesture": "point"
     },
     {
      "who": "murugesan",
      "en": "We'll see what the magistrate says, sir.",
-     "ta": "மாஜிஸ்திரேட் என்ன சொல்றாருன்னு பாப்போம் சார்."
+     "ta": "மாஜிஸ்திரேட் என்ன சொல்றாருன்னு பாப்போம் சார்.",
+     "emotion": "frustrated",
+     "intensity": "low"
     }
    ]
   },
@@ -2988,7 +3289,10 @@
     {
      "who": "selvi",
      "en": "Tea. Drink it, it's hot. The magistrate sits tomorrow.",
-     "ta": "டீ. குடி, சூடா இருக்கு. மாஜிஸ்திரேட் நாளைக்கு உட்காருவாரு."
+     "ta": "டீ. குடி, சூடா இருக்கு. மாஜிஸ்திரேட் நாளைக்கு உட்காருவாரு.",
+     "emotion": "respectful",
+     "intensity": "low",
+     "gesture": "give"
     }
    ]
   },
@@ -3025,12 +3329,17 @@
     {
      "who": "sundaram",
      "en": "Bail. You sign here every evening, six to seven. You don't leave the district, not even to Mettupalayam.",
-     "ta": "ஜாமீன். தினமும் சாயங்காலம் ஆறிலிருந்து ஏழுக்குள்ள இங்க கையெழுத்து. மாவட்டத்த விட்டு போகக்கூடாது, மேட்டுப்பாளையத்துக்கு கூட."
+     "ta": "ஜாமீன். தினமும் சாயங்காலம் ஆறிலிருந்து ஏழுக்குள்ள இங்க கையெழுத்து. மாவட்டத்த விட்டு போகக்கூடாது, மேட்டுப்பாளையத்துக்கு கூட.",
+     "emotion": "confident",
+     "intensity": "medium"
     },
     {
      "who": "sundaram",
      "en": "Here is their case, on paper. Read it at home. Read it twice.",
-     "ta": "இதுதான் அவங்க கேஸ், பேப்பர்ல. வீட்ல படி. ரெண்டு தடவ படி."
+     "ta": "இதுதான் அவங்க கேஸ், பேப்பர்ல. வீட்ல படி. ரெண்டு தடவ படி.",
+     "emotion": "confident",
+     "intensity": "low",
+     "gesture": "give"
     }
    ]
   },
@@ -3061,7 +3370,9 @@
     {
      "who": "murugesan",
      "en": "And Karthik. Your lie, and your mother's, are in the file now. I'll remember them every evening you sign.",
-     "ta": "அப்புறம் கார்த்திக். உன் பொய்யும், உன் அம்மா பொய்யும் இப்போ ஃபைல்ல இருக்கு. நீ கையெழுத்து போடற ஒவ்வொரு சாயங்காலமும் எனக்கு ஞாபகம் வரும்."
+     "ta": "அப்புறம் கார்த்திக். உன் பொய்யும், உன் அம்மா பொய்யும் இப்போ ஃபைல்ல இருக்கு. நீ கையெழுத்து போடற ஒவ்வொரு சாயங்காலமும் எனக்கு ஞாபகம் வரும்.",
+     "emotion": "suspicious",
+     "intensity": "high"
     }
    ]
   },
@@ -3295,7 +3606,9 @@
     {
      "who": "amma",
      "en": "They bring sir home from the hospital this afternoon. The funeral is at four, at the Race Course house. ...Don't go, kanna. Not today.",
-     "ta": "மதியம் சார ஆஸ்பத்திரியில இருந்து வீட்டுக்கு கொண்டு வர்றாங்க. நாலு மணிக்கு ரேஸ் கோர்ஸ் வீட்டுல அடக்கம். ...போகாத கண்ணா. இன்னைக்கு வேண்டாம்."
+     "ta": "மதியம் சார ஆஸ்பத்திரியில இருந்து வீட்டுக்கு கொண்டு வர்றாங்க. நாலு மணிக்கு ரேஸ் கோர்ஸ் வீட்டுல அடக்கம். ...போகாத கண்ணா. இன்னைக்கு வேண்டாம்.",
+     "emotion": "sad",
+     "intensity": "medium"
     }
    ]
   },
@@ -3410,7 +3723,10 @@
     {
      "who": "priya",
      "en": "You. YOU. At my father's gate? Today?",
-     "ta": "நீ. நீயா. என் அப்பா கேட்லயா? இன்னைக்கா?"
+     "ta": "நீ. நீயா. என் அப்பா கேட்லயா? இன்னைக்கா?",
+     "emotion": "angry",
+     "intensity": "high",
+     "gesture": "argue"
     },
     {
      "who": "karthik",
@@ -3420,7 +3736,10 @@
     {
      "who": "suresh",
      "en": "Priya, ma, enough, enough. ...Karthik. Go home, boss. Not today.",
-     "ta": "பிரியா மா, போதும், போதும். ...கார்த்திக். வீட்டுக்கு போ, பாஸ். இன்னைக்கு வேண்டாம்."
+     "ta": "பிரியா மா, போதும், போதும். ...கார்த்திக். வீட்டுக்கு போ, பாஸ். இன்னைக்கு வேண்டாம்.",
+     "emotion": "sad",
+     "intensity": "medium",
+     "gesture": "comfort"
     },
     {
      "who": "karthik",
@@ -3610,17 +3929,25 @@
     {
      "who": "muniyandi",
      "en": "Stop there! ...Aiyo. It's you. The driver.",
-     "ta": "நில்லு அங்கயே! ...அய்யோ. நீயா. அந்த டிரைவர்."
+     "ta": "நில்லு அங்கயே! ...அய்யோ. நீயா. அந்த டிரைவர்.",
+     "emotion": "surprised",
+     "intensity": "medium"
     },
     {
      "who": "karthik",
      "en": "Anna, please. I only want to ask you one thing about that night.",
-     "ta": "அண்ணா, ப்ளீஸ். அன்னைக்கு ராத்திரி பத்தி ஒண்ணு மட்டும் கேக்கணும்."
+     "ta": "அண்ணா, ப்ளீஸ். அன்னைக்கு ராத்திரி பத்தி ஒண்ணு மட்டும் கேக்கணும்.",
+     "emotion": "nervous",
+     "intensity": "medium",
+     "gesture": "namaste"
     },
     {
      "who": "muniyandi",
      "en": "Police said nobody goes up. And you're the accused! Go, go, before somebody sees you here.",
-     "ta": "போலீஸ் யாரும் மேல போகக்கூடாதுன்னு சொல்லிருக்காங்க. நீ தான் குற்றவாளி! போ போ, யாராவது பாக்கறதுக்குள்ள."
+     "ta": "போலீஸ் யாரும் மேல போகக்கூடாதுன்னு சொல்லிருக்காங்க. நீ தான் குற்றவாளி! போ போ, யாராவது பாக்கறதுக்குள்ள.",
+     "emotion": "fear",
+     "intensity": "medium",
+     "gesture": "argue"
     },
     {
      "who": "karthik",
@@ -3669,7 +3996,9 @@
     {
      "who": "muniyandi",
      "en": "The current has been going off all week. If it goes, stand still. I'll come with the torch.",
-     "ta": "இந்த வாரம் முழுக்க கரண்ட் போய் போய் வருது. போச்சுன்னா அப்படியே நில்லு. நான் டார்ச் எடுத்துட்டு வரேன்."
+     "ta": "இந்த வாரம் முழுக்க கரண்ட் போய் போய் வருது. போச்சுன்னா அப்படியே நில்லு. நான் டார்ச் எடுத்துட்டு வரேன்.",
+     "emotion": "nervous",
+     "intensity": "low"
     },
     {
      "who": "karthik",
@@ -3686,22 +4015,31 @@
     {
      "who": "karthik",
      "en": "Tea, anna. And vadai, still hot.",
-     "ta": "டீ அண்ணா. வடையும், இன்னும் சூடா."
+     "ta": "டீ அண்ணா. வடையும், இன்னும் சூடா.",
+     "emotion": "respectful",
+     "intensity": "low",
+     "gesture": "give"
     },
     {
      "who": "muniyandi",
      "en": "...Sit. Sit.",
-     "ta": "...உக்காரு. உக்காரு."
+     "ta": "...உக்காரு. உக்காரு.",
+     "emotion": "relaxed",
+     "intensity": "low"
     },
     {
      "who": "muniyandi",
      "en": "My son also drives. A van, in Tiruppur. Now no work. Everybody says he's lazy. He's not lazy.",
-     "ta": "என் பையனும் டிரைவர் தான். திருப்பூர்ல வேன். இப்போ வேலை இல்ல. எல்லாரும் சோம்பேறின்னு சொல்றாங்க. அவன் சோம்பேறி இல்ல."
+     "ta": "என் பையனும் டிரைவர் தான். திருப்பூர்ல வேன். இப்போ வேலை இல்ல. எல்லாரும் சோம்பேறின்னு சொல்றாங்க. அவன் சோம்பேறி இல்ல.",
+     "emotion": "sad",
+     "intensity": "medium"
     },
     {
      "who": "karthik",
      "en": "They say I killed a man I loved like my father, anna.",
-     "ta": "என் அப்பா மாதிரி நெனச்ச ஒருத்தர நான் கொன்னேன்னு சொல்றாங்க அண்ணா."
+     "ta": "என் அப்பா மாதிரி நெனச்ச ஒருத்தர நான் கொன்னேன்னு சொல்றாங்க அண்ணா.",
+     "emotion": "sad",
+     "intensity": "high"
     },
     {
      "who": "muniyandi",
@@ -3711,7 +4049,9 @@
     {
      "who": "muniyandi",
      "en": "...Less sugar, next time. My sugar is high.",
-     "ta": "...அடுத்த தடவ சக்கர கம்மியா. எனக்கு சுகர் இருக்கு."
+     "ta": "...அடுத்த தடவ சக்கர கம்மியா. எனக்கு சுகர் இருக்கு.",
+     "emotion": "relaxed",
+     "intensity": "low"
     },
     {
      "who": "karthik",
@@ -3773,12 +4113,16 @@
     {
      "who": "amma",
      "en": "Eleven o'clock you came in last night. Where were you?",
-     "ta": "நேத்து ராத்திரி பதினொரு மணிக்கு வந்த. எங்க போயிருந்த?"
+     "ta": "நேத்து ராத்திரி பதினொரு மணிக்கு வந்த. எங்க போயிருந்த?",
+     "emotion": "suspicious",
+     "intensity": "medium"
     },
     {
      "who": "karthik",
      "en": "Drinking tea with a watchman, Amma.",
-     "ta": "ஒரு வாட்ச்மேன் கூட டீ குடிச்சுட்டு இருந்தேன் அம்மா."
+     "ta": "ஒரு வாட்ச்மேன் கூட டீ குடிச்சுட்டு இருந்தேன் அம்மா.",
+     "emotion": "embarrassed",
+     "intensity": "low"
     },
     {
      "who": "amma",
@@ -3788,7 +4132,9 @@
     {
      "who": "divya",
      "en": "Anna's making friends. Good. He needs some.",
-     "ta": "அண்ணாவுக்கு ஃப்ரெண்ட்ஸ் கிடைக்கறாங்க. நல்லது. அவனுக்கு வேணும்."
+     "ta": "அண்ணாவுக்கு ஃப்ரெண்ட்ஸ் கிடைக்கறாங்க. நல்லது. அவனுக்கு வேணும்.",
+     "emotion": "happy",
+     "intensity": "low"
     }
    ],
    "when": "honest_watchman"
@@ -3971,7 +4317,9 @@
     {
      "who": "muniyandi",
      "en": "You again. (This time he leaves the grill gate open.)",
-     "ta": "நீ திரும்பவுமா. (இந்த தடவ கிரில் கேட்ட திறந்தே விடறார்.)"
+     "ta": "நீ திரும்பவுமா. (இந்த தடவ கிரில் கேட்ட திறந்தே விடறார்.)",
+     "emotion": "relaxed",
+     "intensity": "low"
     }
    ],
    "when": "honest_watchman"
@@ -4014,7 +4362,9 @@
     {
      "who": "karthik",
      "en": "Less sugar, anna.",
-     "ta": "சக்கர கம்மி, அண்ணா."
+     "ta": "சக்கர கம்மி, அண்ணா.",
+     "emotion": "happy",
+     "intensity": "low"
     },
     {
      "who": "muniyandi",
@@ -4024,17 +4374,23 @@
     {
      "who": "muniyandi",
      "en": "Twenty-two years at this gate. Forty people in and out every day, and not one knows my name. Your sir knew it.",
-     "ta": "இந்த கேட்ல இருபத்திரெண்டு வருஷம். தினமும் நாப்பது பேர் உள்ள வெளிய போறாங்க, ஒருத்தருக்கும் என் பேர் தெரியாது. உங்க சாருக்கு தெரியும்."
+     "ta": "இந்த கேட்ல இருபத்திரெண்டு வருஷம். தினமும் நாப்பது பேர் உள்ள வெளிய போறாங்க, ஒருத்தருக்கும் என் பேர் தெரியாது. உங்க சாருக்கு தெரியும்.",
+     "emotion": "sad",
+     "intensity": "low"
     },
     {
      "who": "karthik",
      "en": "That night, anna. Did you see me?",
-     "ta": "அன்னைக்கு ராத்திரி அண்ணா. என்ன பாத்தீங்களா?"
+     "ta": "அன்னைக்கு ராத்திரி அண்ணா. என்ன பாத்தீங்களா?",
+     "emotion": "curious",
+     "intensity": "medium"
     },
     {
      "who": "muniyandi",
      "en": "I saw a man. ...Not tonight, thambi. A jeep from the station has gone past twice already.",
-     "ta": "ஒருத்தன பாத்தேன். ...இன்னைக்கு வேண்டாம் தம்பி. ஸ்டேஷன் ஜீப் ஏற்கனவே ரெண்டு தடவ போயிருச்சு."
+     "ta": "ஒருத்தன பாத்தேன். ...இன்னைக்கு வேண்டாம் தம்பி. ஸ்டேஷன் ஜீப் ஏற்கனவே ரெண்டு தடவ போயிருச்சு.",
+     "emotion": "nervous",
+     "intensity": "medium"
     },
     {
      "who": "karthik",
@@ -4097,12 +4453,16 @@
     {
      "who": "divya",
      "en": "Sundaram sir called at seven. He says: don't do anything clever.",
-     "ta": "சுந்தரம் சார் ஏழு மணிக்கு கூப்பிட்டாரு. ஏதும் புத்திசாலித்தனம் பண்ண வேண்டாம்னு சொன்னாரு."
+     "ta": "சுந்தரம் சார் ஏழு மணிக்கு கூப்பிட்டாரு. ஏதும் புத்திசாலித்தனம் பண்ண வேண்டாம்னு சொன்னாரு.",
+     "emotion": "relaxed",
+     "intensity": "low"
     },
     {
      "who": "karthik",
      "en": "Tell him I'm only drinking tea.",
-     "ta": "நான் டீ மட்டும் தான் குடிக்கறேன்னு சொல்லு."
+     "ta": "நான் டீ மட்டும் தான் குடிக்கறேன்னு சொல்லு.",
+     "emotion": "relaxed",
+     "intensity": "low"
     },
     {
      "who": "amma",
@@ -4354,7 +4714,10 @@
     {
      "who": "karthik",
      "en": "Tea, less sugar. And Amma sent dosa.",
-     "ta": "டீ, சக்கர கம்மியா. அம்மா தோசையும் குடுத்து விட்டாங்க."
+     "ta": "டீ, சக்கர கம்மியா. அம்மா தோசையும் குடுத்து விட்டாங்க.",
+     "emotion": "respectful",
+     "intensity": "low",
+     "gesture": "give"
     },
     {
      "who": "muniyandi",
@@ -4409,27 +4772,38 @@
     {
      "who": "muniyandi",
      "en": "Careful. The third step from the top is broken. The current has gone again, see.",
-     "ta": "பாத்து. மேல இருந்து மூணாவது படி உடைஞ்சிருக்கு. பாத்தியா, திரும்ப கரண்ட் போச்சு."
+     "ta": "பாத்து. மேல இருந்து மூணாவது படி உடைஞ்சிருக்கு. பாத்தியா, திரும்ப கரண்ட் போச்சு.",
+     "emotion": "nervous",
+     "intensity": "low"
     },
     {
      "who": "muniyandi",
      "en": "This is where I was standing that night. Twenty to ten.",
-     "ta": "அன்னைக்கு ராத்திரி நான் இங்க தான் நின்னுட்டு இருந்தேன். பத்துக்கு இருபது நிமிஷம்."
+     "ta": "அன்னைக்கு ராத்திரி நான் இங்க தான் நின்னுட்டு இருந்தேன். பத்துக்கு இருபது நிமிஷம்.",
+     "emotion": "confident",
+     "intensity": "low",
+     "gesture": "point"
     },
     {
      "who": "muniyandi",
      "en": "A man in a cap and a dark jacket, about your size. He had a card for the door. He went straight up.",
-     "ta": "தொப்பி போட்டு, கருப்பு ஜாக்கெட் போட்டு, உன் சைஸ்ல ஒருத்தன். கதவுக்கு கார்டு வச்சிருந்தான். நேரா மேல போனான்."
+     "ta": "தொப்பி போட்டு, கருப்பு ஜாக்கெட் போட்டு, உன் சைஸ்ல ஒருத்தன். கதவுக்கு கார்டு வச்சிருந்தான். நேரா மேல போனான்.",
+     "emotion": "nervous",
+     "intensity": "medium"
     },
     {
      "who": "muniyandi",
      "en": "Eighteen minutes later he came down, face to the wall all the way. I told the police. They wrote nothing.",
-     "ta": "பதினெட்டு நிமிஷம் கழிச்சு கீழ வந்தான், முகத்த சுவர் பக்கமாவே வச்சுக்கிட்டு. போலீஸ் கிட்ட சொன்னேன். ஒண்ணும் எழுதல."
+     "ta": "பதினெட்டு நிமிஷம் கழிச்சு கீழ வந்தான், முகத்த சுவர் பக்கமாவே வச்சுக்கிட்டு. போலீஸ் கிட்ட சொன்னேன். ஒண்ணும் எழுதல.",
+     "emotion": "frustrated",
+     "intensity": "low"
     },
     {
      "who": "karthik",
      "en": "I never wear a cap, anna. Never.",
-     "ta": "நான் தொப்பியே போட மாட்டேன் அண்ணா. எப்பவுமே."
+     "ta": "நான் தொப்பியே போட மாட்டேன் அண்ணா. எப்பவுமே.",
+     "emotion": "frustrated",
+     "intensity": "medium"
     }
    ]
   },
@@ -4441,7 +4815,9 @@
     {
      "who": "muniyandi",
      "en": "Listen. The building's camera box... my nephew Kathir fixed it last month. He copies everything onto a drive, he's afraid of losing the job. Ask him. Saibaba Colony, behind the bakery.",
-     "ta": "கேளு. கட்டிடத்து கேமரா பெட்டி... என் அக்கா பையன் கதிர் போன மாசம் ரிப்பேர் பண்ணான். எல்லாத்தையும் ஒரு டிரைவ்ல காப்பி பண்ணிடுவான், வேலை போயிடுமோன்னு பயம். அவன கேளு. சாயிபாபா காலனி, பேக்கரிக்கு பின்னாடி."
+     "ta": "கேளு. கட்டிடத்து கேமரா பெட்டி... என் அக்கா பையன் கதிர் போன மாசம் ரிப்பேர் பண்ணான். எல்லாத்தையும் ஒரு டிரைவ்ல காப்பி பண்ணிடுவான், வேலை போயிடுமோன்னு பயம். அவன கேளு. சாயிபாபா காலனி, பேக்கரிக்கு பின்னாடி.",
+     "emotion": "curious",
+     "intensity": "low"
     }
    ]
   },
@@ -4452,7 +4828,9 @@
     {
      "who": "muniyandi",
      "en": "Now go. And you never came here, understand? Five hundred rupees doesn't buy you a witness.",
-     "ta": "இப்போ போ. நீ இங்க வரவே இல்ல, புரியுதா? ஐநூறு ரூபாய்க்கு சாட்சி கிடைக்காது."
+     "ta": "இப்போ போ. நீ இங்க வரவே இல்ல, புரியுதா? ஐநூறு ரூபாய்க்கு சாட்சி கிடைக்காது.",
+     "emotion": "nervous",
+     "intensity": "medium"
     }
    ]
   },
@@ -4542,7 +4920,9 @@
     {
      "who": "karthik",
      "en": "Hello? ...Who is this?",
-     "ta": "ஹலோ? ...யாரு இது?"
+     "ta": "ஹலோ? ...யாரு இது?",
+     "emotion": "fear",
+     "intensity": "medium"
     },
     {
      "who": "karthik",
@@ -4605,12 +4985,16 @@
     {
      "who": "divya",
      "en": "Anna. Who calls you at midnight and says nothing?",
-     "ta": "அண்ணா. நடு ராத்திரி கூப்பிட்டு ஒண்ணும் பேசாம இருக்கறது யாரு?"
+     "ta": "அண்ணா. நடு ராத்திரி கூப்பிட்டு ஒண்ணும் பேசாம இருக்கறது யாரு?",
+     "emotion": "suspicious",
+     "intensity": "low"
     },
     {
      "who": "karthik",
      "en": "Wrong number. Eat your breakfast.",
-     "ta": "ராங் நம்பர். சாப்பிடு."
+     "ta": "ராங் நம்பர். சாப்பிடு.",
+     "emotion": "embarrassed",
+     "intensity": "low"
     },
     {
      "who": "amma",
@@ -4620,7 +5004,9 @@
     {
      "who": "divya",
      "en": "If you find anything on a computer, show me. I'm not useless, you know.",
-     "ta": "கம்ப்யூட்டர்ல ஏதாவது கிடைச்சா எனக்கு காட்டு. நான் ஒண்ணும் உதவாதவ இல்ல."
+     "ta": "கம்ப்யூட்டர்ல ஏதாவது கிடைச்சா எனக்கு காட்டு. நான் ஒண்ணும் உதவாதவ இல்ல.",
+     "emotion": "confident",
+     "intensity": "medium"
     }
    ]
   },
@@ -4682,17 +5068,23 @@
     {
      "who": "kathir",
      "en": "Muniyandi mama sent you? He said you'd come. He also said you're a fool.",
-     "ta": "முனியாண்டி மாமா அனுப்பினாரா? நீ வருவேன்னு சொன்னாரு. நீ ஒரு முட்டாள்னும் சொன்னாரு."
+     "ta": "முனியாண்டி மாமா அனுப்பினாரா? நீ வருவேன்னு சொன்னாரு. நீ ஒரு முட்டாள்னும் சொன்னாரு.",
+     "emotion": "confident",
+     "intensity": "low"
     },
     {
      "who": "karthik",
      "en": "Maybe. The building's camera, that night. You have it?",
-     "ta": "இருக்கலாம். கட்டிடத்து கேமரா, அன்னைக்கு ராத்திரி. உன் கிட்ட இருக்கா?"
+     "ta": "இருக்கலாம். கட்டிடத்து கேமரா, அன்னைக்கு ராத்திரி. உன் கிட்ட இருக்கா?",
+     "emotion": "curious",
+     "intensity": "low"
     },
     {
      "who": "kathir",
      "en": "I have everything. I'm careful. Come, see. Don't touch my mouse.",
-     "ta": "எல்லாம் இருக்கு. நான் கவனமா இருப்பேன். வா, பாரு. என் மவுஸ தொடாத."
+     "ta": "எல்லாம் இருக்கு. நான் கவனமா இருப்பேன். வா, பாரு. என் மவுஸ தொடாத.",
+     "emotion": "confident",
+     "intensity": "medium"
     }
    ]
   },
@@ -4703,17 +5095,23 @@
     {
      "who": "kathir",
      "en": "Who gave you this address?",
-     "ta": "இந்த அட்ரஸ் யாரு குடுத்தா?"
+     "ta": "இந்த அட்ரஸ் யாரு குடுத்தா?",
+     "emotion": "suspicious",
+     "intensity": "medium"
     },
     {
      "who": "karthik",
      "en": "Your sticker. On the camera box in Raghavan Developers' lobby.",
-     "ta": "உன் ஸ்டிக்கர். ராகவன் டெவலப்பர்ஸ் லாபில கேமரா பெட்டி மேல."
+     "ta": "உன் ஸ்டிக்கர். ராகவன் டெவலப்பர்ஸ் லாபில கேமரா பெட்டி மேல.",
+     "emotion": "respectful",
+     "intensity": "low"
     },
     {
      "who": "kathir",
      "en": "Hm. A sticker is an advertisement, not an invitation. Fine. Come, see.",
-     "ta": "ம். ஸ்டிக்கர் விளம்பரம், அழைப்பு இல்ல. சரி. வா, பாரு."
+     "ta": "ம். ஸ்டிக்கர் விளம்பரம், அழைப்பு இல்ல. சரி. வா, பாரு.",
+     "emotion": "relaxed",
+     "intensity": "low"
     }
    ]
   },
@@ -4731,17 +5129,25 @@
     {
      "who": "kathir",
      "en": "Seen? Good. The copy is mine. I made it, on my drive. Five thousand.",
-     "ta": "பாத்தியா? சரி. காப்பி என்னுது. நான் பண்ணது, என் டிரைவ்ல. அஞ்சாயிரம்."
+     "ta": "பாத்தியா? சரி. காப்பி என்னுது. நான் பண்ணது, என் டிரைவ்ல. அஞ்சாயிரம்.",
+     "emotion": "confident",
+     "intensity": "medium"
     },
     {
      "who": "karthik",
      "en": "Five thousand? It isn't yours to sell, Kathir. It's the building's.",
-     "ta": "அஞ்சாயிரமா? அது நீ விக்கறதுக்கு இல்ல கதிர். கட்டிடத்துது."
+     "ta": "அஞ்சாயிரமா? அது நீ விக்கறதுக்கு இல்ல கதிர். கட்டிடத்துது.",
+     "emotion": "frustrated",
+     "intensity": "medium",
+     "gesture": "argue"
     },
     {
      "who": "kathir",
      "en": "Then let the building come and ask me. The QR's on the stool.",
-     "ta": "அப்போ கட்டிடம் வந்து கேக்கட்டும். QR ஸ்டூல் மேல இருக்கு."
+     "ta": "அப்போ கட்டிடம் வந்து கேக்கட்டும். QR ஸ்டூல் மேல இருக்கு.",
+     "emotion": "confident",
+     "intensity": "medium",
+     "gesture": "shrug"
     }
    ]
   },
@@ -4786,7 +5192,9 @@
     {
      "who": "kathir",
      "en": "Pleasure doing business. And I never gave you anything, okay?",
-     "ta": "சந்தோஷம். நான் உனக்கு ஒண்ணும் குடுக்கல, சரியா?"
+     "ta": "சந்தோஷம். நான் உனக்கு ஒண்ணும் குடுக்கல, சரியா?",
+     "emotion": "happy",
+     "intensity": "low"
     },
     {
      "who": "karthik",
@@ -4892,17 +5300,24 @@
     {
      "who": "divya",
      "en": "This isn't his picture, anna. See the corner: RAGHAVAN DEV, GPM, NVR-1. The recorder stamps its own name on every frame.",
-     "ta": "இது அவன் படம் இல்ல அண்ணா. மூலைய பாரு: RAGHAVAN DEV, GPM, NVR-1. ரெக்கார்டர் ஒவ்வொரு ஃப்ரேம்லயும் தன் பேர போடும்."
+     "ta": "இது அவன் படம் இல்ல அண்ணா. மூலைய பாரு: RAGHAVAN DEV, GPM, NVR-1. ரெக்கார்டர் ஒவ்வொரு ஃப்ரேம்லயும் தன் பேர போடும்.",
+     "emotion": "confident",
+     "intensity": "medium",
+     "gesture": "point"
     },
     {
      "who": "divya",
      "en": "Nithya's father installs these. She says the recorder writes its ID inside the file too. Copy it a hundred times, it's still the building's footage.",
-     "ta": "நித்யா அப்பா இதெல்லாம் ஃபிட் பண்ணுவாரு. ரெக்கார்டர் தன் ID-ய ஃபைலுக்குள்ளயும் எழுதும்னு சொல்றா. நூறு தடவ காப்பி பண்ணாலும் அது கட்டிடத்து வீடியோ தான்."
+     "ta": "நித்யா அப்பா இதெல்லாம் ஃபிட் பண்ணுவாரு. ரெக்கார்டர் தன் ID-ய ஃபைலுக்குள்ளயும் எழுதும்னு சொல்றா. நூறு தடவ காப்பி பண்ணாலும் அது கட்டிடத்து வீடியோ தான்.",
+     "emotion": "curious",
+     "intensity": "medium"
     },
     {
      "who": "divya",
      "en": "So it isn't his to sell. It's evidence.",
-     "ta": "அதனால அது அவன் விக்கறதுக்கு இல்ல. அது சாட்சி."
+     "ta": "அதனால அது அவன் விக்கறதுக்கு இல்ல. அது சாட்சி.",
+     "emotion": "confident",
+     "intensity": "medium"
     }
    ]
   },
@@ -4913,12 +5328,16 @@
     {
      "who": "divya",
      "en": "And look here. 9:40, card number seven opens your office door upstairs. Whose card is seven?",
-     "ta": "அப்புறம் இத பாரு. 9:40, ஏழாம் நம்பர் கார்டு மேல உங்க ஆஃபீஸ் கதவ திறக்குது. ஏழு யாரோட கார்டு?"
+     "ta": "அப்புறம் இத பாரு. 9:40, ஏழாம் நம்பர் கார்டு மேல உங்க ஆஃபீஸ் கதவ திறக்குது. ஏழு யாரோட கார்டு?",
+     "emotion": "curious",
+     "intensity": "medium"
     },
     {
      "who": "karthik",
      "en": "I don't know. Yet.",
-     "ta": "தெரியாது. இன்னும்."
+     "ta": "தெரியாது. இன்னும்.",
+     "emotion": "confident",
+     "intensity": "low"
     }
    ]
   },
@@ -4957,7 +5376,9 @@
     {
      "who": "sundaram",
      "en": "Thambi. Your mother says you've been to a CCTV shop.",
-     "ta": "தம்பி. நீ ஒரு சிசிடிவி கடைக்கு போனேன்னு உங்க அம்மா சொல்றாங்க."
+     "ta": "தம்பி. நீ ஒரு சிசிடிவி கடைக்கு போனேன்னு உங்க அம்மா சொல்றாங்க.",
+     "emotion": "disappointed",
+     "intensity": "low"
     }
    ]
   },
@@ -4968,12 +5389,16 @@
     {
      "who": "sundaram",
      "en": "Five thousand? For a copy with no receipt? A fact you paid for walks on one leg, thambi. Their lawyer will say you made it.",
-     "ta": "அஞ்சாயிரமா? ரசீது இல்லாத காப்பிக்கு? காசு குடுத்து வாங்கின உண்மை ஒத்த கால்ல நடக்கும் தம்பி. நீயே பண்ணினதுன்னு அவங்க வக்கீல் சொல்லுவாரு."
+     "ta": "அஞ்சாயிரமா? ரசீது இல்லாத காப்பிக்கு? காசு குடுத்து வாங்கின உண்மை ஒத்த கால்ல நடக்கும் தம்பி. நீயே பண்ணினதுன்னு அவங்க வக்கீல் சொல்லுவாரு.",
+     "emotion": "disappointed",
+     "intensity": "medium"
     },
     {
      "who": "sundaram",
      "en": "Still. Keep the drive safe and don't open it again. I'll ask the court for the building's own recorder.",
-     "ta": "சரி. டிரைவ பத்திரமா வச்சுக்கோ, திரும்ப திறக்காத. கட்டிடத்து ரெக்கார்டரையே கோர்ட் கிட்ட கேக்கறேன்."
+     "ta": "சரி. டிரைவ பத்திரமா வச்சுக்கோ, திரும்ப திறக்காத. கட்டிடத்து ரெக்கார்டரையே கோர்ட் கிட்ட கேக்கறேன்.",
+     "emotion": "confident",
+     "intensity": "low"
     }
    ]
   },
@@ -4984,17 +5409,24 @@
     {
      "who": "sundaram",
      "en": "And you didn't pay him. Good. Now we ask properly.",
-     "ta": "நீ அவனுக்கு காசு குடுக்கல. நல்லது. இப்போ முறையா கேப்போம்."
+     "ta": "நீ அவனுக்கு காசு குடுக்கல. நல்லது. இப்போ முறையா கேப்போம்.",
+     "emotion": "happy",
+     "intensity": "low"
     },
     {
      "who": "sundaram",
      "en": "A letter, from me. The footage is evidence in Crime No. 412; he keeps it safe and hands it to the defence. Destroying it is an offence, Section 238.",
-     "ta": "என் கிட்ட இருந்து ஒரு கடிதம். இந்த வீடியோ குற்ற எண் 412-ல சாட்சி; அவன் பத்திரமா வச்சு நம்ம கிட்ட குடுக்கணும். அழிச்சா குற்றம், பிரிவு 238."
+     "ta": "என் கிட்ட இருந்து ஒரு கடிதம். இந்த வீடியோ குற்ற எண் 412-ல சாட்சி; அவன் பத்திரமா வச்சு நம்ம கிட்ட குடுக்கணும். அழிச்சா குற்றம், பிரிவு 238.",
+     "emotion": "confident",
+     "intensity": "low",
+     "gesture": "give"
     },
     {
      "who": "sundaram",
      "en": "Take it to him after you sign tonight. Shops in Saibaba Colony stay open till nine.",
-     "ta": "இன்னைக்கு கையெழுத்து போட்டப்புறம் அவன் கிட்ட குடு. சாயிபாபா காலனி கடைங்க ஒன்பது வரைக்கும் திறந்திருக்கும்."
+     "ta": "இன்னைக்கு கையெழுத்து போட்டப்புறம் அவன் கிட்ட குடு. சாயிபாபா காலனி கடைங்க ஒன்பது வரைக்கும் திறந்திருக்கும்.",
+     "emotion": "confident",
+     "intensity": "low"
     }
    ]
   },
@@ -5174,7 +5606,10 @@
     {
      "who": "karthik",
      "en": "From my advocate.",
-     "ta": "என் வக்கீல் கிட்ட இருந்து."
+     "ta": "என் வக்கீல் கிட்ட இருந்து.",
+     "emotion": "respectful",
+     "intensity": "low",
+     "gesture": "give"
     },
     {
      "who": "kathir",
@@ -5184,7 +5619,10 @@
     {
      "who": "kathir",
      "en": "Take it. And tell your lawyer I gave it the first time I was asked properly.",
-     "ta": "எடுத்துக்கோ. முறையா கேட்ட முதல் தடவையே குடுத்தேன்னு உன் வக்கீல் கிட்ட சொல்லு."
+     "ta": "எடுத்துக்கோ. முறையா கேட்ட முதல் தடவையே குடுத்தேன்னு உன் வக்கீல் கிட்ட சொல்லு.",
+     "emotion": "respectful",
+     "intensity": "low",
+     "gesture": "give"
     }
    ]
   },
@@ -5315,27 +5753,37 @@
     {
      "who": "karthik",
      "en": "Divya. Those doorbell cameras. Do they keep what they see?",
-     "ta": "திவ்யா. அந்த டோர்பெல் கேமரா எல்லாம். பாத்தத வச்சிருக்குமா?"
+     "ta": "திவ்யா. அந்த டோர்பெல் கேமரா எல்லாம். பாத்தத வச்சிருக்குமா?",
+     "emotion": "curious",
+     "intensity": "medium"
     },
     {
      "who": "divya",
      "en": "The cheap plans keep clips seven days, anna. Then they delete themselves. Why?",
-     "ta": "சீப் பிளான்ல ஏழு நாள் கிளிப் வச்சிருக்கும் அண்ணா. அப்புறம் தானா அழிஞ்சிடும். ஏன்?"
+     "ta": "சீப் பிளான்ல ஏழு நாள் கிளிப் வச்சிருக்கும் அண்ணா. அப்புறம் தானா அழிஞ்சிடும். ஏன்?",
+     "emotion": "confused",
+     "intensity": "low"
     },
     {
      "who": "karthik",
      "en": "The delivery. Saravanampatti, ten twenty that night. His door had a camera.",
-     "ta": "அந்த டெலிவரி. சரவணம்பட்டி, அன்னைக்கு ராத்திரி பத்து இருபது. அவர் கதவுல கேமரா இருந்துச்சு."
+     "ta": "அந்த டெலிவரி. சரவணம்பட்டி, அன்னைக்கு ராத்திரி பத்து இருபது. அவர் கதவுல கேமரா இருந்துச்சு.",
+     "emotion": "curious",
+     "intensity": "medium"
     },
     {
      "who": "divya",
      "en": "That was six days ago. Anna... tomorrow it's gone. Go today. Now.",
-     "ta": "அது ஆறு நாள் முன்னாடி. அண்ணா... நாளைக்கு போயிடும். இன்னைக்கே போ. இப்பவே."
+     "ta": "அது ஆறு நாள் முன்னாடி. அண்ணா... நாளைக்கு போயிடும். இன்னைக்கே போ. இப்பவே.",
+     "emotion": "fear",
+     "intensity": "medium"
     },
     {
      "who": "amma",
      "en": "Eat something first. Then go.",
-     "ta": "முதல்ல ஏதாவது சாப்பிடு. அப்புறம் போ."
+     "ta": "முதல்ல ஏதாவது சாப்பிடு. அப்புறம் போ.",
+     "emotion": "relaxed",
+     "intensity": "low"
     }
    ]
   },
@@ -5415,22 +5863,32 @@
     {
      "who": "ashwin",
      "en": "Bro? ...Wait. You're the delivery guy. You're the one on the news!",
-     "ta": "ப்ரோ? ...இருங்க. நீங்க அந்த டெலிவரி ஆள். நியூஸ்ல வந்தவர் நீங்க தான்!"
+     "ta": "ப்ரோ? ...இருங்க. நீங்க அந்த டெலிவரி ஆள். நியூஸ்ல வந்தவர் நீங்க தான்!",
+     "emotion": "surprised",
+     "intensity": "high"
     },
     {
      "who": "karthik",
      "en": "That night I was here, at your door. Ten twenty. Your camera saw me.",
-     "ta": "அன்னைக்கு ராத்திரி நான் இங்க இருந்தேன், உங்க வாசல்ல. பத்து இருபது. உங்க கேமரா என்ன பாத்துச்சு."
+     "ta": "அன்னைக்கு ராத்திரி நான் இங்க இருந்தேன், உங்க வாசல்ல. பத்து இருபது. உங்க கேமரா என்ன பாத்துச்சு.",
+     "emotion": "nervous",
+     "intensity": "medium"
     },
     {
      "who": "ashwin",
      "en": "Bro, my company does background checks. I can't be in a police case.",
-     "ta": "ப்ரோ, என் கம்பெனி பேக்ரவுண்ட் செக் பண்ணுவாங்க. நான் போலீஸ் கேஸ்ல மாட்ட முடியாது."
+     "ta": "ப்ரோ, என் கம்பெனி பேக்ரவுண்ட் செக் பண்ணுவாங்க. நான் போலீஸ் கேஸ்ல மாட்ட முடியாது.",
+     "emotion": "nervous",
+     "intensity": "high",
+     "gesture": "shake"
     },
     {
      "who": "ashwin",
      "en": "And it's not my camera. It's the owner's. Lakshmi aunty, downstairs. The app is on her tablet. Ask her. And... sorry, bro.",
-     "ta": "அப்புறம் அது என் கேமரா இல்ல. ஓனரோடது. லட்சுமி ஆன்ட்டி, கீழ. ஆப் அவங்க டேப்லெட்ல. அவங்க கிட்ட கேளுங்க. அப்புறம்... சாரி ப்ரோ."
+     "ta": "அப்புறம் அது என் கேமரா இல்ல. ஓனரோடது. லட்சுமி ஆன்ட்டி, கீழ. ஆப் அவங்க டேப்லெட்ல. அவங்க கிட்ட கேளுங்க. அப்புறம்... சாரி ப்ரோ.",
+     "emotion": "nervous",
+     "intensity": "medium",
+     "gesture": "point"
     }
    ]
   },
@@ -5464,17 +5922,24 @@
     {
      "who": "lakshmi",
      "en": "Ashwin rang me. You're the boy from the news. Raghavan's driver.",
-     "ta": "அஷ்வின் ஃபோன் பண்ணான். நீ தான் நியூஸ்ல வந்த பையன். ராகவனோட டிரைவர்."
+     "ta": "அஷ்வின் ஃபோன் பண்ணான். நீ தான் நியூஸ்ல வந்த பையன். ராகவனோட டிரைவர்.",
+     "emotion": "suspicious",
+     "intensity": "medium"
     },
     {
      "who": "karthik",
      "en": "Aunty, the clip from that night. It shows me at his door at ten twenty. He died across the city.",
-     "ta": "ஆன்ட்டி, அன்னைக்கு ராத்திரி கிளிப். பத்து இருபதுக்கு அவர் வாசல்ல நான் இருக்கேன். அவர் செத்தது ஊரோட அந்த பக்கம்."
+     "ta": "ஆன்ட்டி, அன்னைக்கு ராத்திரி கிளிப். பத்து இருபதுக்கு அவர் வாசல்ல நான் இருக்கேன். அவர் செத்தது ஊரோட அந்த பக்கம்.",
+     "emotion": "nervous",
+     "intensity": "medium",
+     "gesture": "namaste"
     },
     {
      "who": "lakshmi",
      "en": "Sixteen years in a bank, thambi. I don't hand things over because someone asks nicely. Who is your advocate?",
-     "ta": "பதினாறு வருஷமா பேங்க்ல இருக்கேன், தம்பி. யாராவது நல்லா கேட்டாங்கன்னு எதையும் குடுக்க மாட்டேன். உன் வக்கீல் யாரு?"
+     "ta": "பதினாறு வருஷமா பேங்க்ல இருக்கேன், தம்பி. யாராவது நல்லா கேட்டாங்கன்னு எதையும் குடுக்க மாட்டேன். உன் வக்கீல் யாரு?",
+     "emotion": "confident",
+     "intensity": "medium"
     }
    ]
   },
@@ -5509,7 +5974,10 @@
     {
      "who": "lakshmi",
      "en": "Put that away! At my own gate! ...If you had paid, would I believe your clip? Would a judge? Call your advocate.",
-     "ta": "அத உள்ள வை! என் வீட்டு கேட்லயே! ...காசு குடுத்திருந்தா உன் கிளிப்ப நான் நம்புவேனா? ஜட்ஜ் நம்புவாரா? உன் வக்கீலுக்கு ஃபோன் பண்ணு."
+     "ta": "அத உள்ள வை! என் வீட்டு கேட்லயே! ...காசு குடுத்திருந்தா உன் கிளிப்ப நான் நம்புவேனா? ஜட்ஜ் நம்புவாரா? உன் வக்கீலுக்கு ஃபோன் பண்ணு.",
+     "emotion": "angry",
+     "intensity": "high",
+     "gesture": "argue"
     },
     {
      "who": "karthik",
@@ -5532,7 +6000,9 @@
     {
      "who": "sundaram",
      "en": "(on the phone) Thambi? ...A doorbell. Good. Give her the phone.",
-     "ta": "(ஃபோன்ல) தம்பி? ...டோர்பெல். நல்லது. அவங்க கிட்ட ஃபோன குடு."
+     "ta": "(ஃபோன்ல) தம்பி? ...டோர்பெல். நல்லது. அவங்க கிட்ட ஃபோன குடு.",
+     "emotion": "curious",
+     "intensity": "low"
     },
     {
      "who": "karthik",
@@ -5542,12 +6012,16 @@
     {
      "who": "lakshmi",
      "en": "Yes, sir. Lakshmi Narayanan, branch manager, State Bank. ...From my own account, yes. With the date. To your number. ...I understand.",
-     "ta": "ஆமா சார். லட்சுமி நாராயணன், பிராஞ்ச் மேனேஜர், ஸ்டேட் பேங்க். ...என் அக்கவுண்ட்ல இருந்தே, ஆமா. தேதியோட. உங்க நம்பருக்கு. ...புரியுது."
+     "ta": "ஆமா சார். லட்சுமி நாராயணன், பிராஞ்ச் மேனேஜர், ஸ்டேட் பேங்க். ...என் அக்கவுண்ட்ல இருந்தே, ஆமா. தேதியோட. உங்க நம்பருக்கு. ...புரியுது.",
+     "emotion": "respectful",
+     "intensity": "low"
     },
     {
      "who": "lakshmi",
      "en": "Your advocate gets it, not you. But you can look.",
-     "ta": "உன் வக்கீலுக்கு தான், உனக்கு இல்ல. ஆனா நீ பாக்கலாம்."
+     "ta": "உன் வக்கீலுக்கு தான், உனக்கு இல்ல. ஆனா நீ பாக்கலாம்.",
+     "emotion": "confident",
+     "intensity": "low"
     }
    ]
   },
@@ -5565,12 +6039,16 @@
     {
      "who": "lakshmi",
      "en": "There. Sent to your Sundaram, from my account. One more day and it would have deleted itself.",
-     "ta": "இதோ. உன் சுந்தரத்துக்கு அனுப்பிட்டேன், என் அக்கவுண்ட்ல இருந்து. இன்னும் ஒரு நாள் போயிருந்தா தானா அழிஞ்சிருக்கும்."
+     "ta": "இதோ. உன் சுந்தரத்துக்கு அனுப்பிட்டேன், என் அக்கவுண்ட்ல இருந்து. இன்னும் ஒரு நாள் போயிருந்தா தானா அழிஞ்சிருக்கும்.",
+     "emotion": "confident",
+     "intensity": "low"
     },
     {
      "who": "lakshmi",
      "en": "And thambi. The police never came to ask me. Not once.",
-     "ta": "அப்புறம் தம்பி. போலீஸ் என் கிட்ட கேக்க ஒரு தடவை கூட வரல."
+     "ta": "அப்புறம் தம்பி. போலீஸ் என் கிட்ட கேக்க ஒரு தடவை கூட வரல.",
+     "emotion": "frustrated",
+     "intensity": "medium"
     }
    ]
   },
@@ -5849,12 +6327,16 @@
     {
      "who": "amma",
      "en": "Your appa took me that way once, to the temple festival at Pudhur. There was one tea shop at the turn, Murugan Tea Stall, open late for the lorry drivers. Sekar runs it.",
-     "ta": "உங்க அப்பா ஒரு தடவ அந்த பக்கம் கூட்டிட்டு போனாரு, புதூர் கோயில் திருவிழாவுக்கு. திருப்பத்துல ஒரு டீக்கடை, முருகன் டீ ஸ்டால், லாரி டிரைவர்களுக்காக ராத்திரி லேட் வரைக்கும் திறந்திருக்கும். சேகர் நடத்தறாரு."
+     "ta": "உங்க அப்பா ஒரு தடவ அந்த பக்கம் கூட்டிட்டு போனாரு, புதூர் கோயில் திருவிழாவுக்கு. திருப்பத்துல ஒரு டீக்கடை, முருகன் டீ ஸ்டால், லாரி டிரைவர்களுக்காக ராத்திரி லேட் வரைக்கும் திறந்திருக்கும். சேகர் நடத்தறாரு.",
+     "emotion": "sad",
+     "intensity": "low"
     },
     {
      "who": "amma",
      "en": "Go in the daylight, kanna. And be back to sign.",
-     "ta": "பகல்லயே போ கண்ணா. கையெழுத்து போட வந்துடு."
+     "ta": "பகல்லயே போ கண்ணா. கையெழுத்து போட வந்துடு.",
+     "emotion": "relaxed",
+     "intensity": "low"
     }
    ]
   },
@@ -5933,17 +6415,23 @@
     {
      "who": "sekar",
      "en": "Tea? ...Wait. You're the driver. The paper had your face. The Raghavan case.",
-     "ta": "டீயா? ...இருங்க. நீங்க அந்த டிரைவர். பேப்பர்ல உங்க மூஞ்சி வந்துச்சு. ராகவன் கேஸ்."
+     "ta": "டீயா? ...இருங்க. நீங்க அந்த டிரைவர். பேப்பர்ல உங்க மூஞ்சி வந்துச்சு. ராகவன் கேஸ்.",
+     "emotion": "suspicious",
+     "intensity": "medium"
     },
     {
      "who": "karthik",
      "en": "Anna, that night. You close late, they say. Half past ten?",
-     "ta": "அண்ணா, அன்னைக்கு ராத்திரி. நீங்க லேட்டா மூடுவீங்கன்னு சொன்னாங்க. பத்தரை மணி?"
+     "ta": "அண்ணா, அன்னைக்கு ராத்திரி. நீங்க லேட்டா மூடுவீங்கன்னு சொன்னாங்க. பத்தரை மணி?",
+     "emotion": "respectful",
+     "intensity": "low"
     },
     {
      "who": "sekar",
      "en": "A man who drinks tea at my shop is a customer. A man who asks questions is trouble.",
-     "ta": "என் கடையில டீ குடிக்கறவன் கஸ்டமர். கேள்வி கேக்கறவன் பிரச்சனை."
+     "ta": "என் கடையில டீ குடிக்கறவன் கஸ்டமர். கேள்வி கேக்கறவன் பிரச்சனை.",
+     "emotion": "suspicious",
+     "intensity": "high"
     }
    ]
   },
@@ -5979,7 +6467,10 @@
     {
      "who": "sekar",
      "en": "I saw nothing. I sell tea. Drink or go.",
-     "ta": "நான் எதுவும் பாக்கல. டீ விக்கறேன். குடி இல்லனா போ."
+     "ta": "நான் எதுவும் பாக்கல. டீ விக்கறேன். குடி இல்லனா போ.",
+     "emotion": "frustrated",
+     "intensity": "medium",
+     "gesture": "shake"
     },
     {
      "who": "karthik",
@@ -6019,27 +6510,37 @@
     {
      "who": "sekar",
      "en": "You're Muthu's son. He drank tea here when you were this high. ...All right.",
-     "ta": "நீ முத்துவோட பையன். நீ இவ்வளவு உசரம் இருக்கும்போது அவர் இங்க டீ குடிப்பாரு. ...சரி."
+     "ta": "நீ முத்துவோட பையன். நீ இவ்வளவு உசரம் இருக்கும்போது அவர் இங்க டீ குடிப்பாரு. ...சரி.",
+     "emotion": "sad",
+     "intensity": "low"
     },
     {
      "who": "sekar",
      "en": "That night I was pulling the shutter. Twenty-five to eleven. A white SUV, a big one, came from the city side and turned in to Pudhur. Slow, like the driver didn't know the road.",
-     "ta": "அன்னைக்கு ராத்திரி ஷட்டர் இழுத்துட்டு இருந்தேன். பதினொன்னுக்கு இருபத்தஞ்சு நிமிஷம். ஒரு வெள்ள எஸ்யூவி, பெருசு, ஊர் பக்கத்துல இருந்து வந்து புதூருக்குள்ள திரும்புச்சு. மெதுவா, டிரைவருக்கு ரோடு தெரியாத மாதிரி."
+     "ta": "அன்னைக்கு ராத்திரி ஷட்டர் இழுத்துட்டு இருந்தேன். பதினொன்னுக்கு இருபத்தஞ்சு நிமிஷம். ஒரு வெள்ள எஸ்யூவி, பெருசு, ஊர் பக்கத்துல இருந்து வந்து புதூருக்குள்ள திரும்புச்சு. மெதுவா, டிரைவருக்கு ரோடு தெரியாத மாதிரி.",
+     "emotion": "confident",
+     "intensity": "low"
     },
     {
      "who": "sekar",
      "en": "And a black car was already there, by the site gate. Parked nose-out. The way a man parks when he wants to leave fast.",
-     "ta": "அப்புறம் ஒரு கருப்பு கார் ஏற்கனவே அங்க இருந்துச்சு, சைட் கேட் பக்கத்துல. முன்பக்கம் வெளியே பாத்து நிறுத்தியிருந்தது. சீக்கிரம் கிளம்பணும்னு நினைக்கறவன் நிறுத்தற மாதிரி."
+     "ta": "அப்புறம் ஒரு கருப்பு கார் ஏற்கனவே அங்க இருந்துச்சு, சைட் கேட் பக்கத்துல. முன்பக்கம் வெளியே பாத்து நிறுத்தியிருந்தது. சீக்கிரம் கிளம்பணும்னு நினைக்கறவன் நிறுத்தற மாதிரி.",
+     "emotion": "suspicious",
+     "intensity": "low"
     },
     {
      "who": "karthik",
      "en": "The SUV's driver. Did you see him?",
-     "ta": "எஸ்யூவி டிரைவர். அவர பாத்தீங்களா?"
+     "ta": "எஸ்யூவி டிரைவர். அவர பாத்தீங்களா?",
+     "emotion": "curious",
+     "intensity": "high"
     },
     {
      "who": "sekar",
      "en": "A cap. That's all. ...If a court asks me, I'll say it. Only what I saw. Not one word more.",
-     "ta": "ஒரு தொப்பி. அவ்வளவு தான். ...கோர்ட் கேட்டா சொல்றேன். பாத்தது மட்டும். ஒரு வார்த்த கூட அதிகமா இல்ல."
+     "ta": "ஒரு தொப்பி. அவ்வளவு தான். ...கோர்ட் கேட்டா சொல்றேன். பாத்தது மட்டும். ஒரு வார்த்த கூட அதிகமா இல்ல.",
+     "emotion": "confident",
+     "intensity": "medium"
     }
    ]
   },
@@ -6119,17 +6620,24 @@
     {
      "who": "amma",
      "en": "The albums? Top of the steel cupboard, under the Pongal saree. ...Why now?",
-     "ta": "ஆல்பமா? ஸ்டீல் பீரோ மேல, பொங்கல் புடவைக்கு அடியில. ...இப்ப எதுக்கு?"
+     "ta": "ஆல்பமா? ஸ்டீல் பீரோ மேல, பொங்கல் புடவைக்கு அடியில. ...இப்ப எதுக்கு?",
+     "emotion": "confused",
+     "intensity": "low"
     },
     {
      "who": "karthik",
      "en": "The man on the camera wore a cap, Amma.",
-     "ta": "கேமராவுல இருந்தவன் தொப்பி போட்டிருந்தான், அம்மா."
+     "ta": "கேமராவுல இருந்தவன் தொப்பி போட்டிருந்தான், அம்மா.",
+     "emotion": "confident",
+     "intensity": "low"
     },
     {
      "who": "amma",
      "en": "A cap? You? You cried when your appa put one on you at the Ooty trip. Look. Every photo.",
-     "ta": "தொப்பியா? நீயா? ஊட்டி டூர்ல உங்க அப்பா உனக்கு ஒன்னு போட்டப்ப அழுதியே. பாரு. எல்லா போட்டோலயும்."
+     "ta": "தொப்பியா? நீயா? ஊட்டி டூர்ல உங்க அப்பா உனக்கு ஒன்னு போட்டப்ப அழுதியே. பாரு. எல்லா போட்டோலயும்.",
+     "emotion": "happy",
+     "intensity": "medium",
+     "gesture": "laugh"
     }
    ]
   },
@@ -6401,22 +6909,31 @@
     {
      "who": "bala",
      "en": "Da. A week. You think I'd believe the TV over you?",
-     "ta": "டா. ஒரு வாரம். உன்ன விட டிவிய நான் நம்புவேன்னு நினைச்சியா?"
+     "ta": "டா. ஒரு வாரம். உன்ன விட டிவிய நான் நம்புவேன்னு நினைச்சியா?",
+     "emotion": "angry",
+     "intensity": "low"
     },
     {
      "who": "karthik",
      "en": "Bala... the whole lane looks away when I come out now.",
-     "ta": "பாலா... நான் வெளிய வந்தா தெருவே மூஞ்ச திருப்பிக்குது."
+     "ta": "பாலா... நான் வெளிய வந்தா தெருவே மூஞ்ச திருப்பிக்குது.",
+     "emotion": "sad",
+     "intensity": "medium"
     },
     {
      "who": "bala",
      "en": "Let them. I know you, da. Since sixth standard. You can't lie to your mother about a film.",
-     "ta": "திருப்பிக்கட்டும். எனக்கு உன்ன தெரியும் டா. ஆறாம் கிளாஸ்ல இருந்து. ஒரு படத்த பத்தி கூட உங்க அம்மா கிட்ட பொய் சொல்ல முடியாது உனக்கு."
+     "ta": "திருப்பிக்கட்டும். எனக்கு உன்ன தெரியும் டா. ஆறாம் கிளாஸ்ல இருந்து. ஒரு படத்த பத்தி கூட உங்க அம்மா கிட்ட பொய் சொல்ல முடியாது உனக்கு.",
+     "emotion": "confident",
+     "intensity": "medium",
+     "gesture": "comfort"
     },
     {
      "who": "bala",
      "en": "The workshop's open till nine. A bike, a ride, a meal, anything. And where are you running around these days? Tell me, so I know you're safe.",
-     "ta": "வொர்க்ஷாப் ஒன்பது மணி வரைக்கும் திறந்திருக்கும். பைக், ரைடு, சாப்பாடு, எதுவானாலும். இப்ப எங்கெல்லாம் சுத்திட்டு இருக்க? சொல்லு, நீ பத்திரமா இருக்கியான்னு தெரியணும்."
+     "ta": "வொர்க்ஷாப் ஒன்பது மணி வரைக்கும் திறந்திருக்கும். பைக், ரைடு, சாப்பாடு, எதுவானாலும். இப்ப எங்கெல்லாம் சுத்திட்டு இருக்க? சொல்லு, நீ பத்திரமா இருக்கியான்னு தெரியணும்.",
+     "emotion": "happy",
+     "intensity": "low"
     }
    ]
   },
@@ -6450,7 +6967,9 @@
     {
      "who": "bala",
      "en": "Pudhur Vayal? Those farmers are angry, da. Go in daylight. ...And call me after. Promise.",
-     "ta": "புதூர் வயலா? அந்த விவசாயிங்க கோவத்துல இருக்காங்க டா. பகல்ல போ. ...அப்புறம் எனக்கு கூப்பிடு. சத்தியம்."
+     "ta": "புதூர் வயலா? அந்த விவசாயிங்க கோவத்துல இருக்காங்க டா. பகல்ல போ. ...அப்புறம் எனக்கு கூப்பிடு. சத்தியம்.",
+     "emotion": "nervous",
+     "intensity": "low"
     }
    ]
   },
@@ -6461,7 +6980,10 @@
     {
      "who": "bala",
      "en": "Okay, okay, secret agent. Just come back in one piece.",
-     "ta": "சரி சரி, சீக்ரெட் ஏஜென்ட். முழுசா திரும்பி வா, அவ்வளவு தான்."
+     "ta": "சரி சரி, சீக்ரெட் ஏஜென்ட். முழுசா திரும்பி வா, அவ்வளவு தான்.",
+     "emotion": "happy",
+     "intensity": "medium",
+     "gesture": "laugh"
     }
    ]
   },
@@ -6562,27 +7084,41 @@
     {
      "who": "ponnusamy",
      "en": "Stop. That's Raghavan's driver. The one who carried the money.",
-     "ta": "நில்லு. இவன் தான் ராகவனோட டிரைவர். பணத்த தூக்கிட்டு போனவன்."
+     "ta": "நில்லு. இவன் தான் ராகவனோட டிரைவர். பணத்த தூக்கிட்டு போனவன்.",
+     "emotion": "angry",
+     "intensity": "medium",
+     "gesture": "point"
     },
     {
      "who": "farmer1",
      "en": "Four lakhs! Ours! For the land your people took at a fifth of the price!",
-     "ta": "நாலு லட்சம்! எங்களோடது! எங்க நிலத்த அஞ்சுல ஒரு பங்கு விலைக்கு எடுத்துக்கிட்டீங்க!"
+     "ta": "நாலு லட்சம்! எங்களோடது! எங்க நிலத்த அஞ்சுல ஒரு பங்கு விலைக்கு எடுத்துக்கிட்டீங்க!",
+     "emotion": "angry",
+     "intensity": "high",
+     "gesture": "argue"
     },
     {
      "who": "karthik",
      "en": "Ayya, I didn't take it. Sir was bringing it to you. He told me himself.",
-     "ta": "ஐயா, நான் எடுக்கல. சார் அத உங்களுக்கு தான் கொண்டு வந்துட்டு இருந்தாரு. அவரே சொன்னாரு."
+     "ta": "ஐயா, நான் எடுக்கல. சார் அத உங்களுக்கு தான் கொண்டு வந்துட்டு இருந்தாரு. அவரே சொன்னாரு.",
+     "emotion": "fear",
+     "intensity": "medium",
+     "gesture": "namaste"
     },
     {
      "who": "ponnusamy",
      "en": "Bringing it? Then where is it? Forty families sold on his word. Forty.",
-     "ta": "கொண்டு வந்தாரா? அப்போ எங்க அது? அவர் வார்த்தைய நம்பி நாப்பது குடும்பம் வித்தோம். நாப்பது."
+     "ta": "கொண்டு வந்தாரா? அப்போ எங்க அது? அவர் வார்த்தைய நம்பி நாப்பது குடும்பம் வித்தோம். நாப்பது.",
+     "emotion": "angry",
+     "intensity": "high"
     },
     {
      "who": "farmer2",
      "en": "Get off the scooter. Get off it.",
-     "ta": "ஸ்கூட்டர்ல இருந்து இறங்கு. இறங்குடா."
+     "ta": "ஸ்கூட்டர்ல இருந்து இறங்கு. இறங்குடா.",
+     "emotion": "angry",
+     "intensity": "high",
+     "gesture": "point"
     }
    ]
   },
@@ -6678,7 +7214,10 @@
     {
      "who": "ponnusamy",
      "en": "Money? From you? You think we're beggars at your gate? Put it away before I lose my temper.",
-     "ta": "காசா? உன் கிட்ட இருந்தா? உன் வாசல்ல பிச்சை எடுக்கறவங்கன்னு நினைச்சியா? கோபம் வர்றதுக்குள்ள உள்ள வை."
+     "ta": "காசா? உன் கிட்ட இருந்தா? உன் வாசல்ல பிச்சை எடுக்கறவங்கன்னு நினைச்சியா? கோபம் வர்றதுக்குள்ள உள்ள வை.",
+     "emotion": "angry",
+     "intensity": "high",
+     "gesture": "argue"
     },
     {
      "who": "farmer1",
@@ -6694,7 +7233,9 @@
     {
      "who": "ponnusamy",
      "en": "Run, then. Run. That's what thieves do.",
-     "ta": "ஓடு அப்போ. ஓடு. திருடங்க அப்படி தான்."
+     "ta": "ஓடு அப்போ. ஓடு. திருடங்க அப்படி தான்.",
+     "emotion": "disappointed",
+     "intensity": "high"
     },
     {
      "who": "karthik",
@@ -6715,7 +7256,9 @@
     {
      "who": "ponnusamy",
      "en": "There. Now we know what you are. Hit an old man in his own field. ...The police will hear of this, bail-man.",
-     "ta": "அவ்வளவு தான். இப்போ நீ யாருன்னு தெரிஞ்சு போச்சு. சொந்த வயல்ல ஒரு வயசானவன அடிக்கறியா. ...போலீசுக்கு தெரியும் இது, ஜாமீன் ஆளே."
+     "ta": "அவ்வளவு தான். இப்போ நீ யாருன்னு தெரிஞ்சு போச்சு. சொந்த வயல்ல ஒரு வயசானவன அடிக்கறியா. ...போலீசுக்கு தெரியும் இது, ஜாமீன் ஆளே.",
+     "emotion": "angry",
+     "intensity": "high"
     }
    ]
   },
@@ -6736,12 +7279,16 @@
     {
      "who": "ponnusamy",
      "en": "Words. Everyone brings us words. The broker, the officer, now the driver.",
-     "ta": "வார்த்த. எல்லாரும் வார்த்த தான் கொண்டு வர்றாங்க. புரோக்கர், ஆபீசர், இப்போ டிரைவர்."
+     "ta": "வார்த்த. எல்லாரும் வார்த்த தான் கொண்டு வர்றாங்க. புரோக்கர், ஆபீசர், இப்போ டிரைவர்.",
+     "emotion": "frustrated",
+     "intensity": "medium"
     },
     {
      "who": "ponnusamy",
      "en": "Raghavan wrote everything down, that man. If he meant to pay us, he wrote it. Bring us paper, thambi. Until then, don't show your face in Pudhur.",
-     "ta": "அந்த ராகவன் எல்லாத்தையும் எழுதி வைப்பாரு. எங்களுக்கு குடுக்கணும்னு நினைச்சிருந்தா, அத எழுதியிருப்பாரு. காகிதம் கொண்டு வா, தம்பி. அதுவரைக்கும் புதூர்ல மூஞ்சி காட்டாத."
+     "ta": "அந்த ராகவன் எல்லாத்தையும் எழுதி வைப்பாரு. எங்களுக்கு குடுக்கணும்னு நினைச்சிருந்தா, அத எழுதியிருப்பாரு. காகிதம் கொண்டு வா, தம்பி. அதுவரைக்கும் புதூர்ல மூஞ்சி காட்டாத.",
+     "emotion": "confident",
+     "intensity": "low"
     },
     {
      "who": "karthik",
@@ -6839,12 +7386,16 @@
     {
      "who": "divya",
      "en": "(She turns her phone face down.) It's nothing.",
-     "ta": "(ஃபோன கவுத்து வைக்கிறா.) ஒண்ணுமில்ல."
+     "ta": "(ஃபோன கவுத்து வைக்கிறா.) ஒண்ணுமில்ல.",
+     "emotion": "embarrassed",
+     "intensity": "medium"
     },
     {
      "who": "divya",
      "en": "...They made a WhatsApp group. 'Murderer's sister.' Thirty-two people. My bench partner is in it. She added the photo from the paper.",
-     "ta": "...ஒரு வாட்ஸ்அப் குரூப் ஆரம்பிச்சிருக்காங்க. 'கொலைகாரன் தங்கச்சி.' முப்பத்திரண்டு பேர். என் பெஞ்ச் பார்ட்னரும் இருக்கா. பேப்பர்ல வந்த போட்டோவ அவ தான் போட்டா."
+     "ta": "...ஒரு வாட்ஸ்அப் குரூப் ஆரம்பிச்சிருக்காங்க. 'கொலைகாரன் தங்கச்சி.' முப்பத்திரண்டு பேர். என் பெஞ்ச் பார்ட்னரும் இருக்கா. பேப்பர்ல வந்த போட்டோவ அவ தான் போட்டா.",
+     "emotion": "sad",
+     "intensity": "high"
     }
    ]
   },
@@ -6891,7 +7442,9 @@
     {
      "who": "divya",
      "en": "...Thanks for not shouting, anna.",
-     "ta": "...கத்தாம இருந்ததுக்கு தேங்க்ஸ் அண்ணா."
+     "ta": "...கத்தாம இருந்ததுக்கு தேங்க்ஸ் அண்ணா.",
+     "emotion": "sad",
+     "intensity": "low"
     }
    ]
   },
@@ -6902,7 +7455,10 @@
     {
      "who": "divya",
      "en": "No! You'll make it worse! You're on bail, anna! One fight and they'll put you back inside, and then what do I tell them?",
-     "ta": "வேண்டாம்! இன்னும் மோசமாக்கிடுவ! நீ பெயில்ல இருக்க அண்ணா! ஒரு சண்ட போட்டா உள்ள தூக்கி போட்டுடுவாங்க, அப்புறம் நான் அவங்க கிட்ட என்ன சொல்வேன்?"
+     "ta": "வேண்டாம்! இன்னும் மோசமாக்கிடுவ! நீ பெயில்ல இருக்க அண்ணா! ஒரு சண்ட போட்டா உள்ள தூக்கி போட்டுடுவாங்க, அப்புறம் நான் அவங்க கிட்ட என்ன சொல்வேன்?",
+     "emotion": "fear",
+     "intensity": "high",
+     "gesture": "argue"
     }
    ]
   },
@@ -6918,7 +7474,9 @@
     {
      "who": "divya",
      "en": "Okay. But I'm not doing it for you. I'm doing it so I can show that group the truth.",
-     "ta": "சரி. ஆனா உனக்காக இல்ல. அந்த குரூப்புக்கு உண்மைய காட்டறதுக்காக."
+     "ta": "சரி. ஆனா உனக்காக இல்ல. அந்த குரூப்புக்கு உண்மைய காட்டறதுக்காக.",
+     "emotion": "confident",
+     "intensity": "medium"
     }
    ]
   },
@@ -7119,7 +7677,9 @@
     {
      "who": "karthik",
      "en": "Amma. The file is with sir's family. Priya won't take my calls.",
-     "ta": "அம்மா. அந்த ஃபைல் சார் குடும்பத்துகிட்ட இருக்கு. பிரியா என் ஃபோன எடுக்க மாட்டேங்கறாங்க."
+     "ta": "அம்மா. அந்த ஃபைல் சார் குடும்பத்துகிட்ட இருக்கு. பிரியா என் ஃபோன எடுக்க மாட்டேங்கறாங்க.",
+     "emotion": "sad",
+     "intensity": "medium"
     },
     {
      "who": "amma",
@@ -7129,7 +7689,9 @@
     {
      "who": "amma",
      "en": "Go gently, kanna. She's lost her husband. Don't make her lose her peace there too.",
-     "ta": "மெதுவா போ கண்ணா. அவங்க புருஷன இழந்திருக்காங்க. அங்க அவங்க நிம்மதியையும் இழக்க வைக்காத."
+     "ta": "மெதுவா போ கண்ணா. அவங்க புருஷன இழந்திருக்காங்க. அங்க அவங்க நிம்மதியையும் இழக்க வைக்காத.",
+     "emotion": "sad",
+     "intensity": "low"
     }
    ]
   },
@@ -7173,7 +7735,9 @@
     {
      "who": "divya",
      "en": "Not at the gate. A little before it. ...No, at the gate. Let them see.",
-     "ta": "கேட்டுல வேண்டாம். கொஞ்சம் முன்னாடி. ...இல்ல, கேட்டுலயே. அவங்க பாக்கட்டும்."
+     "ta": "கேட்டுல வேண்டாம். கொஞ்சம் முன்னாடி. ...இல்ல, கேட்டுலயே. அவங்க பாக்கட்டும்.",
+     "emotion": "nervous",
+     "intensity": "medium"
     },
     {
      "who": "karthik",
@@ -7363,7 +7927,9 @@
     {
      "who": "karthik",
      "en": "Nobody, amma. Six years I drove him here every Pradosham.",
-     "ta": "யாரும் இல்ல, அம்மா. ஆறு வருஷம் ஒவ்வொரு பிரதோஷத்துக்கும் அவர இங்க கூட்டிட்டு வந்தேன்."
+     "ta": "யாரும் இல்ல, அம்மா. ஆறு வருஷம் ஒவ்வொரு பிரதோஷத்துக்கும் அவர இங்க கூட்டிட்டு வந்தேன்.",
+     "emotion": "respectful",
+     "intensity": "low"
     }
    ]
   },
@@ -7385,22 +7951,32 @@
     {
      "who": "priya",
      "en": "You. Here? At my father's prayers?",
-     "ta": "நீயா. இங்கயா? என் அப்பாவோட பிரார்த்தனையிலயா?"
+     "ta": "நீயா. இங்கயா? என் அப்பாவோட பிரார்த்தனையிலயா?",
+     "emotion": "angry",
+     "intensity": "high"
     },
     {
      "who": "priya",
      "en": "Get away from my mother, or I call the police right now. You're on bail, aren't you?",
-     "ta": "என் அம்மா கிட்ட இருந்து தள்ளிப் போ, இல்லனா இப்பவே போலீஸ கூப்பிடுவேன். நீ பெயில்ல தானே இருக்க?"
+     "ta": "என் அம்மா கிட்ட இருந்து தள்ளிப் போ, இல்லனா இப்பவே போலீஸ கூப்பிடுவேன். நீ பெயில்ல தானே இருக்க?",
+     "emotion": "angry",
+     "intensity": "high",
+     "gesture": "point"
     },
     {
      "who": "karthik",
      "en": "Madam. Two minutes. Only two.",
-     "ta": "மேடம். ரெண்டு நிமிஷம். ரெண்டே நிமிஷம்."
+     "ta": "மேடம். ரெண்டு நிமிஷம். ரெண்டே நிமிஷம்.",
+     "emotion": "respectful",
+     "intensity": "medium",
+     "gesture": "namaste"
     },
     {
      "who": "meenakshi",
      "en": "Priya. Let him speak. Nine days I've listened to everyone. The police, the papers, Suresh. Never to him.",
-     "ta": "பிரியா. பேச விடு. ஒன்பது நாளா எல்லாரையும் கேட்டுட்டேன். போலீஸ், பேப்பர், சுரேஷ். அவன மட்டும் கேக்கல."
+     "ta": "பிரியா. பேச விடு. ஒன்பது நாளா எல்லாரையும் கேட்டுட்டேன். போலீஸ், பேப்பர், சுரேஷ். அவன மட்டும் கேக்கல.",
+     "emotion": "grieving",
+     "intensity": "medium"
     }
    ]
   },
@@ -7441,7 +8017,9 @@
     {
      "who": "meenakshi",
      "en": "He talked about those families at dinner. Every week. He said, 'I won't sleep till they're paid.'",
-     "ta": "சாப்பிடும்போது அந்த குடும்பங்கள பத்தி பேசுவாரு. ஒவ்வொரு வாரமும். 'அவங்களுக்கு குடுக்கற வரைக்கும் தூக்கம் வராது'ன்னு சொல்வாரு."
+     "ta": "சாப்பிடும்போது அந்த குடும்பங்கள பத்தி பேசுவாரு. ஒவ்வொரு வாரமும். 'அவங்களுக்கு குடுக்கற வரைக்கும் தூக்கம் வராது'ன்னு சொல்வாரு.",
+     "emotion": "grieving",
+     "intensity": "low"
     }
    ]
   },
@@ -7452,12 +8030,16 @@
     {
      "who": "priya",
      "en": "A cap. A card. Anybody can say a man in a cap.",
-     "ta": "தொப்பி. கார்டு. தொப்பி போட்ட ஆள்னு யார் வேணா சொல்லலாம்."
+     "ta": "தொப்பி. கார்டு. தொப்பி போட்ட ஆள்னு யார் வேணா சொல்லலாம்.",
+     "emotion": "suspicious",
+     "intensity": "high"
     },
     {
      "who": "meenakshi",
      "en": "Card seven... Priya, who has the small numbers? The ones from the start of the company?",
-     "ta": "ஏழாம் நம்பர் கார்டு... பிரியா, சின்ன நம்பர் யார் கிட்ட இருக்கு? கம்பெனி ஆரம்பத்துல இருந்து இருக்கறவங்க கிட்ட?"
+     "ta": "ஏழாம் நம்பர் கார்டு... பிரியா, சின்ன நம்பர் யார் கிட்ட இருக்கு? கம்பெனி ஆரம்பத்துல இருந்து இருக்கறவங்க கிட்ட?",
+     "emotion": "curious",
+     "intensity": "medium"
     }
    ]
   },
@@ -7478,27 +8060,37 @@
     {
      "who": "karthik",
      "en": "Sir wrote everything down. If the money was for the farmers, he wrote it. In the Green Valley file.",
-     "ta": "சார் எல்லாத்தையும் எழுதி வைப்பாரு. பணம் விவசாயிங்களுக்குன்னா, அத எழுதியிருப்பாரு. கிரீன் வேலி ஃபைல்ல."
+     "ta": "சார் எல்லாத்தையும் எழுதி வைப்பாரு. பணம் விவசாயிங்களுக்குன்னா, அத எழுதியிருப்பாரு. கிரீன் வேலி ஃபைல்ல.",
+     "emotion": "confident",
+     "intensity": "medium"
     },
     {
      "who": "meenakshi",
      "en": "Every night. In green ink. He used to laugh that it was the right ink for a green valley.",
-     "ta": "தினமும் ராத்திரி. பச்சை மையில. பச்சை பள்ளத்தாக்குக்கு சரியான மைன்னு சிரிப்பாரு."
+     "ta": "தினமும் ராத்திரி. பச்சை மையில. பச்சை பள்ளத்தாக்குக்கு சரியான மைன்னு சிரிப்பாரு.",
+     "emotion": "grieving",
+     "intensity": "low"
     },
     {
      "who": "priya",
      "en": "Amma, he's playing you. This is what they do.",
-     "ta": "அம்மா, இவன் உன்ன ஏமாத்தறான். இவங்க இப்படி தான்."
+     "ta": "அம்மா, இவன் உன்ன ஏமாத்தறான். இவங்க இப்படி தான்.",
+     "emotion": "angry",
+     "intensity": "medium"
     },
     {
      "who": "meenakshi",
      "en": "Then look in the file, Priya. And show me he's lying.",
-     "ta": "அப்போ ஃபைல பாரு, பிரியா. இவன் பொய் சொல்றான்னு எனக்கு காட்டு."
+     "ta": "அப்போ ஃபைல பாரு, பிரியா. இவன் பொய் சொல்றான்னு எனக்கு காட்டு.",
+     "emotion": "confident",
+     "intensity": "medium"
     },
     {
      "who": "priya",
      "en": "...Fine. I'll look. So that you stop coming near us. Both of you.",
-     "ta": "...சரி. பாக்கறேன். நீங்க ரெண்டு பேரும் எங்க பக்கம் வராம இருக்கறதுக்காக."
+     "ta": "...சரி. பாக்கறேன். நீங்க ரெண்டு பேரும் எங்க பக்கம் வராம இருக்கறதுக்காக.",
+     "emotion": "frustrated",
+     "intensity": "medium"
     }
    ]
   },
@@ -7565,12 +8157,16 @@
     {
      "who": "amma",
      "en": "Suresh sir came this afternoon. With a box of Mysore pak, for Divya. So kind.",
-     "ta": "சுரேஷ் சார் மதியம் வந்திருந்தாரு. திவ்யாவுக்கு ஒரு பெட்டி மைசூர் பாக்கோட. எவ்வளவு நல்ல மனுஷன்."
+     "ta": "சுரேஷ் சார் மதியம் வந்திருந்தாரு. திவ்யாவுக்கு ஒரு பெட்டி மைசூர் பாக்கோட. எவ்வளவு நல்ல மனுஷன்.",
+     "emotion": "happy",
+     "intensity": "low"
     },
     {
      "who": "amma",
      "en": "He asked where you've been going. The doorbell, the tea shop... I said, he's only trying, sir.",
-     "ta": "நீ எங்கெல்லாம் போறன்னு கேட்டாரு. டோர்பெல், டீக்கடை... அவன் முயற்சி பண்றான் சார்னு சொன்னேன்."
+     "ta": "நீ எங்கெல்லாம் போறன்னு கேட்டாரு. டோர்பெல், டீக்கடை... அவன் முயற்சி பண்றான் சார்னு சொன்னேன்.",
+     "emotion": "confused",
+     "intensity": "low"
     },
     {
      "who": "karthik",
@@ -7586,12 +8182,16 @@
     {
      "who": "amma",
      "en": "Suresh sir came this afternoon. With a box of Mysore pak, for Divya. He asked where you've been going.",
-     "ta": "சுரேஷ் சார் மதியம் வந்திருந்தாரு. திவ்யாவுக்கு ஒரு பெட்டி மைசூர் பாக்கோட. நீ எங்கெல்லாம் போறன்னு கேட்டாரு."
+     "ta": "சுரேஷ் சார் மதியம் வந்திருந்தாரு. திவ்யாவுக்கு ஒரு பெட்டி மைசூர் பாக்கோட. நீ எங்கெல்லாம் போறன்னு கேட்டாரு.",
+     "emotion": "happy",
+     "intensity": "low"
     },
     {
      "who": "amma",
      "en": "I said I don't know. And I don't, do I?",
-     "ta": "எனக்கு தெரியாதுன்னு சொன்னேன். உண்மையிலயே தெரியாது, இல்லையா?"
+     "ta": "எனக்கு தெரியாதுன்னு சொன்னேன். உண்மையிலயே தெரியாது, இல்லையா?",
+     "emotion": "confused",
+     "intensity": "low"
     },
     {
      "who": "karthik",
@@ -7606,12 +8206,16 @@
     {
      "who": "amma",
      "en": "And kanna... I didn't go to the market today. Kamala akka turned her back on me at the vegetable cart. In front of everyone.",
-     "ta": "அப்புறம் கண்ணா... இன்னைக்கு மார்க்கெட் போகல. காய்கறி வண்டி கிட்ட கமலா அக்கா என்ன பாத்து முதுகு திருப்பிட்டாங்க. எல்லார் முன்னாடியும்."
+     "ta": "அப்புறம் கண்ணா... இன்னைக்கு மார்க்கெட் போகல. காய்கறி வண்டி கிட்ட கமலா அக்கா என்ன பாத்து முதுகு திருப்பிட்டாங்க. எல்லார் முன்னாடியும்.",
+     "emotion": "sad",
+     "intensity": "medium"
     },
     {
      "who": "amma",
      "en": "There's nothing for tonight but rice and rasam.",
-     "ta": "இன்னைக்கு ராத்திரிக்கு சாதமும் ரசமும் தான்."
+     "ta": "இன்னைக்கு ராத்திரிக்கு சாதமும் ரசமும் தான்.",
+     "emotion": "sad",
+     "intensity": "low"
     }
    ]
   },
@@ -7653,7 +8257,9 @@
     {
      "who": "divya",
      "en": "Done. Forty minutes. The delivery boy won't know who we are.",
-     "ta": "ஆச்சு. நாப்பது நிமிஷம். டெலிவரி பையனுக்கு நாம யாருன்னு தெரியாது."
+     "ta": "ஆச்சு. நாப்பது நிமிஷம். டெலிவரி பையனுக்கு நாம யாருன்னு தெரியாது.",
+     "emotion": "confident",
+     "intensity": "low"
     }
    ]
   },
@@ -7936,13 +8542,18 @@
     {
      "who": "vendor2",
      "en": "My son was inside two years for a theft he didn't do. The whole street turned its back. I know that walk you're walking.",
-     "ta": "என் பையன் செய்யாத திருட்டுக்கு ரெண்டு வருஷம் உள்ள இருந்தான். தெரு முழுக்க முதுகு காட்டுச்சு. நீ நடக்கற அந்த நடை எனக்கு தெரியும்."
+     "ta": "என் பையன் செய்யாத திருட்டுக்கு ரெண்டு வருஷம் உள்ள இருந்தான். தெரு முழுக்க முதுகு காட்டுச்சு. நீ நடக்கற அந்த நடை எனக்கு தெரியும்.",
+     "emotion": "sad",
+     "intensity": "low"
     },
     {
      "who": "vendor2",
      "en": "Beans, onions, coriander, and a few green chillies for your Amma. Sixty rupees. Tell her Valliammai sent them.",
      "ta": "பீன்ஸ், வெங்காயம், கொத்தமல்லி, உங்க அம்மாவுக்கு கொஞ்சம் பச்ச மிளகாய். அறுபது ரூபாய். வள்ளியம்மை குடுத்தாங்கன்னு சொல்லு.",
-     "pay": -60
+     "pay": -60,
+     "emotion": "relaxed",
+     "intensity": "low",
+     "gesture": "give"
     }
    ]
   },
@@ -7978,7 +8589,9 @@
     {
      "who": "amma",
      "en": "Valliammai? ...She came to your appa's funeral. Nobody else from that market did. (She takes the bag in both hands.)",
-     "ta": "வள்ளியம்மையா? ...உங்க அப்பா சாவுக்கு வந்தாங்க. அந்த மார்க்கெட்ல இருந்து வேற யாரும் வரல. (பைய ரெண்டு கையாலயும் வாங்கறாங்க.)"
+     "ta": "வள்ளியம்மையா? ...உங்க அப்பா சாவுக்கு வந்தாங்க. அந்த மார்க்கெட்ல இருந்து வேற யாரும் வரல. (பைய ரெண்டு கையாலயும் வாங்கறாங்க.)",
+     "emotion": "sad",
+     "intensity": "low"
     }
    ]
   },
@@ -8283,12 +8896,16 @@
     {
      "who": "priya",
      "en": "Revathi was shaking the whole time. It was in Suresh uncle's cabinet, at the back, behind the company's tax files.",
-     "ta": "ரேவதி முழு நேரமும் நடுங்கிட்டே இருந்தா. சுரேஷ் அங்கிள் கேபினெட்ல இருந்துச்சு, பின்னாடி, கம்பெனி டாக்ஸ் ஃபைல்களுக்கு பின்னாடி."
+     "ta": "ரேவதி முழு நேரமும் நடுங்கிட்டே இருந்தா. சுரேஷ் அங்கிள் கேபினெட்ல இருந்துச்சு, பின்னாடி, கம்பெனி டாக்ஸ் ஃபைல்களுக்கு பின்னாடி.",
+     "emotion": "nervous",
+     "intensity": "medium"
     },
     {
      "who": "priya",
      "en": "His hand. Green ink. I'd know it anywhere. ...Read it.",
-     "ta": "அவர் கையெழுத்து. பச்ச மை. எங்க பாத்தாலும் தெரியும். ...படி."
+     "ta": "அவர் கையெழுத்து. பச்ச மை. எங்க பாத்தாலும் தெரியும். ...படி.",
+     "emotion": "sad",
+     "intensity": "high"
     }
    ],
    "unless": "priya_missed"
@@ -8322,7 +8939,9 @@
     {
      "who": "security",
      "en": "You're the driver? Doctor waited twenty minutes. Then she went up to scrub in.",
-     "ta": "நீங்க தான் டிரைவரா? டாக்டர் இருபது நிமிஷம் காத்திருந்தாங்க. அப்புறம் சர்ஜரிக்கு ரெடியாக மேல போயிட்டாங்க."
+     "ta": "நீங்க தான் டிரைவரா? டாக்டர் இருபது நிமிஷம் காத்திருந்தாங்க. அப்புறம் சர்ஜரிக்கு ரெடியாக மேல போயிட்டாங்க.",
+     "emotion": "frustrated",
+     "intensity": "low"
     },
     {
      "who": "security",
@@ -8362,17 +8981,24 @@
     {
      "who": "karthik",
      "en": "'S.' ...Suresh sir.",
-     "ta": "'S.' ...சுரேஷ் சார்."
+     "ta": "'S.' ...சுரேஷ் சார்.",
+     "emotion": "surprised",
+     "intensity": "medium"
     },
     {
      "who": "priya",
      "en": "Don't. This doesn't mean I believe you. It means I don't know any more. And I hate not knowing.",
-     "ta": "வேண்டாம். நான் உன்ன நம்பறேன்னு அர்த்தம் இல்ல இது. எனக்கு இப்போ எதுவும் தெரியலன்னு அர்த்தம். தெரியாம இருக்கறது எனக்கு பிடிக்கல."
+     "ta": "வேண்டாம். நான் உன்ன நம்பறேன்னு அர்த்தம் இல்ல இது. எனக்கு இப்போ எதுவும் தெரியலன்னு அர்த்தம். தெரியாம இருக்கறது எனக்கு பிடிக்கல.",
+     "emotion": "frustrated",
+     "intensity": "high"
     },
     {
      "who": "priya",
      "en": "Your Sundaram has a copy. Take this one to those farmers. They should know he meant it.",
-     "ta": "உன் சுந்தரம் கிட்ட ஒரு நகல் இருக்கு. இத அந்த விவசாயிங்க கிட்ட கொண்டு போ. அவர் உண்மையா தான் சொன்னாருன்னு அவங்களுக்கு தெரியணும்."
+     "ta": "உன் சுந்தரம் கிட்ட ஒரு நகல் இருக்கு. இத அந்த விவசாயிங்க கிட்ட கொண்டு போ. அவர் உண்மையா தான் சொன்னாருன்னு அவங்களுக்கு தெரியணும்.",
+     "emotion": "confident",
+     "intensity": "low",
+     "gesture": "give"
     }
    ],
    "unless": "priya_missed"
@@ -8419,17 +9045,23 @@
     {
      "who": "priya",
      "en": "No. Revathi put everything back the way it was. ...Why does that matter?",
-     "ta": "இல்ல. ரேவதி எல்லாத்தையும் இருந்த மாதிரியே வச்சிட்டா. ...அது ஏன் முக்கியம்?"
+     "ta": "இல்ல. ரேவதி எல்லாத்தையும் இருந்த மாதிரியே வச்சிட்டா. ...அது ஏன் முக்கியம்?",
+     "emotion": "confused",
+     "intensity": "low"
     },
     {
      "who": "karthik",
      "en": "Be careful around him. Please. And tell Revathi.",
-     "ta": "அவர் கிட்ட கவனமா இருங்க. ப்ளீஸ். ரேவதி கிட்டயும் சொல்லுங்க."
+     "ta": "அவர் கிட்ட கவனமா இருங்க. ப்ளீஸ். ரேவதி கிட்டயும் சொல்லுங்க.",
+     "emotion": "fear",
+     "intensity": "medium"
     },
     {
      "who": "priya",
      "en": "He's my father's partner. He held my mother up at the funeral. ...I'll tell her.",
-     "ta": "அவர் என் அப்பாவோட பார்ட்னர். சாவு வீட்டுல என் அம்மாவ தாங்கி பிடிச்சாரு. ...அவ கிட்ட சொல்றேன்."
+     "ta": "அவர் என் அப்பாவோட பார்ட்னர். சாவு வீட்டுல என் அம்மாவ தாங்கி பிடிச்சாரு. ...அவ கிட்ட சொல்றேன்.",
+     "emotion": "confused",
+     "intensity": "medium"
     }
    ]
   },
@@ -8525,12 +9157,17 @@
     {
      "who": "farmer2",
      "en": "You again? Didn't he tell you—",
-     "ta": "மறுபடியும் நீயா? அவர் சொல்லலையா—"
+     "ta": "மறுபடியும் நீயா? அவர் சொல்லலையா—",
+     "emotion": "suspicious",
+     "intensity": "medium"
     },
     {
      "who": "karthik",
      "en": "Ayya. You said, bring paper. (I hold out the note.)",
-     "ta": "ஐயா. காகிதம் கொண்டு வான்னு சொன்னீங்க. (குறிப்ப நீட்டறேன்.)"
+     "ta": "ஐயா. காகிதம் கொண்டு வான்னு சொன்னீங்க. (குறிப்ப நீட்டறேன்.)",
+     "emotion": "respectful",
+     "intensity": "medium",
+     "gesture": "give"
     },
     {
      "who": "ponnusamy",
@@ -8540,12 +9177,16 @@
     {
      "who": "ponnusamy",
      "en": "His hand. He wrote to us once, at Deepavali, with sweets for the children. Green ink, like this.",
-     "ta": "அவர் கையெழுத்து தான். ஒரு தடவ தீபாவளிக்கு, பிள்ளைங்களுக்கு இனிப்போட எழுதினாரு. இப்படியே பச்ச மை."
+     "ta": "அவர் கையெழுத்து தான். ஒரு தடவ தீபாவளிக்கு, பிள்ளைங்களுக்கு இனிப்போட எழுதினாரு. இப்படியே பச்ச மை.",
+     "emotion": "sad",
+     "intensity": "low"
     },
     {
      "who": "ponnusamy",
      "en": "So he meant to pay. And somebody stopped him.",
-     "ta": "அப்போ குடுக்கணும்னு தான் இருந்தாரு. யாரோ தடுத்துட்டாங்க."
+     "ta": "அப்போ குடுக்கணும்னு தான் இருந்தாரு. யாரோ தடுத்துட்டாங்க.",
+     "emotion": "angry",
+     "intensity": "low"
     }
    ]
   },
@@ -8556,7 +9197,9 @@
     {
      "who": "ponnusamy",
      "en": "And the money you held out that day. I'll forget it. You were frightened.",
-     "ta": "அன்னைக்கு நீ நீட்டின காசு. மறந்துடறேன். பயந்துட்ட நீ."
+     "ta": "அன்னைக்கு நீ நீட்டின காசு. மறந்துடறேன். பயந்துட்ட நீ.",
+     "emotion": "relaxed",
+     "intensity": "low"
     }
    ]
   },
@@ -8567,7 +9210,9 @@
     {
      "who": "ponnusamy",
      "en": "And that day in the field, your hands on me. ...I've had worse from men with more reason. Forget it.",
-     "ta": "அன்னைக்கு வயல்ல, என் மேல உன் கை. ...காரணம் இருந்தவங்க கிட்ட இதைவிட மோசமா வாங்கியிருக்கேன். விடு."
+     "ta": "அன்னைக்கு வயல்ல, என் மேல உன் கை. ...காரணம் இருந்தவங்க கிட்ட இதைவிட மோசமா வாங்கியிருக்கேன். விடு.",
+     "emotion": "relaxed",
+     "intensity": "low"
     }
    ]
   },
@@ -8577,7 +9222,9 @@
     {
      "who": "ponnusamy",
      "en": "Thambi. I said things to you. ...Tell your advocate: forty families will come to his court. And ask him who 'S.' is.",
-     "ta": "தம்பி. உன்ன என்னென்னவோ சொல்லிட்டேன். ...உன் வக்கீல் கிட்ட சொல்லு: நாப்பது குடும்பம் அவர் கோர்ட்டுக்கு வருவோம். 'S.' யாருன்னு அவர் கிட்ட கேளு."
+     "ta": "தம்பி. உன்ன என்னென்னவோ சொல்லிட்டேன். ...உன் வக்கீல் கிட்ட சொல்லு: நாப்பது குடும்பம் அவர் கோர்ட்டுக்கு வருவோம். 'S.' யாருன்னு அவர் கிட்ட கேளு.",
+     "emotion": "respectful",
+     "intensity": "medium"
     },
     {
      "who": "farmer1",
@@ -8892,7 +9539,9 @@
     {
      "who": "karthik",
      "en": "Sir. Pudhur Vayal, survey numbers two-fourteen to two-twenty-six. Only to see whose name—",
-     "ta": "சார். புதூர் வயல், சர்வே நம்பர் இருநூத்தி பதினாலு முதல் இருநூத்தி இருபத்தாறு வரைக்கும். யார் பேர்ல இருக்குன்னு மட்டும்—"
+     "ta": "சார். புதூர் வயல், சர்வே நம்பர் இருநூத்தி பதினாலு முதல் இருநூத்தி இருபத்தாறு வரைக்கும். யார் பேர்ல இருக்குன்னு மட்டும்—",
+     "emotion": "respectful",
+     "intensity": "low"
     },
     {
      "who": "clerk_patta",
@@ -8902,12 +9551,16 @@
     {
      "who": "karthik",
      "en": "Sir, fifteen days, I'm on bail, I—",
-     "ta": "சார், பதினஞ்சு நாள், நான் பெயில்ல இருக்கேன், நான்—"
+     "ta": "சார், பதினஞ்சு நாள், நான் பெயில்ல இருக்கேன், நான்—",
+     "emotion": "frustrated",
+     "intensity": "medium"
     },
     {
      "who": "clerk_patta",
      "en": "Everybody has a reason. Online. Next!",
-     "ta": "எல்லாருக்கும் ஒரு காரணம் இருக்கு. ஆன்லைன். அடுத்து!"
+     "ta": "எல்லாருக்கும் ஒரு காரணம் இருக்கு. ஆன்லைன். அடுத்து!",
+     "emotion": "frustrated",
+     "intensity": "medium"
     }
    ]
   },
@@ -8995,7 +9648,10 @@
     {
      "who": "tout",
      "en": "Revathi? Office? (He laughs.) Your wish, anna.",
-     "ta": "ரேவதியா? ஆஃபீஸா? (சிரிக்கிறார்.) உங்க இஷ்டம் அண்ணா."
+     "ta": "ரேவதியா? ஆஃபீஸா? (சிரிக்கிறார்.) உங்க இஷ்டம் அண்ணா.",
+     "emotion": "happy",
+     "intensity": "low",
+     "gesture": "laugh"
     }
    ]
   },
@@ -9006,7 +9662,10 @@
     {
      "who": "tout",
      "en": "Sit at the tea shop. One hour.",
-     "ta": "டீக்கடையில உக்காருங்க. ஒரு மணி நேரம்."
+     "ta": "டீக்கடையில உக்காருங்க. ஒரு மணி நேரம்.",
+     "emotion": "confident",
+     "intensity": "low",
+     "gesture": "point"
     },
     {
      "who": "karthik",
@@ -9421,12 +10080,17 @@
     {
      "who": "security",
      "en": "Sir, deliveries at the back gate. Service lane, on the left.",
-     "ta": "சார், டெலிவரி பின் கேட்ல. இடது பக்கம் சர்வீஸ் லேன்."
+     "ta": "சார், டெலிவரி பின் கேட்ல. இடது பக்கம் சர்வீஸ் லேன்.",
+     "emotion": "neutral",
+     "intensity": "low",
+     "gesture": "point"
     },
     {
      "who": "karthik",
      "en": "I'm not delivering. I want to have lunch.",
-     "ta": "நான் டெலிவரி பண்ண வரல. சாப்பிட வந்தேன்."
+     "ta": "நான் டெலிவரி பண்ண வரல. சாப்பிட வந்தேன்.",
+     "emotion": "frustrated",
+     "intensity": "low"
     },
     {
      "who": "security",
@@ -9670,7 +10334,10 @@
     {
      "who": "security",
      "en": "Good afternoon, sir. Welcome to the Siruvani Grand.",
-     "ta": "குட் ஆஃப்டர்நூன் சார். சிறுவாணி கிராண்டுக்கு வரவேற்கிறோம்."
+     "ta": "குட் ஆஃப்டர்நூன் சார். சிறுவாணி கிராண்டுக்கு வரவேற்கிறோம்.",
+     "emotion": "respectful",
+     "intensity": "low",
+     "gesture": "namaste"
     },
     {
      "who": "karthik",
@@ -9768,12 +10435,16 @@
     {
      "who": "ganesan",
      "en": "Sir... you're Raghavan sir's driver. Six years you waited outside in the white car. Today you came in by the front door.",
-     "ta": "சார்... நீங்க ராகவன் சாரோட டிரைவர். ஆறு வருஷம் வெள்ள கார்ல வெளிய காத்திருந்தீங்க. இன்னைக்கு முன் கதவால உள்ள வந்தீங்க."
+     "ta": "சார்... நீங்க ராகவன் சாரோட டிரைவர். ஆறு வருஷம் வெள்ள கார்ல வெளிய காத்திருந்தீங்க. இன்னைக்கு முன் கதவால உள்ள வந்தீங்க.",
+     "emotion": "surprised",
+     "intensity": "medium"
     },
     {
      "who": "karthik",
      "en": "Anna. Two weeks ago. Suresh sir, lunch, two men from Chennai.",
-     "ta": "அண்ணா. ரெண்டு வாரம் முன்னாடி. சுரேஷ் சார், மதிய சாப்பாடு, சென்னையிலிருந்து ரெண்டு பேர்."
+     "ta": "அண்ணா. ரெண்டு வாரம் முன்னாடி. சுரேஷ் சார், மதிய சாப்பாடு, சென்னையிலிருந்து ரெண்டு பேர்.",
+     "emotion": "curious",
+     "intensity": "medium"
     }
    ]
   },
@@ -9817,17 +10488,23 @@
     {
      "who": "ganesan",
      "en": "Land people. Files on the table, a map. Suresh sir was turning his ring, the big emerald. He turns it when he's selling. Thirty years I've opened doors, sir. I know a man selling.",
-     "ta": "நில ஆளுங்க. டேபிள்ல ஃபைல், ஒரு வரைபடம். சுரேஷ் சார் மோதிரத்த திருப்பிட்டு இருந்தாரு, பெரிய மரகதம். விக்கும்போது அப்படி திருப்புவாரு. முப்பது வருஷம் கதவு திறந்திருக்கேன் சார். விக்கறவன தெரியும்."
+     "ta": "நில ஆளுங்க. டேபிள்ல ஃபைல், ஒரு வரைபடம். சுரேஷ் சார் மோதிரத்த திருப்பிட்டு இருந்தாரு, பெரிய மரகதம். விக்கும்போது அப்படி திருப்புவாரு. முப்பது வருஷம் கதவு திறந்திருக்கேன் சார். விக்கறவன தெரியும்.",
+     "emotion": "nervous",
+     "intensity": "medium"
     },
     {
      "who": "ganesan",
      "en": "When they left, one of them said, 'Once the old man signs, Green Valley is ours.' Then they laughed.",
-     "ta": "போகும்போது ஒருத்தர் சொன்னாரு, 'கிழவர் கையெழுத்து போட்டா, கிரீன் வேலி நம்மளோடது.' அப்புறம் சிரிச்சாங்க."
+     "ta": "போகும்போது ஒருத்தர் சொன்னாரு, 'கிழவர் கையெழுத்து போட்டா, கிரீன் வேலி நம்மளோடது.' அப்புறம் சிரிச்சாங்க.",
+     "emotion": "nervous",
+     "intensity": "medium"
     },
     {
      "who": "ganesan",
      "en": "Raghavan sir always gave me a hundred at Pongal. Every year. ...If someone asks me properly, I'll say it.",
-     "ta": "ராகவன் சார் ஒவ்வொரு பொங்கலுக்கும் நூறு ரூபாய் குடுப்பாரு. ஒவ்வொரு வருஷமும். ...யாராவது முறையா கேட்டா, சொல்லுவேன்."
+     "ta": "ராகவன் சார் ஒவ்வொரு பொங்கலுக்கும் நூறு ரூபாய் குடுப்பாரு. ஒவ்வொரு வருஷமும். ...யாராவது முறையா கேட்டா, சொல்லுவேன்.",
+     "emotion": "sad",
+     "intensity": "medium"
     }
    ]
   },
@@ -10163,12 +10840,16 @@
     {
      "who": "karthik",
      "en": "Anna. The post-mortem report. Raghavan, Race Course. Two weeks ago.",
-     "ta": "அண்ணா. போஸ்ட்மார்ட்டம் ரிப்போர்ட். ராகவன், ரேஸ் கோர்ஸ். ரெண்டு வாரம் முன்னாடி."
+     "ta": "அண்ணா. போஸ்ட்மார்ட்டம் ரிப்போர்ட். ராகவன், ரேஸ் கோர்ஸ். ரெண்டு வாரம் முன்னாடி.",
+     "emotion": "respectful",
+     "intensity": "low"
     },
     {
      "who": "attendant",
      "en": "Family only. Police or court. ...You are family?",
-     "ta": "குடும்பத்துக்கு மட்டும். போலீஸ், இல்லனா கோர்ட். ...நீங்க குடும்பமா?"
+     "ta": "குடும்பத்துக்கு மட்டும். போலீஸ், இல்லனா கோர்ட். ...நீங்க குடும்பமா?",
+     "emotion": "suspicious",
+     "intensity": "low"
     },
     {
      "who": "attendant",
@@ -10325,12 +11006,16 @@
     {
      "who": "sundaram",
      "en": "(on the phone) The post-mortem? Thambi, you are the accused. The law gives you a copy of every document the police rely on, and that report is one of them. I'll apply today.",
-     "ta": "(ஃபோன்ல) போஸ்ட்மார்ட்டமா? தம்பி, நீ குற்றம் சாட்டப்பட்டவன். போலீஸ் நம்பற ஒவ்வொரு ஆவணத்தோட நகலும் உனக்கு சட்டப்படி கிடைக்கணும், அந்த அறிக்கையும் அதுல ஒண்ணு. இன்னைக்கே மனு போடறேன்."
+     "ta": "(ஃபோன்ல) போஸ்ட்மார்ட்டமா? தம்பி, நீ குற்றம் சாட்டப்பட்டவன். போலீஸ் நம்பற ஒவ்வொரு ஆவணத்தோட நகலும் உனக்கு சட்டப்படி கிடைக்கணும், அந்த அறிக்கையும் அதுல ஒண்ணு. இன்னைக்கே மனு போடறேன்.",
+     "emotion": "frustrated",
+     "intensity": "low"
     },
     {
      "who": "sundaram",
      "en": "It comes with the court's papers, not tomorrow. But nobody will ever call it a fake.",
-     "ta": "கோர்ட் பேப்பர்களோட வரும், நாளைக்கு இல்ல. ஆனா அத யாரும் போலின்னு சொல்ல முடியாது."
+     "ta": "கோர்ட் பேப்பர்களோட வரும், நாளைக்கு இல்ல. ஆனா அத யாரும் போலின்னு சொல்ல முடியாது.",
+     "emotion": "confident",
+     "intensity": "low"
     }
    ]
   },
@@ -10422,17 +11107,23 @@
     {
      "who": "divya",
      "en": "Anna. There's a black car at the corner. It came in right after you. Nobody's got out.",
-     "ta": "அண்ணா. மூலையில ஒரு கருப்பு கார் நிக்குது. நீ வந்த உடனே வந்துச்சு. யாரும் இறங்கல."
+     "ta": "அண்ணா. மூலையில ஒரு கருப்பு கார் நிக்குது. நீ வந்த உடனே வந்துச்சு. யாரும் இறங்கல.",
+     "emotion": "fear",
+     "intensity": "medium"
     },
     {
      "who": "karthik",
      "en": "Stay away from the window. And don't tell Amma.",
-     "ta": "ஜன்னல் கிட்ட இருந்து தள்ளி இரு. அம்மா கிட்ட சொல்லாத."
+     "ta": "ஜன்னல் கிட்ட இருந்து தள்ளி இரு. அம்மா கிட்ட சொல்லாத.",
+     "emotion": "fear",
+     "intensity": "medium"
     },
     {
      "who": "divya",
      "en": "(She already has her phone up.) Number plate. TN 37... the last four are covered with mud. On purpose.",
-     "ta": "(ஏற்கனவே ஃபோன தூக்கிட்டா.) நம்பர் பிளேட். TN 37... கடைசி நாலு நம்பர் மேல சேறு. வேணும்னே."
+     "ta": "(ஏற்கனவே ஃபோன தூக்கிட்டா.) நம்பர் பிளேட். TN 37... கடைசி நாலு நம்பர் மேல சேறு. வேணும்னே.",
+     "emotion": "confident",
+     "intensity": "low"
     }
    ],
    "unless": "sedan_lost",
@@ -10469,12 +11160,16 @@
     {
      "who": "divya",
      "en": "Anna? You're breathing like you ran all the way.",
-     "ta": "அண்ணா? ஓடி வந்த மாதிரி மூச்சு வாங்குது."
+     "ta": "அண்ணா? ஓடி வந்த மாதிரி மூச்சு வாங்குது.",
+     "emotion": "confused",
+     "intensity": "medium"
     },
     {
      "who": "karthik",
      "en": "Traffic. ...Stay away from the window tonight, okay? And don't tell Amma.",
-     "ta": "டிராஃபிக். ...இன்னைக்கு ராத்திரி ஜன்னல் பக்கம் போகாத, சரியா? அம்மா கிட்ட சொல்லாத."
+     "ta": "டிராஃபிக். ...இன்னைக்கு ராத்திரி ஜன்னல் பக்கம் போகாத, சரியா? அம்மா கிட்ட சொல்லாத.",
+     "emotion": "nervous",
+     "intensity": "medium"
     },
     {
      "who": "divya",
@@ -10956,12 +11651,17 @@
     {
      "who": "karthik",
      "en": "Anna. A car key. A big white SUV, the kind with a chip in it. Has anyone asked you for one?",
-     "ta": "அண்ணா. கார் சாவி. பெரிய வெள்ள எஸ்யூவி, சிப் வச்சது. யாராவது உங்க கிட்ட கேட்டாங்களா?"
+     "ta": "அண்ணா. கார் சாவி. பெரிய வெள்ள எஸ்யூவி, சிப் வச்சது. யாராவது உங்க கிட்ட கேட்டாங்களா?",
+     "emotion": "curious",
+     "intensity": "low"
     },
     {
      "who": "keycut1",
      "en": "Chip key? (He laughs and holds up his file.) Thambi, I cut almirah keys and padlocks. For chip keys you need a machine and a computer. Try R.S. Puram, the shop by the flyover.",
-     "ta": "சிப் சாவியா? (சிரிச்சிட்டு அரத்த தூக்கி காட்டறார்.) தம்பி, நான் பீரோ சாவி, பூட்டு சாவி வெட்டறவன். சிப் சாவிக்கு மெஷினும் கம்ப்யூட்டரும் வேணும். ஆர்.எஸ். புரம், ஃப்ளைஓவர் பக்கத்து கடைய பாருங்க."
+     "ta": "சிப் சாவியா? (சிரிச்சிட்டு அரத்த தூக்கி காட்டறார்.) தம்பி, நான் பீரோ சாவி, பூட்டு சாவி வெட்டறவன். சிப் சாவிக்கு மெஷினும் கம்ப்யூட்டரும் வேணும். ஆர்.எஸ். புரம், ஃப்ளைஓவர் பக்கத்து கடைய பாருங்க.",
+     "emotion": "happy",
+     "intensity": "low",
+     "gesture": "laugh"
     }
    ]
   },
@@ -11059,12 +11759,16 @@
     {
      "who": "keycut2",
      "en": "A transponder for that SUV? Not from me, not this year. I'd need the car itself here, on my machine, an hour.",
-     "ta": "அந்த எஸ்யூவிக்கு டிரான்ஸ்பாண்டரா? என் கிட்ட இல்ல, இந்த வருஷம். காரே இங்க வேணும், என் மெஷின்ல, ஒரு மணி நேரம்."
+     "ta": "அந்த எஸ்யூவிக்கு டிரான்ஸ்பாண்டரா? என் கிட்ட இல்ல, இந்த வருஷம். காரே இங்க வேணும், என் மெஷின்ல, ஒரு மணி நேரம்.",
+     "emotion": "confident",
+     "intensity": "low"
     },
     {
      "who": "keycut2",
      "en": "In this city, the dealer, and three or four workshops with the programmer. The good one's in Ganapathy. Bala Motors. That boy can do anything with a car.",
-     "ta": "இந்த ஊர்ல, டீலர், அப்புறம் புரோகிராமர் வச்ச மூணு நாலு வொர்க்ஷாப். நல்லது கணபதியில. பாலா மோட்டார்ஸ். அந்த பையன் காருக்கு என்ன வேணா பண்ணுவான்."
+     "ta": "இந்த ஊர்ல, டீலர், அப்புறம் புரோகிராமர் வச்ச மூணு நாலு வொர்க்ஷாப். நல்லது கணபதியில. பாலா மோட்டார்ஸ். அந்த பையன் காருக்கு என்ன வேணா பண்ணுவான்.",
+     "emotion": "relaxed",
+     "intensity": "low"
     },
     {
      "who": "karthik",
@@ -11443,32 +12147,44 @@
     {
      "who": "bala",
      "en": "Da! This early? Coffee? Sorry I didn't pick up last night, the phone was in the car I was—",
-     "ta": "டா! இவ்வளவு சீக்கிரமா? காபி? நேத்து ராத்திரி எடுக்கல சாரி, ஃபோன் கார்ல இருந்துச்சு, நான்—"
+     "ta": "டா! இவ்வளவு சீக்கிரமா? காபி? நேத்து ராத்திரி எடுக்கல சாரி, ஃபோன் கார்ல இருந்துச்சு, நான்—",
+     "emotion": "happy",
+     "intensity": "medium"
     },
     {
      "who": "karthik",
      "en": "Bala. A month ago. Did Suresh sir bring Raghavan sir's white SUV here?",
-     "ta": "பாலா. ஒரு மாசம் முன்னாடி. ராகவன் சார் வெள்ள எஸ்யூவிய சுரேஷ் சார் இங்க கொண்டு வந்தாரா?"
+     "ta": "பாலா. ஒரு மாசம் முன்னாடி. ராகவன் சார் வெள்ள எஸ்யூவிய சுரேஷ் சார் இங்க கொண்டு வந்தாரா?",
+     "emotion": "nervous",
+     "intensity": "medium"
     },
     {
      "who": "bala",
      "en": "Yes, for service. Oil, front brake pads. Why?",
-     "ta": "ஆமா, சர்வீஸுக்கு. ஆயில், முன் பிரேக் பேட். ஏன்?"
+     "ta": "ஆமா, சர்வீஸுக்கு. ஆயில், முன் பிரேக் பேட். ஏன்?",
+     "emotion": "confused",
+     "intensity": "low"
     },
     {
      "who": "karthik",
      "en": "And a key?",
-     "ta": "அப்புறம் ஒரு சாவி?"
+     "ta": "அப்புறம் ஒரு சாவி?",
+     "emotion": "curious",
+     "intensity": "medium"
     },
     {
      "who": "bala",
      "en": "(He stops wiping his hands.) A spare. For the office, he said. Sir's partner, da. Why would I ask?",
-     "ta": "(கைய துடைக்கறத நிறுத்தறான்.) ஒரு ஸ்பேர். ஆஃபீஸுக்குன்னு சொன்னாரு. சாரோட பார்ட்னர் டா. நான் ஏன் கேக்க போறேன்?"
+     "ta": "(கைய துடைக்கறத நிறுத்தறான்.) ஒரு ஸ்பேர். ஆஃபீஸுக்குன்னு சொன்னாரு. சாரோட பார்ட்னர் டா. நான் ஏன் கேக்க போறேன்?",
+     "emotion": "nervous",
+     "intensity": "medium"
     },
     {
      "who": "karthik",
      "en": "Show me the job card.",
-     "ta": "ஜாப் கார்ட காட்டு."
+     "ta": "ஜாப் கார்ட காட்டு.",
+     "emotion": "confident",
+     "intensity": "medium"
     }
    ]
   },
@@ -11502,7 +12218,9 @@
     {
      "who": "bala",
      "en": "It's locked, da. I put a PIN on it after the break-in last year. My head's gone, I can't... I wrote it down somewhere so I'd never forget. It's here somewhere. Look, if you want.",
-     "ta": "லாக் ஆயிருக்கு டா. போன வருஷம் திருட்டு நடந்ததுக்கு அப்புறம் PIN போட்டேன். என் தலையே வேலை செய்யல... மறக்கக்கூடாதுன்னு எங்கயோ எழுதி வச்சேன். இங்க தான் எங்கயோ. பாரு, வேணும்னா."
+     "ta": "லாக் ஆயிருக்கு டா. போன வருஷம் திருட்டு நடந்ததுக்கு அப்புறம் PIN போட்டேன். என் தலையே வேலை செய்யல... மறக்கக்கூடாதுன்னு எங்கயோ எழுதி வச்சேன். இங்க தான் எங்கயோ. பாரு, வேணும்னா.",
+     "emotion": "embarrassed",
+     "intensity": "low"
     }
    ]
   },
@@ -11644,7 +12362,9 @@
     {
      "who": "karthik",
      "en": "That key opened sir's car the night he died, Bala.",
-     "ta": "சார் இறந்த ராத்திரி அந்த சாவி தான் அவர் கார திறந்துச்சு, பாலா."
+     "ta": "சார் இறந்த ராத்திரி அந்த சாவி தான் அவர் கார திறந்துச்சு, பாலா.",
+     "emotion": "confident",
+     "intensity": "medium"
     },
     {
      "who": "bala",
@@ -11654,7 +12374,9 @@
     {
      "who": "bala",
      "en": "He's been coming for tea. Nearly every evening, since. 'How's our Karthik? Where's he going these days?' I thought he cared about you, da. I thought he was helping.",
-     "ta": "அப்போல இருந்து டீ குடிக்க வர்றாரு. கிட்டத்தட்ட தினமும் சாயங்காலம். 'நம்ம கார்த்திக் எப்படி இருக்கான்? இப்போ எங்க போறான்?' உன் மேல அக்கறைன்னு நினைச்சேன் டா. உதவி பண்றாருன்னு நினைச்சேன்."
+     "ta": "அப்போல இருந்து டீ குடிக்க வர்றாரு. கிட்டத்தட்ட தினமும் சாயங்காலம். 'நம்ம கார்த்திக் எப்படி இருக்கான்? இப்போ எங்க போறான்?' உன் மேல அக்கறைன்னு நினைச்சேன் டா. உதவி பண்றாருன்னு நினைச்சேன்.",
+     "emotion": "sad",
+     "intensity": "medium"
     }
    ]
   },
@@ -11665,7 +12387,9 @@
     {
      "who": "bala",
      "en": "I told him. The doorbell. Sekar's shop. Pudhur Vayal. Everything you told me at your door. And then that black car behind you... Da, that was me. I did that.",
-     "ta": "நான் சொன்னேன். டோர்பெல். சேகர் கடை. புதூர் வயல். உன் வாசல்ல நீ சொன்னது எல்லாம். அப்புறம் உன் பின்னாடி அந்த கருப்பு கார்... டா, அது நான் தான். நான் தான் பண்ணேன்."
+     "ta": "நான் சொன்னேன். டோர்பெல். சேகர் கடை. புதூர் வயல். உன் வாசல்ல நீ சொன்னது எல்லாம். அப்புறம் உன் பின்னாடி அந்த கருப்பு கார்... டா, அது நான் தான். நான் தான் பண்ணேன்.",
+     "emotion": "grieving",
+     "intensity": "medium"
     }
    ]
   },
@@ -11676,7 +12400,9 @@
     {
      "who": "bala",
      "en": "And before. Before that night. 'Where's Karthik taking sir tomorrow? What time does he finish? Does he take his own phone home?' I told him. Every time. Like it was nothing.",
-     "ta": "அப்புறம் அதுக்கு முன்னாடி. அந்த ராத்திரிக்கு முன்னாடி. 'கார்த்திக் நாளைக்கு சார எங்க கூட்டிட்டு போறான்? எத்தன மணிக்கு முடிப்பான்? அவன் ஃபோன வீட்டுக்கு எடுத்துட்டு போவானா?' சொன்னேன். ஒவ்வொரு தடவையும். ஒண்ணுமே இல்லாத மாதிரி."
+     "ta": "அப்புறம் அதுக்கு முன்னாடி. அந்த ராத்திரிக்கு முன்னாடி. 'கார்த்திக் நாளைக்கு சார எங்க கூட்டிட்டு போறான்? எத்தன மணிக்கு முடிப்பான்? அவன் ஃபோன வீட்டுக்கு எடுத்துட்டு போவானா?' சொன்னேன். ஒவ்வொரு தடவையும். ஒண்ணுமே இல்லாத மாதிரி.",
+     "emotion": "fear",
+     "intensity": "medium"
     }
    ]
   },
@@ -11779,12 +12505,17 @@
     {
      "who": "karthik",
      "en": "You didn't know, da. He used you like he used me. Now we tell Sundaram sir. Together.",
-     "ta": "உனக்கு தெரியாது டா. என்ன பயன்படுத்தின மாதிரியே உன்னையும் பயன்படுத்தினாரு. இப்போ சுந்தரம் சார் கிட்ட சொல்லுவோம். சேர்ந்து."
+     "ta": "உனக்கு தெரியாது டா. என்ன பயன்படுத்தின மாதிரியே உன்னையும் பயன்படுத்தினாரு. இப்போ சுந்தரம் சார் கிட்ட சொல்லுவோம். சேர்ந்து.",
+     "emotion": "respectful",
+     "intensity": "medium",
+     "gesture": "comfort"
     },
     {
      "who": "bala",
      "en": "(He nods, and nods, and can't stop.) Whatever you need. The court, a car, anything. Anything, da.",
-     "ta": "(தலைய ஆட்டறான், ஆட்டிட்டே இருக்கான்.) உனக்கு என்ன வேணுமோ. கோர்ட், கார், எதுவானாலும். எதுவானாலும் டா."
+     "ta": "(தலைய ஆட்டறான், ஆட்டிட்டே இருக்கான்.) உனக்கு என்ன வேணுமோ. கோர்ட், கார், எதுவானாலும். எதுவானாலும் டா.",
+     "emotion": "sad",
+     "intensity": "medium"
     }
    ]
   },
@@ -12014,12 +12745,16 @@
     {
      "who": "suresh_phone",
      "en": "Boss! Karthik. How are you, how's Amma, how's Divya's college?",
-     "ta": "பாஸ்! கார்த்திக். எப்படி இருக்க, அம்மா எப்படி இருக்காங்க, திவ்யா காலேஜ் எப்படி?"
+     "ta": "பாஸ்! கார்த்திக். எப்படி இருக்க, அம்மா எப்படி இருக்காங்க, திவ்யா காலேஜ் எப்படி?",
+     "emotion": "happy",
+     "intensity": "medium"
     },
     {
      "who": "suresh_phone",
      "en": "Listen. You've been busy, I hear. Let's talk. Just us. You and me, like the old days. Tomorrow night. I'll send you the place.",
-     "ta": "கேளு. ரொம்ப பிஸியா இருக்கன்னு கேள்விப்பட்டேன். பேசலாம். நாம மட்டும். நீயும் நானும், பழைய மாதிரி. நாளைக்கு ராத்திரி. இடத்த அனுப்பறேன்."
+     "ta": "கேளு. ரொம்ப பிஸியா இருக்கன்னு கேள்விப்பட்டேன். பேசலாம். நாம மட்டும். நீயும் நானும், பழைய மாதிரி. நாளைக்கு ராத்திரி. இடத்த அனுப்பறேன்.",
+     "emotion": "relaxed",
+     "intensity": "low"
     },
     {
      "who": "karthik",
@@ -12121,17 +12856,23 @@
     {
      "who": "sundaram",
      "en": "(on the phone) 6:40 at Pudhur? Thambi, think. If you're at a murder site at 6:40 you can't sign at seven. That's a breach. And if anything happens to him there, whom do they arrest?",
-     "ta": "(ஃபோன்ல) புதூர்ல 6:40-ஆ? தம்பி, யோசி. கொலை நடந்த இடத்துல 6:40-க்கு இருந்தா ஏழு மணிக்கு கையெழுத்து போட முடியாது. அது மீறல். அங்க அவருக்கு ஏதாவது ஆனா, யார கைது பண்ணுவாங்க?"
+     "ta": "(ஃபோன்ல) புதூர்ல 6:40-ஆ? தம்பி, யோசி. கொலை நடந்த இடத்துல 6:40-க்கு இருந்தா ஏழு மணிக்கு கையெழுத்து போட முடியாது. அது மீறல். அங்க அவருக்கு ஏதாவது ஆனா, யார கைது பண்ணுவாங்க?",
+     "emotion": "angry",
+     "intensity": "medium"
     },
     {
      "who": "sundaram",
      "en": "You don't go. You forward me that message, and you go and sign on time. A man who sends a message like that is frightened. Let him be frightened.",
-     "ta": "நீ போகாத. அந்த மெசேஜ எனக்கு ஃபார்வர்ட் பண்ணு, நேரத்துக்கு போய் கையெழுத்து போடு. இப்படி மெசேஜ் அனுப்பறவன் பயந்திருக்கான். பயப்படட்டும்."
+     "ta": "நீ போகாத. அந்த மெசேஜ எனக்கு ஃபார்வர்ட் பண்ணு, நேரத்துக்கு போய் கையெழுத்து போடு. இப்படி மெசேஜ் அனுப்பறவன் பயந்திருக்கான். பயப்படட்டும்.",
+     "emotion": "confident",
+     "intensity": "medium"
     },
     {
      "who": "sundaram",
      "en": "And thambi: with the note, the land and Bala's card, I'm filing today for his bank statements and for one Pandi's phone records. The court will hear it.",
-     "ta": "அப்புறம் தம்பி: குறிப்பு, நிலம், பாலா கார்டு வச்சு, இன்னைக்கே அவர் பேங்க் ஸ்டேட்மென்ட்டுக்கும், பாண்டின்னு ஒருத்தன் ஃபோன் ரெக்கார்டுக்கும் மனு போடறேன். கோர்ட் கேக்கும்."
+     "ta": "அப்புறம் தம்பி: குறிப்பு, நிலம், பாலா கார்டு வச்சு, இன்னைக்கே அவர் பேங்க் ஸ்டேட்மென்ட்டுக்கும், பாண்டின்னு ஒருத்தன் ஃபோன் ரெக்கார்டுக்கும் மனு போடறேன். கோர்ட் கேக்கும்.",
+     "emotion": "confident",
+     "intensity": "low"
     }
    ]
   },
@@ -12262,7 +13003,10 @@
     {
      "who": "suresh",
      "en": "Boss! You came. Good boy. ...Sit, sit. Nobody here but the frogs.",
-     "ta": "பாஸ்! வந்துட்ட. நல்ல பையன். ...உக்காரு உக்காரு. தவளைங்கள தவிர இங்க யாரும் இல்ல."
+     "ta": "பாஸ்! வந்துட்ட. நல்ல பையன். ...உக்காரு உக்காரு. தவளைங்கள தவிர இங்க யாரும் இல்ல.",
+     "emotion": "happy",
+     "intensity": "medium",
+     "gesture": "wave"
     }
    ]
   },
@@ -12338,12 +13082,17 @@
     {
      "who": "murugesan",
      "en": "(Headlights. Boots on gravel.) ENOUGH! Hands off him! ...An accused on bail, at the scene, at a witness's throat. I'll write this down, Karthik. Every word.",
-     "ta": "(ஹெட்லைட். கல்லுல பூட்ஸ் சத்தம்.) போதும்! கைய எடு! ...பெயில்ல இருக்கற குற்றவாளி, சம்பவ இடத்துல, சாட்சியோட கழுத்துல. இத எழுதி வைக்கிறேன், கார்த்திக். ஒவ்வொரு வார்த்தையும்."
+     "ta": "(ஹெட்லைட். கல்லுல பூட்ஸ் சத்தம்.) போதும்! கைய எடு! ...பெயில்ல இருக்கற குற்றவாளி, சம்பவ இடத்துல, சாட்சியோட கழுத்துல. இத எழுதி வைக்கிறேன், கார்த்திக். ஒவ்வொரு வார்த்தையும்.",
+     "emotion": "angry",
+     "intensity": "high",
+     "gesture": "argue"
     },
     {
      "who": "suresh",
      "en": "(Straightening his shirt.) I only wanted to help the boy, inspector. You saw.",
-     "ta": "(சட்டைய சரி பண்ணிட்டு.) பையனுக்கு உதவி பண்ண தான் நினைச்சேன், இன்ஸ்பெக்டர். நீங்களே பாத்தீங்க."
+     "ta": "(சட்டைய சரி பண்ணிட்டு.) பையனுக்கு உதவி பண்ண தான் நினைச்சேன், இன்ஸ்பெக்டர். நீங்களே பாத்தீங்க.",
+     "emotion": "relaxed",
+     "intensity": "low"
     }
    ]
   },
@@ -12367,12 +13116,16 @@
     {
      "who": "murugesan",
      "en": "(Headlights. Boots on gravel.) Put it down. ...Five lakhs, in an accused's hands, from a witness, at the scene. Do you know what that looks like, Karthik? It looks like a price.",
-     "ta": "(ஹெட்லைட். சரளைக்கல்லுல பூட்ஸ்.) கீழ வை. ...அஞ்சு லட்சம், குற்றம் சாட்டப்பட்டவன் கையில, ஒரு சாட்சி கிட்ட இருந்து, சம்பவ இடத்துல. இது எப்படி தெரியுது தெரியுமா, கார்த்திக்? ஒரு விலை மாதிரி."
+     "ta": "(ஹெட்லைட். சரளைக்கல்லுல பூட்ஸ்.) கீழ வை. ...அஞ்சு லட்சம், குற்றம் சாட்டப்பட்டவன் கையில, ஒரு சாட்சி கிட்ட இருந்து, சம்பவ இடத்துல. இது எப்படி தெரியுது தெரியுமா, கார்த்திக்? ஒரு விலை மாதிரி.",
+     "emotion": "suspicious",
+     "intensity": "high"
     },
     {
      "who": "suresh",
      "en": "He asked me for money, inspector. I only wanted the family to be all right. You saw.",
-     "ta": "அவன் தான் காசு கேட்டான், இன்ஸ்பெக்டர். குடும்பம் நல்லா இருக்கணும்னு தான் நினைச்சேன். நீங்களே பாத்தீங்க."
+     "ta": "அவன் தான் காசு கேட்டான், இன்ஸ்பெக்டர். குடும்பம் நல்லா இருக்கணும்னு தான் நினைச்சேன். நீங்களே பாத்தீங்க.",
+     "emotion": "sad",
+     "intensity": "low"
     }
    ]
   },
@@ -12725,17 +13478,23 @@
     {
      "who": "selvi",
      "en": "(on the phone, low) Karthik. The stand office called the station. A man matching Pandi is at Gandhipuram bus stand, at the Salem counter. The inspector is in court. I can't leave the desk.",
-     "ta": "(ஃபோன்ல, மெதுவா) கார்த்திக். ஸ்டாண்ட் ஆபீஸ்ல இருந்து ஸ்டேஷனுக்கு கூப்பிட்டாங்க. பாண்டி மாதிரி ஒருத்தன் காந்திபுரம் பஸ் ஸ்டாண்ட்ல, சேலம் கவுண்டர்ல. இன்ஸ்பெக்டர் கோர்ட்ல. நான் மேஜைய விட்டு போக முடியாது."
+     "ta": "(ஃபோன்ல, மெதுவா) கார்த்திக். ஸ்டாண்ட் ஆபீஸ்ல இருந்து ஸ்டேஷனுக்கு கூப்பிட்டாங்க. பாண்டி மாதிரி ஒருத்தன் காந்திபுரம் பஸ் ஸ்டாண்ட்ல, சேலம் கவுண்டர்ல. இன்ஸ்பெக்டர் கோர்ட்ல. நான் மேஜைய விட்டு போக முடியாது.",
+     "emotion": "nervous",
+     "intensity": "medium"
     },
     {
      "who": "selvi",
      "en": "The stand office says: a black cap, a dark jacket, grey trousers. The Salem bus leaves in a few minutes.",
-     "ta": "ஸ்டாண்ட் ஆபீஸ் சொல்றாங்க: கருப்பு தொப்பி, கருப்பு ஜாக்கெட், சாம்பல் பேன்ட். சேலம் பஸ் இன்னும் கொஞ்ச நிமிஷத்துல கிளம்பும்."
+     "ta": "ஸ்டாண்ட் ஆபீஸ் சொல்றாங்க: கருப்பு தொப்பி, கருப்பு ஜாக்கெட், சாம்பல் பேன்ட். சேலம் பஸ் இன்னும் கொஞ்ச நிமிஷத்துல கிளம்பும்.",
+     "emotion": "confident",
+     "intensity": "low"
     },
     {
      "who": "selvi",
      "en": "Don't touch him. Don't speak to him. Keep him in sight and call me. A patrol is ten minutes away.",
-     "ta": "அவன தொடாத. பேசாத. கண்ணுல வச்சுக்கோ, எனக்கு கூப்பிடு. ஒரு பேட்ரோல் பத்து நிமிஷத்துல வரும்."
+     "ta": "அவன தொடாத. பேசாத. கண்ணுல வச்சுக்கோ, எனக்கு கூப்பிடு. ஒரு பேட்ரோல் பத்து நிமிஷத்துல வரும்.",
+     "emotion": "confident",
+     "intensity": "medium"
     }
    ]
   },
@@ -13027,12 +13786,17 @@
     {
      "who": "murugesan",
      "en": "Pandi. Om Sakthi Traders' driver. Your phone was at Pudhur Vayal the night Raghavan died. Get in the jeep.",
-     "ta": "பாண்டி. ஓம் சக்தி டிரேடர்ஸ் டிரைவர். ராகவன் இறந்த ராத்திரி உன் ஃபோன் புதூர் வயல்ல இருந்துச்சு. ஜீப்ல ஏறு."
+     "ta": "பாண்டி. ஓம் சக்தி டிரேடர்ஸ் டிரைவர். ராகவன் இறந்த ராத்திரி உன் ஃபோன் புதூர் வயல்ல இருந்துச்சு. ஜீப்ல ஏறு.",
+     "emotion": "confident",
+     "intensity": "high",
+     "gesture": "point"
     },
     {
      "who": "pandi",
      "en": "(In the jeep, before the door shuts:) He promised me two lakhs. He gave me forty thousand. I'm not going down for him alone. I'll tell everything.",
-     "ta": "(ஜீப்ல, கதவு மூடறதுக்கு முன்னாடி:) ரெண்டு லட்சம்னு சொன்னாரு. நாப்பதாயிரம் தான் குடுத்தாரு. அவருக்காக நான் மட்டும் உள்ள போக மாட்டேன். எல்லாத்தையும் சொல்றேன்."
+     "ta": "(ஜீப்ல, கதவு மூடறதுக்கு முன்னாடி:) ரெண்டு லட்சம்னு சொன்னாரு. நாப்பதாயிரம் தான் குடுத்தாரு. அவருக்காக நான் மட்டும் உள்ள போக மாட்டேன். எல்லாத்தையும் சொல்றேன்.",
+     "emotion": "fear",
+     "intensity": "high"
     }
    ],
    "unless": "pandi_bus_left"
@@ -13044,7 +13808,9 @@
     {
      "who": "selvi",
      "en": "(on the phone) The patrol stopped the Salem bus at the Avinashi Road signal. He's in the jeep. ...Next time, Karthik, you look faster or you call sooner.",
-     "ta": "(ஃபோன்ல) ரோந்து வண்டி சேலம் பஸ்ஸ அவினாசி ரோடு சிக்னல்ல நிறுத்திடுச்சு. அவன் ஜீப்ல இருக்கான். ...அடுத்த தடவ, கார்த்திக், சீக்கிரம் பாரு, இல்லனா சீக்கிரம் கூப்பிடு."
+     "ta": "(ஃபோன்ல) ரோந்து வண்டி சேலம் பஸ்ஸ அவினாசி ரோடு சிக்னல்ல நிறுத்திடுச்சு. அவன் ஜீப்ல இருக்கான். ...அடுத்த தடவ, கார்த்திக், சீக்கிரம் பாரு, இல்லனா சீக்கிரம் கூப்பிடு.",
+     "emotion": "confident",
+     "intensity": "low"
     },
     {
      "who": "karthik",
@@ -13054,7 +13820,9 @@
     {
      "who": "pandi",
      "en": "He promised me two lakhs. He gave me forty thousand. I'm not going down for him alone. I'll tell everything.",
-     "ta": "ரெண்டு லட்சம் தரேன்னு சொன்னாரு. நாப்பதாயிரம் தான் குடுத்தாரு. அவருக்காக நான் மட்டும் உள்ள போக மாட்டேன். எல்லாத்தையும் சொல்றேன்."
+     "ta": "ரெண்டு லட்சம் தரேன்னு சொன்னாரு. நாப்பதாயிரம் தான் குடுத்தாரு. அவருக்காக நான் மட்டும் உள்ள போக மாட்டேன். எல்லாத்தையும் சொல்றேன்.",
+     "emotion": "angry",
+     "intensity": "medium"
     }
    ],
    "hide": [
@@ -13068,7 +13836,9 @@
     {
      "who": "murugesan",
      "en": "And you. A fight in a bus stand, on bail, on camera. Rules are rules, Karthik.",
-     "ta": "அப்புறம் நீ. பெயில்ல இருந்துட்டு, பஸ் ஸ்டாண்ட்ல சண்டை, கேமராவுல. சட்டம் சட்டம் தான், கார்த்திக்."
+     "ta": "அப்புறம் நீ. பெயில்ல இருந்துட்டு, பஸ் ஸ்டாண்ட்ல சண்டை, கேமராவுல. சட்டம் சட்டம் தான், கார்த்திக்.",
+     "emotion": "frustrated",
+     "intensity": "medium"
     }
    ]
   },
@@ -13366,7 +14136,9 @@
     {
      "who": "sundaram",
      "en": "(on the phone) Joseph? A good man, and a frightened one. A trade fair at two in the afternoon: a thousand people around you. Go. Record him. And come straight back.",
-     "ta": "(ஃபோன்ல) ஜோசப்பா? நல்ல மனுஷன், பயந்த மனுஷன். மதியம் ரெண்டு மணிக்கு கண்காட்சி: உன்ன சுத்தி ஆயிரம் பேர். போ. ரெக்கார்டு பண்ணு. நேரா திரும்பி வா."
+     "ta": "(ஃபோன்ல) ஜோசப்பா? நல்ல மனுஷன், பயந்த மனுஷன். மதியம் ரெண்டு மணிக்கு கண்காட்சி: உன்ன சுத்தி ஆயிரம் பேர். போ. ரெக்கார்டு பண்ணு. நேரா திரும்பி வா.",
+     "emotion": "relaxed",
+     "intensity": "low"
     }
    ]
   },
@@ -13553,7 +14325,9 @@
     {
      "who": "joseph",
      "en": "Don't look at me. Look at the tractor. Stand at it like you're reading the price.",
-     "ta": "என்ன பாக்காத. டிராக்டர பாரு. விலைய படிக்கற மாதிரி அது பக்கத்துல நில்லு."
+     "ta": "என்ன பாக்காத. டிராக்டர பாரு. விலைய படிக்கற மாதிரி அது பக்கத்துல நில்லு.",
+     "emotion": "nervous",
+     "intensity": "high"
     },
     {
      "who": "karthik",
@@ -13670,7 +14444,9 @@
     {
      "who": "joseph",
      "en": "I kept quiet two weeks. I have two daughters too, thambi. ...If the court calls me, I'll say it. Now walk away. Slowly. Look at the harvesters.",
-     "ta": "ரெண்டு வாரம் பேசாம இருந்தேன். எனக்கும் ரெண்டு பொண்ணு இருக்காங்க, தம்பி. ...கோர்ட் கூப்பிட்டா, சொல்லுவேன். இப்போ மெதுவா நடந்து போ. அறுவடை இயந்திரங்கள பாரு."
+     "ta": "ரெண்டு வாரம் பேசாம இருந்தேன். எனக்கும் ரெண்டு பொண்ணு இருக்காங்க, தம்பி. ...கோர்ட் கூப்பிட்டா, சொல்லுவேன். இப்போ மெதுவா நடந்து போ. அறுவடை இயந்திரங்கள பாரு.",
+     "emotion": "nervous",
+     "intensity": "medium"
     }
    ],
    "when": "joseph_taped"
@@ -13926,12 +14702,17 @@
     {
      "who": "amma",
      "en": "Your appa's shirt. I kept it for your wedding. ...Wear it today.",
-     "ta": "உங்க அப்பா சட்ட. உன் கல்யாணத்துக்கு வச்சிருந்தேன். ...இன்னைக்கு போட்டுக்கோ."
+     "ta": "உங்க அப்பா சட்ட. உன் கல்யாணத்துக்கு வச்சிருந்தேன். ...இன்னைக்கு போட்டுக்கோ.",
+     "emotion": "happy",
+     "intensity": "medium",
+     "gesture": "give"
     },
     {
      "who": "divya",
      "en": "I made a timeline, anna. On my laptop. Every minute. Sundaram sir has it.",
-     "ta": "நான் ஒரு டைம்லைன் பண்ணியிருக்கேன் அண்ணா. லேப்டாப்ல. ஒவ்வொரு நிமிஷமும். சுந்தரம் சார் கிட்ட இருக்கு."
+     "ta": "நான் ஒரு டைம்லைன் பண்ணியிருக்கேன் அண்ணா. லேப்டாப்ல. ஒவ்வொரு நிமிஷமும். சுந்தரம் சார் கிட்ட இருக்கு.",
+     "emotion": "confident",
+     "intensity": "medium"
     }
    ]
   },
@@ -13942,7 +14723,9 @@
     {
      "who": "bala",
      "en": "(At the door, in his best shirt, the workshop car washed.) Get in, da. Court.",
-     "ta": "(வாசல்ல, நல்ல சட்டையோட, வொர்க்ஷாப் கார கழுவி வச்சிருக்கான்.) ஏறு டா. கோர்ட்."
+     "ta": "(வாசல்ல, நல்ல சட்டையோட, வொர்க்ஷாப் கார கழுவி வச்சிருக்கான்.) ஏறு டா. கோர்ட்.",
+     "emotion": "confident",
+     "intensity": "medium"
     }
    ]
   },
@@ -14523,7 +15306,9 @@
     {
      "who": "priya",
      "en": "Karthik. I slapped you at my father's gate, in front of everyone. ...I'm sorry. I was wrong about you. So I'm saying this in front of everyone too.",
-     "ta": "கார்த்திக். என் அப்பா கேட்ல, எல்லார் முன்னாடியும் உன்ன அறைஞ்சேன். ...மன்னிச்சுக்கோ. உன்ன பத்தி தப்பா நினைச்சேன். அதனால இதையும் எல்லார் முன்னாடியும் சொல்றேன்."
+     "ta": "கார்த்திக். என் அப்பா கேட்ல, எல்லார் முன்னாடியும் உன்ன அறைஞ்சேன். ...மன்னிச்சுக்கோ. உன்ன பத்தி தப்பா நினைச்சேன். அதனால இதையும் எல்லார் முன்னாடியும் சொல்றேன்.",
+     "emotion": "embarrassed",
+     "intensity": "high"
     }
    ]
   },
@@ -14534,7 +15319,9 @@
     {
      "who": "priya",
      "en": "(Behind her mother, on the step.) Karthik. At the temple I said I'd call the police on you, in front of my mother. ...I'm sorry. I was wrong about you, and I said it in front of people. So I'm saying this in front of people too.",
-     "ta": "(அம்மா பின்னாடி, படியில.) கார்த்திக். கோயில்ல, என் அம்மா முன்னாடி, உன் மேல போலீஸ கூப்பிடுவேன்னு சொன்னேன். ...மன்னிச்சுக்கோ. உன்ன பத்தி தப்பா நினைச்சேன், ஆளுங்க முன்னாடி சொன்னேன். அதனால இதையும் ஆளுங்க முன்னாடி சொல்றேன்."
+     "ta": "(அம்மா பின்னாடி, படியில.) கார்த்திக். கோயில்ல, என் அம்மா முன்னாடி, உன் மேல போலீஸ கூப்பிடுவேன்னு சொன்னேன். ...மன்னிச்சுக்கோ. உன்ன பத்தி தப்பா நினைச்சேன், ஆளுங்க முன்னாடி சொன்னேன். அதனால இதையும் ஆளுங்க முன்னாடி சொல்றேன்.",
+     "emotion": "embarrassed",
+     "intensity": "medium"
     }
    ]
   },
@@ -14544,12 +15331,17 @@
     {
      "who": "meenakshi",
      "en": "(She puts a bunch of keys and a thick envelope in Amma's hands.) The Mist Village. Up in the hills, past Kotagiri. He was going to give it to the boy who drove him for six years without one complaint.",
-     "ta": "(அம்மா கையில ஒரு கொத்து சாவியையும் ஒரு தடிமனான கவரையும் வைக்கிறாங்க.) தி மிஸ்ட் வில்லேஜ். மலை மேல, கோத்தகிரி தாண்டி. ஆறு வருஷம் ஒரு குறை கூட சொல்லாம அவர ஓட்டின பையனுக்கு குடுக்கணும்னு இருந்தாரு."
+     "ta": "(அம்மா கையில ஒரு கொத்து சாவியையும் ஒரு தடிமனான கவரையும் வைக்கிறாங்க.) தி மிஸ்ட் வில்லேஜ். மலை மேல, கோத்தகிரி தாண்டி. ஆறு வருஷம் ஒரு குறை கூட சொல்லாம அவர ஓட்டின பையனுக்கு குடுக்கணும்னு இருந்தாரு.",
+     "emotion": "respectful",
+     "intensity": "medium",
+     "gesture": "give"
     },
     {
      "who": "meenakshi",
      "en": "He trusted you. He'd want it to be yours.",
-     "ta": "அவர் உன்ன நம்பினாரு. அது உன்னுடையதா இருக்கணும்னு அவர் நினைப்பாரு."
+     "ta": "அவர் உன்ன நம்பினாரு. அது உன்னுடையதா இருக்கணும்னு அவர் நினைப்பாரு.",
+     "emotion": "sad",
+     "intensity": "low"
     },
     {
      "who": "amma",

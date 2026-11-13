@@ -147,6 +147,8 @@ func greeting(key: String) -> String:
 		return "namaste"
 	if feeling(key, "familiarity") >= 60.0 and trust_of(key) >= 60.0:
 		return "wave" if randf() < 0.4 else "wobble"
+	if feeling(key, "familiarity") >= 25.0 and trust_of(key) >= 50.0 and not key in ["amma", "divya", "selvi", "priya", "meenakshi", "lakshmi"]:
+		return "handshake"                               # (a man he knows a little, at work)
 	return "nod"
 
 

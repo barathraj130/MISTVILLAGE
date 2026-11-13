@@ -338,40 +338,98 @@ def sketchfab_hair(body, arm, style, colour):
 
 
 # ---- the saree ----
-def saree_material(colour):
-    """Silk with small gold buttas, a zari border along both edges (v near 0 and 1) and a richer gold band at the
-    pallu's end (u near 1): an image (procedural shaders don't survive the export to the game)."""
+SAREE_STYLES = ("kanchi", "buttas", "stripes", "temple", "cotton")
+CROWD_WEAVES = False                                    # crowd_cast.py sets it: the crowd's sarees vary, the cast's don't
+# body colour → a contrasting border, as Kanchipuram silks pair them
+CONTRAST = {"red": (0.12, 0.42, 0.22), "green": (0.62, 0.08, 0.32), "blue": (0.75, 0.42, 0.06), "yellow": (0.55, 0.06, 0.2),
+            "other": (0.5, 0.08, 0.12)}
+
+
+def _hue_name(c):
+    r, g, b = c[:3]
+    if r > g * 1.3 and r > b * 1.3:
+        return "red" if g < r * 0.7 else "yellow"
+    if g >= r and g >= b:
+        return "green"
+    if b >= r and b >= g:
+        return "blue"
+    return "other"
+
+
+def saree_material(colour, rng=None, style=None):
+    """The cloth, as an image (procedural shaders don't survive the export to the game). The weave (style, else one
+    chosen by rng) is one of what you see on a Coimbatore street:
+        kanchi   silk in large contrasting checks, a wide border in the contrast colour edged in gold zari
+        buttas   silk with small gold dots, a contrasting border edged in gold
+        stripes  fine vertical stripes, a plain border
+        temple   a border of 'temple' triangles (the korvai) in the contrast colour
+        cotton   plain everyday cotton, a thin dark border, matte
+    The borders run along both edges (v near 0 and 1); the pallu's end (u near 1) is richer."""
     import numpy as np
+    import random as _r
+    rng = rng or _r.Random(1)
+    style = style or rng.choice(SAREE_STYLES)
     n = 1024
     yy, xx = np.mgrid[0:n, 0:n] / n                     # yy: v (0 at the top row of the array), xx: u
-    base = np.array(colour)[None, None, :] * (0.92 + 0.08 * np.sin(xx * n * 0.9))[:, :, None]   # the weave
-    img = np.repeat(base, 1, axis=0).copy()
+    col = np.array(colour[:3])
+    con = np.array(CONTRAST[_hue_name(colour)])
     gold = np.array((0.85, 0.62, 0.16))
-    gx, gy = (xx * 24) % 1.0, (yy * 24) % 1.0           # buttas: little gold dots on a grid, every other row offset
-    off = (np.floor(yy * 24) % 2) * 0.5
-    d = np.hypot(((xx * 24 + off) % 1.0) - 0.5, gy - 0.5)
-    img[d < 0.13] = gold
-    for lo, hi in ((0.0, 0.085), (0.915, 1.0)):         # the zari borders, with a darker line pattern inside
+    img = (col[None, None, :] * (0.92 + 0.08 * np.sin(xx * n * 0.9))[:, :, None]).copy()   # the weave
+    silk = style != "cotton"
+    if style == "kanchi":                               # big checks: the contrast threads crossing the body
+        ch = ((np.floor(xx * 10) + np.floor(yy * 10)) % 2 == 0)
+        img[ch] = img[ch] * 0.75 + con * 0.25
+        lines = ((xx * 10) % 1.0 < 0.04) | ((yy * 10) % 1.0 < 0.04)
+        img[lines] = gold * 0.8
+    elif style == "buttas":
+        off = (np.floor(yy * 24) % 2) * 0.5
+        d = np.hypot(((xx * 24 + off) % 1.0) - 0.5, (yy * 24) % 1.0 - 0.5)
+        img[d < 0.13] = gold
+    elif style == "stripes":
+        st = (xx * 60) % 1.0 < 0.18
+        img[st] = img[st] * 0.55 + con * 0.45
+    elif style == "cotton":
+        img = img * 0.92 + 0.04                         # (washed, a little faded)
+    if style == "classic":                              # (the cast's: gold buttas, gold zari borders with dark lines)
+        off = (np.floor(yy * 24) % 2) * 0.5
+        d = np.hypot(((xx * 24 + off) % 1.0) - 0.5, (yy * 24) % 1.0 - 0.5)
+        img[d < 0.13] = gold
+    wide = {"kanchi": 0.12, "buttas": 0.085, "stripes": 0.05, "temple": 0.11, "cotton": 0.035, "classic": 0.085}[style]
+    for lo, hi in ((0.0, wide), (1.0 - wide, 1.0)):     # the borders
         band = (yy >= lo) & (yy < hi)
-        img[band] = gold
-        stripe = band & (((yy - lo) * n).astype(int) % 14 < 3)
-        img[stripe] = gold * 0.6
-    img[xx > 0.86] = img[xx > 0.86] * 0.4 + gold * 0.6  # the pallu's end
+        if style == "cotton":
+            img[band] = col * 0.35
+            continue
+        if style == "classic":
+            img[band] = gold
+            img[band & (((yy - lo) * n).astype(int) % 14 < 3)] = gold * 0.6
+            continue
+        img[band] = con if style in ("kanchi", "temple", "buttas") else col * 0.6
+        edge = band & ((np.abs(yy - (hi if lo == 0.0 else lo)) * n) < 10)
+        img[edge] = gold                                # gold zari along the border's inner edge
+        if style == "temple":                           # the korvai: a row of triangles pointing into the body
+            tt = (xx * 40) % 1.0
+            depth = (yy - lo) / (hi - lo) if lo == 0.0 else (hi - yy) / (hi - lo)
+            tri = band & (depth > 0.35) & (np.abs(tt - 0.5) < (1.0 - depth) * 0.6)
+            img[tri] = gold * 0.9
+    end = xx > 0.86                                     # the pallu's end
+    img[end] = img[end] * 0.45 + (gold * 0.55 if silk else con * 0.55)
     px = np.ones((n, n, 4), dtype=np.float32)
-    px[:, :, :3] = img[::-1]
-    im = bpy.data.images.new("SareeSilk", n, n)
+    px[:, :, :3] = np.clip(img[::-1], 0.0, 1.0)
+    im = bpy.data.images.new("Saree_" + style, n, n)
     im.pixels.foreach_set(px.ravel())
     im.pack()
-    m = bpy.data.materials.new("Saree Silk")
+    m = bpy.data.materials.new("Saree " + ("Silk" if silk else "Cotton"))
     m.use_nodes = True
     nt = m.node_tree
     b = nt.nodes["Principled BSDF"]
-    b.inputs["Roughness"].default_value = 0.42
+    b.inputs["Roughness"].default_value = 0.42 if silk else 0.85
     if "Sheen Weight" in b.inputs:
-        b.inputs["Sheen Weight"].default_value = 0.5
+        b.inputs["Sheen Weight"].default_value = 0.5 if silk else 0.1
     t = nt.nodes.new("ShaderNodeTexImage")
     t.image = im
     nt.links.new(t.outputs["Color"], b.inputs["Base Color"])
+    print("CAST saree weave", style, flush=True)
     return m
 
 
@@ -380,7 +438,7 @@ def saree(h, arm, top, colour, rng):
     zari at the hem, skinned to the pelvis and thighs so it swings with her walk; the pallu draped as cloth from
     the waist across the chest, over the left shoulder and down the back."""
     import bmesh
-    mat = saree_material(colour)
+    mat = saree_material(colour, rng, None if CROWD_WEAVES else "classic")   # (the cast keep their own cloth)
     bpy.context.view_layer.update()
     # the hips and legs as they are: the body mesh's own vertices (not MakeHuman's hidden helper shapes), below the
     # waist and inside the hands
