@@ -68,6 +68,12 @@ func _process(dt: float) -> void:
 			life.energy = 0.0
 		if "--hospitalbroke" in OS.get_cmdline_user_args() and city.fines:   # (testing: ₹200 to his name)
 			city.fines.sim.money = 200
+		for a in OS.get_cmdline_user_args():             # (testing: --hospitalat=x,z: he goes down there)
+			if a.begins_with("--hospitalat="):
+				var xz := a.get_slice("=", 1).split(",")
+				var hy: float = city.streamer.height_at(float(xz[0]), float(xz[1]))
+				city.walker.global_position = Vector3(float(xz[0]), (city.walker.global_position.y if is_nan(hy) else hy) + 0.5, float(xz[1]))
+				await get_tree().create_timer(6.0).timeout
 		admit(_test, 0.7)
 		return
 	if _test != "" and has_meta("tested") and not has_meta("left") and city.indoors and Time.get_ticks_msec() > get_meta("woke", 1e12) + 4000:

@@ -902,6 +902,8 @@ var _stuck_said := false
 
 
 func _unstick(dt: float) -> void:
+	if "--unsticktest" in OS.get_cmdline_user_args():   # (testing: tipped onto a kerb off the road, then G)
+		_unstick_test(dt)
 	if walker != null or car == null or (story and story.room != null):
 		_stuck_t = 0.0
 		_g_held = 0.0
@@ -923,6 +925,28 @@ func _unstick(dt: float) -> void:
 			_back_on_road()
 	else:
 		_g_held = 0.0
+
+
+var _ut := 0.0
+
+
+func _unstick_test(dt: float) -> void:
+	_ut += dt
+	if _ut > 14.0 and not has_meta("tipped") and car.global_position.y < 550.0:
+		set_meta("tipped", true)
+		var side := car.global_basis.x
+		car.global_transform = Transform3D(car.global_basis.rotated(car.global_basis.z, deg_to_rad(40.0)),
+			car.global_position + side * 7.0 + Vector3.UP * 1.2)
+		print("UNSTICKTEST tipped 40° at %s" % car.global_position)
+	if _ut > 22.0 and not has_meta("pushed"):
+		set_meta("pushed", true)
+		var tilt: float = rad_to_deg(acos(clampf(car.global_basis.y.dot(Vector3.UP), -1.0, 1.0)))
+		print("UNSTICKTEST before: at %s tilt %.0f°, stuck for %.1f s, hint %s" % [car.global_position, tilt, _stuck_t, _stuck_said])
+		_back_on_road()
+	if _ut > 28.0 and not has_meta("after"):
+		set_meta("after", true)
+		var tilt2: float = rad_to_deg(acos(clampf(car.global_basis.y.dot(Vector3.UP), -1.0, 1.0)))
+		print("UNSTICKTEST after: at %s tilt %.0f°, speed %.1f" % [car.global_position, tilt2, car.speed])
 
 
 func _back_on_road() -> void:

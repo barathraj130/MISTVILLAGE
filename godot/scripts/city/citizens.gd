@@ -19,6 +19,9 @@ extends Node
 ## (`say`). What they know and remember is phase 3 (knowledge.gd).
 ## Story people with a day of their own ("story": their key in slice.json's people, their model from there): while
 ## the story has them on stage (story.gd `cast`), the story's is the only one.
+## Shops (where someone's day has "open" and "close"): a rolling shutter on the shop's wall (the building's own,
+## nearest the place), down before the owner opens and after he's closed, rolling up as he opens it (his "open"
+## quarter of an hour) and down as he closes; only round Karthik (a few nodes each). Off by default (`_shutters`).
 ## They react: in the rain they hurry (running), and those standing about chatting or shopping go in; someone
 ## collapsing or knocked down near them (`gather`, hospital.gd) brings the near ones round, one on the phone.
 ##   --citizentest[=HH:MM]   (testing) on foot at Gandhipuram at that hour; every 10 s who's where; pictures (--shots=DIR)
@@ -34,6 +37,8 @@ const FAR := 100.0
 const PACE := 1.3                       # m/s, a person walking with somewhere to be
 const RAIN_PACE := 2.6                  # in the rain: hurrying, half running
 const MID := 300.0
+const SHUTTER_W := 3.2
+const SHUTTER_H := 2.7
 const HELP_PACE := 3.6                  # running to someone who's gone down
 const STRIDE := 1.25                    # metres the crowd's Walk clip covers in a cycle
 const SEEN := ["walk", "open", "work", "close", "guard", "wait", "chat", "shop"]   # (the rest: indoors, unseen)
@@ -50,10 +55,15 @@ var _graph_wait := 0.0
 var _spots := {}                        # place key or "x,z" → [Vector3 on the footpath, facing]
 var _slots := {}                        # place → the ids that stand there, in the order they came: their slot
 var _label: Label
+## (off for now: the tiles' building outlines don't always match the designed models' fronts, and a shutter can
+## land on an inner wall; --shutters to try them. To do: put them on the kit models' own shop fronts.)
+var _shutters := "--shutters" in OS.get_cmdline_user_args()
+var _shops := {}                        # place key → {open, close (minutes), node, frac (1 shut .. 0 open)}
 var _e_down := false
 var _test := ""
 var _shots := ""
 var _test_t := 0.0
+var _test_at := Vector2(-250.0, 125.0)
 
 
 func _ready() -> void:
@@ -70,6 +80,20 @@ func _ready() -> void:
 		if p.has("story") and not p.has("name"):
 			p["name"] = cast.get(p["story"], {"en": p["story"]})
 		people.append({"d": p, "act": "", "place": "", "node": null, "path": [], "pi": 0, "wait": 0.0, "pos": Vector3.INF})
+	for c in people:                                    # (who opens and shuts where, and when)
+		var day: Array = c["d"]["day"]
+		var op := -1.0
+		var cl := -1.0
+		var where := ""
+		for e in day:
+			if str(e[1]) == "open":
+				op = float(e[0])
+				where = str(e[2])
+			elif str(e[1]) == "close":
+				cl = float(e[0]) + 15.0
+		if op >= 0.0 and cl >= 0.0:
+			var key := str(c["d"]["work"]) if where == "work" else where
+			_shops[key] = {"open": op, "close": cl, "raw": c["d"]["work"] if where == "work" else where, "p": c["d"], "node": null, "frac": 1.0}
 	_label = Label.new()
 	_label.add_theme_font_size_override("font_size", 18)
 	_label.add_theme_color_override("font_shadow_color", Color(0, 0, 0, 0.9))
@@ -82,6 +106,10 @@ func _ready() -> void:
 	for a in OS.get_cmdline_user_args():
 		if a.begins_with("--citizentest"):
 			_test = a.get_slice("=", 1) if a.contains("=") else "08:00"
+			if _test.contains("@"):                          # (HH:MM@x,z: where he stands)
+				var xz := _test.get_slice("@", 1).split(",")
+				_test_at = Vector2(float(xz[0]), float(xz[1]))
+				_test = _test.get_slice("@", 0)
 		if a.begins_with("--shots="):
 			_shots = a.get_slice("=", 1)
 	print("CITIZENS %d people" % people.size())
@@ -150,9 +178,20 @@ func _process_timed(dt: float) -> void:
 		var off: bool = city.get("indoors") or (city.story != null and city.story.room != null)
 		for c in people:
 			_think(c, m, me, off)
+		if _shutters:
+			for key in _shops:
+				_shop(_shops[key], m, me, off)
 	for c in people:
 		if c["node"] != null:
 			_move(c, dt)
+	for key in _shops:                                  # (the shutters roll: a quarter of a metre a second)
+		var sh: Dictionary = _shops[key]
+		if sh["node"] != null and is_instance_valid(sh["node"]):
+			var want: float = sh.get("want", 1.0)
+			sh["frac"] = move_toward(float(sh["frac"]), want, dt * 0.1)
+			var cur: MeshInstance3D = sh["curtain"]
+			cur.scale.y = maxf(float(sh["frac"]), 0.02)
+			cur.position.y = SHUTTER_H - SHUTTER_H * cur.scale.y * 0.5
 	_greet(me)
 
 
@@ -219,6 +258,122 @@ func _think(c: Dictionary, m: float, me: Vector3, off: bool) -> void:
 		c["path"] = _route(c["node"].global_position, dest[0])
 		c["pi"] = 0
 		_play(c, "Walk" if c["path"].size() > 1 else _pose(act))
+
+
+## A shop's shutter near Karthik: put on its wall, shut or open by the hour; rolling while its owner opens or shuts it.
+func _shop(sh: Dictionary, m: float, me: Vector3, off: bool) -> void:
+	var pl := _place(sh["raw"], sh["p"])
+	var d := Vector2(me.x, me.z).distance_to(pl)
+	if off or d > FAR:
+		if sh["node"] != null and is_instance_valid(sh["node"]):
+			sh["node"].queue_free()
+		sh["node"] = null
+		return
+	var open_now: bool = m >= float(sh["open"]) + 15.0 and m < float(sh["close"]) - 15.0   # (between his opening and closing it)
+	var owner_open := false                             # (rolling only with him there doing it)
+	for c in people:
+		if c["d"] == sh["p"] and c["node"] != null and str(c["act"]) in ["open", "close"] and int(c["pi"]) >= (c["path"] as Array).size():
+			owner_open = true
+	if sh["node"] == null:
+		if d > NEAR:
+			return
+		var foot: Array = _spot_for(sh["raw"], sh["p"], 0)    # (the wall facing the footpath he stands on)
+		var wall := _wall_near(pl if foot[0] == Vector3.INF else Vector2(foot[0].x, foot[0].z))
+		if wall.is_empty():
+			return
+		sh["node"] = _make_shutter(wall)
+		sh["curtain"] = (sh["node"] as Node3D).get_meta("curtain")
+		if _test != "":
+			var sp: Vector3 = (sh["node"] as Node3D).global_position
+			var nn: Vector2 = wall["n"]
+			print("CITIZENTEST shutter at %.1f,%.1f,%.1f facing %.2f,%.2f" % [sp.x, sp.y, sp.z, nn.x, nn.y])
+		sh["frac"] = 0.0 if open_now else 1.0           # (as it is at this hour, already)
+	var act_open := false
+	for c in people:
+		if c["d"] == sh["p"]:
+			act_open = str(c["act"]) == "open"
+	if owner_open:
+		sh["want"] = 0.0 if act_open else 1.0
+	elif not open_now:
+		sh["want"] = 1.0
+	elif sh.get("want", -1.0) < 0.0 or float(sh["frac"]) > 0.99 and m > float(sh["open"]) + 15.0:
+		sh["want"] = 0.0                                # (open by now: he opened it while no one was looking)
+
+
+## The wall of the building nearest a point: [the point on it, its outward normal], from the tiles' outlines.
+func _wall_near(p: Vector2) -> Dictionary:
+	var s = city.streamer
+	var best := 25.0
+	var out := {}
+	for k in s.loaded:
+		var node: Node3D = s.loaded[k]
+		if node == null or not is_instance_valid(node):
+			continue
+		for b in node.get_meta("bldinfo", []):
+			var centre: Vector2 = b[1]
+			if centre.distance_to(p) > 60.0:
+				continue
+			var poly: PackedVector2Array = b[0]
+			for i in poly.size():
+				var a := poly[i]
+				var e := poly[(i + 1) % poly.size()]
+				if a.distance_to(e) < SHUTTER_W + 0.4:
+					continue
+				var q := Geometry2D.get_closest_point_to_segment(p, a, e)
+				var ed := (e - a).normalized()
+				var nrm := Vector2(ed.y, -ed.x)
+				if nrm.dot(q - centre) < 0.0:
+					nrm = -nrm
+				if nrm.dot(p - q) < 0.3 * q.distance_to(p):      # (only a wall that faces the footpath: a shop front)
+					continue
+				var dd := q.distance_to(p) + (0.0 if bool(b[3]) else 4.0)   # (a shop's building before a house)
+				if dd < best:
+					var lo := a + ed * (SHUTTER_W * 0.5 + 0.2)   # (whole on the wall)
+					var hi := e - ed * (SHUTTER_W * 0.5 + 0.2)
+					q = Geometry2D.get_closest_point_to_segment(q, lo, hi)
+					best = dd
+					out = {"at": q, "n": nrm}
+	return out
+
+
+func _make_shutter(wall: Dictionary) -> Node3D:
+	var at: Vector2 = wall["at"]
+	var n: Vector2 = wall["n"]
+	var y: float = city.streamer.height_at(at.x, at.y)
+	var root := Node3D.new()
+	add_child(root)
+	root.global_position = Vector3(at.x + n.x * 0.08, (0.0 if is_nan(y) else y), at.y + n.y * 0.08)
+	root.rotation.y = atan2(n.x, n.y)
+	var mat := StandardMaterial3D.new()                  # (ribbed galvanised steel: stripes drawn into a texture)
+	var img := Image.create(4, 32, false, Image.FORMAT_RGB8)
+	for j in 32:
+		var v := 0.47 if j % 4 == 0 else (0.62 if j % 4 == 1 else 0.56)
+		for i in 4:
+			img.set_pixel(i, j, Color(v, v, v * 1.02))
+	mat.albedo_texture = ImageTexture.create_from_image(img)
+	mat.uv1_scale = Vector3(1, 6, 1)
+	mat.metallic = 0.55
+	mat.roughness = 0.45
+	var cur := MeshInstance3D.new()
+	var bm := BoxMesh.new()
+	bm.size = Vector3(SHUTTER_W, SHUTTER_H, 0.04)
+	cur.mesh = bm
+	cur.material_override = mat
+	cur.position.y = SHUTTER_H * 0.5
+	root.add_child(cur)
+	var box := MeshInstance3D.new()                      # (the housing it rolls into)
+	var hb := BoxMesh.new()
+	hb.size = Vector3(SHUTTER_W + 0.2, 0.32, 0.32)
+	box.mesh = hb
+	var hm := StandardMaterial3D.new()
+	hm.albedo_color = Color(0.4, 0.41, 0.42)
+	hm.metallic = 0.4
+	hm.roughness = 0.55
+	box.material_override = hm
+	box.position = Vector3(0, SHUTTER_H + 0.16, 0.1)
+	root.add_child(box)
+	root.set_meta("curtain", cur)
+	return root
 
 
 ## No body, but on their way: along the real route at a person's pace (half-second steps).
@@ -583,6 +738,21 @@ func _greet(me: Vector3) -> void:
 
 # ---- testing ------------------------------------------------------------------------------------------------------
 
+## (testing) A camera on `at` from `dist` away, the way `dir` points or turned from it, wherever it sees it clear.
+func _aim(cam: Camera3D, at: Vector3, dir: Vector3, dist: float, up: float) -> void:
+	var space := cam.get_world_3d().direct_space_state
+	for turn in [0.0, 0.6, -0.6, 1.2, -1.2, PI]:
+		var d := dir.rotated(Vector3.UP, turn).normalized()
+		var p := at + d * dist + Vector3.UP * (up - 1.1)
+		var q := PhysicsRayQueryParameters3D.create(at, p)
+		if space.intersect_ray(q).is_empty():
+			cam.global_position = p
+			cam.look_at(at)
+			return
+	cam.global_position = at + dir * dist + Vector3.UP * (up - 1.1)
+	cam.look_at(at)
+
+
 func _run_test(dt: float) -> void:
 	_test_t += dt
 	if not has_meta("set") and city.fines and city.walker == null and Time.get_ticks_msec() > 12000 \
@@ -593,8 +763,8 @@ func _run_test(dt: float) -> void:
 			city.fines.sim.minute = float(hm[0]) * 60.0 + (float(hm[1]) if hm.size() > 1 else 0.0)
 		city.toggle_on_foot()
 		if city.walker:                                  # (at Gandhipuram itself, by Kovai Tiffin Centre)
-			var y: float = city.streamer.height_at(-250.0, 125.0)
-			city.walker.global_position = Vector3(-250.0, (432.7 if is_nan(y) else y) + 0.5, 125.0)
+			var y: float = city.streamer.height_at(_test_at.x, _test_at.y)
+			city.walker.global_position = Vector3(_test_at.x, (432.7 if is_nan(y) else y) + 0.5, _test_at.y)
 		print("CITIZENTEST on foot at %s, %s" % [city.walker.global_position if city.walker else Vector3.ZERO, city.fines.sim.minute])
 	if _test_t >= 10.0:
 		_test_t = 0.0
@@ -612,6 +782,33 @@ func _run_test(dt: float) -> void:
 				mids.append("%s %s %.0f m" % [c["d"]["id"], c["mid_act"], Vector2(c["pos"].x, c["pos"].z).distance_to(Vector2(city.streamer.target.global_position.x, city.streamer.target.global_position.z))])
 		print("CITIZENTEST %s%s: %d near (%s); middle: %s; graph %d" % [city.fines.sim.clock_text(_now()) if city.fines else "",
 			" rain" if _rain() else "", seen, ", ".join(parts), ", ".join(mids), _astar.get_point_count()])
+		for a in OS.get_cmdline_user_args():              # (testing: --shotview=x,y,z>x,y,z[;...]: pictures from there)
+			if a.begins_with("--shotview=") and not has_meta("viewed") and Time.get_ticks_msec() > 35000 and _shots != "":
+				set_meta("viewed", true)
+				var vc := Camera3D.new()
+				var pv := get_viewport().get_camera_3d()
+				if pv:
+					vc.environment = pv.environment
+					vc.attributes = pv.attributes
+					vc.far = pv.far
+				vc.fov = 60.0
+				add_child(vc)
+				vc.make_current()
+				var vi := 0
+				for v in a.substr(11).split(";"):
+					var ab := v.split(">")
+					var p0 := ab[0].split(",")
+					var p1 := ab[1].split(",")
+					vc.global_position = Vector3(float(p0[0]), float(p0[1]), float(p0[2]))
+					vc.look_at(Vector3(float(p1[0]), float(p1[1]), float(p1[2])))
+					for f in 20:
+						await get_tree().process_frame
+					await RenderingServer.frame_post_draw
+					get_viewport().get_texture().get_image().save_jpg("%s/view_%d.jpg" % [_shots, vi], 0.9)
+					vi += 1
+				if pv:
+					pv.make_current()
+				vc.queue_free()
 		if _shots != "" and seen > 0 and not has_meta("portraits") and Time.get_ticks_msec() > 40000:
 			set_meta("portraits", true)                    # each one there, from a few metres in front
 			var prev := get_viewport().get_camera_3d()
@@ -626,14 +823,25 @@ func _run_test(dt: float) -> void:
 				if c["node"] == null or not is_instance_valid(c["node"]):
 					continue
 				var n: Node3D = c["node"]
-				var fwd := n.global_basis.z
-				cam.global_position = n.global_position + fwd * 3.2 + n.global_basis.x * 1.0 + Vector3.UP * 1.6
-				cam.look_at(n.global_position + Vector3.UP * 1.1)
+				_aim(cam, n.global_position + Vector3.UP * 1.1, n.global_basis.z, 3.2, 1.6)
 				for f in 3:
 					await get_tree().process_frame
 				await RenderingServer.frame_post_draw
 				get_viewport().get_texture().get_image().save_jpg("%s/citizen_%s_%s_%s.jpg" % [_shots, _test.replace(":", ""),
 					c["d"]["id"], c["act"]], 0.85)
+			for key in _shops:                              # (and each shop's shutter, now and 12 s on)
+				var sh: Dictionary = _shops[key]
+				if sh["node"] == null or not is_instance_valid(sh["node"]):
+					continue
+				var sn: Node3D = sh["node"]
+				_aim(cam, sn.global_position + Vector3.UP * 1.4, sn.global_basis.z, 4.5, 2.2)
+				for shot in 2:
+					for f in 3:
+						await get_tree().process_frame
+					await RenderingServer.frame_post_draw
+					get_viewport().get_texture().get_image().save_jpg("%s/shop_%s_%s_%d.jpg" % [_shots, _test.replace(":", ""), key, shot], 0.85)
+					print("CITIZENTEST shop %s shutter %.2f" % [key, float(sh["frac"])])
+					await get_tree().create_timer(12.0).timeout
 			if prev:
 				prev.make_current()
 			cam.queue_free()
