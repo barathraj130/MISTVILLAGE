@@ -8,14 +8,17 @@ extends Node3D
 ##   corner   at 40 km/h the steering wound in over 6 s: the most lateral g held, body roll (deg), spun out or not
 ##   bump     a city speed breaker (3 m, 10 cm: city_streamer.gd's) at 20 and 40 km/h: wheels-off time, peak jolt,
 ##            peak pitch
+## --rc=sedan: that vehicle as the raycast-wheel prototype (raycast_car.gd) too, its runs reported as "sedan_rc"
+## (the ones it has: upright, accel, brake, wet, gravel, mud, turn, corner, bumps)
 ## Run: Godot --headless --fixed-fps 60 --path godot scenes/vehicle_lab.tscn -- --vehicles=karthik_scooter,sedan
 ## (default: the story's own and a spread of the fleet). Numbers are for comparing before/after a change, not claims
 ## about real vehicles.
 
 const Jeep := preload("res://scripts/drive/jeep.gd")
+const RaycastCar := preload("res://scripts/drive/raycast_car.gd")
 const DEFAULT := ["karthik_scooter", "bike", "auto", "hatchback", "sedan", "luxury_suv", "bus"]
 
-var car: VehicleBody3D
+var car: RigidBody3D                                  # jeep.gd (VehicleBody3D), or raycast_car.gd with --rc
 var results: Array = []
 
 
@@ -87,8 +90,32 @@ func _breaker(p: Vector3) -> void:
 func _run(vehicles: Array) -> void:
 	for v in vehicles:
 		await _vehicle(str(v))
+	for a in OS.get_cmdline_user_args():
+		if a.begins_with("--rc="):
+			for v in a.get_slice("=", 1).split(","):
+				await _vehicle_rc(str(v))
 	print("LAB done: %d runs" % results.size())
 	get_tree().quit()
+
+
+func _vehicle_rc(kind: String) -> void:
+	if car:
+		car.queue_free()
+		await get_tree().physics_frame
+	car = RaycastCar.new()
+	add_child(car)
+	car.configure(kind)
+	var tag := kind + "_rc"
+	await _upright(tag)
+	await _accel(tag)
+	await _brake(tag, "brake", 1.0)
+	await _brake(tag, "wet", 0.7)
+	await _surface_brake(tag, "gravel", 1000.0)
+	await _surface_brake(tag, "mud", 1100.0)
+	await _turn(tag)
+	await _corner(tag)
+	await _bump(tag, 20.0)
+	await _bump(tag, 40.0)
 
 
 func _vehicle(kind: String) -> void:
@@ -126,6 +153,9 @@ func _place(at: Vector3) -> void:
 	car.in_throttle = 0.0
 	car.in_brake = 0.0
 	car.in_steer = 0.0
+	car.steering = 0.0
+	if car.has_method("repair"):                          # (whole again: after the wall the damage pulled it 1° to one
+		car.repair()                                      #  side, and every run after curved out of its lane)
 	car.set_grip(1.0)
 	car.set_surface("asphalt")                            # (the test ground has no surface of its own: back to tarmac)
 	await get_tree().physics_frame
@@ -374,11 +404,17 @@ func _bump(kind: String, kmh: float) -> void:
 		if passing:
 			var any := false
 			for w in car._wheels:
-				if (w as VehicleWheel3D).is_in_contact():
+				if w.is_in_contact():
 					any = true
 			if not any:
 				off += 1.0 / 60.0
 			jolt = maxf(jolt, car.jolt)
+			if "--labtrace" in OS.get_cmdline_user_args() and car is VehicleBody3D and int(t * 60.0) % 6 == 0:
+				var touch := []
+				for w in car._wheels:
+					var cb = (w as VehicleWheel3D).get_contact_body()
+					touch.append("%s %s" % [str(cb.name) if cb else "-", str((w as VehicleWheel3D).get_contact_point().snapped(Vector3.ONE * 0.01))])
+				print("BUMP z=%.1f y=%.3f wheels %s" % [z - target, car.global_position.y, str(touch)])
 			pitch = maxf(pitch, absf(rad_to_deg(asin(clampf(-car.global_basis.z.y, -1.0, 1.0)))))
 		if z > target + 10.0:
 			break

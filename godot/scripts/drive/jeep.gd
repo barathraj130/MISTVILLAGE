@@ -10,6 +10,7 @@ extends VehicleBody3D
 ## (The file keeps its old name, jeep.gd, so the rest of the game needs no changes.)
 
 const Dents := preload("res://scripts/drive/dents.gd")
+const Surfaces := preload("res://scripts/surfaces.gd")
 const Prof := preload("res://scripts/drive/prof.gd")
 const MB := preload("res://scripts/drive/mesh_builder.gd")
 const RiderPose := preload("res://scripts/drive/rider_pose.gd")
@@ -1285,25 +1286,9 @@ func set_surface(kind: String) -> void:
 	if kind == surface:
 		return
 	surface = kind
-	match kind:
-		"asphalt", "concrete":
-			_surface_grip = 1.0
-			_surface_drag = 0.0
-		"gravel":
-			_surface_grip = 0.65
-			_surface_drag = 40.0
-		"earth":                                          # a village road's packed earth: nearly a road's grip
-			_surface_grip = 0.85
-			_surface_drag = 25.0
-		"mud":
-			_surface_grip = 0.4
-			_surface_drag = 100.0
-		"shoulder":
-			_surface_grip = 0.85
-			_surface_drag = 160.0
-		_:
-			_surface_grip = 0.62
-			_surface_drag = 420.0
+	var t: Array = Surfaces.tyre(kind)                 # (scripts/surfaces.gd: one table for tyres and feet)
+	_surface_grip = float(t[0])
+	_surface_drag = float(t[1])
 	_apply_grip()
 
 

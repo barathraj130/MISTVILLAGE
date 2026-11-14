@@ -26,6 +26,7 @@ extends Node
 ## quiet and comes back when he moves again.
 const Prof := preload("res://scripts/drive/prof.gd")
 const HeadLook := preload("res://scripts/story/head_look.gd")
+const Surfaces := preload("res://scripts/surfaces.gd")
 
 const SLOW := 0.9
 const WALK := 1.4
@@ -345,19 +346,19 @@ func want(input: Vector2, keys_run: bool) -> float:
 
 
 func _ground_mult() -> float:
-	return {"grass": 0.96, "earth": 0.95, "sand": 0.88, "mud": 0.8}.get(surface, 1.0)
+	return float(Surfaces.foot_of(surface)["pace"])
 
 
 ## Getting going / stopping (m/s²) for this speed on this ground: a walk eases in in half a second, a sprint
 ## builds over a couple; sand slow to push off, mud slower, a wet road a little careful stopping.
 func accel(v: float) -> float:
 	var a := 3.5 if v <= FAST else (4.5 if v <= JOG else 5.0)
-	return a * {"sand": 0.7, "mud": 0.65}.get(surface, 1.0)
+	return a * float(Surfaces.foot_of(surface)["accel"])
 
 
 func decel(from: float) -> float:
 	var d := 5.0 if from <= FAST else 6.5
-	return d * ({"mud": 0.8, "wet_road": 0.85}.get(surface, 1.0))
+	return d * float(Surfaces.foot_of(surface)["stop"])
 
 
 ## Each physics frame from player.gd after it moved: his breath, the ground, the clips, the head, the camera.
@@ -460,17 +461,7 @@ func _feel_ground() -> void:
 	if city and "indoors" in city and city.indoors:
 		wet = 0.0
 		kind = "concrete"
-	match kind:
-		"ground":
-			surface = "mud" if wet > 0.5 else "grass"
-		"earth":
-			surface = "mud" if wet > 0.5 else "earth"
-		"gravel":
-			surface = "sand"
-		"asphalt", "concrete":
-			surface = "wet_road" if wet > 0.35 else kind
-		_:
-			surface = kind
+	surface = Surfaces.foot(kind, wet)                    # (scripts/surfaces.gd: the table tyres read too)
 	var f = p.get("feet")
 	on_stairs = f != null and is_instance_valid(f) and absf(float(f._ground["l"]) - float(f._ground["r"])) > 0.07
 

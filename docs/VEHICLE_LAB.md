@@ -331,3 +331,41 @@ straight on the physics server; crashes still see it as `ParkedVehicles`, so the
 
 Test note (2026-11-09): two-wheelers lose their balance when a test runs the engine faster than real time
 (`--timescale=4`: the balance controller's steps get too big and the scooter falls). Test them at `--timescale=1`.
+
+## Phase 6, 2026-11-14: a raycast-wheel car measured against VehicleBody3D
+
+The physics brief asks whether our own raycast wheels would drive better than Godot's VehicleBody3D (jeep.gd).
+`scripts/drive/raycast_car.gd` is that car, built only for this lab: a rigid body on four rays, a spring and damper on
+each (8 cm of sag, 0.35 of critical damping), anti-roll bars, a simplified Pacejka tyre (B 8, C 1.6) on each wheel's
+slip angle, scaled by its load, with the drive and brakes inside the friction circle. It uses the same engine,
+gearbox, drag and brakes as jeep.gd's sedan (`petrol_car`). Run it with `--rc=sedan`:
+
+| | VehicleBody3D sedan | raycast sedan |
+|---|---|---|
+| 0–60 km/h / top | 5.1 s / 150 km/h | 6.5 s / 138 km/h |
+| 60–0 dry / wet | 16.4 / 19.8 m | 18.2 / 21.0 m |
+| 60–0 on gravel, 40–0 in mud | 20.4 / 13.7 m | 18.2 / 8.5 m* |
+| turning circle at 10 km/h | 5.6 m | 5.0 m |
+| 40 km/h, steering wound in | 0.67 g, roll 2.4° | 0.89 g, roll 2.3° |
+| speed breaker at 40 km/h | jolt 7.4, pitch 2.3° | jolt 4.4, pitch 2.8° |
+
+\* the prototype doesn't read the city's surface tags, so its gravel and mud runs are on tarmac grip.
+
+**Decision: keep VehicleBody3D.** On the lab's runs the two are within a few tenths of each other. The raycast car
+holds more grip in a corner (0.89 g, nearer a real sedan's ~0.8) and rides a breaker more softly, but jeep.gd already
+carries everything the game leans on: crash damage and the pull it leaves, the two-wheelers' balance and lean, the
+gearbox and engine sounds, every vehicle's own profile, the surfaces, the traffic and the chase. Rebuilding all that
+on new wheels would cost weeks and change little you can feel. What the prototype is good for: a reference to tune
+against (more lateral grip on the cars is the one difference worth taking).
+
+**A lab bug, fixed.** Every vehicle seemed to ignore the speed breaker (jolt 0.0). It wasn't the cars: the wall-crash
+run left the car damaged, and the damage's 1° pull curved every later run out of its lane, past the breaker. The lab
+now repairs the car (and straightens its wheels) before each run. After the fix: scooter jolt 9.8, pitch 5.6°; cars
+jolt 7–8, pitch 2–2.5°; bus jolt 8.0, pitch 1.4°.
+
+**One surface table.** `scripts/surfaces.gd` now holds what the ground is for tyres (grip, drag) and for feet (pace,
+getting going, stopping), read by jeep.gd and by gait.gd, Karthik on foot. Same numbers as before (gravel 20.4 m, mud
+13.7 m).
+
+Still to look at: the auto-rickshaw holds 0.8 g at 12° of roll (a real one would be near tipping well before that); a
+bus brakes the same wet and dry (its brakes, 0.55 g, are below wet grip, as a bus's are).
