@@ -422,7 +422,7 @@ func _build(k: Vector2i) -> void:
 	out["walks_raw"] = walks                                  # (the footpaths' lines, for the people walking them)
 	_junctions(juncs, out)
 	_props(props, out)
-	_yards(yards, out)
+	_yards(yards, out, [k, hn, h, float(index["hstep"]), tile])
 	_life(life, out, roads)
 	_potholes(roads, out)
 	_wires(wires, out)
@@ -1316,7 +1316,8 @@ func _walks(walks: Array, out: Dictionary, g: Array) -> void:
 					far_e = pts[q] - rws[q] * hw
 				_quad(kb, near_e, far_e, _down(g, far_e), _down(g, near_e), tq, Color(0.5, 0.48, 0.45),
 					Vector2.ZERO, Vector2.ZERO, Vector2.ZERO, Vector2.ZERO, Vector2.ZERO)
-				_apron(kb, faces, g, far_e, near_e, tq, tq, Color(0.6, 0.59, 0.56), 0.12)   # a kerb ramp at the junction
+				if not "--noramps" in OS.get_cmdline_user_args():
+					_apron(kb, faces, g, far_e, near_e, tq, tq, Color(0.6, 0.59, 0.56), 0.12)   # a kerb ramp at the junction
 	if not seps.is_empty():
 		var smm := _MM.new()
 		smm.transform_format = MultiMesh.TRANSFORM_3D
@@ -1967,7 +1968,7 @@ static func _gltf_mesh(path: String) -> Mesh:
 
 ## Yards: paver forecourts, concrete yards and footpath corners with skirts into the ground, plastered compound
 ## walls with a coping, and trees (two LODs).
-func _yards(yards: Array, out: Dictionary) -> void:
+func _yards(yards: Array, out: Dictionary, g: Array = []) -> void:
 	var pav := [PackedVector3Array(), PackedVector3Array(), PackedColorArray(), PackedVector2Array(), PackedVector2Array(), PackedInt32Array()]
 	var con := [PackedVector3Array(), PackedVector3Array(), PackedColorArray(), PackedVector2Array(), PackedVector2Array(), PackedInt32Array()]
 	var skirt := [PackedVector3Array(), PackedVector3Array(), PackedColorArray(), PackedVector2Array(), PackedVector2Array(), PackedInt32Array()]
@@ -2002,6 +2003,20 @@ func _yards(yards: Array, out: Dictionary) -> void:
 		elif kind > 100:
 			if (kind == 101 or kind == 102) and not bike_meshes.is_empty():
 				_park_bikes(p, kind == 101, bikes)
+			var cen := Vector3.ZERO                          # (its middle: the banks go away from it)
+			for i in n:
+				cen += Vector3(p[i * 3], 0, p[i * 3 + 2])
+			cen /= maxf(n, 1)
+			for i in n - 1:
+				if g.is_empty():
+					break
+				var a2 := Vector3(p[i * 3], p[i * 3 + 1], p[i * 3 + 2])
+				var b2 := Vector3(p[i * 3 + 3], p[i * 3 + 4], p[i * 3 + 5])
+				var e2 := b2 - a2
+				var o := Vector3(e2.z, 0, -e2.x).normalized()
+				if ((a2 + b2) * 0.5 - cen).dot(o) < 0.0:
+					o = -o
+				_apron(skirt, faces, g, a2, b2, o, o, EARTH)    # a bank off its edge, not a drop
 			for i in n - 1:
 				var a := Vector3(p[i * 3], p[i * 3 + 1], p[i * 3 + 2])
 				var b := Vector3(p[i * 3 + 3], p[i * 3 + 4], p[i * 3 + 5])

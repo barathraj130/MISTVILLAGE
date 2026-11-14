@@ -100,8 +100,14 @@ func _process(dt: float) -> void:
 func crash(severity: float, two_wheeler: bool) -> void:
 	if busy or city.life == null or city.life._story_busy():
 		return
-	if severity >= (0.45 if two_wheeler else 0.75) or city.life.hurt >= 85.0:
+	# the 108 only for a crash that could kill him: in a car a hit of ~60 km/h (17 m/s change of speed), on two wheels
+	# ~36 km/h (10 m/s: nothing round him); or hurt already near the end (95). Anything less hurts (life.gd) and dents
+	# the car: he drives on.
+	var dv: float = city.car.last_dv if city.car and "last_dv" in city.car else severity * 12.0 + 3.0
+	if dv >= (10.0 if two_wheeler else 17.0) or city.life.hurt >= 95.0:
 		admit("crash", severity)
+	else:
+		print("HOSPITAL no: a %.0f km/h hit, he drives on (hurt %.0f)" % [dv * 3.6, city.life.hurt])
 
 
 ## He's taken in: why ("hunger", "crash", "beaten") and how bad (0..1).

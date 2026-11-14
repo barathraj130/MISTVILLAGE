@@ -185,6 +185,7 @@ var _ind_mats: Array = []          # [left, right]
 var indicator := 0                 # 0 off, 1 left, -1 right, 2 hazards
 var _ind_yaw := 0.0
 var _blink := 0.0
+var last_dv := 0.0                 # the last hit's change of speed, m/s (unclamped, unlike its severity)
 var jolt := 0.0                    # vertical shock this frame (m/s² change): camera shake, suspension thud
 var slip := 0.0                    # how much the tyres are sliding (0 grip .. 1 skidding): squeal
 var _vy_prev := 0.0
@@ -1666,6 +1667,7 @@ func _integrate_forces(state: PhysicsDirectBodyState3D) -> void:
 	var ln := global_basis.inverse() * state.get_contact_local_normal(best)   # (pushed this way: the hit came from the other)
 	var zone := "front" if ln.z < -0.5 else ("rear" if ln.z > 0.5 else ("left" if ln.x < 0.0 else "right"))
 	var severity := clampf((dv.length() - 3.0) / 12.0, 0.05, 1.0)
+	last_dv = dv.length()                                 # (the hit itself, m/s: hospital.gd asks if it could kill)
 	hit_velocity = before
 	hit_normal = state.get_contact_local_normal(best)
 	hit_point = state.get_contact_local_position(best)
