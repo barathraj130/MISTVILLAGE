@@ -580,16 +580,40 @@ def clip(arm, name, frames):
     tr.strips.new(name, int(frames[0][0]), act)
 
 
-def idle(a, k):                     # breathing, the weight shifting from foot to foot, a small look about
+def idle(a, k, b=0.0):
+    """Standing at ease, as a man waits on a street: k is where his weight is (-1 the right leg, +1 the left, between
+    as it shifts), b his breath (-1 out .. +1 in). The feet stay where they are, a shoulder's width apart, toes turned a
+    little out; the leg he stands on is nearly straight (never locked), the other knee eases forward and its foot sits
+    a touch further out; the hips go over the standing leg and drop a little on the easy side, the chest balances
+    back over them; breathing lifts the chest and the shoulders slightly; the arms hang loose, elbows soft; a small
+    look about. Each sole is kept level (the ankle takes back what the hip and knee turned)."""
+    w_l = 0.5 + 0.5 * k                                    # how much of him is on the left leg
+    for side, sg, w in (("l", 1.0, w_l), ("r", -1.0, 1.0 - w_l)):
+        ease = 1.0 - w                                     # 1: this is the easy leg
+        hip = 1.5 + 4.0 * ease                             # the thigh a little forward (degrees of flexion)
+        knee = 3.5 + 9.0 * ease                            # never locked; the easy knee forward
+        turn(a, "thigh_" + side, 'Z', sg * (6.0 + 3.0 * ease))   # toes out (the whole leg turned out from the hip)
+        turn(a, "thigh_" + side, 'Y', -sg * 1.2 * ease)          # the easy foot a touch wider
+        turn(a, "thigh_" + side, 'X', -hip)
+        turn(a, "calf_" + side, 'X', knee)
+        turn(a, "foot_" + side, 'X', hip - knee)                 # the sole level on the ground
     pb = a.pose.bones.get("pelvis")
-    if pb is not None:                                     # hips over one foot, then the other
+    if pb is not None:                                     # hips over the standing foot, and down with the soft knees
         m = a.matrix_world @ pb.matrix
-        m.translation.x += 0.012 * k
+        m.translation.x += 0.016 * k
+        m.translation.z -= 0.008
         pb.matrix = a.matrix_world.inverted() @ m
         bpy.context.view_layer.update()
-    turn(a, "pelvis", 'Y', -1.5 * k)
-    turn(a, "spine_02", 'Y', 1.2 * k)
-    turn(a, "spine_02", 'X', -1.2 * k)
+    turn(a, "pelvis", 'Y', -2.0 * k)                       # the easy side's hip drops
+    turn(a, "spine_01", 'Y', 1.4 * k)                      # the chest balancing back over
+    turn(a, "spine_02", 'Y', 0.8 * k)
+    turn(a, "spine_02", 'X', -1.4 * b)                     # breathing: the chest lifts
+    turn(a, "spine_03", 'X', -0.6 * b)
+    for side, sg in (("l", 1.0), ("r", -1.0)):
+        turn(a, "clavicle_" + side, 'Y', -sg * 0.8 * b)    # the shoulders rise a little with it
+        turn(a, "lowerarm_" + side, 'X', -9.0)             # elbows soft, the arms hanging loose
+        turn(a, "hand_" + side, 'X', -4.0)
+    turn(a, "neck_01", 'Y', -0.8 * k)
     turn(a, "head", 'Z', 2.5 * k)
 
 
@@ -627,6 +651,9 @@ def gait(curve, g):
 
 STRIDE = {"saree": 0.72, "veshti": 0.85}              # in a saree or a veshti the steps are shorter
 stride = 1.0                                           # (this character's: set from its outfit before its clips)
+# The gait's size, for the speeds between (the Loco clips): legs (the hip's swing; the knee follows at the root),
+# arms (the swing) and lean (degrees more from the waist). 1, 1, 0: the Walk and the Run as they are.
+AMP_LEG, AMP_ARM, LEAN = 1.0, 1.0, 0.0
 
 
 def walk_phase(a, t):
@@ -638,28 +665,33 @@ def walk_phase(a, t):
     the arm comes forward, the wrist loose; not held stiff at the sides); the head stays level and steady."""
     w = 2.0 * math.pi * t
     for side, g in (("l", t - 0.25), ("r", t - 0.75)):
-        turn(a, "thigh_" + side, 'X', -gait(GAIT_HIP, g) * stride)
-        turn(a, "calf_" + side, 'X', gait(GAIT_KNEE, g) * (0.4 + 0.6 * stride))
-        turn(a, "foot_" + side, 'X', gait(GAIT_ANKLE, g))
+        turn(a, "thigh_" + side, 'X', -gait(GAIT_HIP, g) * stride * AMP_LEG)
+        turn(a, "calf_" + side, 'X', gait(GAIT_KNEE, g) * (0.4 + 0.6 * stride) * math.sqrt(AMP_LEG))
+        turn(a, "foot_" + side, 'X', gait(GAIT_ANKLE, g) * math.sqrt(AMP_LEG))
     pb = a.pose.bones.get("pelvis")
     if pb is not None:                                     # over the standing foot: left (+X) at t = 0.5
         m = a.matrix_world @ pb.matrix
         m.translation.x += 0.014 * math.sin(2.0 * math.pi * (t - 0.25))
         pb.matrix = a.matrix_world.inverted() @ m
         bpy.context.view_layer.update()
-    lower(a, "pelvis", -0.011 * (1.0 + math.cos(4.0 * math.pi * (t - 0.25))))
-    turn(a, "pelvis", 'Z', 4.0 * math.sin(w))
-    turn(a, "pelvis", 'Y', 2.5 * math.sin(2.0 * math.pi * (t - 0.25)))
-    turn(a, "spine_01", 'X', 2.5)
-    turn(a, "spine_03", 'Z', -5.0 * math.sin(w))
+    lower(a, "pelvis", -0.02 * AMP_LEG * (0.5 + 0.5 * math.cos(4.0 * math.pi * (t - 0.25))))   # down as each heel lands
+    turn(a, "pelvis", 'Z', 6.0 * AMP_LEG * math.sin(w))                  # the hips turning with the swinging leg
+    turn(a, "pelvis", 'Y', 3.5 * math.sin(2.0 * math.pi * (t - 0.25)))   # and dipping on the swinging side
+    turn(a, "spine_01", 'X', 4.0 + LEAN)                                  # a little forward, walking somewhere
+    turn(a, "spine_03", 'Z', -7.5 * AMP_ARM * math.sin(w))               # the chest turning against the hips
+    turn(a, "spine_03", 'Y', -1.2 * math.sin(2.0 * math.pi * (t - 0.25)))   # (and balancing the dip)
     for side, sg in (("l", 1.0), ("r", -1.0)):
         s = sg * math.sin(2.0 * math.pi * (t - 0.05))     # +1: this arm furthest back
-        sl = sg * math.sin(2.0 * math.pi * (t - 0.12))    # (the forearm a moment behind: it follows the upper arm)
-        turn(a, "upperarm_" + side, 'X', 12.0 * max(0.0, s) - 16.0 * max(0.0, -s) - 2.0)   # ~16° forward, ~12° back
-        turn(a, "lowerarm_" + side, 'X', -(10.0 + 20.0 * max(0.0, -sl)))      # the elbow soft, bending as it comes forward
-        turn(a, "hand_" + side, 'X', 7.0 * sl)                                # the wrist loose, trailing the swing
-    turn(a, "neck_01", 'Z', 2.0 * math.sin(w))
-    turn(a, "neck_01", 'X', -2.0)
+        sl = sg * math.sin(2.0 * math.pi * (t - 0.13))    # (the forearm a moment behind: it follows the upper arm)
+        # from the shoulder, loose: ~20° forward, ~16° back; the elbow only soft, a little more as it comes forward;
+        # the hand passing the hip, not crossing in front of him
+        turn(a, "upperarm_" + side, 'X', (16.0 * max(0.0, s) - 20.0 * max(0.0, -s)) * AMP_ARM)
+        turn(a, "upperarm_" + side, 'Y', sg * 3.0)                            # (held a little off the body)
+        turn(a, "lowerarm_" + side, 'X', -(6.0 + 12.0 * AMP_ARM * max(0.0, -sl)))
+        turn(a, "hand_" + side, 'X', 6.0 * sl)                                # the wrist loose, trailing the swing
+        turn(a, "clavicle_" + side, 'X', 3.0 * s)                             # the shoulder rolling with the arm
+    turn(a, "neck_01", 'Z', 3.0 * math.sin(w))                               # the head keeps looking where he goes
+    turn(a, "neck_01", 'X', -3.5 - 0.5 * LEAN)
 
 
 # A run (a jog, ~3.9 m/s) on the clinical running curves (Novacheck, The biomechanics of running), at % of the
@@ -681,20 +713,57 @@ def run_phase(a, t):
     the head stays steady, looking ahead."""
     w = 2.0 * math.pi * t
     for side, g in (("l", t - 0.25), ("r", t - 0.75)):
-        turn(a, "thigh_" + side, 'X', -gait(RUN_HIP, g) * stride)
-        turn(a, "calf_" + side, 'X', gait(RUN_KNEE, g))
+        turn(a, "thigh_" + side, 'X', -gait(RUN_HIP, g) * stride * AMP_LEG)
+        turn(a, "calf_" + side, 'X', gait(RUN_KNEE, g) * min(AMP_LEG, 1.2))
         turn(a, "foot_" + side, 'X', gait(RUN_ANKLE, g))
     lower(a, "pelvis", -0.03 - 0.03 * math.cos(4.0 * math.pi * (t - 0.42)))   # low at mid-stance, up in the air
-    turn(a, "spine_01", 'X', 8.0)                                         # leaning into the run
+    turn(a, "spine_01", 'X', 10.0 + LEAN)                                 # leaning into the run
     turn(a, "neck_01", 'X', -6.0)
     turn(a, "pelvis", 'Z', 6.0 * math.sin(w))
     turn(a, "spine_03", 'Z', -9.0 * math.sin(w))
     for side, sg in (("l", 1.0), ("r", -1.0)):
         s = sg * math.sin(2.0 * math.pi * (t - 0.04))     # +1: this arm furthest back
-        turn(a, "upperarm_" + side, 'X', 22.0 * s + 12.0)        # mostly behind: the elbow drives back
-        turn(a, "lowerarm_" + side, 'X', -(84.0 - 10.0 * s))
-        curl_fingers(a, side, 55.0, 45.0)                         # hands loosely closed
+        turn(a, "upperarm_" + side, 'X', 28.0 * AMP_ARM * s + 4.0)    # forward and back past the hip, the elbow driving
+        turn(a, "upperarm_" + side, 'Y', sg * 5.0)                     # (a little out from the ribs)
+        turn(a, "lowerarm_" + side, 'X', -(72.0 - 12.0 * s))           # bent ~75°: the hands come to the waist, not the chest
+        hand_pose(a, side, "run")                                 # hands loosely closed (over the relaxed hand)
     turn(a, "neck_01", 'Z', 2.5 * math.sin(w))
+
+
+def step_turn(a, t):
+    """Stepping round on the spot (a 1 s loop): one foot lifted and put down a little turned, then the other, the
+    hips turning a few degrees with each step, the arms loose. The game turns the body; this is the feet doing it."""
+    for side, ph in (("l", 0.0), ("r", 0.5)):
+        u = (t - ph) % 1.0
+        lift = math.sin(math.pi * u / 0.45) if u < 0.45 else 0.0          # this foot up for 45% of the loop
+        turn(a, "thigh_" + side, 'X', -16.0 * lift)
+        turn(a, "calf_" + side, 'X', 30.0 * lift)
+        turn(a, "foot_" + side, 'X', 8.0 * lift)
+    pb = a.pose.bones.get("pelvis")
+    if pb is not None:                                     # over the standing foot
+        m = a.matrix_world @ pb.matrix
+        m.translation.x += 0.018 * math.sin(2.0 * math.pi * (t - 0.25))
+        pb.matrix = a.matrix_world.inverted() @ m
+        bpy.context.view_layer.update()
+    turn(a, "pelvis", 'Y', 3.0 * math.sin(2.0 * math.pi * t))
+    turn(a, "spine_03", 'Y', -1.5 * math.sin(2.0 * math.pi * t))
+    for side, sg in (("l", 1.0), ("r", -1.0)):
+        turn(a, "upperarm_" + side, 'X', 4.0 * sg * math.sin(2.0 * math.pi * t) - 2.0)
+        turn(a, "lowerarm_" + side, 'X', -12.0)
+
+
+def tired(a, k):
+    """Out of breath after running: the chest heaving, the shoulders lifting with each breath, the head down a
+    little, the hands on the hips' sides, the weight back on the heels."""
+    turn(a, "spine_02", 'X', -4.0 * k)
+    turn(a, "spine_03", 'X', -2.0 * k + 4.0)
+    for side in ("l", "r"):
+        turn(a, "clavicle_" + side, 'X', -2.5 * k)
+        turn(a, "upperarm_" + side, 'Z', (14.0 if side == "l" else -14.0))
+        turn(a, "lowerarm_" + side, 'X', -55.0)
+    turn(a, "neck_01", 'X', 6.0 - 2.0 * k)
+    turn(a, "head", 'X', 4.0)
+    lower(a, "pelvis", -0.01)
 
 
 def sit(a):
@@ -887,13 +956,115 @@ def hang_arm(a, side, out=0.10, back=0.04, bend=0.18):
             qturn(a, "lowerarm_" + side, Quaternion(fdir, ang))
 
 
+def _palm_point(a, side):
+    """A point just in front of the palm's middle (where curling fingers and the thumb close to)."""
+    wrist = head_of(a, "hand_" + side)
+    mid = head_of(a, "middle_01_" + side)
+    knuck = head_of(a, "index_01_" + side) - head_of(a, "pinky_01_" + side)
+    normal = knuck.cross(mid - wrist).normalized()
+    tip = tail_of(a, "middle_03_" + side)                 # (the fingers' rest curl shows which side the palm is)
+    centre = wrist.lerp(mid, 0.6)
+    if (tip - centre).dot(normal) < 0:
+        normal = -normal
+    return centre + normal * 0.035
+
+
+def _hinge(a, bone, deg, target, tip_bone, axis=(1.0, 0.0, 0.0), force=0.0):
+    """Bend one joint about its own hinge (the bone's local axis: X for a finger's flexion), by deg toward target
+    (the direction that brings tip_bone's tip nearer it), or away for a negative deg."""
+    pb = a.pose.bones.get(bone)
+    if pb is None or abs(deg) < 1e-3:
+        return
+    pb.rotation_mode = 'QUATERNION'
+    ax = Vector(axis)
+    base = pb.rotation_quaternion.copy()
+    d0 = (tail_of(a, tip_bone) - target).length
+    pb.rotation_quaternion = base @ Quaternion(ax, math.radians(5))
+    bpy.context.view_layer.update()
+    closer = (tail_of(a, tip_bone) - target).length < d0
+    sgn = force if force else (1.0 if closer else -1.0)
+    pb.rotation_quaternion = base @ Quaternion(ax, sgn * math.radians(deg))
+    bpy.context.view_layer.update()
+    return sgn
+
+
+def curl_finger(a, side, finger, k1, k2, k3, splay=0.0):
+    """One finger: its three joints each bent about its own hinge toward the palm by k1 (the knuckle), k2, k3 degrees,
+    and splayed (degrees, away from the middle finger) at the knuckle (its local Z)."""
+    chain = ["%s_0%d_%s" % (finger, j, side) for j in (1, 2, 3)]
+    if any(b not in a.pose.bones for b in chain) or "middle_01_" + side not in a.pose.bones:
+        return
+    if splay and finger != "middle":
+        pb = a.pose.bones[chain[0]]
+        base = pb.rotation_quaternion.copy()
+        mid = head_of(a, "middle_01_" + side)
+        d0 = (tail_of(a, chain[0]) - mid).length
+        pb.rotation_quaternion = base @ Quaternion(Vector((0, 0, 1)), math.radians(3))
+        bpy.context.view_layer.update()
+        out = 1.0 if (tail_of(a, chain[0]) - mid).length > d0 else -1.0
+        pb.rotation_quaternion = base @ Quaternion(Vector((0, 0, 1)), out * math.radians(splay))
+        bpy.context.view_layer.update()
+    target = _palm_point(a, side)
+    for b, k in zip(chain, (k1, k2, k3)):
+        _hinge(a, b, k, target, chain[2])
+
+
+# The hands' poses (degrees at the knuckle, middle and end joints of each finger; the thumb's three; the splay):
+# relaxed hands curl more toward the little finger, the thumb resting along the index's side; a light fist; open;
+# pointing (the index straight, the rest closed); round a phone (fingers wrapped behind it, the thumb free over the
+# screen); holding papers (the thumb over, the fingers flat under); round a steering wheel.
+HANDS = {
+    "relaxed": {"index": (12, 18, 10), "middle": (16, 22, 12), "ring": (20, 25, 14), "pinky": (24, 28, 16), "thumb": (6, 10, 8), "splay": 2.0},
+    "walk": {"index": (14, 20, 12), "middle": (18, 25, 14), "ring": (22, 28, 16), "pinky": (26, 30, 18), "thumb": (8, 12, 10), "splay": 1.5},
+    "run": {"index": (34, 40, 28), "middle": (36, 42, 28), "ring": (36, 41, 28), "pinky": (36, 38, 26), "thumb": (18, 14, 10), "splay": 0.0},
+    "fist": {"index": (75, 90, 60), "middle": (78, 92, 60), "ring": (80, 92, 60), "pinky": (82, 90, 58), "thumb": (35, 30, 25), "splay": 0.0},
+    "open": {"index": (4, 5, 3), "middle": (5, 6, 3), "ring": (6, 7, 4), "pinky": (7, 8, 4), "thumb": (0, 4, 2), "splay": 5.0},
+    "point": {"index": (2, 3, 2), "middle": (70, 88, 55), "ring": (74, 90, 55), "pinky": (78, 88, 55), "thumb": (30, 25, 20), "splay": 0.0},
+    "phone": {"index": (35, 40, 25), "middle": (42, 48, 28), "ring": (48, 52, 30), "pinky": (52, 55, 30), "thumb": (4, 6, 4), "splay": 0.0},
+    "papers": {"index": (10, 8, 4), "middle": (12, 10, 5), "ring": (14, 12, 6), "pinky": (16, 14, 7), "thumb": (-6, 12, 14), "splay": 0.0},
+    "grip": {"index": (55, 70, 45), "middle": (58, 72, 46), "ring": (60, 72, 46), "pinky": (62, 70, 44), "thumb": (24, 30, 20), "splay": 0.0},
+}
+
+
+def hand_pose(a, side, name, extra=0.0):
+    """A hand as HANDS has it (extra: degrees more at every joint: one hand not quite the other's mirror)."""
+    h = HANDS[name]
+    for f in ("index", "middle", "ring", "pinky"):
+        k = h[f]
+        curl_finger(a, side, f, k[0] + extra, k[1] + extra, k[2] + extra * 0.5,
+                    h["splay"] * {"index": 1.0, "ring": 0.8, "pinky": 1.6}.get(f, 0.0))
+    thumb(a, side, h["thumb"], extra * 0.3)
+
+
+THUMB_SWING = {}                                       # the way the left thumb's base swung in (the right mirrors it)
+
+
+def thumb(a, side, degs, extra=0.0):
+    """The thumb: its base swings in across the palm (about its own Z), its two joints bend toward the palm (about
+    their own X); each the way that brings its tip nearer the palm's middle."""
+    chain = ["thumb_0%d_%s" % (j, side) for j in (1, 2, 3)]
+    if any(b not in a.pose.bones for b in chain) or "middle_01_" + side not in a.pose.bones:
+        return
+    target = _palm_point(a, side)
+    force = -THUMB_SWING["l"] if side == "r" and THUMB_SWING.get("l") else 0.0   # (the right: the left's way, mirrored)
+    sg = _hinge(a, chain[0], degs[0] + extra, target, chain[2], (0.0, 0.0, 1.0), force)
+    if side == "l" and sg:
+        THUMB_SWING["l"] = sg
+    _hinge(a, chain[1], degs[1] + extra, target, chain[2])
+    _hinge(a, chain[2], degs[2] + extra, target, chain[2])
+
+
+HAND_NOW = "relaxed"                                   # (the hands of the clip being made: relax() uses it)
+
+
 def relax(a):
-    """Standing at ease: arms hanging beside the body, elbows soft, fingers gently curled."""
+    """Standing at ease: arms hanging beside the body, elbows soft, the hands relaxed (HANDS), the left a little more
+    closed than the right."""
     if "upperarm_l" not in a.pose.bones:
         return
     for side in ("l", "r"):
         hang_arm(a, side)
-        curl_fingers(a, side, 18.0, 12.0)
+        hand_pose(a, side, HAND_NOW, 3.0 if side == "l" else 0.0)
 
 
 # ---- Karthik's face: blinks, the jaw, the lips (MakeHuman's expression units as shape keys) ----
@@ -996,12 +1167,45 @@ def face_rig(arm, objs):
     return objs
 
 
+# On foot, the speeds between (player.gd blends them on his speed, AnimationTree): each a 1 s cycle of 24 frames,
+# the left heel down at 0.25 and the right at 0.75 in all of them, so any two blend in step. What a cycle covers at
+# speed 1 (m), measured as the Walk's and the Run's: LocoSlow ~0.8, LocoWalk 1.18, LocoFast ~1.5, LocoJog 2.6 (the
+# Run's two strides in a second), LocoSprint ~3.6.
+LOCO = [("LocoSlow", "walk", 0.7, 0.55, -1.0), ("LocoWalk", "walk", 1.0, 1.0, 0.0), ("LocoFast", "walk", 1.22, 1.5, 3.0),
+        ("LocoJog", "run", 1.0, 1.0, 0.0), ("LocoSprint", "run", 1.25, 1.35, 6.0)]
+
+
+def loco(arm):
+    global AMP_LEG, AMP_ARM, LEAN
+    global HAND_NOW
+    for name, kind, leg, arm_amp, lean in LOCO:
+        AMP_LEG, AMP_ARM, LEAN = leg, arm_amp, lean
+        HAND_NOW = "walk" if kind == "walk" else "relaxed"   # (a run closes them itself: run_phase)
+        fn = walk_phase if kind == "walk" else run_phase
+        clip(arm, name, [(1 + k, (lambda kk, f: (lambda a: f(a, (kk % 24) / 24.0)))(k, fn)) for k in range(25)])
+    AMP_LEG, AMP_ARM, LEAN = 1.0, 1.0, 0.0
+    HAND_NOW = "relaxed"
+    for pose in ("open", "point", "phone", "papers", "fist", "grip"):   # hands alone, laid over any clip (gait.gd
+        HAND_NOW = pose                                                  #  filters it to the fingers)
+        clip(arm, "Hand" + pose.capitalize(), [(1, lambda a: None), (2, lambda a: None)])
+    HAND_NOW = "relaxed"
+    clip(arm, "StepTurn", [(1 + k, (lambda kk: (lambda a: step_turn(a, (kk % 24) / 24.0)))(k)) for k in range(25)])
+    clip(arm, "Tired", [(1 + 9 * k, (lambda kk: (lambda a: tired(a, 1 if kk % 2 else -1)))(k)) for k in range(9)])
+
+
 def animate(arm):
-    clip(arm, "Idle", [(1, lambda a: idle(a, -1)), (37, lambda a: idle(a, 1)), (73, lambda a: idle(a, -1))])
+    # 8 s: the weight over one leg, eased across to the other and back (held a while on each, as people stand), a
+    # breath every 4 s; keyed every half second so both run smoothly together; the last key is the first
+    def shift(i):
+        c = math.cos(math.pi * 2.0 * i / 16.0)
+        return -math.copysign(abs(c) ** 0.5, c)            # (dwelling near each leg, quick across)
+    clip(arm, "Idle", [(1 + 12 * i, (lambda ii: (lambda a: idle(a, shift(ii), math.sin(math.pi * 2.0 * ii / 8.0))))(i))
+                       for i in range(17)])
     clip(arm, "Talk", [(1, lambda a: talk(a, -1)), (13, lambda a: talk(a, 1)), (25, lambda a: talk(a, -0.4)),
                        (37, lambda a: talk(a, 1)), (49, lambda a: talk(a, -1))])
     clip(arm, "Walk", [(1 + k, (lambda kk: (lambda a: walk_phase(a, (kk % 24) / 24.0)))(k)) for k in range(25)])
     clip(arm, "Run", [(1 + k, (lambda kk: (lambda a: run_phase(a, (kk % 16) / 16.0)))(k)) for k in range(17)])
+    loco(arm)
     clip(arm, "Sit", [(f, (lambda kk, lk: (lambda a: sit_idle(a, kk, lk)))(k, lk))      # 4 s: two breaths, a look
                       for f, k, lk in ((1, -1, 0), (25, 1, 6), (49, -1, 8), (73, 1, -4), (97, -1, 0))])
     clip(arm, "SitEat", [(1 + 4 * k, (lambda kk: (lambda a: sit_eat(a, (kk % 16) / 16.0)))(k)) for k in range(17)])

@@ -405,7 +405,7 @@ func _ready() -> void:
 		var self_test := false                      # (a self-test never writes your saved game: wallet, challans, weather)
 		for flag in ["--testdrive", "--carshot", "--trafficshot", "--crashtest", "--peopletest", "--parkedtest",
 				"--potholetest", "--flyover", "--clock=", "--weather=", "--nohud", "--doortest", "--threattest", "--surfacetest", "--jointest", "--walkertest", "--activitytest",
-				"--hospitaltest", "--citizentest", "--interviewtest", "--unsticktest", "--livingtest", "--livingbench", "--hospitalat", "--shotview", "--interacttest", "--falltest", "--stairtest"]:
+				"--hospitaltest", "--citizentest", "--interviewtest", "--unsticktest", "--livingtest", "--livingbench", "--hospitalat", "--shotview", "--interacttest", "--falltest", "--stairtest", "--gaittest", "--standtest"]:
 			self_test = self_test or " ".join(args).contains(flag)
 		fines.persist = not self_test
 		hud = DriveHud.new()
@@ -821,7 +821,8 @@ func toggle_on_foot() -> bool:
 			door.y = maxf(door.y, top)
 		walker.spawn_at(door + Vector3(0, 0.4, 0), car.global_position + car.forward() * 12.0)
 		walker.activate()
-		car.freeze = true
+		_park_t = 3.0                                          # (the car is held where it stands once it's down on its
+		_settle_parked()                                       #  four tyres: never in the air it was still dropping through)
 		streamer.target = walker
 		map.target = walker
 		traffic.player = walker
@@ -905,10 +906,20 @@ var _stuck_said := false
 func _unstick(dt: float) -> void:
 	if "--unsticktest" in OS.get_cmdline_user_args():   # (testing: tipped onto a kerb off the road, then G)
 		_unstick_test(dt)
-	if "--falltest" in OS.get_cmdline_user_args() and walker == null and not has_meta("falltest") and Time.get_ticks_msec() > 9000 \
-			and not car.freeze and car.global_position.y < 590.0 and absf(car.speed) < 0.5:
+	if ("--falltest" in OS.get_cmdline_user_args() or "--gaittest" in OS.get_cmdline_user_args() or " ".join(OS.get_cmdline_user_args()).contains("--standtest")) and walker == null and not has_meta("falltest") and Time.get_ticks_msec() > 9000 \
+			and not car.freeze and car.global_position.y < 590.0 and absf(car.speed) < 0.5 and Time.get_ticks_msec() > 12000:
 		set_meta("falltest", true)                      # (testing: out of the car; player.gd does the rest)
 		print("FALLTEST car at %s, ground %.1f" % [str(car.global_position), streamer.height_at(car.global_position.x, car.global_position.z)])
+		print("CARPROBE sleeping %s, freeze %s, lin %s, chassis contacts %d" % [car.sleeping, car.freeze, str(car.linear_velocity), car.get_contact_count()])
+		for wh in car.find_children("*", "VehicleWheel3D", true, false):   # (each tyre: touching, and the gap under it)
+			var w3 := wh as VehicleWheel3D
+			var q := PhysicsRayQueryParameters3D.create(w3.global_position + Vector3.UP * 6.0, w3.global_position + Vector3.DOWN * 6.0)
+			q.exclude = [car.get_rid()]
+			var hit := get_world_3d().direct_space_state.intersect_ray(q)
+			var gap: float = (w3.global_position.y - w3.wheel_radius - float(hit["position"].y)) if not hit.is_empty() else -99.0
+			print("CARPROBE %s at y %.2f, susp %.2f/%.2f" % [w3.name, w3.global_position.y, w3.wheel_rest_length, w3.suspension_travel])
+			print("CARPROBE %s contact %s, tyre bottom %.2f m over what's under it (%s)" % [w3.name, w3.is_in_contact(), gap,
+				str(hit["collider"].name) if not hit.is_empty() else "nothing"])
 		toggle_on_foot()
 		print("FALLTEST out at %s" % str(walker.global_position) if walker else "FALLTEST not out")
 	if walker != null or car == null or (story and story.room != null):
@@ -1509,7 +1520,29 @@ func _drive_camera(dt: float) -> void:
 func _process(dt: float) -> void:
 	var _p0 := Time.get_ticks_usec()
 	_process_timed(dt)
+	if _park_t > 0.0:
+		_park_t -= dt
+		_settle_parked()
 	Prof.add("city", _p0)
+
+
+## Out of the car: it's frozen where it stands, but only once all its tyres are on the ground (or after 3 s, if
+## something holds a wheel up: a kerb); until then it settles under its own weight.
+var _park_t := 0.0
+
+
+func _settle_parked() -> void:
+	if walker == null or car == null:
+		_park_t = 0.0
+		return
+	var down := true
+	for w in car._wheels:
+		down = down and (w as VehicleWheel3D).is_in_contact()
+	if (down and car.linear_velocity.length() < 0.2) or _park_t <= 0.0:
+		car.freeze = true
+		_park_t = 0.0
+	else:
+		car.freeze = false
 
 
 var _f2_down := false
@@ -1592,6 +1625,10 @@ func _process_timed(dt: float) -> void:
 			if t > 6.0 and shots_dir != "":
 				get_viewport().get_texture().get_image().save_jpg(shots_dir + "/car.jpg", 0.85)
 				print("WHEELS %d %s" % [car._wheels.size(), str(car._wheels.map(func(w): return w.get_child_count()))])
+				for w in car._wheels:                    # (touching the road, and the tyre's bottom over it)
+					var w3 := w as VehicleWheel3D
+					print("WHEEL contact %s  local y %.2f  global y %.2f  car y %.2f  rpm %.0f" % [w3.is_in_contact(), w3.position.y,
+						w3.global_position.y, car.global_position.y, w3.get_rpm()])
 				if car._rider:
 					for ap in car._rider.find_children("*", "AnimationPlayer", true, false):
 						print("RIDER anim=%s playing=%s pos=%s" % [ap.current_animation, ap.is_playing(), str(car._rider.position)])

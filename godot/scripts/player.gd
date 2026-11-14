@@ -10,6 +10,10 @@ extends CharacterBody3D
 ## catch himself, or, knocked harder, goes over: a pendulum from his feet (the push starts it, gravity finishes
 ## it), down on the ground a moment, then up again. knock(push) is how anything pushes him (people, the gang).
 ##   --falltest  testing: a light push, a hard one and a drop, pictures of each (user://fall_*.jpg)
+##   --gaittest  testing: every pace, a stop, turns of 90° and 180°, a circle, a step back, getting his breath;
+##               how far his planted foot slides (m/s, should be near 0) and a picture of each (user://gait_*.jpg)
+##   --standtest=TAG testing: standing, seen from the front, back, left, right and the play camera, close on the
+##               legs and whole (user://stand_<TAG>_*.jpg: a before and an after)
 ##   --stairtest testing: in a room with a stair (the story's climb: --storyfrom=138), up it from Mark_cut to
 ##               Mark_landing, his feet's IK printed, pictures from the side (user://stair_*.jpg)
 const Prof := preload("res://scripts/drive/prof.gd")
@@ -43,13 +47,23 @@ const TURN_RATE := 7.0              # how quickly the body swings round to the w
 const TURN_RATE_RUN := 3.5          # …and running (momentum: no about-turn on the spot at a run)
 var auto_input := Vector2.INF       # (testing: a move held as if from the keys, tests/movement_lab.gd)
 var auto_run := false
+var auto_pace := ""                 # (testing: slow, walk, fast, jog, sprint as if from the keys: gait.gd)
 var debug_label: Label              # (development: --movedebug shows how he moves)
 const AVATAR := "res://assets/people/person_man_shirt.glb"
 static var avatar := ""            # who you are on foot, when not the default (the story: Karthik himself)
 var avatar_run_stride := false     # a story cast model: its Run covers ~3.9 m/s at speed 1
 var scripted := false              # a scene moves him (brush3d.gd): his clips and facing are its, not the walk's
 const FootIK := preload("res://scripts/foot_ik.gd")
+const Gait := preload("res://scripts/gait.gd")
 var feet: Node                      # foot_ik.gd, on the model's skeleton
+var gait: Node                      # gait.gd: his speeds, the AnimationTree, breath, ground, head, camera (Karthik)
+var _want_yaw := INF                # where the keys say to go (the body's yaw), INF with none
+var _turn_rate := 0.0               # how fast the body is turning (rad/s), for the clips and the head
+var _sp_was := 0.0
+var _accel := 0.0                   # along the way he faces, m/s² (smoothed): he leans into a start, back into a stop
+var _back_t := 0.0                  # how long S alone has been held (a short one: a step or two backwards)
+var _flinch := 0.0                  # walked into something: a moment's lean back
+const TURN_IN_PLACE := 3.6          # rad/s stepping round on the spot (a half turn in under a second)
 var _down := 0.0                    # 0 on his feet; 1 going over; 2 on the ground; 3 getting up
 var _theta := 0.0                   # how far over he is (radians from upright)
 var _omega := 0.0
@@ -97,6 +111,7 @@ func _init() -> void:
 			if anim.has_animation(a):
 				anim.get_animation(a).loop_mode = Animation.LOOP_LINEAR
 		feet = FootIK.attach(self, model)
+		gait = Gait.attach(self, model, anim)
 	_set_view(true)
 	if "--movedebug" in OS.get_cmdline_user_args():
 		var layer := CanvasLayer.new()
@@ -138,6 +153,13 @@ func activate() -> void:
 	if not active and "--stairtest" in OS.get_cmdline_user_args() and not has_meta("stairtest"):
 		set_meta("stairtest", true)
 		_stair_test.call_deferred()
+	for a in OS.get_cmdline_user_args():
+		if a.begins_with("--standtest=") and not active and not has_meta("standtest"):
+			set_meta("standtest", true)
+			_stand_test.call_deferred(a.get_slice("=", 1))
+	if not active and "--gaittest" in OS.get_cmdline_user_args() and not has_meta("gaittest"):
+		set_meta("gaittest", true)
+		_gait_test.call_deferred()
 	if not active and "--falltest" in OS.get_cmdline_user_args() and not has_meta("falltest"):
 		set_meta("falltest", true)
 		_fall_test.call_deferred()
@@ -182,12 +204,36 @@ func _physics_process_timed(delta: float) -> void:
 		if Input.is_action_just_pressed("jump") and is_on_floor():
 			velocity.y = jump_velocity
 		var input := Input.get_vector("move_left", "move_right", "move_forward", "move_back") if auto_input == Vector2.INF else auto_input
+		if auto_input == Vector2.INF:                    # a controller's right stick looks about, as the mouse does
+			var look := Vector2(Input.get_joy_axis(0, JOY_AXIS_RIGHT_X), Input.get_joy_axis(0, JOY_AXIS_RIGHT_Y))
+			if look.length() > 0.15:
+				rotation.y -= look.x * 2.6 * delta * Settings.look()
+				_pitch = clampf(_pitch - look.y * 1.8 * delta * Settings.look(), -1.45, 1.45)
+				head.rotation.x = _pitch
 		var dir := (transform.basis * Vector3(input.x, 0.0, input.y)).normalized()
 		var running := Input.is_action_pressed("run") if auto_input == Vector2.INF else auto_run
 		var speed := (run_speed if running else walk_speed) * minf(input.length(), 1.0)   # (a stick half pushed: slower)
-		if dir != Vector3.ZERO and model:               # a sharp turn: he slows to make it, then goes on
+		if gait:
+			speed = gait.want(input, running)
+			var back_only := input.y > 0.5 and absf(input.x) < 0.35 and not running
+			_back_t = _back_t + delta if back_only else 0.0
+			gait.backing = back_only and _back_t < 1.1 and Vector2(velocity.x, velocity.z).length() < 1.2
+			if gait.backing:                             # (a step or two back, facing on; held, he turns round)
+				speed = minf(speed, 0.8)
+		_want_yaw = atan2(dir.x, dir.z) if dir != Vector3.ZERO else INF
+		if gait and gait.backing:
+			_want_yaw = INF
+		if dir != Vector3.ZERO and model and not (gait and gait.backing):   # a sharp turn: he slows to make it
 			var off := absf(angle_difference(_model_yaw, atan2(dir.x, dir.z)))
 			speed *= clampf(1.0 - (off - 0.6) / 2.0, 0.35, 1.0)
+			if gait:
+				var have_sp := Vector2(velocity.x, velocity.z).length()
+				if have_sp < 0.35 and off > 1.0:            # standing: he turns on the spot first, then sets off
+					speed = 0.0
+				elif off > 0.7:                          # moving: on the way he faces, slowing, as the body comes
+					var fwd := Vector3(sin(_model_yaw), 0.0, cos(_model_yaw))   #  round (no sideways slide)
+					dir = (fwd * cos(minf(off, 1.5)) + dir * 0.35).normalized()
+					speed *= clampf(cos(off * 0.8), 0.2, 1.0)
 		if dir != Vector3.ZERO and is_on_floor():       # a slope: slower up it, careful down a steep one
 			var grade := -dir.dot(get_floor_normal())    # (sin of the slope, + uphill)
 			if grade > 0.0:
@@ -201,6 +247,9 @@ func _physics_process_timed(delta: float) -> void:
 		var want := Vector2(dir.x, dir.z) * speed
 		var have := Vector2(velocity.x, velocity.z)
 		var rate := (ACCEL if want.length() > have.length() else DECEL) * (1.0 if is_on_floor() else 0.3)
+		if gait:
+			rate = (gait.accel(want.length()) if want.length() > have.length() else gait.decel(have.length())) \
+				* (1.0 if is_on_floor() else 0.3)
 		have = have.move_toward(want, rate * delta)
 		velocity.x = have.x
 		velocity.z = have.y
@@ -210,7 +259,17 @@ func _physics_process_timed(delta: float) -> void:
 	if active:                                          # up a step: the body catches up with the capsule
 		_step_drop = minf(_step_drop + _try_step_up(delta), 0.4)
 	var was_air := not is_on_floor()
+	var pre := Vector3(velocity.x, 0.0, velocity.z)
 	move_and_slide()
+	if gait and _down == 0.0 and pre.length() > 1.0:     # into a wall or a post: a flinch; at a run, a stumble back
+		for i in get_slide_collision_count():
+			var c := get_slide_collision(i)
+			var nrm := c.get_normal()
+			if absf(nrm.y) < 0.35 and pre.normalized().dot(Vector3(nrm.x, 0.0, nrm.z).normalized()) < -0.8:
+				if pre.length() > 3.0:
+					knock(Vector3(nrm.x, 0.0, nrm.z).normalized() * 1.4)
+				_flinch = 0.35
+				break
 	if was_air and is_on_floor() and _down == 0.0:   # landed: from a height, it shows
 		var v := -_fall_vy
 		var fwd := Vector3(velocity.x, 0.0, velocity.z)
@@ -236,15 +295,32 @@ func _animate(delta: float) -> void:
 	var flat := Vector3(velocity.x, 0, velocity.z)
 	var sp := flat.length()
 	var turned := 0.0
-	if sp > 0.2:
+	if gait and gait.backing:                            # (stepping back: he faces the way the view does)
+		var was_b := _model_yaw
+		_model_yaw = lerp_angle(_model_yaw, rotation.y + PI, 1.0 - exp(-delta * 6.0))
+		turned = angle_difference(was_b, _model_yaw) / maxf(delta, 0.001)
+	elif gait and sp <= 0.35 and _want_yaw != INF and _down == 0.0:   # on the spot: stepping round at a person's rate
+		var was_t := _model_yaw
+		var d := angle_difference(_model_yaw, _want_yaw)
+		_model_yaw += clampf(d, -TURN_IN_PLACE * delta, TURN_IN_PLACE * delta)
+		turned = angle_difference(was_t, _model_yaw) / maxf(delta, 0.001)
+	elif sp > 0.2:
 		# face the way you're walking (the model faces +Z), turning at a person's pace; standing, he stays put
 		var was := _model_yaw
 		var rate := lerpf(TURN_RATE, TURN_RATE_RUN, clampf((sp - walk_speed) / maxf(run_speed - walk_speed, 0.1), 0.0, 1.0))
 		_model_yaw = lerp_angle(_model_yaw, atan2(flat.x, flat.z), 1.0 - exp(-delta * rate))
 		turned = angle_difference(was, _model_yaw) / maxf(delta, 0.001)
 	_lean = lerpf(_lean, clampf(-turned * sp * 0.012, -0.12, 0.12), 1.0 - exp(-delta * 6.0))   # into the curve
+	_turn_rate = lerpf(_turn_rate, turned, 1.0 - exp(-delta * 10.0))
+	var a_long := (sp - _sp_was) / maxf(delta, 0.001)    # speeding up (+) or slowing (−), m/s²
+	_sp_was = sp
+	_accel = lerpf(_accel, a_long, 1.0 - exp(-delta * 6.0))
+	_flinch = maxf(_flinch - delta, 0.0)
 	model.global_rotation = Vector3(0.0, _model_yaw, 0.0)
 	model.rotate_object_local(Vector3.FORWARD, _lean)
+	if gait:                                            # his weight: forward into a start, back into a stop, back from a wall
+		var pitch := clampf(_accel * 0.022, -0.13, 0.09) - _flinch * 0.35
+		model.rotate_object_local(Vector3.RIGHT, pitch)
 	if _stumble > 0.0:                                  # (pitched the push's way, arms of the walk catching up)
 		var k := clampf(_stumble / 0.7, 0.0, 1.0)
 		model.global_basis = Basis(Vector3.UP.cross(_stumble_dir).normalized(), 0.22 * k) * model.global_basis
@@ -256,6 +332,12 @@ func _animate(delta: float) -> void:
 	var has_run := anim.has_animation("Run")
 	if _down > 0.0:
 		sp = 0.0
+	if gait:                                            # (gait.gd: the clips blended on his speed)
+		gait.update(delta, sp, _turn_rate, _down > 0.0)
+		if debug_label:
+			debug_label.text = "%.2f m/s  %s  accel %+.1f  turn %+.1f  %s  vy %.2f" % [sp, str(gait.debug_data()),
+				_accel, _turn_rate, "ground" if is_on_floor() else "air", velocity.y]
+		return
 	if sp > (2.6 if has_run else 99.0):
 		a = "Run"
 	elif sp > 0.3:
@@ -431,4 +513,170 @@ func _stair_test() -> void:
 		await _fall_snap("stair_%d" % k)
 		camera.make_current()
 	auto_input = Vector2.INF
+	tree.quit()
+
+
+## (development) how he's moving, for the debug display and the tests.
+func get_movement_debug_data() -> Dictionary:
+	var d := {"speed": snappedf(Vector2(velocity.x, velocity.z).length(), 0.01), "grounded": is_on_floor(),
+		"vertical_velocity": snappedf(velocity.y, 0.01), "facing": snappedf(_model_yaw, 0.01), "down": _down}
+	if gait:
+		d.merge(gait.debug_data())
+	return d
+
+
+var _slide_sum := 0.0
+var _slide_n := 0
+var _slide_prev := {}
+
+
+## The planted foot's slide: the lower foot each frame (it's the one bearing him), how it moves over the ground,
+## m/s; and along his way (+: it creeps forward, the clip's steps too short for his speed; −: too long).
+var _slide_fwd := 0.0
+
+
+func _measure_slide(delta: float) -> void:
+	if gait == null or gait._sk == null:
+		return
+	var sk: Skeleton3D = gait._sk
+	var lo := ""
+	var ly := INF
+	var pos := {}
+	for s in ["l", "r"]:
+		var w: Vector3 = sk.global_transform * sk.get_bone_global_pose(sk.find_bone("foot_" + s)).origin
+		pos[s] = w
+		if w.y < ly:
+			ly = w.y
+			lo = s
+	if _slide_prev.get("foot", "") == lo and ly - global_position.y < 0.1:   # (on the ground: not the run's flight)
+		var d: Vector3 = pos[lo] - _slide_prev["at"]
+		var fwd := Vector3(sin(_model_yaw), 0.0, cos(_model_yaw))
+		_slide_sum += Vector2(d.x, d.z).length() / maxf(delta, 0.001)
+		_slide_fwd += d.dot(fwd) / maxf(delta, 0.001)
+		_slide_n += 1
+	_slide_prev = {"foot": lo, "at": pos[lo]}
+
+
+func _gait_phase(name: String, input: Vector2, pace: String, secs: float, side: Camera3D, turn_input := 0.0) -> void:
+	var tree := get_tree()
+	auto_input = input
+	auto_pace = pace
+	_slide_sum = 0.0
+	_slide_fwd = 0.0
+	_slide_n = 0
+	_slide_prev = {}
+	var t := 0.0
+	var top := 0.0
+	var snapped := false
+	while t < secs:
+		await tree.physics_frame
+		var dt := get_physics_process_delta_time()
+		t += dt
+		if turn_input != 0.0:                            # (a circle: the keys' way turning steadily)
+			auto_input = Vector2(sin(t * turn_input), -cos(t * turn_input))
+		if t > secs * 0.4:
+			_measure_slide(dt)
+		top = maxf(top, Vector2(velocity.x, velocity.z).length())
+		if not snapped and t > secs * 0.7:
+			snapped = true
+			var at := global_position + Vector3.UP * 0.9
+			var fwd := Vector3(sin(_model_yaw), 0.0, cos(_model_yaw))
+			side.global_position = at + fwd.cross(Vector3.UP) * 3.2 + fwd * 0.6 + Vector3.UP * 0.2
+			side.look_at(at, Vector3.UP)
+			side.make_current()
+			await _fall_snap("gait_" + name)
+			camera.make_current()
+	var d := get_movement_debug_data()
+	print("GAITTEST %-9s speed %.2f (top %.2f)  planted foot slides %.2f m/s (along his way %+.2f) over %d samples  %s" % [name,
+		d["speed"], top, _slide_sum / maxf(_slide_n, 1), _slide_fwd / maxf(_slide_n, 1), _slide_n, str(gait.debug_data()) if gait else "no gait"])
+
+
+func _gait_test() -> void:
+	var tree := get_tree()
+	await tree.create_timer(2.0).timeout
+	if gait == null:
+		print("GAITTEST no gait (this model has no Loco clips)")
+		tree.quit()
+		return
+	var side := Camera3D.new()
+	side.fov = 45.0
+	get_parent().add_child(side)
+	await _gait_phase("idle", Vector2.ZERO, "", 4.0, side)
+	await _gait_phase("slow", Vector2(0, -1), "slow", 4.0, side)
+	await _gait_phase("walk", Vector2(0, -1), "walk", 4.0, side)
+	await _gait_phase("fast", Vector2(0, -1), "fast", 4.0, side)
+	await _gait_phase("jog", Vector2(0, -1), "jog", 4.0, side)
+	await _gait_phase("sprint", Vector2(0, -1), "sprint", 5.0, side)
+	await _gait_phase("stop", Vector2.ZERO, "", 1.2, side)
+	await _gait_phase("turn90", Vector2(1, 0), "walk", 2.5, side)
+	await _gait_phase("turn180", Vector2(-1, 0), "walk", 3.0, side)
+	await _gait_phase("circle", Vector2(0, -1), "walk", 6.0, side, 1.0)
+	await _gait_phase("standturn", Vector2.ZERO, "", 1.0, side)
+	rotation.y += PI * 0.5                                # (the view turned: the keys now ask him to turn on the spot)
+	await _gait_phase("spotturn", Vector2(0, -1), "slow", 0.6, side)
+	await _gait_phase("back", Vector2(0, 1), "walk", 0.9, side)
+	await _gait_phase("breath", Vector2.ZERO, "", 4.0, side)
+	auto_input = Vector2.INF
+	auto_pace = ""
+	tree.quit()
+
+
+func _stand_test(tag: String) -> void:
+	var tree := get_tree()
+	await tree.create_timer(3.0).timeout
+	var cam := Camera3D.new()
+	cam.fov = 40.0
+	get_parent().add_child(cam)
+	for n in get_parent().find_children("*", "VehicleBody3D", true, false) + get_parent().find_children("*", "RigidBody3D", true, false):
+		var b := n as Node3D                             # (what's near him, and how high over the ground under it)
+		if b.global_position.distance_to(global_position) > 15.0:
+			continue
+		var q := PhysicsRayQueryParameters3D.create(b.global_position + Vector3.UP * 0.5, b.global_position + Vector3.DOWN * 8.0)
+		q.exclude = [(b as CollisionObject3D).get_rid()]
+		var hit := get_world_3d().direct_space_state.intersect_ray(q)
+		print("STANDTEST near: %s (%s) at %s, %.2f m over %s; frozen %s" % [b.name, b.get_class(), str(b.global_position.snapped(Vector3.ONE * 0.01)),
+			(b.global_position.y - float(hit["position"].y)) if not hit.is_empty() else -1.0, str(hit["collider"].name) if not hit.is_empty() else "-",
+			str(b.get("freeze"))])
+	var fwd := Vector3(sin(_model_yaw), 0.0, cos(_model_yaw))
+	var right := fwd.cross(Vector3.UP)
+	var base := global_position
+	for v in [["front", fwd], ["back", -fwd], ["left", -right], ["right", right]]:
+		var d: Vector3 = v[1]
+		for k in [["whole", 3.4, 0.95], ["legs", 1.9, 0.5]]:
+			cam.global_position = base + d * float(k[1]) + Vector3.UP * float(k[2])
+			cam.look_at(base + Vector3.UP * float(k[2]), Vector3.UP)
+			cam.make_current()
+			await tree.create_timer(0.4).timeout
+			await _fall_snap("stand_%s_%s_%s" % [tag, v[0], k[0]])
+	camera.make_current()
+	await tree.create_timer(0.4).timeout
+	await _fall_snap("stand_%s_play" % tag)
+	if gait:                                             # his hands: close, from the front, in each pose
+		for pose in ["", "open", "point", "phone", "papers", "fist", "grip"]:
+			gait.hand_test = pose
+			await tree.create_timer(0.6).timeout
+			var hp: Vector3 = global_position + Vector3.UP * 0.85     # (both hands, from the front, a little to his right)
+			cam.global_position = hp + fwd * 1.15 + right * 0.3 + Vector3.UP * 0.05
+			cam.look_at(hp, Vector3.UP)
+			cam.make_current()
+			await tree.create_timer(0.2).timeout
+			await _fall_snap("stand_%s_hand_%s" % [tag, pose if pose != "" else "relaxed"])
+			var sk: Skeleton3D = gait._sk
+			var msg := ""
+			for sd in ["l", "r"]:
+				var palm: Vector3 = (sk.get_bone_global_pose(sk.find_bone("middle_01_" + sd)).origin + sk.get_bone_global_pose(sk.find_bone("hand_" + sd)).origin) * 0.5
+				for f in ["thumb_03", "index_03", "pinky_03", "thumb_01"]:
+					msg += " %s_%s %.3f" % [f, sd, sk.get_bone_global_pose(sk.find_bone(f + "_" + sd)).origin.distance_to(palm)]
+			print("STANDTEST hand %s distances to the palm:%s" % [pose, msg])
+			if pose in ["", "fist"]:                     # (the right hand close: from his front and from his right)
+				var hr: Vector3 = sk.global_transform * sk.get_bone_global_pose(sk.find_bone("middle_01_r")).origin
+				for vv in [["front", fwd], ["side", right]]:
+					cam.global_position = hr + (vv[1] as Vector3) * 0.4 + Vector3.UP * 0.05
+					cam.look_at(hr, Vector3.UP)
+					await tree.create_timer(0.15).timeout
+					await _fall_snap("stand_%s_rhand_%s_%s" % [tag, pose if pose != "" else "relaxed", vv[0]])
+			print("STANDTEST hand %s: weights l %.2f r %.2f, index_02 bend l %.0f° r %.0f°" % [pose, float(gait.tree.get("parameters/hand_l/blend_amount")),
+				float(gait.tree.get("parameters/hand_r/blend_amount")), rad_to_deg(sk.get_bone_pose_rotation(sk.find_bone("index_02_l")).get_angle()),
+				rad_to_deg(sk.get_bone_pose_rotation(sk.find_bone("index_02_r")).get_angle())])
+		gait.hand_test = ""
 	tree.quit()
