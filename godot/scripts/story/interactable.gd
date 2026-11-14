@@ -243,6 +243,16 @@ func go(w: Node3D) -> void:
 	var it := _at(w)
 	if it.is_empty() or busy:
 		return
+	var kind := str(it["kind"])                          # his hand to it first: the drawer's pull, the switch, the
+	var at := _w(it["at"])
+	if kind in ["drawer", "switch", "locked"] and w.has_method("reach") and float(it["at"][2]) > 0.8:   #  almirah's
+		# (a low drawer, under a desk, is pulled without a reach: standing, his hand can't get down to it)
+		if kind == "drawer":
+			var dr: Node3D = _drawers[it["id"]]
+			at = dr.global_position - dr.global_basis.z * (float(it.get("size", [0, 0.5])[1]) * 0.5 + 0.05)
+		busy = true
+		await w.reach(at, "point" if kind == "switch" else "open", 0.25)
+		busy = false
 	_use(it, w)
 
 
@@ -350,6 +360,8 @@ func _close_look(p: Vector3, it: Dictionary, w: Node3D, delay: float) -> void:
 	var tw := create_tween()
 	tw.tween_interval(delay * 0.3)
 	tw.tween_method(func(k: float):
+		if _cam == null or not is_instance_valid(_cam):
+			return
 		var q := start.lerp(from, k)
 		_cam.look_at_from_position(q, p, Vector3.UP), 0.0, 1.0, 0.6).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
 
@@ -415,6 +427,33 @@ func _run_test(dt: float) -> void:
 	print("INTERACT %s: offer '%s' at %s (stand %s, thing %s)" % [it["id"], o, str(w.global_position), str(stand), str(p)])
 	if o != "":
 		go(w)
+	if str(it["kind"]) in ["drawer", "switch", "locked"]:   # (his hand on it: a picture from beside him)
+		await get_tree().create_timer(0.42).timeout
+		var r = w.get("hand_reach")
+		if r:
+			var hb: int = r.sk.find_bone("hand_" + r._side)
+			var hp: Vector3 = r.sk.global_transform * r.sk.get_bone_global_pose(hb).origin
+			print("INTERACT   reach %s hand: weight %.2f, the wrist %.2f m from where it's going (target %.2f m from the shoulder)" % [r._side,
+				r.ik.weight, r.ik.error, (r.sk.global_transform * r.sk.get_bone_global_pose(r.sk.find_bone("upperarm_" + r._side)).origin).distance_to(r.ik.target)])
+			var cam := Camera3D.new()                    # (from his side, wherever the room leaves space)
+			add_child(cam)
+			var model: Node3D = w.get("model")
+			var fwd: Vector3 = model.global_basis.z
+			var rt: Vector3 = -model.global_basis.x
+			var eye := w.global_position + Vector3.UP * 1.2
+			for c in [rt * 1.4 + fwd * 0.4, -rt * 1.4 + fwd * 0.4, rt * 1.0 - fwd * 0.6, -rt * 1.0 - fwd * 0.6]:
+				var q := PhysicsRayQueryParameters3D.create(eye, eye + c)
+				q.exclude = [(w as CollisionObject3D).get_rid()]
+				if get_world_3d().direct_space_state.intersect_ray(q).is_empty():
+					cam.global_position = eye + c
+					break
+			cam.look_at(hp.lerp(eye, 0.3), Vector3.UP)
+			var was := get_viewport().get_camera_3d()
+			cam.make_current()
+			await _snap("interact_%s_reach" % it["id"])
+			if was:
+				was.make_current()
+			cam.queue_free()
 	await get_tree().create_timer(1.1).timeout
 	var cc := get_viewport().get_camera_3d()
 	print("INTERACT   camera %s at %s busy %s; walker cam at %s" % [cc.name if cc else "-", str(cc.global_position) if cc else "", busy, str(w.camera.global_position)])

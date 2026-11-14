@@ -150,7 +150,7 @@ func _process_timed(dt: float) -> void:
 		_label.text = ("Inside %s · E: go out" % NAMES.get(inside["room"], "the building")) if at_door else \
 			("E: %s" % todo["offer"] if not todo.is_empty() else ("E: " + sign if sign != "" else ""))
 		if at_door and pressed:
-			leave(w)
+			_through(w, _exit + Vector3.UP * 1.0, func(): leave(w))
 		elif pressed and use != "":
 			_things.go(w)
 		elif pressed and pay != "":
@@ -169,7 +169,23 @@ func _process_timed(dt: float) -> void:
 		_near = door_near(w.global_position)
 	_label.text = ("E: go into %s" % NAMES.get(_near.get("room", ""), "the building")) if not _near.is_empty() else ""
 	if pressed and not _near.is_empty():
-		enter(_near, w)
+		var d := _near
+		_through(w, Vector3(d["pos"].x, w.global_position.y + 1.05, d["pos"].z) - d["out"] * 0.05, func(): enter(d, w))
+
+
+var _going := false                  # (his hand is on the door: E again does nothing till he's through)
+
+
+## His hand on the door first (player.gd reach), then through it.
+func _through(w: Node3D, handle: Vector3, then: Callable) -> void:
+	if _going:
+		return
+	_going = true
+	if w.has_method("reach"):
+		await w.reach(handle, "open", 0.2)
+	_going = false
+	if is_instance_valid(w):
+		then.call()
 
 
 ## By the shopkeeper of a shop with a counter (COUNTERS).
@@ -497,7 +513,13 @@ func _door_test(n: int) -> void:
 		if shots != "":
 			await RenderingServer.frame_post_draw
 			get_viewport().get_texture().get_image().save_jpg("%s/door_%02d_out.jpg" % [shots, k], 0.85)
-		enter(d, w)
+		var dd := d                                     # (his hand on the door first, as when you press E)
+		_through(w, Vector3(d["pos"].x, w.global_position.y + 1.05, d["pos"].z) - d["out"] * 0.05, func(): enter(dd, w))
+		await tree.create_timer(0.3).timeout
+		if shots != "" and k == 0:
+			await _shot(shots, "door_%02d_hand" % k)
+		while _going:
+			await tree.process_frame
 		await tree.create_timer(2.5).timeout
 		if shots != "":
 			await RenderingServer.frame_post_draw

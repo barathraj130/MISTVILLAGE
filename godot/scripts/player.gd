@@ -55,6 +55,8 @@ var avatar_run_stride := false     # a story cast model: its Run covers ~3.9 m/s
 var scripted := false              # a scene moves him (brush3d.gd): his clips and facing are its, not the walk's
 const FootIK := preload("res://scripts/foot_ik.gd")
 const Gait := preload("res://scripts/gait.gd")
+const Reach := preload("res://scripts/reach.gd")
+var hand_reach: Node                # reach.gd: his hand to a door, a drawer, a switch
 var feet: Node                      # foot_ik.gd, on the model's skeleton
 var gait: Node                      # gait.gd: his speeds, the AnimationTree, breath, ground, head, camera (Karthik)
 var _want_yaw := INF                # where the keys say to go (the body's yaw), INF with none
@@ -112,6 +114,9 @@ func _init() -> void:
 				anim.get_animation(a).loop_mode = Animation.LOOP_LINEAR
 		feet = FootIK.attach(self, model)
 		gait = Gait.attach(self, model, anim)
+		var sks := model.find_children("*", "Skeleton3D", true, false)
+		if not sks.is_empty():
+			hand_reach = Reach.attach(self, sks[0])
 	_set_view(true)
 	if "--movedebug" in OS.get_cmdline_user_args():
 		var layer := CanvasLayer.new()
@@ -680,3 +685,17 @@ func _stand_test(tag: String) -> void:
 				rad_to_deg(sk.get_bone_pose_rotation(sk.find_bone("index_02_r")).get_angle())])
 		gait.hand_test = ""
 	tree.quit()
+
+
+## His hand to a point (a door, a drawer's pull, a switch): turned to it, the arm reaches, the hand in `pose`;
+## returns when it's there (await it), lets go `hold` seconds later. Nothing happens for a model without arms' IK.
+func reach(point: Vector3, pose := "open", hold := 0.35) -> void:
+	if hand_reach == null or _down > 0.0 or scripted:
+		return
+	var to := Vector3(point.x - global_position.x, 0.0, point.z - global_position.z)
+	if to.length() > 0.1:                                # (facing it first, at a person's turn)
+		var want := atan2(to.x, to.z)
+		var tw := create_tween()
+		tw.tween_method(func(v: float): _model_yaw = lerp_angle(_model_yaw, want, v), 0.0, 1.0, 0.18)
+		await tw.finished
+	await hand_reach.go(point, pose, hold)
