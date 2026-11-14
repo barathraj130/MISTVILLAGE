@@ -257,6 +257,9 @@ func go(w: Node3D) -> void:
 
 
 func _use(it: Dictionary, w: Node3D) -> void:
+	var soc = city.doors.social if city and "doors" in city and city.doors and "social" in city.doors else null
+	if soc and is_instance_valid(soc) and str(it["kind"]) in ["drawer", "locked"] or (soc and is_instance_valid(soc) and it.get("private", false)):
+		soc.act("search", _w(it["at"]))                  # (opening what isn't his, with people about: social.gd)
 	match str(it["kind"]):
 		"switch":
 			_set_lights(not _lights_on)

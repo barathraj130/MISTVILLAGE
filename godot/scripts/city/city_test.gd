@@ -407,7 +407,7 @@ func _ready() -> void:
 		var self_test := false                      # (a self-test never writes your saved game: wallet, challans, weather)
 		for flag in ["--testdrive", "--carshot", "--trafficshot", "--crashtest", "--peopletest", "--parkedtest",
 				"--potholetest", "--flyover", "--clock=", "--weather=", "--nohud", "--doortest", "--threattest", "--surfacetest", "--jointest", "--walkertest", "--activitytest",
-				"--hospitaltest", "--citizentest", "--interviewtest", "--unsticktest", "--livingtest", "--livingbench", "--hospitalat", "--shotview", "--interacttest", "--falltest", "--stairtest", "--gaittest", "--standtest", "--gangtest", "--gangstage", "--pursuittest"]:
+				"--hospitaltest", "--citizentest", "--interviewtest", "--unsticktest", "--livingtest", "--livingbench", "--hospitalat", "--shotview", "--interacttest", "--falltest", "--stairtest", "--gaittest", "--standtest", "--gangtest", "--gangstage", "--pursuittest", "--socialtest", "--streetaudit"]:
 			self_test = self_test or " ".join(args).contains(flag)
 		fines.persist = not self_test
 		hud = DriveHud.new()
@@ -481,6 +481,10 @@ func _ready() -> void:
 		citizens.name = "Citizens"
 		citizens.city = self
 		add_child(citizens)
+		if "--streetaudit" in args:                  # (development: the streets' connectivity, street_audit.gd)
+			var au = load("res://scripts/city/street_audit.gd").new()
+			au.city = self
+			add_child(au)
 		gang = Gang.new()                            # the watcher, the pursuit (gang.gd)
 		gang.name = "Gang"
 		gang.city = self

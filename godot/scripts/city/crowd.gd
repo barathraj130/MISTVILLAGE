@@ -37,6 +37,7 @@ static func fill(room: Node3D, body: StaticBody3D, key: String, fill := 0.7) -> 
 		if npc == null:
 			continue
 		var mk := m as Node3D
+		npc.set_meta("crowd_pose", pose)                   # (social.gd: who they are in the room)
 		npc.global_position = mk.global_position
 		var f := -mk.global_basis.z                        # the mark faces +Y in Blender: -Z here
 		npc.global_rotation = Vector3(0, atan2(f.x, f.z) + rng.randf_range(-0.15, 0.15), 0)
@@ -55,6 +56,7 @@ static func fill(room: Node3D, body: StaticBody3D, key: String, fill := 0.7) -> 
 			cap.radius = 0.25
 			cap.height = 1.6
 			cs.shape = cap
+			cs.set_meta("person", true)                    # (social.gd sees past people, not through walls)
 			body.add_child(cs)
 			cs.global_position = mk.global_position + Vector3(0, 0.8, 0)
 		n += 1

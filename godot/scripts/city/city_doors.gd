@@ -28,6 +28,7 @@ const ROOM_MODEL := {"medical": "kirana", "hardware": "kirana"}
 const COUNTERS := ["kirana", "medical", "hardware", "fuel"]
 const Goods := preload("res://scripts/city/goods.gd")
 const Interact := preload("res://scripts/story/interactable.gd")
+const Social := preload("res://scripts/city/social.gd")
 const HOMES := ["house_mid", "house_old", "house_flat", "house_mid", "house_flat"]   # (Karthik's own "home" is the story's)
 const KIT_ROOM := {"apartment": "house_flat", "bungalow": "house", "city_house": "house", "tn_house": "house", "hill_cottage": "house",
 	"commercial": "office", "shop_house": "shop", "hotel": "hotel", "mill_shed": "office"}
@@ -45,6 +46,7 @@ var city                             # city_test.gd: walker, streamer, story, in
 var inside := {}                     # the door you came in by, while you're inside
 var _room: Node3D
 var _things: Node3D                  # the room's things he can use (interactable.gd), if it has any
+var social: Node                     # the room's people noticing what he does (social.gd), where there are people
 var _exit := Vector3.ZERO
 var _near := {}                      # the door you're standing at, if any
 var _t := 0.0
@@ -76,6 +78,8 @@ func _ready() -> void:
 			_walk_test.call_deferred()
 		if a.begins_with("--doortest="):                #  --doorat=<landmark> into that landmark; screenshots in --shots)
 			_door_test.call_deferred(int(a.get_slice("=", 1)))
+		if a == "--socialtest":                         # (testing: into the nearest office: social.gd's test)
+			_social_test.call_deferred()
 	var layer := CanvasLayer.new()
 	layer.layer = 5
 	add_child(layer)
@@ -145,6 +149,13 @@ func _process_timed(dt: float) -> void:
 			_label.text = ""
 			return
 		var use: String = _things.offer(w) if _things and is_instance_valid(_things) and not at_door and todo.is_empty() and sign == "" else ""
+		var greet := ""                                   # (by the front desk of a building with people: say why he's here)
+		if use == "" and social and is_instance_valid(social) and not at_door and todo.is_empty() and sign == "":
+			var sp := _room.find_child("StaffPerson", true, false) as Node3D
+			if sp and Vector2(sp.global_position.x - w.global_position.x, sp.global_position.z - w.global_position.z).length() < 2.2:
+				greet = social.greet_offer()
+		if greet != "":
+			sign = greet
 		if use != "":
 			sign = use
 		_label.text = ("Inside %s · E: go out" % NAMES.get(inside["room"], "the building")) if at_door else \
@@ -153,6 +164,8 @@ func _process_timed(dt: float) -> void:
 			_through(w, _exit + Vector3.UP * 1.0, func(): leave(w))
 		elif pressed and use != "":
 			_things.go(w)
+		elif pressed and greet != "":
+			social.greet()
 		elif pressed and pay != "":
 			money.go()
 		elif pressed and sign != "":
@@ -168,6 +181,10 @@ func _process_timed(dt: float) -> void:
 		_t = 0.15
 		_near = door_near(w.global_position)
 	_label.text = ("E: go into %s" % NAMES.get(_near.get("room", ""), "the building")) if not _near.is_empty() else ""
+	var day_now: int = int(city.fines.sim.day) if city.fines else 0
+	if not _near.is_empty() and Social.ROOMS.has(str(_near.get("room", ""))) and Social.barred(str(_near.get("key", "")), day_now):
+		_label.text = ("The guard shakes his head: not today" if (city.story == null or city.story.lang == "en") else "செக்யூரிட்டி தலையாட்டுறாரு: இன்னைக்கு இல்ல")
+		return
 	if pressed and not _near.is_empty():
 		var d := _near
 		_through(w, Vector3(d["pos"].x, w.global_position.y + 1.05, d["pos"].z) - d["out"] * 0.05, func(): enter(d, w))
@@ -288,6 +305,11 @@ func enter(d: Dictionary, walker: Node3D) -> void:
 		var cs := CollisionShape3D.new()
 		cs.shape = (mi as MeshInstance3D).mesh.create_trimesh_shape()
 		cs.transform = _room.global_transform.affine_inverse() * (mi as MeshInstance3D).global_transform
+		var m3 := (mi as MeshInstance3D).mesh
+		for si in m3.get_surface_count():                  # (glass: people see through it, social.gd)
+			var mat := m3.surface_get_material(si)
+			if mat and mat.resource_name.to_lower().contains("glass"):
+				cs.set_meta("see_through", true)
 		body.add_child(cs)
 	var people := Crowd.fill(_room, body, d["key"])        # the station's travellers, the mall's shoppers...
 	var walking := RoomWalkers.new()                       # and some walking through
@@ -334,6 +356,7 @@ func enter(d: Dictionary, walker: Node3D) -> void:
 		srng.seed = hash(d["key"] + "staff")
 		var npc := Crowd.person(_room, srng)
 		if npc:
+			npc.name = "StaffPerson"
 			npc.global_position = staff.global_position
 			var to_door := _exit - staff.global_position
 			npc.rotation.y = atan2(to_door.x, to_door.z)
@@ -344,6 +367,7 @@ func enter(d: Dictionary, walker: Node3D) -> void:
 					ap.get_animation("Idle").loop_mode = Animation.LOOP_LINEAR
 					ap.play("Idle")
 	_things = Interact.attach(_room, ROOM_MODEL.get(d["room"], d["room"]), city, city.story if "story" in city else null)
+	social = Social.attach(_room, str(d["room"]), str(d["key"]), city)
 	var at: Vector3 = entry.global_position if entry else _room.global_position
 	var into := (_room.global_position - at)
 	walker.global_position = at + Vector3(0, 0.15, 0) + Vector3(into.x, 0, into.z).normalized() * 0.8
@@ -646,4 +670,27 @@ func _walk_test() -> void:
 	while "life" in city and city.life and city.life.busy:   # (asleep on his feet: until he's up again)
 		await tree.create_timer(1.0).timeout
 	print("WALKTEST frames %d" % (n / 3))
+	tree.quit()
+
+
+## (testing) Out of the car, into the nearest office building (social.gd runs its test inside).
+func _social_test() -> void:
+	var tree := get_tree()
+	await tree.create_timer(12.0).timeout
+	city.toggle_on_foot()
+	await tree.create_timer(1.5).timeout
+	var w: Node3D = city.walker
+	var seen := {}
+	for k in 400:
+		var d := _a_door(w.global_position, seen)
+		if d.is_empty():
+			break
+		seen[d["key"]] = true
+		if str(d["room"]) == "office":
+			print("SOCIALTEST into the office at %s" % d["key"])
+			w.global_position = d["pos"] + d["out"] * 0.9 + Vector3(0, 0.6, 0)
+			await tree.physics_frame
+			enter(d, w)
+			return
+	print("SOCIALTEST no office near")
 	tree.quit()
