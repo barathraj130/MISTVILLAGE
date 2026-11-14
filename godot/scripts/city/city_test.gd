@@ -36,6 +36,8 @@ const Story := preload("res://scripts/story/story.gd")
 const Phone := preload("res://scripts/story/phone.gd")
 const Bail := preload("res://scripts/city/bail.gd")
 const Money := preload("res://scripts/city/money.gd")
+const Hospital := preload("res://scripts/city/hospital.gd")
+const Citizens := preload("res://scripts/city/citizens.gd")
 const RoomSound := preload("res://scripts/city/room_sound.gd")
 const Hands := preload("res://scripts/story/hands.gd")
 const Walker := preload("res://scripts/player.gd")
@@ -79,6 +81,8 @@ var fines                                   # wallet and e-challans (fines.gd)
 var life                                    # Karthik's stress and his outings (life.gd)
 var _taught_foot := false
 var bail                                    # his bail: signing, strikes, the district border (city/bail.gd)
+var hospital                                # the 108 and the hospital (hospital.gd)
+var citizens                                # the citizens with a day (citizens.gd)
 var money                                   # his money after the arrest: the frozen account, bills (city/money.gd)
 var phone                                   # Karthik's phone, P (story/phone.gd)
 var hands                                   # what he holds and carries, I (story/hands.gd)
@@ -470,6 +474,14 @@ func _ready() -> void:
 		money.name = "Money"
 		money.city = self
 		add_child(money)
+		citizens = Citizens.new()                    # people with a home, a job and a day (citizens.gd)
+		citizens.name = "Citizens"
+		citizens.city = self
+		add_child(citizens)
+		hospital = Hospital.new()                    # the 108 and the hospital: hunger, a bad crash (hospital.gd)
+		hospital.name = "Hospital"
+		hospital.city = self
+		add_child(hospital)
 		traffic.physics_interpolation_mode = Node.PHYSICS_INTERPOLATION_MODE_OFF
 		map = CityMap.new()
 		map.name = "Map"
@@ -881,6 +893,79 @@ func _crossed_signal(sp: Vector3, state: int) -> void:
 		_sms("E-challan %s: %d km/h in a 50 zone, speed camera, %s." % [Fines.rupees(Fines.OVERSPEED), roundi(kmh), _now12()])
 
 
+## Stuck: the car up on a kerb, a step, a ledge, wedged or on its side, going nowhere (under 1 km/h for 4 s with
+## the throttle or reverse on, or tipped over 25°). The HUD says so once; holding G for a second and a half has the
+## people about push it back: it's set down on the nearest street, upright, along it, still.
+var _stuck_t := 0.0
+var _g_held := 0.0
+var _stuck_said := false
+
+
+func _unstick(dt: float) -> void:
+	if walker != null or car == null or (story and story.room != null):
+		_stuck_t = 0.0
+		_g_held = 0.0
+		return
+	var tilt: float = rad_to_deg(acos(clampf(car.global_basis.y.dot(Vector3.UP), -1.0, 1.0)))
+	var pushing := InputMap.has_action("accelerate") and (Input.is_action_pressed("accelerate") or Input.is_action_pressed("brake"))
+	if absf(car.speed) < 0.3 and (pushing or tilt > 25.0):
+		_stuck_t += dt
+	elif absf(car.speed) > 1.5:
+		_stuck_t = 0.0
+		_stuck_said = false
+	if _stuck_t > 4.0 and not _stuck_said:
+		_stuck_said = true
+		hud.warn("Stuck? Hold G: the people around help push it back onto the road.", 6.0)
+	if Input.is_key_pressed(KEY_G):
+		_g_held += dt
+		if _g_held >= 1.5:
+			_g_held = -99.0                                 # (once a press)
+			_back_on_road()
+	else:
+		_g_held = 0.0
+
+
+func _back_on_road() -> void:
+	var at: Vector3 = car.global_position
+	var best := INF
+	var bp := at
+	var bd := Vector3.FORWARD
+	for k in streamer.loaded:
+		var node: Node3D = streamer.loaded[k]
+		if node == null or not is_instance_valid(node):
+			continue
+		for r in node.get_meta("roads", []):
+			if not str(r["c"]) in ["trunk", "primary", "secondary", "tertiary", "unclassified", "residential", "living_street"] \
+					or r.get("fly", false):
+				continue
+			var p: PackedFloat32Array = r["p"]
+			for i in p.size() / 3 - 1:
+				var a := Vector3(p[i * 3], p[i * 3 + 1], p[i * 3 + 2])
+				var b := Vector3(p[i * 3 + 3], p[i * 3 + 4], p[i * 3 + 5])
+				var q := Geometry3D.get_closest_point_to_segment(at, a, b)
+				var dd := Vector2(q.x - at.x, q.z - at.z).length_squared()
+				if dd < best:
+					best = dd
+					bp = q
+					bd = (b - a).normalized()
+	if best > 80.0 * 80.0:
+		bp = at
+		bd = -car.global_basis.z
+	var fwd := -car.global_basis.z                      # (facing along the street the way it pointed)
+	if Vector2(fwd.x, fwd.z).dot(Vector2(bd.x, bd.z)) < 0.0:
+		bd = -bd
+	var y: float = streamer.height_at(bp.x, bp.z)
+	if is_nan(y):
+		y = bp.y
+	car.linear_velocity = Vector3.ZERO
+	car.angular_velocity = Vector3.ZERO
+	car.global_transform = Transform3D(Basis.looking_at(Vector3(bd.x, 0.0, bd.z).normalized(), Vector3.UP), Vector3(bp.x, y + 0.6, bp.z))
+	_stuck_t = 0.0
+	_stuck_said = false
+	hud.say("", "A few men from the shops lean on it with him. It rolls back onto the road.", 4.0)
+	print("UNSTUCK to %.1f,%.1f (%.1f m)" % [bp.x, bp.z, sqrt(best)])
+
+
 ## An e-challan arrives as it does in Coimbatore: an SMS from the police, on his phone.
 ## A crash. Another vehicle: it is shoved (city_traffic.gd), its driver has words, and a hard hit is a rash-driving
 ## complaint (an e-challan) and, while he is on bail, one more thing the inspector hears of. A police checking
@@ -889,6 +974,8 @@ func _crossed_signal(sp: Vector3, state: int) -> void:
 func _on_impact(_zone: String, severity: float, other: Object) -> void:
 	if life and severity >= 0.15:                       # (he feels it: on two wheels, far more)
 		life.add_hurt(severity * (45.0 if car.two_wheeler else 16.0))
+	if hospital:                                        # (a bad one: the 108, the hospital)
+		hospital.crash(severity, car.two_wheeler)
 	var now := Time.get_ticks_msec() / 1000.0
 	var key := other.get_instance_id() if other else 0
 	var again := now - float(_hit_seen.get(key, -99.0)) < 6.0
@@ -1415,6 +1502,7 @@ func _process_timed(dt: float) -> void:
 	_l_down = lk
 	if _torch and (walker == null or not is_instance_valid(_torch)):
 		_torch = null
+	_unstick(get_process_delta_time())
 	var bk := Input.is_key_pressed(KEY_B)
 	if bk and not _b_down and bag and not (store and store.visible):
 		bag.toggle()

@@ -18,6 +18,7 @@ Raw files live in `mapdata/` and are not committed (see .gitignore).
 | `eyebrows01_cc0.zip`, `eyelashes01_cc0.zip`, `system_eye_materials01_cc0.zip` | MakeHuman asset packs | CC0 |
 | `bodyparts05_cc0.zip` — beards and moustaches | MakeHuman asset packs | CC0 |
 | `faceunits01.zip` — ARKit-style facial expressions | MakeHuman functional packs | CC0 |
+| `hair01_cc0.zip` (228 MB, 2026-11-13): five styles kept in vendor/mh_hair01 — two buns (rehmanpolanski_hair_bun_brown, elvs_reverse_french_braid_bun) and braids (elvs_double_mh_braid, elvs_french_braid_variation, elvs_unkempt_french_braid) | https://static.makehumancommunity.org/assets/assetpacks/hair01.html | CC0 |
 
 Only CC0 packs are used, so nothing in the game needs attribution for them. Indian clothing, hair styling, accessories
 and animation are made by our own scripts on top of these bodies.
@@ -41,6 +42,8 @@ models may be used inside the game but not redistributed as standalone files.
 | Indian Woman in Saree | Pixel_Monster (ar.jethin) | Sketchfab Standard | https://sketchfab.com/3d-models/indian-woman-in-saree-b5965a93b03440dea65160f7cbac1fc7 |
 | Mom dress (saree and blouse) | Habib Siddick | CC-BY 4.0 | https://sketchfab.com/3d-models/mom-dress-saree-and-blouse-e5eeac0236714098a27fdbe13aedcb09 |
 | Traditional Saree | Mobin Mithun | CC-BY 4.0 | https://sketchfab.com/3d-models/traditional-saree-c70eeeafd37c4d8aa138b61a45821c25 |
+| Sareewoman | dk8026854 | CC-BY 4.0 | https://sketchfab.com/3d-models/sareewoman-c28105203127478b8e26ad0474083367 (in the game as `sfa_woman_saree_yellow.glb` and `sf_woman_saree_yellow.glb`, made by `tools/sketchfab_living.py`: thinned, scaled, given the game's bones, clips, a face and saree colours) |
+| Pink saree lady 3d model | dk8026854 | CC-BY 4.0 | https://sketchfab.com/3d-models/pink-saree-lady-3d-model-a65d5cf1ae3f4ed2a3a7cb206bec8e81 (in the game as `sfa_woman_saree_pink.glb` and `sf_woman_saree_pink.glb`, made by `tools/sketchfab_living.py`: given a skeleton, the game's clips, a face and saree colours) |
 | FREE Male Fashion Hair collection 02 lowpoly | Vincent Page | CC-BY 4.0 | https://sketchfab.com/3d-models/free-male-fashion-hair-collection-02-lowpoly-bd74c3f6166c41778474cbe0485dda1d |
 | South Indian Men . traditional fit | pranayeesaha0009 | CC-BY 4.0 | https://sketchfab.com/3d-models/south-indian-men-traditional-fit-c57eaa2b3afc4f258a60c4909a419772 |
 | Dhoti-Clad Man in Traditional Indian Attire | ravitejareddy9381 | CC-BY 4.0 | https://sketchfab.com/3d-models/dhoti-clad-man-in-traditional-indian-attire-052dff295ffa40a69628d9960c0580c9 |

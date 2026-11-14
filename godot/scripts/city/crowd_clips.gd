@@ -33,6 +33,13 @@ static func add(person: Node, sex: String) -> bool:
 	var ap := aps[0] as AnimationPlayer
 	if ap.has_animation_library("crowd"):
 		return true
+	if ap.has_animation("Phone"):                       # (a living Sketchfab person: these clips are already hers,
+		var own := AnimationLibrary.new()               #  made for her bones: "crowd/..." the same ones)
+		for pair in _source(sex):
+			if ap.has_animation(pair[0]):
+				own.add_animation(pair[0], ap.get_animation(pair[0]))
+		ap.add_animation_library("crowd", own)
+		return true
 	var skel_path := String(ap.get_node(ap.root_node).get_path_to(sks[0]))
 	var lib := AnimationLibrary.new()
 	for pair in _source(sex):

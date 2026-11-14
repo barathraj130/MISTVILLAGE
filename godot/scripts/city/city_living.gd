@@ -17,6 +17,7 @@ const Prof := preload("res://scripts/drive/prof.gd")
 const Graphics := preload("res://scripts/graphics.gd")
 const CrowdClips := preload("res://scripts/city/crowd_clips.gd")
 const HeadLook := preload("res://scripts/story/head_look.gd")
+const Living := preload("res://scripts/city/sf_living.gd")
 # a conversation's mood: what the talker does by turns with Talk, and how the other takes it (crowd_clips.gd)
 const MOODS := {"friendly": [["crowd/Laugh", "Talk"], ["crowd/Wobble", "crowd/Laugh", "Idle"]],
 	"serious": [["Talk", "crowd/Point"], ["crowd/Nod", "Idle"]],
@@ -57,7 +58,9 @@ func _tick(dt: float) -> void:
 	var off: bool = (city.walker == null and not view_test) or city.get("indoors") or "--livingbench" in OS.get_cmdline_user_args() or (city.story != null and city.story.room != null) \
 		or "--noliving" in OS.get_cmdline_user_args()      # (on foot is a walker; in the car there's none)
 	if ("--livingtest" in OS.get_cmdline_user_args() or "--livingbench" in OS.get_cmdline_user_args()) and city.walker == null and Time.get_ticks_msec() > 8000 and not has_meta("out") \
-			and city.car and city.car.global_position.y < 550.0 and absf(city.car.speed) < 0.5:   # (the car set down first)
+			and city.car and city.car.global_position.y < 550.0 and absf(city.car.speed) < 0.5 \
+			and absf(city.car.linear_velocity.y) < 0.2 and Time.get_ticks_msec() > 12000:   # (the car set down first: not
+			# still dropping onto the road, or it's left in the air)
 		set_meta("out", true)                             # (testing: out of the car, on the footpath)
 		print("LIVING out of the car: %s, driving %s" % [city.toggle_on_foot(), city.driving])
 	if "--livingbench" in OS.get_cmdline_user_args() and city.walker != null:
@@ -99,8 +102,12 @@ func _test(dt: float) -> void:
 			talking += 1 if live[k]["mate"] != "" else 0
 		if _acc_n > 0:
 			print("LIVING average since 12 s: %.1f fps (%.1f ms)" % [_acc_n / _acc_t, _acc_t * 1000.0 / _acc_n])
-		print("LIVING t=%.0f live %d (talking %d) hidden %d, budget %d, nearest figure left %.0f m, %.0f fps" % [_tt, live.size(),
-			talking, hidden.size(), _budget(), _nearest, Engine.get_frames_per_second()])
+		var sf := []                                     # (the Sketchfab people alive among them, sf_living.gd)
+		for k in live:
+			if is_instance_valid(live[k]["node"]) and live[k]["node"].has_meta("living"):
+				sf.append(live[k]["node"].get_meta("living"))
+		print("LIVING t=%.0f live %d (talking %d, Sketchfab %s) hidden %d, budget %d, nearest figure left %.0f m, %.0f fps" % [_tt,
+			live.size(), talking, sf, hidden.size(), _budget(), _nearest, Engine.get_frames_per_second()])
 	if _tt > 22.0 and not has_meta("shot"):
 		set_meta("shot", true)
 		for a in OS.get_cmdline_user_args():
@@ -184,7 +191,18 @@ func _set_xf(mms: Array, i: int, xf: Transform3D) -> void:
 		mi.multimesh.set_instance_transform(i, mi.global_transform.affine_inverse() * xf)
 
 
-func _person(sex: String) -> Node3D:
+func _person(sex: String, kind := "") -> Node3D:
+	var lv := Living.living(kind)                        # a Sketchfab figure: the same person, alive (in her colour)
+	if lv[0] != "":
+		var pk := "%s@%d" % lv
+		if not _pool.has(pk):
+			_pool[pk] = []
+		if not _pool[pk].is_empty():
+			return _pool[pk].pop_back()
+		var ln := Living.make(lv[0], lv[1])
+		if ln:
+			ln.set_meta("pool", pk)
+			return ln
 	if not _pool[sex].is_empty():
 		return _pool[sex].pop_back()
 	var list: Array = WOMEN if sex == "w" else MEN
@@ -196,12 +214,16 @@ func _person(sex: String) -> Node3D:
 		for clip in (a as AnimationPlayer).get_animation_list():
 			(a as AnimationPlayer).get_animation(clip).loop_mode = Animation.LOOP_LINEAR
 	n.set_meta("sex", sex)
+	n.set_meta("pool", sex)
 	return n
 
 
 func _bring(key: String, mms: Array, i: int, xf: Transform3D, nm: String) -> void:
-	var sex := "w" if nm.contains("woman") or nm.contains("women") or nm in ["sf_woman_saree_green", "sf_woman_office", "sf_woman_office2"] else "m"
-	var n := _person(sex)
+	var sex := "w" if nm.contains("woman") or nm.contains("women") else "m"
+	var n := _person(sex, nm)
+	if n.find_children("*", "AnimationPlayer", true, false).is_empty():   # (a model without its clips: a crowd person)
+		n.queue_free()
+		n = _person(sex)
 	if n.get_parent() == null:
 		add_child(n)
 	n.visible = true
@@ -228,7 +250,7 @@ func _put_back(key: String) -> void:
 	var n: Node3D = p["node"]
 	if is_instance_valid(n):
 		n.visible = false
-		_pool[n.get_meta("sex", "m")].append(n)
+		_pool[n.get_meta("pool", n.get_meta("sex", "m"))].append(n)
 	var mate: String = p.get("mate", "")
 	if p.has("group"):                                   # out of the group; one left alone goes back to idling
 		var g: Array = p["group"]

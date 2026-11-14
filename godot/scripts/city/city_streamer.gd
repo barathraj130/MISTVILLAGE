@@ -78,11 +78,14 @@ const POTHOLES := {"trunk": 0.03, "primary": 0.06, "secondary": 0.12, "tertiary"
 	"residential": 0.35, "living_street": 0.3, "service": 0.4}
 var life_names: Array = []                 # life kind → name (index.json life_kinds, then our own extra kinds)
 var bhel_kind := -1                        # the snack cart (life_bhel.glb): it stands in for every third push cart
-## The Sketchfab street crowd (tools/sketchfab_people.py): each stands in for every third standing man / woman of the
-## city's own (always the same person at the same spot); walkers keep their own figures.
+## The Sketchfab street crowd (tools/sketchfab_people.py, tools/sketchfab_living.py): each stands in for every third
+## standing man / woman of the city's own (always the same person at the same spot); walkers keep their own figures.
+## Near Karthik the same person comes alive (city_living.gd, sf_living.gd). "@i": in her colour i (sfa_<name>_t<i-1>.jpg).
 const SF_PEOPLE := {"men": ["sf_man_kurta_blue", "sf_man_kurta_red", "sf_man_suit", "sf_man_office", "sf_man_old_coat",
 		"sf_man_veshti", "sf_man_dhoti"],
-	"women": ["sf_woman_saree_green", "sf_woman_office", "sf_woman_office2"]}
+	"women": ["sf_woman_saree_green", "sf_woman_office", "sf_woman_office2", "sf_woman_saree_yellow",
+		"sf_woman_saree_yellow@1", "sf_woman_saree_yellow@2", "sf_woman_saree_yellow@3", "sf_woman_saree_pink",
+		"sf_woman_saree_pink@1", "sf_woman_saree_pink@2"]}
 const SF_STANDS_FOR := {"street_man_shirt_stand": "men", "street_man_veshti": "men", "street_man_lungi": "men",
 	"street_woman_saree_red": "women", "street_woman_saree_green": "women", "street_woman_saree_blue": "women"}
 var sf_kinds := {}                         # "men" / "women" → their life kind indices
@@ -163,10 +166,14 @@ func _ready() -> void:
 	for group in SF_PEOPLE:
 		sf_kinds[group] = []
 		for nm in SF_PEOPLE[group]:
-			var pp := "res://assets/people/%s.glb" % nm
-			if ResourceLoader.exists(pp):
+			var pp := "res://assets/people/%s.glb" % nm.get_slice("@", 0)
+			var tint := "res://assets/people/sfa_%s_t%d.jpg" % [nm.get_slice("@", 0).substr(3), int(nm.get_slice("@", 1)) - 1]
+			if ResourceLoader.exists(pp) and (not nm.contains("@") or ResourceLoader.exists(tint)):
+				var pm := _scene_mesh(pp)
+				if nm.contains("@"):                           # (her colour: the same mesh, its texture another)
+					pm = _retextured(pm, load(tint) as Texture2D)
 				sf_kinds[group].append(life_meshes.size())
-				life_meshes.append(_with_lods(_scene_mesh(pp)))
+				life_meshes.append(_with_lods(pm))
 				life_far.append(null)
 				life_names.append(nm)
 	for m in life_meshes:
@@ -1574,6 +1581,17 @@ static var _bark: StandardMaterial3D
 
 ## Every mesh of a glTF scene merged into one ArrayMesh (one surface per source surface, transforms baked):
 ## vehicles, people and props come as several parts. Leaf and bark materials get the game's own versions.
+static func _retextured(m: Mesh, tex: Texture2D) -> Mesh:
+	var out := (m as ArrayMesh).duplicate() as ArrayMesh
+	for i in out.get_surface_count():
+		var mat := out.surface_get_material(i)
+		if mat is BaseMaterial3D and (mat as BaseMaterial3D).albedo_texture != null:
+			var dup := (mat as BaseMaterial3D).duplicate() as BaseMaterial3D
+			dup.albedo_texture = tex
+			out.surface_set_material(i, dup)
+	return out
+
+
 static func _scene_mesh(path: String) -> Mesh:
 	if not ResourceLoader.exists(path):
 		return null

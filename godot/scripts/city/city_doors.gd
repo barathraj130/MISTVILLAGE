@@ -331,10 +331,83 @@ func leave(walker: Node3D) -> void:
 		return
 	var d := inside
 	_drop_room()
-	walker.global_position = d["pos"] + d["out"] * 1.4 + Vector3(0, 0.4, 0)
+	var at: Vector3 = d["pos"] + d["out"] * 1.4
+	var road := _road_side(at, d["pos"], d["out"])       # out to the street: on the footpath by the road, facing it
+	if road.is_empty():
+		walker.global_position = at + Vector3(0, 0.4, 0)
+		walker.rotation.y = atan2(-d["out"].x, -d["out"].z)
+	else:
+		walker.global_position = road["pos"] + Vector3(0, 0.4, 0)
+		walker.rotation.y = atan2(-d["out"].x, -d["out"].z)            # (his back to the building, the street before him)
 	walker.velocity = Vector3.ZERO
-	walker.rotation.y = atan2(-d["out"].x, -d["out"].z)
 	print("DOOR out of %s" % d["room"])
+
+
+## The road nearest a door (within 40 m): a place on its edge, the door's side (on the footpath, a step off the
+## carriageway), and which way the road is from there. Empty if there's none near.
+func _road_side(at: Vector3, door := Vector3.INF, out := Vector3.ZERO) -> Dictionary:
+	var s = city.streamer
+	if s == null:
+		return {}
+	var best := INF
+	var bq := Vector3.ZERO
+	var bw := 0.0
+	for k in s.loaded:
+		var node: Node3D = s.loaded[k]
+		if node == null or not is_instance_valid(node):
+			continue
+		for r in node.get_meta("roads", []):
+			if r.get("fly", false) or not str(r["c"]) in ["trunk", "primary", "secondary", "tertiary", "unclassified",
+					"residential", "living_street"]:
+				continue
+			var p: PackedFloat32Array = r["p"]
+			for i in p.size() / 3 - 1:
+				var a := Vector3(p[i * 3], p[i * 3 + 1], p[i * 3 + 2])
+				var b := Vector3(p[i * 3 + 3], p[i * 3 + 4], p[i * 3 + 5])
+				var q := Geometry3D.get_closest_point_to_segment(Vector3(at.x, a.y, at.z), a, b)
+				if door != Vector3.INF and Vector2(q.x - door.x, q.z - door.z).dot(Vector2(out.x, out.z)) < 1.0:
+					continue                                 # (behind the door: a road the building stands over)
+				var dd := Vector2(q.x - at.x, q.z - at.z).length_squared()
+				if dd < best:
+					best = dd
+					bq = q
+					bw = float(r["w"]) * 0.5
+	if best > 40.0 * 40.0:
+		return {}
+	var away := Vector3(at.x - bq.x, 0.0, at.z - bq.z)
+	if away.length() < 0.1:
+		away = Vector3(1, 0, 0)
+	away = away.normalized()
+	var along := away.cross(Vector3.UP)
+	# a place on the road's edge, open to the sky at the street's level: not under a porch or on a roof (a landmark
+	# can stand over the road's line). The door's side first, then along the road both ways, then the far side.
+	for side in [1.0, -1.0]:
+		for step in [0.0, 4.0, -4.0, 8.0, -8.0, 12.0, -12.0, 18.0, -18.0]:
+			var spot: Vector3 = bq + away * side * maxf(bw - 0.8, 0.5) + along * step
+			if door != Vector3.INF and Vector2(spot.x - door.x, spot.z - door.z).dot(Vector2(out.x, out.z)) < 1.0:
+				continue
+			var y := _clear_ground(spot)
+			if not is_nan(y):
+				return {"pos": Vector3(spot.x, y, spot.z), "face": away * side}
+	return {}
+
+
+## The ground at (x, z) if a man can stand there under the open sky: the first thing straight down from high above
+## is level ground near the street's own height, not a roof, a porch or a wall top. NAN otherwise.
+func _clear_ground(p: Vector3) -> float:
+	var s = city.streamer
+	var road_y: float = s.height_at(p.x, p.z) if s else p.y
+	if is_nan(road_y):
+		road_y = p.y
+	var space := (city as Node3D).get_world_3d().direct_space_state
+	var q := PhysicsRayQueryParameters3D.create(Vector3(p.x, road_y + 30.0, p.z), Vector3(p.x, road_y - 5.0, p.z))
+	var hit := space.intersect_ray(q)
+	if hit.is_empty():
+		return NAN
+	var hy: float = hit["position"].y
+	if absf(hy - road_y) > 1.2 or (hit["normal"] as Vector3).y < 0.8:
+		return NAN
+	return hy
 
 
 func _drop_room() -> void:

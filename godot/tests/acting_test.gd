@@ -1,7 +1,7 @@
 extends SceneTree
 ## People acting in conversation (scripts/story/acting.gd, story/emotions.json), on a plain stage with a wide camera:
 ## each scene a few lines with their feelings and gestures, a picture of each line 1.8 s in.
-##   Godot --resolution 1280x720 --script res://tests/acting_test.gd -- --out=DIR
+##   Godot --resolution 1280x720 --script res://tests/acting_test.gd -- --out=DIR [--scene=sf_]
 ## Scenes: a stranger greeted (namaste), a nervous witness questioned, an angry man confronted, three laughing
 ## together, two arguing.
 
@@ -36,6 +36,13 @@ const SCENES := [
 	["argue", {"m": ["crowd_m1", -0.65, 0.0], "w": ["crowd_w2", 0.65, 0.0]}, [
 		{"who": "m", "en": "I paid you yesterday!", "emotion": "angry", "intensity": "medium", "gesture": "argue", "to": "w"},
 		{"who": "w", "en": "No, you didn't.", "emotion": "frustrated", "intensity": "high", "gesture": "shake", "to": "m"}]],
+	# the living Sketchfab people (tools/sketchfab_living.py): their own bones, clips and faces
+	["sf_market", {"karthik": ["story_karthik", -0.7, 0.0], "lady": ["sfa_woman_saree_yellow", 0.7, 0.0]}, [
+		{"who": "karthik", "en": "Vanakkam, amma. Is the post office this way?", "gesture": "namaste", "emotion": "respectful", "to": "lady"},
+		{"who": "lady", "en": "Straight on, then left at the temple.", "gesture": "point", "emotion": "happy", "to": "karthik"}]],
+	["sf_pair", {"a": ["sfa_man_kurta_red", -0.65, 0.0], "b": ["sfa_woman_saree_pink", 0.65, 0.0]}, [
+		{"who": "a", "en": "Did you hear what happened?", "emotion": "curious", "intensity": "medium", "to": "b"},
+		{"who": "b", "en": "Aiyo, don't ask.", "emotion": "sad", "intensity": "medium", "gesture": "wobble", "to": "a"}]],
 ]
 
 
@@ -80,7 +87,13 @@ func _stage() -> void:
 
 func _run() -> void:
 	_stage()
+	var only := ""
+	for a in OS.get_cmdline_user_args():
+		if a.begins_with("--scene="):
+			only = a.get_slice("=", 1)
 	for sc in SCENES:
+		if only != "" and not str(sc[0]).begins_with(only):
+			continue
 		var people := {}
 		for key in sc[1]:
 			var spec: Array = sc[1][key]

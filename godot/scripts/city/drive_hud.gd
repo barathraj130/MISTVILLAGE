@@ -73,8 +73,9 @@ func _draw() -> void:
 				if bad > 0.5:
 					col = Color(0.95, 0.75, 0.2).lerp(Color(0.95, 0.25, 0.2), (bad - 0.5) * 2.0)
 				draw_rect(Rect2(vs1.x - 175, y + 4, 145.0 * float(rows[i][2]), 9), col)
-	if car == null or car.cockpit or car.freeze:           # (on foot: no speedometer)
-		return
+	var c0 = life.city if life and "city" in life else null
+	if car == null or car.cockpit or car.freeze or (c0 and c0.walker != null) or (c0 and c0.indoors):   # (on foot, or
+		return                                                                                         #  inside: none)
 	var vs := get_viewport_rect().size
 	var c := Vector2(vs.x - 150.0, vs.y - 110.0)
 	draw_circle(c, 92.0, Color(0, 0, 0, 0.35))
