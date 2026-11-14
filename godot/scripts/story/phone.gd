@@ -590,6 +590,12 @@ func _take_photo() -> void:
 			if to.length() < float(tg["reach"]) and ang < deg_to_rad(16.0):
 				tag = tg["tag"]
 				label = tg["label"]
+	var gang = city.gang if city and "gang" in city else null
+	if tag == "" and gang and gang.in_view(cam):        # the man who keeps turning up (gang.gd): not evidence, a face
+		label = {"en": "The man in dark grey, again", "ta": "அடர் சாம்பல் சட்டை ஆள், மறுபடியும்"}
+		if city.story:
+			city.story.flags["watcher_photo"] = true
+		print("PHONE a picture of the watcher")
 	visible = false                                    # (the photo is of the world, not of the viewfinder)
 	await RenderingServer.frame_post_draw
 	await RenderingServer.frame_post_draw
