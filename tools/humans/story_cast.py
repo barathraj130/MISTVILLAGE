@@ -730,6 +730,51 @@ def run_phase(a, t):
     turn(a, "neck_01", 'Z', 2.5 * math.sin(w))
 
 
+def _ankles(a):
+    bpy.context.view_layer.update()
+    return min(head_of(a, "foot_l").z, head_of(a, "foot_r").z)
+
+
+def crouch(a, t=None, k=0.0, b=0.0):
+    """Crouched, low (hiding behind a wall, a car): the knees deeply bent, the thighs forward, each sole kept level;
+    the hips come down exactly as far as the legs fold (the lower foot stays on the ground), the chest leans forward
+    over the knees to balance, the head up, the hands loose in front, near the knees. t: a moment of the crouched
+    walk (None standing still): short steps, one foot lifted and set down ahead, the hips rising a little over the
+    standing leg. k, b: the weight shifting and the breath, standing."""
+    z0 = _ankles(a)
+    for side, ph in (("l", 0.25), ("r", 0.75)):
+        hip, knee = 78.0, 112.0
+        lift = 0.0
+        if t is not None:                                  # the step: this leg swings forward through a third of it
+            u = (t - ph) % 1.0
+            swing = math.sin(2.0 * math.pi * u)
+            hip += 22.0 * swing
+            knee += 15.0 * swing
+            lift = max(0.0, math.sin(2.0 * math.pi * u)) * 0.6
+        else:
+            ease = 0.5 + 0.5 * (k if side == "r" else -k)
+            hip += 4.0 * ease
+            knee += 3.0 * ease
+        turn(a, "thigh_" + side, 'Z', (1 if side == "l" else -1) * 12.0)  # knees a little apart
+        turn(a, "thigh_" + side, 'X', -hip)
+        turn(a, "calf_" + side, 'X', knee + 18.0 * lift)
+        turn(a, "foot_" + side, 'X', hip - knee - 18.0 * lift)
+    lower(a, "pelvis", z0 - _ankles(a))                    # (the lower foot back on the ground)
+    bpy.context.view_layer.update()
+    if t is not None:
+        lower(a, "pelvis", 0.02 * (0.5 + 0.5 * math.cos(4.0 * math.pi * (t - 0.25))))
+        bpy.context.view_layer.update()
+    turn(a, "spine_01", 'X', 24.0)                         # leaning over the knees
+    turn(a, "spine_02", 'X', 8.0 - 1.5 * b)
+    turn(a, "neck_01", 'X', -22.0)                         # the head up, watching
+    turn(a, "head", 'X', -8.0)
+    for side, sg in (("l", 1.0), ("r", -1.0)):
+        sw = (sg * math.sin(2.0 * math.pi * (t - 0.05))) if t is not None else 0.0
+        turn(a, "upperarm_" + side, 'X', -28.0 + 8.0 * sw)  # the hands forward, near the knees
+        turn(a, "lowerarm_" + side, 'X', -32.0)
+    turn(a, "head", 'Z', 3.0 * k)
+
+
 def step_turn(a, t):
     """Stepping round on the spot (a 1 s loop): one foot lifted and put down a little turned, then the other, the
     hips turning a few degrees with each step, the arms loose. The game turns the body; this is the feet doing it."""
@@ -1190,6 +1235,9 @@ def loco(arm):
         clip(arm, "Hand" + pose.capitalize(), [(1, lambda a: None), (2, lambda a: None)])
     HAND_NOW = "relaxed"
     clip(arm, "StepTurn", [(1 + k, (lambda kk: (lambda a: step_turn(a, (kk % 24) / 24.0)))(k)) for k in range(25)])
+    clip(arm, "Crouch", [(1 + 12 * i, (lambda ii: (lambda a: crouch(a, None, math.sin(math.pi * 2.0 * ii / 8.0),
+                                                                     math.sin(math.pi * 2.0 * ii / 4.0))))(i)) for i in range(9)])
+    clip(arm, "CrouchWalk", [(1 + k, (lambda kk: (lambda a: crouch(a, (kk % 24) / 24.0)))(k)) for k in range(25)])
     clip(arm, "Tired", [(1 + 9 * k, (lambda kk: (lambda a: tired(a, 1 if kk % 2 else -1)))(k)) for k in range(9)])
 
 

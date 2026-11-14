@@ -78,9 +78,15 @@ const COM := 0.95                   # his centre of mass over his feet, metres (
 signal fell                         # (on the ground: someone may come and help)
 
 
+var _shape: CollisionShape3D
+var _capsule: CapsuleShape3D
+
+
 func _init() -> void:
 	var shape := CollisionShape3D.new()
 	var capsule := CapsuleShape3D.new()
+	_shape = shape
+	_capsule = capsule
 	capsule.radius = 0.25                                # (a person's shoulders; 0.3 jammed on a stair's 30 cm tread)
 	capsule.height = 1.75
 	shape.shape = capsule
@@ -203,6 +209,8 @@ func _physics_process_timed(delta: float) -> void:
 	if not is_on_floor():
 		velocity.y -= gravity * delta
 		_fall_vy = velocity.y
+	if gait and active and _down == 0.0 and InputMap.has_action("crouch") and Input.is_action_just_pressed("crouch"):
+		set_crouch(not gait.crouched)
 	if _down > 0.0:
 		_downed(delta)
 	elif active:
@@ -621,6 +629,11 @@ func _gait_test() -> void:
 	await _gait_phase("spotturn", Vector2(0, -1), "slow", 0.6, side)
 	await _gait_phase("back", Vector2(0, 1), "walk", 0.9, side)
 	await _gait_phase("breath", Vector2.ZERO, "", 4.0, side)
+	set_crouch(true)
+	await _gait_phase("crouch", Vector2.ZERO, "", 2.0, side)
+	await _gait_phase("crouchwalk", Vector2(0, -1), "", 4.0, side)
+	print("GAITTEST up again: %s" % (not set_crouch(false)))
+	await _gait_phase("stood", Vector2.ZERO, "", 1.0, side)
 	auto_input = Vector2.INF
 	auto_pace = ""
 	tree.quit()
@@ -699,3 +712,19 @@ func reach(point: Vector3, pose := "open", hold := 0.35) -> void:
 		tw.tween_method(func(v: float): _model_yaw = lerp_angle(_model_yaw, want, v), 0.0, 1.0, 0.18)
 		await tw.finished
 	await hand_reach.go(point, pose, hold)
+
+
+## Low or up: the capsule shortened to a crouching man's height (1.15 m) or back; standing only where there's room
+## over his head (a ray up the capsule's extra height). Returns whether he's now crouched.
+func set_crouch(low: bool) -> bool:
+	if gait == null or low == gait.crouched:
+		return gait != null and gait.crouched
+	if not low:
+		var q := PhysicsRayQueryParameters3D.create(global_position + Vector3.UP * 1.1, global_position + Vector3.UP * 1.8)
+		q.exclude = [get_rid()]
+		if not get_world_3d().direct_space_state.intersect_ray(q).is_empty():
+			return true                                  # (something over him: he stays down)
+	gait.crouched = low
+	_capsule.height = 1.15 if low else 1.75
+	_shape.position.y = _capsule.height * 0.5
+	return low

@@ -14,6 +14,8 @@ extends Node
 ##              (sim.wet): grass and earth a touch slower, gravel (sand) slow to get going, wet earth is mud (slower,
 ##              no sprint), wet roads a little careful stopping; stairs (his feet at different steps, foot_ik.gd) no
 ##              faster than a jog. No slipping. Each footstep is heard on what it lands on, and wet ground splashes.
+##   crouched   Z: low (the Crouch and CrouchWalk clips, the hips down as far as the knees fold), a crouched step
+##              at most 0.6 m/s, the view lower; up again only where there's room over his head (player.gd).
 ##   his head   looks a little into a turn, at someone near him now and then, about him when he's standing.
 ##   his hands  relaxed in every clip (story_cast.py HANDS: each finger its own curl, the thumb along the index, the
 ##              two hands not mirrored); hand(pose, side) lays a hand's pose over whatever he's doing, only on that
@@ -34,7 +36,9 @@ const SPRINT := 5.6
 const POINTS := [["LocoSlow", SLOW, 1.03], ["LocoWalk", WALK, 1.41], ["LocoFast", FAST, 1.66], ["LocoJog", JOG, 2.2],
 	["LocoSprint", SPRINT, 2.9]]
 const CLIPS := ["LocoSlow", "LocoWalk", "LocoFast", "LocoJog", "LocoSprint", "Idle", "Tired", "StepTurn", "HandOpen", "HandPoint",
-	"HandPhone", "HandPapers", "HandFist", "HandGrip"]
+	"HandPhone", "HandPapers", "HandFist", "HandGrip", "Crouch", "CrouchWalk"]
+const CROUCH := 0.6                   # m/s, crouched (CrouchWalk: ~0.34 m a cycle)
+const CROUCH_CYCLE := 0.34
 
 var p: CharacterBody3D                # player.gd
 var ap: AnimationPlayer
@@ -46,6 +50,8 @@ var surface := "asphalt"              # what's under his feet
 var wet := 0.0
 var on_stairs := false
 var state := "idle"                   # idle, slow, walk, fast, jog, sprint, back, turn (for the debug and the tests)
+var crouched := false                 # low (Z): player.gd shortens him; the Crouch clips here
+var _crouch_w := 0.0
 var backing := false                  # stepping backwards (a short S): facing on, the slow clip reversed
 var _back_t := 0.0
 var _turn_w := 0.0
@@ -117,7 +123,19 @@ func _build(model: Node3D) -> void:
 	root.add_node("out", AnimationNodeBlend2.new())
 	root.connect_node("out", 0, "stand")
 	root.connect_node("out", 1, "cadence")
-	var last := "out"
+	for c in ["Crouch", "CrouchWalk"]:                   # crouched: still, or stepping low (its own pace)
+		var an := AnimationNodeAnimation.new()
+		an.animation = c
+		root.add_node(c.to_lower(), an)
+	root.add_node("ccad", AnimationNodeTimeScale.new())
+	root.connect_node("ccad", 0, "crouchwalk")
+	root.add_node("cmove", AnimationNodeBlend2.new())
+	root.connect_node("cmove", 0, "crouch")
+	root.connect_node("cmove", 1, "ccad")
+	root.add_node("crouchmix", AnimationNodeBlend2.new())
+	root.connect_node("crouchmix", 0, "out")
+	root.connect_node("crouchmix", 1, "cmove")
+	var last := "crouchmix"
 	for side in ["l", "r"]:                              # a hand's own pose over whatever he's doing (hand())
 		var hn := AnimationNodeAnimation.new()
 		hn.animation = "HandOpen"
@@ -237,7 +255,7 @@ func _hands_for_what_he_holds() -> void:
 ## The keys and the stick: the existing actions kept; slow / fast walk and the sprint added if missing; the left
 ## stick on the move actions, if nothing has them yet.
 func _actions() -> void:
-	for pair in [["slow_walk", [KEY_CTRL]], ["fast_walk", [KEY_C]], ["sprint", []]]:
+	for pair in [["slow_walk", [KEY_CTRL]], ["fast_walk", [KEY_C]], ["sprint", []], ["crouch", [KEY_Z]]]:
 		if not InputMap.has_action(pair[0]):
 			InputMap.add_action(pair[0], 0.2)
 			for kc in pair[1]:
@@ -276,6 +294,9 @@ func want(input: Vector2, keys_run: bool) -> float:
 	if n < 0.05:
 		state = "idle"
 		return 0.0
+	if crouched:                                         # (low: no faster than a crouched step)
+		state = "crouch"
+		return CROUCH * clampf(n, 0.4, 1.0) * _ground_mult()
 	var pace := str(p.get("auto_pace"))                  # (testing: a pace held as if from the keys)
 	if pace in ["slow", "walk", "fast", "jog", "sprint"]:
 		state = pace
@@ -395,6 +416,10 @@ func _blend(delta: float, sp: float, turning: float, down: bool) -> void:
 	_tired_w = lerpf(_tired_w, tired, 1.0 - exp(-delta * 2.0))
 	tree.set("parameters/rest/blend_amount", _tired_w)
 	tree.set("parameters/out/blend_amount", _move_w)
+	_crouch_w = move_toward(_crouch_w, 1.0 if crouched else 0.0, delta * 3.5)   # (down or up in about a third of a second)
+	tree.set("parameters/crouchmix/blend_amount", _crouch_w)
+	tree.set("parameters/cmove/blend_amount", _move_w)
+	tree.set("parameters/ccad/scale", maxf(sp, 0.2) / CROUCH_CYCLE)
 	for sd in ["l", "r"]:
 		_hand_w[sd] = move_toward(_hand_w[sd], 1.0 if _hand[sd] != "" else 0.0, delta * 5.0)
 		tree.set("parameters/hand_%s/blend_amount" % sd, _hand_w[sd])
@@ -510,7 +535,7 @@ func _camera(delta: float, sp: float) -> void:
 	_last_y = y
 	_cam_lag = lerpf(_cam_lag, 0.0, 1.0 - exp(-delta * 7.0))
 	if p.head:
-		p.head.position.y = 1.62 - _cam_lag
+		p.head.position.y = lerpf(1.62, 1.05, _crouch_w) - _cam_lag
 	var want_fov := 70.0 + (6.0 if sp > JOG + 0.5 else (2.5 if sp > FAST + 0.4 else 0.0))
 	var want_arm := 3.0 + (0.35 if sp > JOG + 0.5 else (0.15 if sp > FAST + 0.4 else 0.0))
 	_fov = lerpf(_fov, want_fov, 1.0 - exp(-delta * 2.5))
