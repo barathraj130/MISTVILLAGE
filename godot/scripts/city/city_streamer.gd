@@ -1154,6 +1154,7 @@ func _street_edge(kb: Array, faces: PackedVector3Array, a: Vector3, b: Vector3, 
 			Vector2.ZERO, Vector2.ZERO, Vector2.ZERO, Vector2.ZERO, Vector2.ZERO)
 		_quad(kb, d0, d1, _down(g, d1), _down(g, d0), -ra, slab, Vector2.ZERO, Vector2.ZERO, Vector2.ZERO, Vector2.ZERO, Vector2.ZERO)
 		faces.append_array([e0, e1, d1, e0, d1, d0])
+		_apron(kb, faces, g, d0, d1, -ra, -rb, EARTH)
 	elif styp == 5:
 		var w := 0.45
 		var low := Vector3(0, -0.35, 0)
@@ -1178,6 +1179,32 @@ func _street_edge(kb: Array, faces: PackedVector3Array, a: Vector3, b: Vector3, 
 		_quad(kb, e0, e1, g1, g0, Vector3.UP, gravel, Vector2.ZERO, Vector2.ZERO, Vector2.ZERO, Vector2.ZERO, Vector2.ZERO)
 		_quad(kb, g0, g1, _down(g, g1), _down(g, g0), -rd, gravel, Vector2.ZERO, Vector2.ZERO, Vector2.ZERO, Vector2.ZERO, Vector2.ZERO)
 		faces.append_array([e0, e1, g1, e0, g1, g0])
+		_apron(kb, faces, g, g0, g1, -ra, -rb, EARTH)
+
+
+const EARTH := Color(0.42, 0.36, 0.27)
+
+
+## A bank from an edge (p0–p1, a footpath's back, a strip's end) down or up to the ground beyond it, out along
+## o0/o1, no steeper than about 30° (a person walks it; a slot behind a raised footpath trapped him), part of the
+## collision. Its width follows the drop (0.3–2.5 m); "lift" keeps its low end that far above the drawn ground
+## (a junction ramp ends at the road, a touch over the ground there).
+func _apron(kb: Array, faces: PackedVector3Array, g: Array, p0: Vector3, p1: Vector3, o0: Vector3, o1: Vector3,
+		col: Color, lift := 0.02) -> void:
+	var q := []
+	for e in [[p0, o0], [p1, o1]]:
+		var p: Vector3 = e[0]
+		var o: Vector3 = (e[1] as Vector3).normalized()
+		var probe := p + o * 1.0
+		var drop := p.y - (_ground_at(g, probe.x, probe.z) + lift)
+		var w := clampf(absf(drop) / 0.55, 0.3, 2.5)
+		var end := p + o * w
+		end.y = _ground_at(g, end.x, end.z) + lift
+		q.append(end)
+	if absf(p0.y - q[0].y) < 0.06 and absf(p1.y - q[1].y) < 0.06:
+		return                                          # (level with the ground already)
+	_quad(kb, p0, p1, q[1], q[0], Vector3.UP, col, Vector2.ZERO, Vector2.ZERO, Vector2.ZERO, Vector2.ZERO, Vector2.ZERO)
+	faces.append_array([p0, p1, q[1], p0, q[1], q[0]])
 
 
 ## Footpath strips: paver top, a skirt down the outer edge into the ground, and the kerb on the road side
@@ -1248,8 +1275,11 @@ func _walks(walks: Array, out: Dictionary, g: Array) -> void:
 				_quad(top, ai, bi, bo, ao, Vector3.UP, Color.WHITE, Vector2(hw, along) / 2.0, Vector2(hw, along + L) / 2.0,
 					Vector2(-hw, along + L) / 2.0, Vector2(-hw, along) / 2.0, Vector2.ZERO)
 			faces.append_array([ai, bi, bo, ai, bo, ao])
-			_quad(kb, ao, bo, _down(g, bo), _down(g, ao), -rw, col if sep else Color(0.5, 0.48, 0.45), Vector2.ZERO, Vector2.ZERO,
-				Vector2.ZERO, Vector2.ZERO, Vector2.ZERO)
+			if sep:
+				_quad(kb, ao, bo, _down(g, bo), _down(g, ao), -rw, col, Vector2.ZERO, Vector2.ZERO,
+					Vector2.ZERO, Vector2.ZERO, Vector2.ZERO)
+			else:                                        # behind it, a bank to the ground (not a drop: a slot he fell into)
+				_apron(kb, faces, g, ao, bo, -rws[i], -rws[i + 1], EARTH)
 			# kerb: 0.2 m wide, a touch above the footpath, its face dropping to the road
 			var up := Vector3(0, 0.02, 0)
 			var ki := ai + rws[i] * KERB + up
@@ -1286,6 +1316,7 @@ func _walks(walks: Array, out: Dictionary, g: Array) -> void:
 					far_e = pts[q] - rws[q] * hw
 				_quad(kb, near_e, far_e, _down(g, far_e), _down(g, near_e), tq, Color(0.5, 0.48, 0.45),
 					Vector2.ZERO, Vector2.ZERO, Vector2.ZERO, Vector2.ZERO, Vector2.ZERO)
+				_apron(kb, faces, g, far_e, near_e, tq, tq, Color(0.6, 0.59, 0.56), 0.12)   # a kerb ramp at the junction
 	if not seps.is_empty():
 		var smm := _MM.new()
 		smm.transform_format = MultiMesh.TRANSFORM_3D

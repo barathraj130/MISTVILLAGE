@@ -19,7 +19,7 @@ extends CharacterBody3D
 const Prof := preload("res://scripts/drive/prof.gd")
 const Settings := preload("res://scripts/settings.gd")
 
-const STEP_HEIGHT := 0.35          # stone steps and kerbs are 15–25 cm
+const STEP_HEIGHT := 0.6           # stone steps 15–25 cm; a footpath stands up to 0.57 over the road: a big step, but a step
 
 @export var walk_speed := 1.4       # a person's pace: the Walk clip covers 1.18–1.5 m a cycle, so feet don't slide
 @export var run_speed := 4.2        # a run: the Run clip covers 3.9–5.5 m

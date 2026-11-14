@@ -10,7 +10,9 @@ extends Node
 ## Printed per kind, with where; the worst of each pictured (user://audit_<kind>_<n>.jpg). Spots: --auditat=x,z;...
 ## (default: where the city starts and three more round Gandhipuram). Development only.
 ##   --streetaudit
-const STEP := 0.35                    # player.gd STEP_HEIGHT
+##   --streetwalk   then Karthik himself, at 40 of the cross-sections: from the road's middle out across the footpath
+##                  4 m past it, and back; where he can't get out, or can't get back to the road (stuck), counted
+const STEP := 0.6                     # player.gd STEP_HEIGHT
 
 var city
 var found := {"hole": [], "uneven": [], "step": [], "trench": [], "no_ground": []}
@@ -22,11 +24,24 @@ func _ready() -> void:
 
 
 func _ray(x: float, z: float, y: float) -> float:
-	var q := PhysicsRayQueryParameters3D.create(Vector3(x, y + 30.0, z), Vector3(x, y - 12.0, z))
+	var ex: Array[RID] = []
 	if city.car:
-		q.exclude = [city.car.get_rid()]
-	var hit := get_viewport().get_world_3d().direct_space_state.intersect_ray(q)
-	return float(hit["position"].y) if not hit.is_empty() else NAN
+		ex.append(city.car.get_rid())
+	var space := get_viewport().get_world_3d().direct_space_state
+	for k in 6:                                          # the city's own ground only: through cars, people, poles
+		var q := PhysicsRayQueryParameters3D.create(Vector3(x, y + 4.0, z), Vector3(x, y - 12.0, z))
+		q.exclude = ex
+		var hit := space.intersect_ray(q)
+		if hit.is_empty():
+			return NAN
+		var co = hit["collider"]
+		if co is StaticBody3D and not (co is CollisionObject3D and (co as Node).name.begins_with("Parked")):
+			var oid := (co as CollisionObject3D).shape_find_owner(int(hit["shape"]))
+			var sn = (co as CollisionObject3D).shape_owner_get_owner(oid) if oid >= 0 else null
+			if sn == null or sn is Node and (sn as Node).has_meta("surface"):
+				return float(hit["position"].y)
+		ex.append(hit["rid"])                            # (a parked car's server-made body has no node: its RID)
+	return NAN
 
 
 func _run() -> void:
@@ -47,17 +62,28 @@ func _run() -> void:
 		city.car.global_position = Vector3(sp.x, 600.0, sp.y)
 		city.streamer.target = city.car
 		await tree.create_timer(6.0).timeout             # (the tiles round it load)
-		for k in city.streamer.loaded:
+		for k in city.streamer.loaded.keys():
 			if done.has(k):
 				continue
 			done[k] = true
-			for r in (city.streamer.loaded[k] as Node3D).get_meta("roads", []):
+			var node = city.streamer.loaded.get(k)
+			if node == null or not is_instance_valid(node):   # (unloaded while we measured another)
+				continue
+			for r in (node as Node3D).get_meta("roads", []):
 				if r.get("fly", false):
 					continue
 				_road(r)
 				if sections % 200 == 0:
 					await tree.process_frame
 	var lines := ["AUDIT %d cross-sections over %d tiles" % [sections, done.size()]]
+	for kind in ["step", "trench"]:
+		var hist := {}
+		for e in found[kind]:
+			var b := snappedf(float(e[2]), 0.1)
+			hist[b] = int(hist.get(b, 0)) + 1
+		var ks := hist.keys()
+		ks.sort()
+		lines.append("AUDIT %s heights: %s" % [kind, ", ".join(ks.map(func(k): return "%.1f m %d" % [k, hist[k]]))])
 	for kind in found:
 		var arr: Array = found[kind]
 		lines.append("AUDIT %-9s %5d (%.1f%%)%s" % [kind, arr.size(), 100.0 * arr.size() / maxf(sections, 1.0),
@@ -70,6 +96,8 @@ func _run() -> void:
 		for kind in found:
 			out[kind] = (found[kind] as Array).map(func(e): return [e[0].x, e[0].y, e[0].z, e[1]])
 		f.store_string(JSON.stringify(out))
+	if "--streetwalk" in OS.get_cmdline_user_args():
+		await _walks()
 	for kind in found:                                   # the worst of each, pictured
 		var arr: Array = found[kind]
 		arr.sort_custom(func(a, b): return float(a[2]) > float(b[2]))
@@ -78,31 +106,38 @@ func _run() -> void:
 	tree.quit()
 
 
-## One road: a cross-section every 8 m along it.
+## One road: a cross-section every 8 m along it, not within 8 m of its ends (a junction's mouth: the other roads
+## cross there).
 func _road(r: Dictionary) -> void:
 	var p: PackedFloat32Array = r["p"]
 	var hw := float(r.get("w", 6.0)) * 0.5
 	var n := p.size() / 3
-	var carry := 0.0
+	var total := 0.0
+	for i in n - 1:
+		total += Vector3(p[i * 3], 0, p[i * 3 + 2]).distance_to(Vector3(p[i * 3 + 3], 0, p[i * 3 + 5]))
+	var at := 0.0
+	var next := 8.0
 	for i in n - 1:
 		var a := Vector3(p[i * 3], p[i * 3 + 1], p[i * 3 + 2])
 		var b := Vector3(p[i * 3 + 3], p[i * 3 + 4], p[i * 3 + 5])
-		var seg := a.distance_to(b)
-		if seg < 0.1:
+		var seg := Vector3(a.x, 0, a.z).distance_to(Vector3(b.x, 0, b.z))
+		if seg < 0.05:
 			continue
 		var d := Vector3(b.x - a.x, 0.0, b.z - a.z).normalized()
 		var side := Vector3(d.z, 0.0, -d.x)
-		var s := 8.0 - carry
-		while s < seg:
-			var c := a.lerp(b, s / seg)
-			if s > 6.0 and s < seg - 6.0:                 # (not in a junction's mouth: the other roads cross there)
-				_section(c, d, side, hw)
-			s += 8.0
-		carry = seg - (s - 8.0)
+		while next <= at + seg:
+			if next < total - 8.0:
+				_section(a.lerp(b, (next - at) / seg), d, side, hw)
+			next += 8.0
+		at += seg
+
+
+var _xs: Array = []                   # [centre, side, half-width] of every cross-section (for --streetwalk)
 
 
 func _section(c: Vector3, along: Vector3, side: Vector3, hw: float) -> void:
 	sections += 1
+	_xs.append([c, side, hw])
 	var mid := _ray(c.x, c.z, c.y)
 	if is_nan(mid) or absf(mid - c.y) > 1.5:
 		found["hole"].append([c, "mid %s" % ("none" if is_nan(mid) else "%.1f m off" % (mid - c.y)), 9.0, along])
@@ -149,8 +184,8 @@ func _section(c: Vector3, along: Vector3, side: Vector3, hw: float) -> void:
 			elif not rose and rise > 0.08 and rise <= STEP and ex < hw + 2.5:
 				rose = true
 				foot = ey
-			elif rose and not is_nan(foot) and foot - ey > 0.3 and ey > foot - 2.0:   # behind the footpath, a dip
-				found["trench"].append([c + side * (sg * ex), "%.2f m down" % (foot - ey), foot - ey, along])
+			elif rose and prev - ey > 0.25 and prev - ey < 2.0:   # behind the footpath, a sudden drop (a bank is fine)
+				found["trench"].append([c + side * (sg * ex), "%.2f m down" % (prev - ey), prev - ey, along])
 				break
 			elif rise > 2.0:                              # (a wall: the footpath's end)
 				break
@@ -174,3 +209,55 @@ func _picture(at: Vector3, along: Vector3, name: String) -> void:
 	img.resize(img.get_width() / 2, img.get_height() / 2)
 	img.save_jpg(ProjectSettings.globalize_path("user://%s.jpg" % name), 0.85)
 	cam.queue_free()
+
+
+## Karthik walking it: out from the road's middle to 4 m past its edge, and back.
+func _walks() -> void:
+	var tree := get_tree()
+	city.car.global_position = Vector3(0, 600, 0)
+	city.car.freeze = true
+	if city.walker == null:
+		city.car.global_position = Vector3(_xs[0][0].x, _xs[0][0].y + 1.0, _xs[0][0].z)
+		await tree.physics_frame
+		city.toggle_on_foot()
+	var w = city.walker
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 5
+	var out_fail := 0
+	var back_fail := 0
+	var tries := 0
+	var fails := []
+	for k in 40:
+		var x: Array = _xs[rng.randi() % _xs.size()]
+		var c: Vector3 = x[0]
+		var sd: Vector3 = x[1] * (1.0 if rng.randf() < 0.5 else -1.0)
+		var hw: float = x[2]
+		city.streamer.target = w
+		w.global_position = c + Vector3.UP * 0.6
+		w.velocity = Vector3.ZERO
+		await tree.create_timer(0.6).timeout
+		var start: Vector3 = w.global_position
+		w.rotation.y = atan2(-sd.x, -sd.z)                # (the view along the way out: the keys' forward)
+		w.auto_input = Vector2(0, -1)
+		var t := 0.0
+		while t < 8.0 and (w.global_position - start).dot(sd) < hw + 4.0:
+			await tree.physics_frame
+			t += get_physics_process_delta_time()
+		var got: float = (w.global_position - start).dot(sd)
+		w.rotation.y = atan2(sd.x, sd.z)
+		t = 0.0
+		while t < 8.0 and (w.global_position - start).dot(sd) > 0.5:
+			await tree.physics_frame
+			t += get_physics_process_delta_time()
+		var back: float = (w.global_position - start).dot(sd)
+		w.auto_input = Vector2.ZERO
+		tries += 1
+		if got < hw + 3.0:
+			out_fail += 1
+			fails.append("%.0f,%.0f out only %.1f of %.1f m" % [c.x, c.z, got, hw + 4.0])
+		elif back > 1.0:
+			back_fail += 1
+			fails.append("%.0f,%.0f stuck %.1f m off the road" % [c.x, c.z, back])
+	print("AUDIT walking: %d tries, %d couldn't get out past the footpath, %d couldn't get back to the road" % [tries, out_fail, back_fail])
+	for f in fails.slice(0, 12):
+		print("AUDIT   " + f)

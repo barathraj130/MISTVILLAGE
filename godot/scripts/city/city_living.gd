@@ -184,8 +184,10 @@ func _scan() -> void:
 func _set_xf(mms: Array, i: int, xf: Transform3D) -> void:
 	var done := {}
 	for m in mms:
+		if not is_instance_valid(m):                     # (its tile unloaded: a teleport across the city)
+			continue
 		var mi := m as MultiMeshInstance3D
-		if not is_instance_valid(mi) or done.has(mi.multimesh):
+		if done.has(mi.multimesh):
 			continue
 		done[mi.multimesh] = true
 		mi.multimesh.set_instance_transform(i, mi.global_transform.affine_inverse() * xf)
