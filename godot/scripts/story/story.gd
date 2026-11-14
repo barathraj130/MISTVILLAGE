@@ -58,6 +58,7 @@ const Sim := preload("res://scripts/drive/sim.gd")
 const Tasks := preload("res://scripts/story/tasks.gd")
 const Table := preload("res://scripts/story/table.gd")
 const Wall := preload("res://scripts/story/wall.gd")
+const Interact := preload("res://scripts/story/interactable.gd")
 const Dvr := preload("res://scripts/story/dvr.gd")
 const Doorbell := preload("res://scripts/story/doorbell.gd")
 const Keypad := preload("res://scripts/story/keypad.gd")
@@ -163,6 +164,7 @@ var _knock_t := 0.0
 var _note := ""                       # home: a line under the goal for a few seconds (the car's HUD is off indoors)
 var _note_t := 0.0
 var room: Node3D                    # the room a scene is playing in, under the street
+var interact: Node3D                # its things he can use on foot (interactable.gd), if it has any
 var face_light: SpotLight3D         # a soft key light on whoever is speaking (close-ups)
 const ROOMS := "res://assets/interiors/room_%s.glb"
 
@@ -1097,6 +1099,7 @@ func _load_room(name: String, at_key: String) -> void:
 			l.light_color = Color(1.0, 0.97, 0.92)
 			l.position = lp
 			room.add_child(l)
+	interact = Interact.attach(room, name, city, self)
 	city.indoors = true
 
 
@@ -2283,6 +2286,10 @@ func _walk_out() -> void:
 func _home() -> void:
 	if _in_task or city.walker == null:
 		return
+	if interact and is_instance_valid(interact) and interact.busy:   # (looking close at something in the room)
+		_e_down = true
+		goal.text = ""
+		return
 	var v: Dictionary = cur["visits"][_visit]
 	if cur.has("knock"):                                 # someone at the door, knocking until it's opened
 		_knock_t -= get_process_delta_time()
@@ -2341,13 +2348,19 @@ func _home() -> void:
 		_peek = -2 - _visit
 		t_step = 0.0                                    # (the meal card opens a second after the picture)
 		_shot()
+	var use := ""                                        # (not at the visit's place: the room's things, interactable.gd)
+	if not near and interact and is_instance_valid(interact):
+		use = interact.offer(city.walker)
 	if (near and e and not _e_down) or (_skip and t_step > 1.0):
 		t_step = 0.0
 		_peek = -1
 		_start_visit(v)
+	elif use != "" and e and not _e_down:
+		interact.go(city.walker)
 	_e_down = e
 	_note_t -= get_process_delta_time()
 	goal.text = tr_(v.get("goal", "")) + ("\n" + ("E: " if lang == "en" else "E: ") + tr_(v.get("prompt", {"en": "go", "ta": "போ"})) if near else "") \
+		+ ("\nE: " + use if use != "" else "") \
 		+ ("\n" + _note if _note_t > 0.0 else "") + ("\nF: " + pay if pay != "" else "")
 
 

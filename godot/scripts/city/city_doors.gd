@@ -27,6 +27,7 @@ const ROOM_MODEL := {"medical": "kirana", "hardware": "kirana"}
 ## Rooms with a counter to buy things at (goods.gd STOCK), by the shopkeeper ("Staff").
 const COUNTERS := ["kirana", "medical", "hardware", "fuel"]
 const Goods := preload("res://scripts/city/goods.gd")
+const Interact := preload("res://scripts/story/interactable.gd")
 const HOMES := ["house_mid", "house_old", "house_flat", "house_mid", "house_flat"]   # (Karthik's own "home" is the story's)
 const KIT_ROOM := {"apartment": "house_flat", "bungalow": "house", "city_house": "house", "tn_house": "house", "hill_cottage": "house",
 	"commercial": "office", "shop_house": "shop", "hotel": "hotel", "mill_shed": "office"}
@@ -43,6 +44,7 @@ const NAMES := {"home": "Karthik's house", "house_mid": "the house", "house_old"
 var city                             # city_test.gd: walker, streamer, story, indoors
 var inside := {}                     # the door you came in by, while you're inside
 var _room: Node3D
+var _things: Node3D                  # the room's things he can use (interactable.gd), if it has any
 var _exit := Vector3.ZERO
 var _near := {}                      # the door you're standing at, if any
 var _t := 0.0
@@ -139,10 +141,18 @@ func _process_timed(dt: float) -> void:
 		var pay: String = money.offer(inside["room"], _room, w.global_position) if money and not at_door and sign == "" else ""
 		if pay != "":
 			sign = pay
+		if _things and is_instance_valid(_things) and _things.busy:
+			_label.text = ""
+			return
+		var use: String = _things.offer(w) if _things and is_instance_valid(_things) and not at_door and todo.is_empty() and sign == "" else ""
+		if use != "":
+			sign = use
 		_label.text = ("Inside %s · E: go out" % NAMES.get(inside["room"], "the building")) if at_door else \
 			("E: %s" % todo["offer"] if not todo.is_empty() else ("E: " + sign if sign != "" else ""))
 		if at_door and pressed:
 			leave(w)
+		elif pressed and use != "":
+			_things.go(w)
 		elif pressed and pay != "":
 			money.go()
 		elif pressed and sign != "":
@@ -317,6 +327,7 @@ func enter(d: Dictionary, walker: Node3D) -> void:
 				if ap.has_animation("Idle"):
 					ap.get_animation("Idle").loop_mode = Animation.LOOP_LINEAR
 					ap.play("Idle")
+	_things = Interact.attach(_room, ROOM_MODEL.get(d["room"], d["room"]), city, city.story if "story" in city else null)
 	var at: Vector3 = entry.global_position if entry else _room.global_position
 	var into := (_room.global_position - at)
 	walker.global_position = at + Vector3(0, 0.15, 0) + Vector3(into.x, 0, into.z).normalized() * 0.8

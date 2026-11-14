@@ -405,7 +405,7 @@ func _ready() -> void:
 		var self_test := false                      # (a self-test never writes your saved game: wallet, challans, weather)
 		for flag in ["--testdrive", "--carshot", "--trafficshot", "--crashtest", "--peopletest", "--parkedtest",
 				"--potholetest", "--flyover", "--clock=", "--weather=", "--nohud", "--doortest", "--threattest", "--surfacetest", "--jointest", "--walkertest", "--activitytest",
-				"--hospitaltest", "--citizentest", "--interviewtest", "--unsticktest", "--livingtest", "--livingbench", "--hospitalat", "--shotview"]:
+				"--hospitaltest", "--citizentest", "--interviewtest", "--unsticktest", "--livingtest", "--livingbench", "--hospitalat", "--shotview", "--interacttest"]:
 			self_test = self_test or " ".join(args).contains(flag)
 		fines.persist = not self_test
 		hud = DriveHud.new()
