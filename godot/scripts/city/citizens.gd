@@ -36,6 +36,8 @@ var _places := {}                       # place key → Vector2
 var _t := 0.0
 var _astar := AStar3D.new()
 var _graph_sig := ""
+var _graph_want := ""                   # the tiles waited for (they settle before the graph is built)
+var _graph_wait := 0.0
 var _spots := {}                        # place key or "x,z" → [Vector3 on the footpath, facing]
 var _slots := {}                        # place → the ids that stand there, in the order they came: their slot
 var _label: Label
@@ -192,7 +194,7 @@ func _bring(c: Dictionary, at: Vector3) -> void:
 		return
 	add_child(n)
 	n.name = "Citizen_" + str(p["id"])
-	n.global_position = at
+	n.global_position = Vector3(at.x, _ground(at, at.y), at.z)
 	var aps := n.find_children("*", "AnimationPlayer", true, false)
 	if aps.is_empty():
 		n.queue_free()
@@ -209,6 +211,13 @@ func _bring(c: Dictionary, at: Vector3) -> void:
 	c["node"] = n
 	c["anim"] = aps[0]
 	c["gest"] = randf_range(3.0, 8.0)
+
+
+## The height to stand at: the footpath's own, unless the ground there is higher (some footpaths' lines lie under
+## the ground the city built: the map's heights and the streets' differ); a footpath on a flyover stays up.
+func _ground(p: Vector3, path_y: float) -> float:
+	var g: float = city.streamer.height_at(p.x, p.z) if city.streamer else NAN
+	return path_y if is_nan(g) else maxf(path_y, g)
 
 
 func _away(c: Dictionary) -> void:
@@ -235,7 +244,7 @@ func _move(c: Dictionary, dt: float) -> void:
 			return
 		var step := d.normalized() * minf(PACE * dt, d.length())
 		n.global_position += step
-		n.global_position.y = lerpf(n.global_position.y, tgt.y, 1.0 - exp(-dt * 6.0))
+		n.global_position.y = lerpf(n.global_position.y, _ground(n.global_position, tgt.y), 1.0 - exp(-dt * 6.0))
 		n.rotation.y = lerp_angle(n.rotation.y, atan2(d.x, d.z), 1.0 - exp(-dt * 8.0))
 		return
 	var face: float = c.get("face", n.rotation.y)
@@ -293,18 +302,32 @@ func _play(c: Dictionary, clip: String, blend := 0.3) -> void:
 ## and across the road where one path's end faces another's (6–20 m: where the city's walkers cross).
 func _graph() -> void:
 	var s = city.streamer
-	var sig := "%d" % s.loaded.size()
+	var me: Vector3 = s.target.global_position
+	var c := Vector2i(floori(me.x / s.tile), floori(me.z / s.tile))
+	var keys: Array = []                                # (the tiles round him only: 3 × 3)
 	for k in s.loaded:
-		sig += str(k)
-	if sig == _graph_sig:
+		if absi(k.x - c.x) <= 1 and absi(k.y - c.y) <= 1:
+			keys.append(k)
+	keys.sort()
+	var sig := str(keys)
+	if sig != _graph_sig:                                # (streets still arriving: wait till they've settled)
+		if sig != _graph_want:
+			_graph_want = sig
+			_graph_wait = 1.5
+			return
+		_graph_wait -= 0.5
+		if _graph_wait > 0.0 and _astar.get_point_count() > 0:
+			return
+	else:
 		return
 	_graph_sig = sig
+	var t0 := Time.get_ticks_usec()
 	_astar.clear()
 	_spots.clear()
 	var grid := {}
 	var ends: Array = []
 	var id := 0
-	for k in s.loaded:
+	for k in keys:
 		var node: Node3D = s.loaded[k]
 		if node == null or not is_instance_valid(node):
 			continue
@@ -351,7 +374,10 @@ func _graph() -> void:
 						var dd := v.distance_to(_astar.get_point_position(f))
 						if dd > 6.0 and dd < 20.0:
 							_astar.connect_points(e, f)
-	print("CITIZENS footpath graph: %d points" % _astar.get_point_count())
+	print("CITIZENS footpath graph: %d points in %d tiles, %.1f ms" % [_astar.get_point_count(), keys.size(), (Time.get_ticks_usec() - t0) / 1000.0])
+	for p in people:                                    # (the old points are gone: new routes)
+		if p["node"] != null:
+			p["place"] = ""
 
 
 func _spot_near(at: Vector3) -> Vector3:
@@ -439,8 +465,9 @@ func _run_test(dt: float) -> void:
 	if not has_meta("set") and city.fines and city.walker == null and Time.get_ticks_msec() > 12000 \
 			and city.car.global_position.y < 550.0 and absf(city.car.linear_velocity.y) < 0.2:
 		set_meta("set", true)
-		var hm := _test.split(":")
-		city.fines.sim.minute = float(hm[0]) * 60.0 + (float(hm[1]) if hm.size() > 1 else 0.0)
+		if not " ".join(OS.get_cmdline_user_args()).contains("--clock="):   # (--clock= sets it with the sky)
+			var hm := _test.split(":")
+			city.fines.sim.minute = float(hm[0]) * 60.0 + (float(hm[1]) if hm.size() > 1 else 0.0)
 		city.toggle_on_foot()
 		if city.walker:                                  # (at Gandhipuram itself, by Kovai Tiffin Centre)
 			var y: float = city.streamer.height_at(-250.0, 125.0)
@@ -453,7 +480,9 @@ func _run_test(dt: float) -> void:
 		for c in people:
 			if c["node"] != null:
 				seen += 1
-				parts.append("%s %s" % [c["d"]["id"], c["act"]])
+				var np: Vector3 = (c["node"] as Node3D).global_position
+				var gy: float = city.streamer.height_at(np.x, np.z)
+				parts.append("%s %s (%+.1f m)" % [c["d"]["id"], c["act"], np.y - gy])
 		print("CITIZENTEST %s: %d near (%s); graph %d" % [city.fines.sim.clock_text(_now()) if city.fines else "",
 			seen, ", ".join(parts), _astar.get_point_count()])
 		if _shots != "" and seen > 0 and not has_meta("portraits") and Time.get_ticks_msec() > 40000:
