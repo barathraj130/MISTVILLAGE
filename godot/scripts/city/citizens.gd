@@ -31,6 +31,7 @@ const CrowdClips := preload("res://scripts/city/crowd_clips.gd")
 const Living := preload("res://scripts/city/sf_living.gd")
 const HeadLook := preload("res://scripts/story/head_look.gd")
 const DATA := "res://story/citizens.json"
+const KNOW := "res://story/knowledge.json"
 const STORY := "res://story/slice.json"
 const NEAR := 70.0
 const FAR := 100.0
@@ -46,6 +47,12 @@ const SEEN := ["walk", "open", "work", "close", "guard", "wait", "chat", "shop"]
 var city
 var people: Array = []                  # [{data, act, at (Vector3), node, path, ...}]
 var say := {}
+var know := {}                          # knowledge.json: topics, records, dont_know
+var heard: Array = []                   # the records he's been told (ids), kept in the save
+var _iv := {}                           # the citizen he's interviewing (empty: none)
+var _iv_page := "topics"
+var _iv_opts: Array = []                # [label, action]
+var _iv_box: Label
 var _places := {}                       # place key → Vector2
 var _t := 0.0
 var _astar := AStar3D.new()
@@ -73,6 +80,7 @@ func _ready() -> void:
 		var p: Dictionary = story["places"][k]
 		_places[k] = Vector2(float(p.get("x", 0.0)), float(p.get("z", 0.0)))
 	say = d.get("say", {})
+	know = JSON.parse_string(FileAccess.get_file_as_string(KNOW))
 	var cast: Dictionary = story.get("people", {})
 	for p in d.get("people", []):
 		if p.has("story") and not p.has("model"):         # (a story person: the model the story gives him)
@@ -112,7 +120,14 @@ func _ready() -> void:
 				_test = _test.get_slice("@", 0)
 		if a.begins_with("--shots="):
 			_shots = a.get_slice("=", 1)
-	print("CITIZENS %d people" % people.size())
+	_iv_box = Label.new()                               # the questions he can ask (an interview)
+	_iv_box.add_theme_font_size_override("font_size", 17)
+	_iv_box.add_theme_color_override("font_shadow_color", Color(0, 0, 0, 0.95))
+	_iv_box.add_theme_constant_override("shadow_offset_x", 2)
+	_iv_box.add_theme_constant_override("shadow_offset_y", 2)
+	cl.add_child(_iv_box)
+	_load_heard.call_deferred()
+	print("CITIZENS %d people, %d things known" % [people.size(), know.get("records", []).size()])
 
 
 func _now() -> float:
@@ -705,6 +720,10 @@ func _greet(me: Vector3) -> void:
 	var pressed := e and not _e_down
 	_e_down = e
 	_label.text = ""
+	if not _iv.is_empty():
+		if w == null or _iv["node"] == null or not is_instance_valid(_iv["node"]) or (_iv["node"] as Node3D).global_position.distance_to(w.global_position) > 4.0:
+			_end_interview()
+		return
 	if w == null or city.get("indoors"):
 		return
 	var best: Dictionary = {}
@@ -734,6 +753,177 @@ func _greet(me: Vector3) -> void:
 		if city.hud:
 			city.hud.say(nm, line, 4.0)
 		print("CITIZENS %s (%s) to Karthik: %s" % [nm, best["act"], line])
+		if str(best["act"]) != "walk":                   # (one in a hurry won't stop to talk)
+			interview(best)
+
+
+# ---- interviews -------------------------------------------------------------------------------------------------
+
+func _lang() -> String:
+	return city.story.lang if city.story and "lang" in city.story else "en"
+
+
+func _tx(d) -> String:
+	return str(d.get(_lang(), d.get("en", ""))) if d is Dictionary else str(d)
+
+
+func _flag(k: String) -> bool:
+	if city.story == null or not (city.story.get("flags") is Dictionary):
+		return false
+	return bool(city.story.flags.get(k, false))
+
+
+## Talking with one of them: what he can ask (the topics he knows of), or something of his to show them.
+func interview(c: Dictionary) -> void:
+	_iv = c
+	_iv_page = "topics"
+	if city.walker:
+		city.walker.active = false
+	c["gather_t"] = 0.0
+	_play(c, "Idle")
+	_menu()
+
+
+func _end_interview() -> void:
+	if city.walker:
+		city.walker.active = true
+	_iv = {}
+	_iv_box.text = ""
+
+
+func _menu() -> void:
+	_iv_opts = []
+	if _iv_page == "topics":
+		for tp in know.get("topics", []):
+			if tp.has("needs") and not _flag(str(tp["needs"])):
+				continue
+			_iv_opts.append([_tx(tp), "ask:" + str(tp["key"])])
+		var ev: Dictionary = city.story.get("evidence") if city.story and city.story.get("evidence") is Dictionary else {}
+		if not ev.is_empty():
+			_iv_opts.append(["Show something" if _lang() == "en" else "எதையாவது காட்டு", "page:evidence"])
+		_iv_opts.append(["Thank them and go" if _lang() == "en" else "நன்றி சொல்லிட்டு போ", "bye"])
+	else:
+		var ev2: Dictionary = city.story.get("evidence")
+		for tag in ev2:
+			_iv_opts.append([_tx(ev2[tag].get("title", {"en": tag})), "ask:evidence:" + str(tag)])
+		_iv_opts.append(["Back" if _lang() == "en" else "பின்னால", "page:topics"])
+	var nm: String = _tx(_iv["d"]["name"])
+	var lines: Array = [("Ask %s:" if _lang() == "en" else "%s-கிட்ட கேளு:") % nm]
+	for i in _iv_opts.size():
+		lines.append("%d  %s" % [i + 1, _iv_opts[i][0]])
+	_iv_box.text = "\n".join(lines)
+	var vs := get_viewport().get_visible_rect().size
+	_iv_box.position = Vector2(vs.x * 0.06, vs.y * 0.42)
+
+
+func _input(e: InputEvent) -> void:
+	if _iv.is_empty() or not (e is InputEventKey) or not e.pressed or e.echo:
+		return
+	var k: int = (e as InputEventKey).keycode
+	if k == KEY_ESCAPE or k == KEY_E:
+		_end_interview()
+		get_viewport().set_input_as_handled()
+		return
+	var n := k - KEY_1
+	if n >= 0 and n < _iv_opts.size():
+		get_viewport().set_input_as_handled()
+		_choose(str(_iv_opts[n][1]))
+
+
+func _choose(a: String) -> void:
+	if a == "bye":
+		_play(_iv, "crowd/Nod", 0.2)
+		_end_interview()
+		return
+	if a.begins_with("page:"):
+		_iv_page = a.substr(5)
+		_menu()
+		return
+	ask(_iv, a.substr(4))
+	_menu()
+
+
+## What they say to a question, from what they know: seen or heard, sure or not; nothing if they don't know (they
+## say so). What he's told goes in his phone's notes, with when and where and how they came by it; one that doesn't
+## fit something he's already been told, he notices (a thought); one that names someone else, he notes the name.
+func ask(c: Dictionary, topic: String) -> Dictionary:
+	var who := str(c["d"]["id"])
+	var nm: String = _tx(c["d"]["name"])
+	var rec: Dictionary = {}
+	for r in know.get("records", []):
+		if str(r["who"]) == who and str(r["topic"]) == topic:
+			rec = r
+	if rec.is_empty():
+		var dk: Array = know.get("dont_know", {}).get(_lang(), ["I don't know."])
+		if city.hud:
+			city.hud.say(nm, dk[randi() % dk.size()], 3.5)
+		_play(c, "crowd/Shrug" if randf() < 0.6 else "crowd/Shake", 0.2)
+		print("CITIZENS asked %s about %s: doesn't know" % [who, topic])
+		return {}
+	if city.hud:
+		city.hud.say(nm, _tx(rec["text"]), 6.0)
+	_play(c, "Talk" if bool(rec.get("firsthand", false)) else "crowd/Shrug", 0.2)
+	c["gest"] = 5.0
+	if not str(rec["id"]) in heard:
+		heard.append(str(rec["id"]))
+		_note(rec)
+		_save_heard()
+	var thought := ""
+	if rec.has("contradicts") and str(rec["contradicts"]) in heard:
+		var other := _rec(str(rec["contradicts"]))
+		var on: String = _tx(_person(str(other.get("who", "")))["name"]) if not other.is_empty() else ""
+		thought = ("(That isn't what %s told me.)" if _lang() == "en" else "(%s சொன்னது இது இல்லையே.)") % on
+	elif rec.has("lead"):
+		var ln: String = _tx(_person(str(rec["lead"])).get("name", {"en": str(rec["lead"]).capitalize()}))
+		thought = ("(%s. I should ask %s.)" if _lang() == "en" else "(%s. அவர்கிட்ட கேக்கணும்.)") % [ln, ln]
+	if thought != "" and city.hud:
+		get_tree().create_timer(6.0).timeout.connect(func(): city.hud.say("Karthik", thought, 4.0))
+	print("CITIZENS asked %s about %s: %s (%s, %.1f)%s" % [who, topic, str(rec["id"]), "seen" if rec.get("firsthand", false) else "heard",
+		float(rec.get("confidence", 0.5)), (" " + thought) if thought != "" else ""])
+	return rec
+
+
+func _rec(id: String) -> Dictionary:
+	for r in know.get("records", []):
+		if str(r["id"]) == id:
+			return r
+	return {}
+
+
+func _person(id: String) -> Dictionary:
+	for c in people:
+		if str(c["d"]["id"]) == id:
+			return c["d"]
+	return {}
+
+
+func _note(rec: Dictionary) -> void:
+	if city.phone == null or not "statements" in city.phone:
+		return
+	var p := _person(str(rec["who"]))
+	var how_en := "%s; %s%s" % [str(rec["seen"].get("en", "")) if rec.has("seen") else "", "saw it" if rec.get("firsthand", false) else "heard it",
+		", not sure" if float(rec.get("confidence", 0.5)) < 0.5 else ""]
+	var how_ta := "%s; %s%s" % [rec["seen"].get("ta", "") if rec.has("seen") else "", "நேரில் பார்த்தது" if rec.get("firsthand", false) else "கேட்டது",
+		", உறுதியில்லை" if float(rec.get("confidence", 0.5)) < 0.5 else ""]
+	city.phone.statements.push_front({"id": rec["id"], "who": p.get("name", {"en": rec["who"]}), "text": rec["text"],
+		"how": {"en": how_en, "ta": how_ta}})
+
+
+func _save_heard() -> void:
+	if city.fines:
+		city.fines._save_data["statements"] = heard.duplicate()
+		if city.fines.has_method("save") and city.fines.persist:
+			city.fines.save()
+
+
+func _load_heard() -> void:
+	if city == null or city.fines == null:
+		return
+	heard = Array(city.fines._save_data.get("statements", []))
+	for id in heard:
+		var r := _rec(str(id))
+		if not r.is_empty():
+			_note(r)
 
 
 # ---- testing ------------------------------------------------------------------------------------------------------
@@ -782,6 +972,25 @@ func _run_test(dt: float) -> void:
 				mids.append("%s %s %.0f m" % [c["d"]["id"], c["mid_act"], Vector2(c["pos"].x, c["pos"].z).distance_to(Vector2(city.streamer.target.global_position.x, city.streamer.target.global_position.z))])
 		print("CITIZENTEST %s%s: %d near (%s); middle: %s; graph %d" % [city.fines.sim.clock_text(_now()) if city.fines else "",
 			" rain" if _rain() else "", seen, ", ".join(parts), ", ".join(mids), _astar.get_point_count()])
+		if "--interviewtest" in OS.get_cmdline_user_args() and not has_meta("interviewed") and Time.get_ticks_msec() > 30000:
+			set_meta("interviewed", true)                 # (testing: everyone near asked everything, Rafiq first)
+			var order := people.filter(func(c): return c["node"] != null)
+			order.sort_custom(func(a, b): return str(a["d"]["id"]) == "rafiq")
+			for c in order:
+				interview(c)
+				for tp in know.get("topics", []):
+					ask(c, str(tp["key"]))
+				for tag in ["E05", "E07", "E14"]:
+					ask(c, "evidence:" + tag)
+				_end_interview()
+			if city.phone and _shots != "":
+				city.phone.hold(true)
+				city.phone._open_app("notes")
+				for f in 20:
+					await get_tree().process_frame
+				await RenderingServer.frame_post_draw
+				get_viewport().get_texture().get_image().save_jpg("%s/interview_notes.jpg" % _shots, 0.9)
+				city.phone.hold(false)
 		for a in OS.get_cmdline_user_args():              # (testing: --shotview=x,y,z>x,y,z[;...]: pictures from there)
 			if a.begins_with("--shotview=") and not has_meta("viewed") and Time.get_ticks_msec() > 35000 and _shots != "":
 				set_meta("viewed", true)

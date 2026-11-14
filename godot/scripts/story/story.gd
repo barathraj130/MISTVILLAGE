@@ -2477,6 +2477,7 @@ func _visit_do(v: Dictionary) -> void:
 			if str(ph.get("tag", "")) != "":
 				var w: Dictionary = ph.duplicate()
 				w["id"] = ph["tag"]
+				w["tag"] = ph["tag"]
 				w["title"] = ph["label"]
 				w["kind"] = "photo" if ph.has("tex") else "recording"
 				wall.add(w)
@@ -2769,6 +2770,36 @@ func _gate_note(amount: int) -> void:
 	_next()
 
 
+## Where a piece of evidence stands, by the court's own points (the "court" step's claims: each point and the
+## evidence that answers it): "" (not found), "bought" (paid for: it walks on one leg), "one leg" (honest, but
+## nothing else he has answers the same point yet), "two legs" (another honest piece answers it too: a fact needs two
+## legs, as Sundaram says), "before the court" (the trial has heard it). The wall stamps its cards with it.
+var _claims: Array = []
+
+
+func evidence_status(tag: String) -> String:
+	var e: Dictionary = evidence.get(tag, {})
+	if e.is_empty():
+		return ""
+	if flags.get("court_done", false):
+		return "before the court"
+	if _claims.is_empty():
+		for st in data["steps"]:
+			if str(st.get("do", "")) == "court":
+				_claims = st.get("claims", [])
+	var backed := false
+	for c in _claims:
+		var ans: Array = c.get("answers", [])
+		if not tag in ans:
+			continue
+		for t2 in ans:
+			if str(t2) != tag and evidence.has(str(t2)) and not bool(evidence[str(t2)].get("paid", false)):
+				backed = true
+	if bool(e.get("paid", false)):
+		return "bought, backed" if backed else "bought"
+	return "two legs" if backed else "one leg"
+
+
 ## "evidence": the newest recording on his phone with "speaker" in it becomes evidence ("tag", "label"; "label_paid"
 ## when the flag "paid" is set: a bought word); either way the wall gets his memory of it ("memory": a card).
 func _evidence() -> void:
@@ -2785,7 +2816,9 @@ func _evidence() -> void:
 				print("STORY evidence: recording → %s" % ph["tag"])
 				break
 	if cur.has("memory"):
-		wall.add(cur["memory"])
+		var mem: Dictionary = (cur["memory"] as Dictionary).duplicate()
+		mem["tag"] = str(cur["tag"])                     # (the wall stamps it with where it stands: evidence_status)
+		wall.add(mem)
 	var paid: bool = flags.get(str(cur.get("paid", "-")), false)   # (what was bought walks on one leg: court.gd)
 	flags["ev_" + str(cur["tag"])] = "paid" if paid else "yes"
 	var m: Dictionary = cur.get("memory", {})
@@ -3228,6 +3261,7 @@ func _court_done(result: Dictionary) -> void:
 	_in_task = false
 	flags["court_points"] = int(result["won"])
 	flags["court_won"] = int(result["won"]) * 2 > int(result["of"])
+	flags["court_done"] = true                       # (the wall's cards: "before the court")
 	print("STORY court: %d of %d points" % [result["won"], result["of"]])
 	_next()
 
@@ -3889,6 +3923,7 @@ func _build_ui() -> void:
 		_next())
 	ui.add_child(table)
 	wall = Wall.new()
+	wall.status_fn = evidence_status
 	wall.visible = false
 	wall.closed.connect(func():
 		if str(cur.get("do", "")) == "home" and _in_task:

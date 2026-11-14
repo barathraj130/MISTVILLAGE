@@ -17,6 +17,7 @@ const CARD := Vector2(170, 120)
 var lang := "en"
 var pool: Array = []                       # [{"id", "title": {en, ta}, "kind": paper | note | card | photo | recording,
                                            #   "tex"?, "body"?}]
+var status_fn: Callable                    # story.gd evidence_status: a card's stamp (two legs, one leg, bought)
 var state := {"pins": {}, "threads": []}   # pins: id → Vector2 (board fraction); threads: [[a, b]]
 var font: Font
 var _drag := ""
@@ -241,6 +242,17 @@ func _card(it: Dictionary, r: Rect2, pin: bool) -> void:
 		for j in 4:
 			draw_line(r.position + Vector2(12, 30 + j * 14), r.position + Vector2(r.size.x - 12 - (30 if j == 3 else 0), 30 + j * 14), Color(0, 0, 0, 0.15), 2.0)
 	_text(Vector2(r.position.x + 6.0, r.end.y - 10.0), t_(it.get("title", "")), 13, INK, r.size.x - 12.0)
+	if it.has("tag") and status_fn.is_valid():          # where it stands: a rubber stamp in the corner, his own hand
+		var st: String = status_fn.call(str(it["tag"]))
+		if st != "":
+			var sc: Color = {"two legs": Color(0.1, 0.5, 0.2), "one leg": Color(0.75, 0.5, 0.05), "bought": Color(0.75, 0.12, 0.1),
+				"bought, backed": Color(0.6, 0.35, 0.1), "before the court": Color(0.15, 0.25, 0.6)}.get(st, INK)
+			var label: String = st.to_upper() if lang == "en" else {"two legs": "இரண்டு கால்", "one leg": "ஒரு கால்",
+				"bought": "விலைக்கு வாங்கியது", "bought, backed": "வாங்கியது, துணையுடன்", "before the court": "நீதிமன்றத்தில்"}.get(st, st)
+			var sr := Rect2(r.position + Vector2(r.size.x - 92.0, 10.0), Vector2(84.0, 18.0))
+			draw_rect(sr, Color(sc, 0.12))
+			draw_rect(sr, Color(sc, 0.85), false, 1.5)
+			_text(sr.position + Vector2(4, 13), label, 10, sc, 76.0, HORIZONTAL_ALIGNMENT_CENTER)
 	if pin:
 		draw_circle(r.position + Vector2(r.size.x * 0.5, 6), 6.0, Color(0.85, 0.15, 0.15))
 		draw_circle(r.position + Vector2(r.size.x * 0.5 - 1.5, 4.5), 2.0, Color(1, 0.6, 0.6))

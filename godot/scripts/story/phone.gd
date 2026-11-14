@@ -42,6 +42,8 @@ var city                                       # city_test.gd (the clock, the wa
 var is_open := false
 var app := ""
 var notes: Array = []                          # [{"text": {en, ta}, "done": bool}]
+var statements: Array = []                     # what people told him (citizens.gd interviews): [{"who", "text", "how"}],
+											   #  the newest first; under his notes, in his own words
 var messages: Array = []                       # [{"from": {en, ta}, "text": {en, ta}, "time": "9:52 PM", "read": bool}]
 var contacts: Array = []                       # [{"name": {en, ta}, "number": "98...", "where": {en, ta}}]
 var pins: Array = []                           # [{"place": key, "label": {en, ta}}]
@@ -657,13 +659,22 @@ func _draw() -> void:
 		"notes":
 			_title(s, APP_NAME["notes"])
 			var y := s.position.y + 70.0
-			for n in notes.slice(0, 7):
+			for n in notes.slice(0, 7 if statements.is_empty() else 3):
 				var col := DIM if n["done"] else FG
 				if not n["done"]:
 					draw_rect(Rect2(s.position.x + 10.0, y - 14.0, 10, 10), APP_COL["notes"])
 				y += _wrap(Vector2(s.position.x + 28.0, y), t_(n["text"]), 16, col, s.size.x - 40.0, 4) + 12.0
 				if y > s.end.y - 30.0:
 					break
+			if not statements.is_empty() and y < s.end.y - 80.0:   # what people told him
+				y += 6.0
+				_text(Vector2(s.position.x + 12.0, y), L("What people said", "மக்கள் சொன்னது"), 14, APP_COL["notes"])
+				y += 20.0
+				for st in statements:
+					y += _wrap(Vector2(s.position.x + 12.0, y), "%s: %s (%s)" % [t_(st["who"]), t_(st["text"]), t_(st["how"])],
+						14, FG, s.size.x - 24.0, 4) + 10.0
+					if y > s.end.y - 30.0:
+						break
 		"messages":
 			_title(s, APP_NAME["messages"])
 			if _view >= 0 and _view < messages.size():
