@@ -13,6 +13,8 @@ extends Node
 ##   6 before court  the trial (court_done)
 ## No frights: the watcher is a man you notice, not a jump.
 ##   --gangstage=N  testing: start at stage N
+##   --pursuittest  testing: (with --story --storyfrom=530 --gangstage=3) into the car, the sedan's pickup, a
+##                  picture of it behind, then driven hard down the road until it's lost (user://gang_pursuit.jpg)
 ##   --gangtest     testing: stage 2, the watcher brought out; pictures of him and of him leaving (user://gang_*.jpg)
 const Crowd := preload("res://scripts/city/crowd.gd")
 const HeadLook := preload("res://scripts/story/head_look.gd")
@@ -218,8 +220,13 @@ func in_view(cam: Camera3D) -> bool:
 var _drive_t := 0.0
 
 
+var _ptest := 0
+
+
 func _pursue() -> void:
 	var st = _story()
+	if "--pursuittest" in OS.get_cmdline_user_args():
+		_pursuit_test(st)
 	if st == null or city.walker != null or st.fines == null:
 		_drive_t = 0.0
 		return
@@ -280,3 +287,35 @@ func _snap(n: String) -> void:
 	var img := get_viewport().get_texture().get_image()
 	img.resize(img.get_width() / 2, img.get_height() / 2)
 	img.save_jpg(ProjectSettings.globalize_path("user://%s.jpg" % n), 0.85)
+
+
+func _pursuit_test(st) -> void:
+	if st == null or _ptest < 0:
+		return
+	if _ptest == 0 and city.walker != null and str(st.cur.get("do", "")) == "drive" and Time.get_ticks_msec() > 9000:
+		_ptest = 1
+		city.walker.global_position = city.car.global_position - city.car.global_basis.x * 1.6
+		city.toggle_on_foot()                             # (back in the car)
+		print("GANG pursuit test: in the car: %s" % (city.walker == null))
+	elif _ptest == 1 and st._tail != null:
+		_ptest = 2
+		_pursuit_watch(st)
+
+
+func _pursuit_watch(st) -> void:
+	_ptest = -1
+	var tree := get_tree()
+	await tree.create_timer(1.5).timeout
+	await _snap("gang_pursuit")
+	var car = city.car
+	car.autopilot = true
+	var t := 0.0
+	while st._tail != null and t < 60.0:                  # straight on, flat out: the sedan's top is 21 m/s
+		car.in_throttle = 1.0
+		car.in_steer = 0.0
+		await tree.physics_frame
+		t += get_physics_process_delta_time()
+		if int(t * 60.0) % 300 == 0:
+			print("GANG pursuit: %.0f s, %.0f km/h, sedan %s" % [t, car.speed * 3.6, st._status.text if st._status else "?"])
+	print("GANG pursuit test: lost it %s after %.0f s (flag %s)" % [st._tail == null, t, st.flags.get("gang_shaken_d%d" % st.fines.sim.day, false)])
+	tree.quit()
