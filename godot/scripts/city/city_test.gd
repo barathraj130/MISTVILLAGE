@@ -405,7 +405,7 @@ func _ready() -> void:
 		var self_test := false                      # (a self-test never writes your saved game: wallet, challans, weather)
 		for flag in ["--testdrive", "--carshot", "--trafficshot", "--crashtest", "--peopletest", "--parkedtest",
 				"--potholetest", "--flyover", "--clock=", "--weather=", "--nohud", "--doortest", "--threattest", "--surfacetest", "--jointest", "--walkertest", "--activitytest",
-				"--hospitaltest", "--citizentest", "--interviewtest", "--unsticktest", "--livingtest", "--livingbench", "--hospitalat", "--shotview", "--interacttest"]:
+				"--hospitaltest", "--citizentest", "--interviewtest", "--unsticktest", "--livingtest", "--livingbench", "--hospitalat", "--shotview", "--interacttest", "--falltest", "--stairtest"]:
 			self_test = self_test or " ".join(args).contains(flag)
 		fines.persist = not self_test
 		hud = DriveHud.new()
@@ -905,6 +905,12 @@ var _stuck_said := false
 func _unstick(dt: float) -> void:
 	if "--unsticktest" in OS.get_cmdline_user_args():   # (testing: tipped onto a kerb off the road, then G)
 		_unstick_test(dt)
+	if "--falltest" in OS.get_cmdline_user_args() and walker == null and not has_meta("falltest") and Time.get_ticks_msec() > 9000 \
+			and not car.freeze and car.global_position.y < 590.0 and absf(car.speed) < 0.5:
+		set_meta("falltest", true)                      # (testing: out of the car; player.gd does the rest)
+		print("FALLTEST car at %s, ground %.1f" % [str(car.global_position), streamer.height_at(car.global_position.x, car.global_position.z)])
+		toggle_on_foot()
+		print("FALLTEST out at %s" % str(walker.global_position) if walker else "FALLTEST not out")
 	if walker != null or car == null or (story and story.room != null):
 		_stuck_t = 0.0
 		_g_held = 0.0

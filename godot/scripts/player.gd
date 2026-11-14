@@ -5,6 +5,13 @@ extends CharacterBody3D
 ## the way you walk, as a person does: it gets going and slows down over a few steps, turns at a
 ## person's pace (slowing to turn sharply, leaning a little into a curve), stands facing where it
 ## stopped while you look about, and rises onto a step rather than jumping up it.
+## His body (OPEN_WORLD_PLAN phase 5): his feet find the step each is over (foot_ik.gd: the hips come down, the
+## higher knee bends); knocked by someone running into him, or landing from a height, he stumbles a few steps to
+## catch himself, or, knocked harder, goes over: a pendulum from his feet (the push starts it, gravity finishes
+## it), down on the ground a moment, then up again. knock(push) is how anything pushes him (people, the gang).
+##   --falltest  testing: a light push, a hard one and a drop, pictures of each (user://fall_*.jpg)
+##   --stairtest testing: in a room with a stair (the story's climb: --storyfrom=138), up it from Mark_cut to
+##               Mark_landing, his feet's IK printed, pictures from the side (user://stair_*.jpg)
 const Prof := preload("res://scripts/drive/prof.gd")
 const Settings := preload("res://scripts/settings.gd")
 
@@ -41,6 +48,18 @@ const AVATAR := "res://assets/people/person_man_shirt.glb"
 static var avatar := ""            # who you are on foot, when not the default (the story: Karthik himself)
 var avatar_run_stride := false     # a story cast model: its Run covers ~3.9 m/s at speed 1
 var scripted := false              # a scene moves him (brush3d.gd): his clips and facing are its, not the walk's
+const FootIK := preload("res://scripts/foot_ik.gd")
+var feet: Node                      # foot_ik.gd, on the model's skeleton
+var _down := 0.0                    # 0 on his feet; 1 going over; 2 on the ground; 3 getting up
+var _theta := 0.0                   # how far over he is (radians from upright)
+var _omega := 0.0
+var _axis := Vector3.RIGHT          # what he goes over about (level, across the push)
+var _down_t := 0.0
+var _stumble := 0.0                 # seconds still catching himself
+var _stumble_dir := Vector3.ZERO
+var _fall_vy := 0.0                 # how fast he was falling, the frame before he landed
+const COM := 0.95                   # his centre of mass over his feet, metres (the pendulum's length)
+signal fell                         # (on the ground: someone may come and help)
 
 
 func _init() -> void:
@@ -77,6 +96,7 @@ func _init() -> void:
 		for a in ["Idle", "Walk", "Run"]:
 			if anim.has_animation(a):
 				anim.get_animation(a).loop_mode = Animation.LOOP_LINEAR
+		feet = FootIK.attach(self, model)
 	_set_view(true)
 	if "--movedebug" in OS.get_cmdline_user_args():
 		var layer := CanvasLayer.new()
@@ -115,6 +135,12 @@ func _set_view(third: bool) -> void:
 
 
 func activate() -> void:
+	if not active and "--stairtest" in OS.get_cmdline_user_args() and not has_meta("stairtest"):
+		set_meta("stairtest", true)
+		_stair_test.call_deferred()
+	if not active and "--falltest" in OS.get_cmdline_user_args() and not has_meta("falltest"):
+		set_meta("falltest", true)
+		_fall_test.call_deferred()
 	active = true
 	camera.make_current()
 	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
@@ -149,7 +175,10 @@ func _physics_process(delta: float) -> void:
 func _physics_process_timed(delta: float) -> void:
 	if not is_on_floor():
 		velocity.y -= gravity * delta
-	if active:
+		_fall_vy = velocity.y
+	if _down > 0.0:
+		_downed(delta)
+	elif active:
 		if Input.is_action_just_pressed("jump") and is_on_floor():
 			velocity.y = jump_velocity
 		var input := Input.get_vector("move_left", "move_right", "move_forward", "move_back") if auto_input == Vector2.INF else auto_input
@@ -165,6 +194,10 @@ func _physics_process_timed(delta: float) -> void:
 				speed *= 1.0 - clampf(grade * 0.5, 0.0, 0.3)
 			else:
 				speed *= 1.0 - clampf((-grade - 0.2) * 0.8, 0.0, 0.2)
+		if _stumble > 0.0:                               # catching himself: carried the push's way, your keys half his
+			_stumble -= delta
+			dir = (dir * 0.4 + _stumble_dir * clampf(_stumble, 0.0, 0.6) * 1.6).normalized()
+			speed = maxf(speed, walk_speed * 1.3)
 		var want := Vector2(dir.x, dir.z) * speed
 		var have := Vector2(velocity.x, velocity.z)
 		var rate := (ACCEL if want.length() > have.length() else DECEL) * (1.0 if is_on_floor() else 0.3)
@@ -176,7 +209,18 @@ func _physics_process_timed(delta: float) -> void:
 		velocity.z = 0.0
 	if active:                                          # up a step: the body catches up with the capsule
 		_step_drop = minf(_step_drop + _try_step_up(delta), 0.4)
+	var was_air := not is_on_floor()
 	move_and_slide()
+	if was_air and is_on_floor() and _down == 0.0:   # landed: from a height, it shows
+		var v := -_fall_vy
+		var fwd := Vector3(velocity.x, 0.0, velocity.z)
+		if fwd.length() < 0.3:
+			fwd = Vector3(sin(_model_yaw), 0.0, cos(_model_yaw))
+		if v > 8.5:                                      # (2.5 m or more: he goes down)
+			knock(fwd.normalized() * (v * 0.35), true)
+		elif v > 6.0:                                    # (a metre and a half: he stumbles)
+			knock(fwd.normalized() * 1.6)
+		_fall_vy = 0.0
 	if global_position.y < -400.0:         # fell off the world
 		_respawn()
 	_animate(delta)
@@ -201,10 +245,17 @@ func _animate(delta: float) -> void:
 	_lean = lerpf(_lean, clampf(-turned * sp * 0.012, -0.12, 0.12), 1.0 - exp(-delta * 6.0))   # into the curve
 	model.global_rotation = Vector3(0.0, _model_yaw, 0.0)
 	model.rotate_object_local(Vector3.FORWARD, _lean)
+	if _stumble > 0.0:                                  # (pitched the push's way, arms of the walk catching up)
+		var k := clampf(_stumble / 0.7, 0.0, 1.0)
+		model.global_basis = Basis(Vector3.UP.cross(_stumble_dir).normalized(), 0.22 * k) * model.global_basis
+	if _down > 0.0:                                     # over, about his feet
+		model.global_basis = Basis(_axis, _theta) * model.global_basis
 	_step_drop = move_toward(_step_drop, 0.0, delta * 1.6)       # up onto the step over a fifth of a second
-	model.position.y = -_step_drop
+	model.position.y = -_step_drop + (0.13 * sin(_theta) if _down > 0.0 else 0.0)   # (lying, he's on his back's thickness)
 	var a := "Idle"
 	var has_run := anim.has_animation("Run")
+	if _down > 0.0:
+		sp = 0.0
 	if sp > (2.6 if has_run else 99.0):
 		a = "Run"
 	elif sp > 0.3:
@@ -250,3 +301,134 @@ func _try_step_up(delta: float) -> float:
 		return 0.0
 	global_position.y += rise + 0.005
 	return rise + 0.005
+
+
+## Pushed: by someone running into him, a shove, landing hard. push is horizontal, m/s of shove. Light (under 2.4,
+## not hard): he stumbles a few steps to catch himself; harder: he goes over.
+func knock(push: Vector3, hard := false) -> void:
+	push.y = 0.0
+	var s := push.length()
+	if _down > 0.0 or scripted or s < 0.05:
+		return
+	if s < 2.4 and not hard:
+		_stumble = 0.7
+		_stumble_dir = push / s
+		velocity += push * 0.8
+		return
+	_down = 1.0
+	_theta = 0.0
+	_omega = clampf(s * 0.55, 1.0, 4.0)                 # (the shove tips him; gravity does the rest)
+	_axis = Vector3.UP.cross(push / s).normalized()     # (Basis(axis, +θ) turns up towards the push)
+	velocity.x = push.x * 0.5
+	velocity.z = push.z * 0.5
+	_stumble = 0.0
+
+
+func is_down() -> bool:
+	return _down > 0.0
+
+
+## Going over, on the ground, getting up.
+func _downed(delta: float) -> void:
+	var f := 1.0 - exp(-delta * (2.0 if _down == 1.0 else 8.0))   # (his feet drag; lying, he stops)
+	velocity.x = lerpf(velocity.x, 0.0, f)
+	velocity.z = lerpf(velocity.z, 0.0, f)
+	match int(_down):
+		1:                                               # a pendulum from his feet: θ'' = g/L sin θ
+			_omega += gravity / COM * sin(maxf(_theta, 0.05)) * delta
+			_theta += _omega * delta
+			if _theta >= 1.5:                            # the ground: a small bounce, then still
+				_theta = 1.5
+				_omega = -_omega * 0.12
+				if absf(_omega) < 0.6:
+					_omega = 0.0
+					_down = 2.0
+					_down_t = 1.8
+					fell.emit()
+		2:
+			_down_t -= delta
+			if _down_t <= 0.0:
+				_down = 3.0
+				_down_t = 0.0
+		3:                                               # up again: onto a knee and up, in a second and a half
+			_down_t += delta / 1.5
+			var k := clampf(_down_t, 0.0, 1.0)
+			_theta = 1.5 * (1.0 - (k * k * (3.0 - 2.0 * k)))
+			if k >= 1.0:
+				_theta = 0.0
+				_down = 0.0
+
+
+# ---- testing ----
+func _fall_test() -> void:
+	var tree := get_tree()
+	await tree.create_timer(2.0).timeout
+	var fwd := Vector3(sin(_model_yaw), 0.0, cos(_model_yaw))
+	print("FALLTEST light push")
+	knock(fwd.cross(Vector3.UP) * 1.8)
+	await tree.create_timer(0.3).timeout
+	await _fall_snap("fall_1_stumble")
+	await tree.create_timer(2.0).timeout
+	print("FALLTEST hard push")
+	knock(fwd.cross(Vector3.UP) * -4.5)
+	await tree.create_timer(0.35).timeout
+	await _fall_snap("fall_2_going")
+	await tree.create_timer(0.8).timeout
+	print("FALLTEST down=%d theta=%.2f" % [int(_down), _theta])
+	await _fall_snap("fall_3_down")
+	await tree.create_timer(2.2).timeout
+	await _fall_snap("fall_4_getting_up")
+	await tree.create_timer(1.6).timeout
+	print("FALLTEST up again: down=%d theta=%.2f" % [int(_down), _theta])
+	global_position += Vector3.UP * 4.0
+	velocity = Vector3(fwd.x, 0.0, fwd.z) * 1.2
+	await tree.create_timer(1.3).timeout
+	print("FALLTEST after the drop: down=%d theta=%.2f" % [int(_down), _theta])
+	await _fall_snap("fall_5_drop")
+	await tree.create_timer(5.0).timeout
+	print("FALLTEST done: down=%d" % int(_down))
+	tree.quit()
+
+
+func _fall_snap(n: String) -> void:
+	print("FALLTEST %s at %s floor %s cam %s vel %s" % [n, str(global_position), is_on_floor(), str(get_viewport().get_camera_3d().global_position), str(velocity)])
+	await RenderingServer.frame_post_draw
+	var img := get_viewport().get_texture().get_image()
+	img.resize(img.get_width() / 2, img.get_height() / 2)
+	img.save_jpg(ProjectSettings.globalize_path("user://%s.jpg" % n), 0.85)
+
+
+func _stair_test() -> void:
+	var tree := get_tree()
+	await tree.create_timer(2.0).timeout
+	var a := tree.root.find_child("Mark_cut", true, false) as Node3D
+	var b := tree.root.find_child("Mark_landing", true, false) as Node3D
+	if a == null or b == null:
+		print("STAIRTEST no stair here")
+		tree.quit()
+		return
+	var up := Vector3(b.global_position.x - a.global_position.x, 0.0, b.global_position.z - a.global_position.z).normalized()
+	spawn_at(a.global_position + up * 0.6 + Vector3.UP * 0.6, b.global_position)
+	await tree.create_timer(1.0).timeout
+	var side := Camera3D.new()                           # a camera from the stair's open side, level with his legs
+	side.fov = 45.0
+	get_parent().add_child(side)
+	var lamp := OmniLight3D.new()                        # (the power is cut on this stair: a lamp for the pictures)
+	lamp.omni_range = 5.0
+	lamp.light_energy = 2.0
+	side.add_child(lamp)
+	var right := up.cross(Vector3.UP)
+	for k in 6:
+		auto_input = Vector2(0, -1) if k > 0 else Vector2.INF
+		await tree.create_timer(0.55 if k > 0 else 0.3).timeout
+		auto_input = Vector2.ZERO if k > 0 else Vector2.INF
+		await tree.create_timer(0.6).timeout
+		var at := global_position + Vector3.UP * 0.5
+		side.global_position = at + right * 2.0 + Vector3.UP * 0.1 - up * 0.2
+		side.look_at(at, Vector3.UP)
+		side.make_current()
+		print("STAIRTEST %d at y %.2f: %s" % [k, global_position.y, feet.debug if feet else "no foot IK"])
+		await _fall_snap("stair_%d" % k)
+		camera.make_current()
+	auto_input = Vector2.INF
+	tree.quit()

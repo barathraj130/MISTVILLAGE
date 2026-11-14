@@ -526,6 +526,7 @@ func _move(c: Dictionary, dt: float) -> void:
 			return
 		var pace := HELP_PACE if c.get("gather_t", 0.0) > 0.0 else (RAIN_PACE if _rain() else PACE)   # (hurrying)
 		var step := d.normalized() * minf(pace * dt, d.length())
+		_barge(c, n, d.normalized() * pace)
 		n.global_position += step
 		n.global_position.y = lerpf(n.global_position.y, _ground(n.global_position, tgt.y), 1.0 - exp(-dt * 6.0))
 		n.rotation.y = lerp_angle(n.rotation.y, atan2(d.x, d.z), 1.0 - exp(-dt * 8.0))
@@ -538,6 +539,23 @@ func _move(c: Dictionary, dt: float) -> void:
 	if c["gest"] <= 0.0:                               # now and then, what the work looks like
 		c["gest"] = randf_range(5.0, 11.0)
 		_play(c, _gesture(c), 0.4)
+
+
+## Hurrying (the rain, to someone down) and running into him: he's knocked (player.gd knock: a stumble, or over at
+## a run), once; they check and go on.
+func _barge(c: Dictionary, n: Node3D, vel: Vector3) -> void:
+	var w = city.walker if city else null
+	if w == null or vel.length() < RAIN_PACE - 0.1 or c.get("barged", 0.0) > Time.get_ticks_msec() / 1000.0:
+		return
+	var to: Vector3 = w.global_position - n.global_position
+	to.y = 0.0
+	if to.length() > 0.6 or to.dot(vel) <= 0.0:
+		return
+	c["barged"] = Time.get_ticks_msec() / 1000.0 + 4.0
+	var push: Vector3 = (to.normalized() * 0.6 + vel.normalized() * 0.4).normalized() * vel.length() * 0.75
+	if w.has_method("knock"):
+		w.knock(push)
+	print("CITIZEN %s ran into him (%.1f m/s)" % [str(c["d"].get("id", "?")), vel.length()])
 
 
 func _arrive(c: Dictionary) -> void:
