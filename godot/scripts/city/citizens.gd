@@ -990,6 +990,11 @@ func _run_test(dt: float) -> void:
 					await get_tree().process_frame
 				await RenderingServer.frame_post_draw
 				get_viewport().get_texture().get_image().save_jpg("%s/interview_notes.jpg" % _shots, 0.9)
+				city.phone._open_app("case")
+				for f in 10:
+					await get_tree().process_frame
+				await RenderingServer.frame_post_draw
+				get_viewport().get_texture().get_image().save_jpg("%s/interview_night.jpg" % _shots, 0.9)
 				city.phone.hold(false)
 		for a in OS.get_cmdline_user_args():              # (testing: --shotview=x,y,z>x,y,z[;...]: pictures from there)
 			if a.begins_with("--shotview=") and not has_meta("viewed") and Time.get_ticks_msec() > 35000 and _shots != "":

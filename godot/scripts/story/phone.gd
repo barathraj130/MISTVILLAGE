@@ -26,13 +26,14 @@ signal nilam_done(ok: bool, form: Dictionary)  # a Tamil Nilam application paid 
 
 const W := 300.0
 const H := 560.0
-var APPS := ["notes", "messages", "contacts", "map", "camera", "recorder", "photos", "rider"]
+var APPS := ["notes", "messages", "contacts", "map", "camera", "recorder", "photos", "rider", "case"]
 const APP_NAME := {"notes": ["Notes", "குறிப்பு"], "messages": ["Messages", "மெசேஜ்"], "contacts": ["Contacts", "தொடர்புகள்"],
 	"map": ["Map", "மேப்"], "camera": ["Camera", "கேமரா"], "recorder": ["Recorder", "ரெக்கார்டர்"], "photos": ["Photos", "படங்கள்"],
-	"rider": ["QuickBite", "குவிக்பைட்"], "nilam": ["Tamil Nilam", "தமிழ் நிலம்"]}
+	"rider": ["QuickBite", "குவிக்பைட்"], "nilam": ["Tamil Nilam", "தமிழ் நிலம்"], "case": ["The night", "அந்த ராத்திரி"]}
 const APP_COL := {"notes": Color(0.95, 0.75, 0.2), "messages": Color(0.25, 0.7, 0.35), "contacts": Color(0.3, 0.55, 0.9),
 	"map": Color(0.2, 0.65, 0.6), "camera": Color(0.35, 0.35, 0.4), "recorder": Color(0.85, 0.25, 0.25),
-	"photos": Color(0.75, 0.4, 0.8), "rider": Color(0.9, 0.35, 0.1), "nilam": Color(0.1, 0.45, 0.3)}
+	"photos": Color(0.75, 0.4, 0.8), "rider": Color(0.9, 0.35, 0.1), "nilam": Color(0.1, 0.45, 0.3),
+	"case": Color(0.55, 0.45, 0.3)}
 const BG := Color(0.07, 0.08, 0.1)
 const FG := Color(0.95, 0.95, 0.97)
 const DIM := Color(0.6, 0.62, 0.68)
@@ -675,6 +676,9 @@ func _draw() -> void:
 						14, FG, s.size.x - 24.0, 4) + 10.0
 					if y > s.end.y - 30.0:
 						break
+		"case":
+			_title(s, APP_NAME["case"])
+			_case(s)
 		"messages":
 			_title(s, APP_NAME["messages"])
 			if _view >= 0 and _view < messages.size():
@@ -843,6 +847,64 @@ func _thumb(i: int) -> Rect2:
 	return Rect2(s.position.x + 8.0 + (i % 2) * (w + 8.0), s.position.y + 60.0 + floori(i / 2.0) * (w * 0.6 + 8.0), w, w * 0.6)
 
 
+## The night of Day 3 as he has it, 9:30 to 11:15 PM down the screen: each piece of evidence he has at its time
+## (story/knowledge.json "timeline"), each thing he's been told with a time (citizens.gd heard); of two accounts that
+## don't fit each other, the weaker (heard, or less sure) in red. Only what he has: an empty night at first.
+var _know := {}
+
+
+func _case(s: Rect2) -> void:
+	if _know.is_empty():
+		_know = JSON.parse_string(FileAccess.get_file_as_string("res://story/knowledge.json"))
+	var t0 := 21.5 * 60.0
+	var t1 := 23.25 * 60.0
+	var top := s.position.y + 74.0
+	var bot := s.end.y - 24.0
+	var x := s.position.x + 58.0
+	var ym := func(hm: String) -> float:
+		var p := hm.split(":")
+		return top + (float(p[0]) * 60.0 + float(p[1]) - t0) / (t1 - t0) * (bot - top)
+	draw_line(Vector2(x, top), Vector2(x, bot), DIM, 2.0)
+	for q in range(0, 8):                                # (a mark each quarter of an hour)
+		var m := t0 + q * 15.0
+		var yy: float = top + (m - t0) / (t1 - t0) * (bot - top)
+		draw_line(Vector2(x - 5, yy), Vector2(x + 5, yy), DIM, 1.0)
+		_text(Vector2(s.position.x + 8.0, yy + 4.0), "%d:%02d" % [int(m / 60.0) - 12, int(m) % 60], 11, DIM)
+	var rows: Array = []
+	var ev: Dictionary = city.story.evidence if city and city.story and city.story.get("evidence") is Dictionary else {}
+	for e in _know.get("timeline", []):
+		if ev.has(str(e["tag"])):
+			rows.append([str(e["at"]), "%s  %s" % [e["tag"], t_(e)], Color(0.95, 0.8, 0.35)])
+	var heard: Array = city.citizens.heard if city and city.get("citizens") else []
+	for r in _know.get("records", []):
+		if r.has("at") and str(r["id"]) in heard:
+			var bad := false                             # (of two that don't fit, the weaker: heard, or less sure)
+			for r2 in _know.get("records", []):
+				var pair: bool = (str(r.get("contradicts", "")) == str(r2["id"]) or str(r2.get("contradicts", "")) == str(r["id"]))
+				if pair and str(r2["id"]) in heard and float(r.get("confidence", 0.5)) + (0.3 if r.get("firsthand", false) else 0.0) \
+						< float(r2.get("confidence", 0.5)) + (0.3 if r2.get("firsthand", false) else 0.0):
+					bad = true
+			var who := str(r["who"])
+			var nm := who.capitalize()
+			if city and city.get("citizens"):
+				var pp: Dictionary = city.citizens._person(who)
+				nm = t_(pp.get("name", {"en": nm}))
+			rows.append([str(r["at"]), "%s%s: %s" % [L("(doesn't fit) ", "(பொருந்தவில்லை) ") if bad else "", nm, t_(r["text"])],
+				Color(0.95, 0.4, 0.35) if bad else FG])
+	rows.sort_custom(func(a, b): return str(a[0]) < str(b[0]))
+	if rows.is_empty():
+		_wrap(Vector2(x + 14.0, top + 20.0), L("Nothing yet. What do I know of that night?", "இன்னும் ஒண்ணுமில்ல. அந்த ராத்திரி பத்தி எனக்கு என்ன தெரியும்?"), 14, DIM, s.size.x - 80.0, 3)
+		return
+	var last := -1e9
+	for row in rows:
+		var yy: float = ym.call(row[0])
+		draw_circle(Vector2(x, yy), 4.0, row[2])
+		var ty := maxf(yy + 4.0, last + 6.0)
+		draw_line(Vector2(x + 4.0, yy), Vector2(x + 12.0, ty - 4.0), Color(row[2], 0.6), 1.0)
+		var h := _wrap(Vector2(x + 14.0, ty), row[1], 12, row[2], s.end.x - x - 22.0, 3)
+		last = ty + h
+
+
 func _title(s: Rect2, n: Array) -> void:
 	_text(Vector2(s.position.x + 12.0, s.position.y + 48.0), L(n[0], n[1]), 20, FG)
 
@@ -908,6 +970,11 @@ func _glyph(a: String, r: Rect2) -> void:
 		"notes":
 			for k in 3:
 				draw_line(c + Vector2(-16, -10 + k * 10), c + Vector2(16, -10 + k * 10), w, 3.0)
+		"case":
+			draw_line(c + Vector2(-8, -16), c + Vector2(-8, 16), w, 2.0)
+			for k in 3:
+				draw_circle(c + Vector2(-8, -10 + k * 10), 3.0, w)
+				draw_line(c + Vector2(-2, -10 + k * 10), c + Vector2(14, -10 + k * 10), w, 2.0)
 		"messages":
 			draw_rect(Rect2(c - Vector2(18, 13), Vector2(36, 24)), w)
 			draw_colored_polygon(PackedVector2Array([c + Vector2(-8, 11), c + Vector2(4, 11), c + Vector2(-10, 20)]), w)

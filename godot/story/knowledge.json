@@ -1,55 +1,296 @@
 {
  "_about": "What the citizens (citizens.json) know, as Karthik can ask them (citizens.gd interview): each record is one person's knowledge of one topic, with when and where they came by it, whether they saw it themselves or heard it, how sure they are (0..1), and, where it applies, who else to ask ('lead') and which other record it doesn't fit ('contradicts'). 'needs': a story flag before the topic means anything to them. They are statements, not evidence: none adds an evidence tag, and none contradicts the story (docs/STORY_BIBLE.md, the night of Day 3). Topics: night (the night of Day 3), person:<key>, place:<key>, vehicle:<key>, evidence:<tag> (shown to them).",
  "topics": [
-  {"key": "night", "en": "The night Raghavan sir was killed", "ta": "ராகவன் சார் கொல்லப்பட்ட ராத்திரி"},
-  {"key": "person:raghavan", "en": "Raghavan sir", "ta": "ராகவன் சார்"},
-  {"key": "person:suresh", "en": "Suresh Kumar", "ta": "சுரேஷ் குமார்"},
-  {"key": "person:karthik", "en": "What people say about me", "ta": "என்னைப் பத்தி என்ன சொல்றாங்க"},
-  {"key": "place:office", "en": "The Raghavan Developers office", "ta": "ராகவன் டெவலப்பர்ஸ் ஆபீஸ்"},
-  {"key": "vehicle:white_suv", "en": "Raghavan sir's white SUV", "ta": "ராகவன் சார் வெள்ளை எஸ்யூவி"},
-  {"key": "vehicle:black_sedan", "en": "A black sedan", "ta": "ஒரு கருப்பு சேடன்", "needs": "ev_E08"}
+  {
+   "key": "night",
+   "en": "The night Raghavan sir was killed",
+   "ta": "ராகவன் சார் கொல்லப்பட்ட ராத்திரி"
+  },
+  {
+   "key": "person:raghavan",
+   "en": "Raghavan sir",
+   "ta": "ராகவன் சார்"
+  },
+  {
+   "key": "person:suresh",
+   "en": "Suresh Kumar",
+   "ta": "சுரேஷ் குமார்"
+  },
+  {
+   "key": "person:karthik",
+   "en": "What people say about me",
+   "ta": "என்னைப் பத்தி என்ன சொல்றாங்க"
+  },
+  {
+   "key": "place:office",
+   "en": "The Raghavan Developers office",
+   "ta": "ராகவன் டெவலப்பர்ஸ் ஆபீஸ்"
+  },
+  {
+   "key": "vehicle:white_suv",
+   "en": "Raghavan sir's white SUV",
+   "ta": "ராகவன் சார் வெள்ளை எஸ்யூவி"
+  },
+  {
+   "key": "vehicle:black_sedan",
+   "en": "A black sedan",
+   "ta": "ஒரு கருப்பு சேடன்",
+   "needs": "ev_E08"
+  }
  ],
  "records": [
-  {"id": "rafiq_night", "who": "rafiq", "topic": "night", "firsthand": true, "confidence": 0.9,
-   "seen": {"en": "Day 3, about 9:50 PM, Hotel Anna Mess", "ta": "நாள் 3, சுமார் இரவு 9:50, அன்னா மெஸ்"},
-   "text": {"en": "That night? You were here, anna. The parcel for Saravanampatti, ten to ten. I packed it myself and you went off on the scooter.", "ta": "அந்த ராத்திரியா? நீங்க இங்கதான் இருந்தீங்க அண்ணா. சரவணம்பட்டி பார்சல், பத்துக்கு பத்து நிமிஷம் முன்னாடி. நானே பேக் பண்ணேன், நீங்க ஸ்கூட்டர்ல போனீங்க."}},
-  {"id": "rafiq_e05", "who": "rafiq", "topic": "evidence:E05", "firsthand": true, "confidence": 0.8,
-   "seen": {"en": "Day 3, Hotel Anna Mess", "ta": "நாள் 3, அன்னா மெஸ்"},
-   "text": {"en": "Saravanampatti, ten-twenty? That's where the parcel was going. Twelve kilometres, anna. You can't be in two places.", "ta": "சரவணம்பட்டி, பத்து இருபது? அங்கதான் பார்சல் போச்சு. பன்னிரண்டு கிலோமீட்டர் அண்ணா. ரெண்டு இடத்துல இருக்க முடியாது."}},
-  {"id": "kumaresan_night", "who": "kumaresan", "topic": "night", "firsthand": false, "confidence": 0.3, "contradicts": "rafiq_night",
-   "seen": {"en": "heard at the tea stall, the next morning", "ta": "மறுநாள் காலை டீ கடையில கேட்டது"},
-   "text": {"en": "Everyone says the driver took him out that night and drove him to the fields. That's what they say at the tea stall.", "ta": "டிரைவர்தான் அன்னைக்கு ராத்திரி அவர வயலுக்கு கூட்டிட்டு போனான்னு எல்லாரும் சொல்றாங்க. டீ கடையில அப்படித்தான் பேச்சு."}},
-  {"id": "kumaresan_karthik", "who": "kumaresan", "topic": "person:karthik", "firsthand": false, "confidence": 0.2,
-   "seen": {"en": "the papers, the street", "ta": "பேப்பர், தெரு பேச்சு"},
-   "text": {"en": "You're the driver? They say you did it. I've lived long enough not to believe everything I hear.", "ta": "நீங்கதான் அந்த டிரைவரா? நீங்கதான் பண்ணீங்கன்னு சொல்றாங்க. கேக்குறதெல்லாம் நம்பாத அளவுக்கு நான் வாழ்ந்துட்டேன்."}},
-  {"id": "kumaresan_e14", "who": "kumaresan", "topic": "evidence:E14", "firsthand": true, "confidence": 0.6,
-   "seen": {"en": "the photos, just now", "ta": "இப்போ பார்த்த ஃபோட்டோ"},
-   "text": {"en": "No cap in any of them? Hm. Then the cap man on the camera wasn't you. People talk too much.", "ta": "ஒரு ஃபோட்டோலயும் தொப்பி இல்லையா? ம்ம். அப்போ கேமராவுல தொப்பி போட்டவன் நீங்க இல்ல. ஜனங்க ரொம்ப பேசுறாங்க."}},
-  {"id": "murugan_office", "who": "murugan_s", "topic": "place:office", "firsthand": true, "confidence": 1.0, "lead": "muniyandi",
-   "seen": {"en": "his own shifts, every day", "ta": "தினமும் அவரோட ஷிஃப்ட்"},
-   "text": {"en": "Days, it's me at the gate. Nights, Muniyandi. Whatever happened after dark, he's the one to ask.", "ta": "பகல்ல நான் கேட்ல. ராத்திரி முனியாண்டி. இருட்டினப்புறம் என்ன நடந்ததுன்னாலும் அவர்கிட்டதான் கேக்கணும்."}},
-  {"id": "murugan_suresh", "who": "murugan_s", "topic": "person:suresh", "firsthand": true, "confidence": 0.8,
-   "seen": {"en": "at the gate, often", "ta": "கேட்ல, அடிக்கடி"},
-   "text": {"en": "Suresh sir has his own card for the office door. Comes and goes as he likes, signs nothing.", "ta": "சுரேஷ் சார்கிட்ட ஆபீஸ் கதவுக்கு சொந்த கார்டு இருக்கு. இஷ்டத்துக்கு வருவார் போவார், எதுலயும் கையெழுத்து போடமாட்டார்."}},
-  {"id": "murugan_e07", "who": "murugan_s", "topic": "evidence:E07", "firsthand": true, "confidence": 0.7, "lead": "muniyandi",
-   "seen": {"en": "the picture, just now", "ta": "இப்போ பார்த்த படம்"},
-   "text": {"en": "That's our lobby, yes. A man in a cap with a card... at night that's Muniyandi's watch, not mine.", "ta": "ஆமா, அது நம்ம லாபி. தொப்பி போட்டு கார்டோட ஒருத்தன்... ராத்திரி அது முனியாண்டி டியூட்டி, என்னுது இல்ல."}},
-  {"id": "shankar_sedan", "who": "shankar", "topic": "vehicle:black_sedan", "firsthand": true, "confidence": 0.5,
-   "seen": {"en": "that night, after nine, the office lane", "ta": "அன்னைக்கு ராத்திரி ஒன்பதுக்கு அப்புறம், ஆபீஸ் சந்து"},
-   "text": {"en": "A black sedan, parked nose-out by the office lane that night, after nine. I didn't see who got out.", "ta": "ஒரு கருப்பு சேடன், அன்னைக்கு ராத்திரி ஒன்பதுக்கு அப்புறம் ஆபீஸ் சந்துல வெளியே பாத்து நிறுத்தியிருந்தது. யார் இறங்கினாங்கன்னு பாக்கல."}},
-  {"id": "shankar_suv", "who": "shankar", "topic": "vehicle:white_suv", "firsthand": true, "confidence": 0.4,
-   "seen": {"en": "that night, after ten, Gandhipuram", "ta": "அன்னைக்கு ராத்திரி பத்துக்கு அப்புறம், காந்திபுரம்"},
-   "text": {"en": "Raghavan sir's white one? It went past after ten, fast. I couldn't see the driver.", "ta": "ராகவன் சார் வெள்ளை வண்டியா? பத்துக்கு அப்புறம் வேகமா போச்சு. டிரைவர பாக்க முடியல."}},
-  {"id": "dinesh_suv", "who": "dinesh", "topic": "vehicle:white_suv", "firsthand": false, "confidence": 0.5,
-   "seen": {"en": "talk at the station", "ta": "ஸ்டேஷன் பேச்சு"},
-   "text": {"en": "The Lawley Road camera caught it at ten-twelve; it's in your case file. They say the man at the wheel wore a cap.", "ta": "லாலி ரோடு கேமரா பத்து பன்னிரண்டுக்கு அத பிடிச்சுது; உங்க கேஸ் ஃபைல்லயே இருக்கு. ஓட்டினவன் தொப்பி போட்டிருந்தான்னு சொல்றாங்க."}},
-  {"id": "joseph_raghavan", "who": "joseph_d", "topic": "person:raghavan", "firsthand": true, "confidence": 0.95,
-   "seen": {"en": "Day 3, 10:30 AM, the bank's counter", "ta": "நாள் 3, காலை 10:30, வங்கி கவுண்டர்"},
-   "text": {"en": "You drew the four lakhs on his signed letter. I checked the signature myself. It was his order, not yours.", "ta": "அவர் கையெழுத்து போட்ட லெட்டர் வச்சுதான் நீங்க நாலு லட்சம் எடுத்தீங்க. கையெழுத்த நானே சரி பார்த்தேன். அது அவர் உத்தரவு, உங்களுது இல்ல."}},
-  {"id": "vasanthi_suresh", "who": "vasanthi", "topic": "person:suresh", "firsthand": true, "confidence": 0.8,
-   "seen": {"en": "at her flower basket, every Friday", "ta": "வெள்ளிக்கிழமை தோறும் பூக்கூடை அருகே"},
-   "text": {"en": "Suresh sir? The one with the big green stone ring, always turning it. Buys jasmine for his wife, never haggles.", "ta": "சுரேஷ் சாரா? பெரிய பச்சைக்கல் மோதிரம், எப்பவும் சுத்திக்கிட்டே இருப்பார். மனைவிக்கு மல்லிகை வாங்குவார், பேரம் பேசமாட்டார்."}}
+  {
+   "id": "rafiq_night",
+   "who": "rafiq",
+   "topic": "night",
+   "firsthand": true,
+   "confidence": 0.9,
+   "seen": {
+    "en": "Day 3, about 9:50 PM, Hotel Anna Mess",
+    "ta": "நாள் 3, சுமார் இரவு 9:50, அன்னா மெஸ்"
+   },
+   "text": {
+    "en": "That night? You were here, anna. The parcel for Saravanampatti, ten to ten. I packed it myself and you went off on the scooter.",
+    "ta": "அந்த ராத்திரியா? நீங்க இங்கதான் இருந்தீங்க அண்ணா. சரவணம்பட்டி பார்சல், பத்துக்கு பத்து நிமிஷம் முன்னாடி. நானே பேக் பண்ணேன், நீங்க ஸ்கூட்டர்ல போனீங்க."
+   },
+   "at": "21:50"
+  },
+  {
+   "id": "rafiq_e05",
+   "who": "rafiq",
+   "topic": "evidence:E05",
+   "firsthand": true,
+   "confidence": 0.8,
+   "seen": {
+    "en": "Day 3, Hotel Anna Mess",
+    "ta": "நாள் 3, அன்னா மெஸ்"
+   },
+   "text": {
+    "en": "Saravanampatti, ten-twenty? That's where the parcel was going. Twelve kilometres, anna. You can't be in two places.",
+    "ta": "சரவணம்பட்டி, பத்து இருபது? அங்கதான் பார்சல் போச்சு. பன்னிரண்டு கிலோமீட்டர் அண்ணா. ரெண்டு இடத்துல இருக்க முடியாது."
+   }
+  },
+  {
+   "id": "kumaresan_night",
+   "who": "kumaresan",
+   "topic": "night",
+   "firsthand": false,
+   "confidence": 0.3,
+   "contradicts": "rafiq_night",
+   "seen": {
+    "en": "heard at the tea stall, the next morning",
+    "ta": "மறுநாள் காலை டீ கடையில கேட்டது"
+   },
+   "text": {
+    "en": "Everyone says the driver took him out that night and drove him to the fields. That's what they say at the tea stall.",
+    "ta": "டிரைவர்தான் அன்னைக்கு ராத்திரி அவர வயலுக்கு கூட்டிட்டு போனான்னு எல்லாரும் சொல்றாங்க. டீ கடையில அப்படித்தான் பேச்சு."
+   },
+   "at": "22:00"
+  },
+  {
+   "id": "kumaresan_karthik",
+   "who": "kumaresan",
+   "topic": "person:karthik",
+   "firsthand": false,
+   "confidence": 0.2,
+   "seen": {
+    "en": "the papers, the street",
+    "ta": "பேப்பர், தெரு பேச்சு"
+   },
+   "text": {
+    "en": "You're the driver? They say you did it. I've lived long enough not to believe everything I hear.",
+    "ta": "நீங்கதான் அந்த டிரைவரா? நீங்கதான் பண்ணீங்கன்னு சொல்றாங்க. கேக்குறதெல்லாம் நம்பாத அளவுக்கு நான் வாழ்ந்துட்டேன்."
+   }
+  },
+  {
+   "id": "kumaresan_e14",
+   "who": "kumaresan",
+   "topic": "evidence:E14",
+   "firsthand": true,
+   "confidence": 0.6,
+   "seen": {
+    "en": "the photos, just now",
+    "ta": "இப்போ பார்த்த ஃபோட்டோ"
+   },
+   "text": {
+    "en": "No cap in any of them? Hm. Then the cap man on the camera wasn't you. People talk too much.",
+    "ta": "ஒரு ஃபோட்டோலயும் தொப்பி இல்லையா? ம்ம். அப்போ கேமராவுல தொப்பி போட்டவன் நீங்க இல்ல. ஜனங்க ரொம்ப பேசுறாங்க."
+   }
+  },
+  {
+   "id": "murugan_office",
+   "who": "murugan_s",
+   "topic": "place:office",
+   "firsthand": true,
+   "confidence": 1.0,
+   "lead": "muniyandi",
+   "seen": {
+    "en": "his own shifts, every day",
+    "ta": "தினமும் அவரோட ஷிஃப்ட்"
+   },
+   "text": {
+    "en": "Days, it's me at the gate. Nights, Muniyandi. Whatever happened after dark, he's the one to ask.",
+    "ta": "பகல்ல நான் கேட்ல. ராத்திரி முனியாண்டி. இருட்டினப்புறம் என்ன நடந்ததுன்னாலும் அவர்கிட்டதான் கேக்கணும்."
+   }
+  },
+  {
+   "id": "murugan_suresh",
+   "who": "murugan_s",
+   "topic": "person:suresh",
+   "firsthand": true,
+   "confidence": 0.8,
+   "seen": {
+    "en": "at the gate, often",
+    "ta": "கேட்ல, அடிக்கடி"
+   },
+   "text": {
+    "en": "Suresh sir has his own card for the office door. Comes and goes as he likes, signs nothing.",
+    "ta": "சுரேஷ் சார்கிட்ட ஆபீஸ் கதவுக்கு சொந்த கார்டு இருக்கு. இஷ்டத்துக்கு வருவார் போவார், எதுலயும் கையெழுத்து போடமாட்டார்."
+   }
+  },
+  {
+   "id": "murugan_e07",
+   "who": "murugan_s",
+   "topic": "evidence:E07",
+   "firsthand": true,
+   "confidence": 0.7,
+   "lead": "muniyandi",
+   "seen": {
+    "en": "the picture, just now",
+    "ta": "இப்போ பார்த்த படம்"
+   },
+   "text": {
+    "en": "That's our lobby, yes. A man in a cap with a card... at night that's Muniyandi's watch, not mine.",
+    "ta": "ஆமா, அது நம்ம லாபி. தொப்பி போட்டு கார்டோட ஒருத்தன்... ராத்திரி அது முனியாண்டி டியூட்டி, என்னுது இல்ல."
+   }
+  },
+  {
+   "id": "shankar_sedan",
+   "who": "shankar",
+   "topic": "vehicle:black_sedan",
+   "firsthand": true,
+   "confidence": 0.5,
+   "seen": {
+    "en": "that night, after nine, the office lane",
+    "ta": "அன்னைக்கு ராத்திரி ஒன்பதுக்கு அப்புறம், ஆபீஸ் சந்து"
+   },
+   "text": {
+    "en": "A black sedan, parked nose-out by the office lane that night, after nine. I didn't see who got out.",
+    "ta": "ஒரு கருப்பு சேடன், அன்னைக்கு ராத்திரி ஒன்பதுக்கு அப்புறம் ஆபீஸ் சந்துல வெளியே பாத்து நிறுத்தியிருந்தது. யார் இறங்கினாங்கன்னு பாக்கல."
+   },
+   "at": "21:15"
+  },
+  {
+   "id": "shankar_suv",
+   "who": "shankar",
+   "topic": "vehicle:white_suv",
+   "firsthand": true,
+   "confidence": 0.4,
+   "seen": {
+    "en": "that night, after ten, Gandhipuram",
+    "ta": "அன்னைக்கு ராத்திரி பத்துக்கு அப்புறம், காந்திபுரம்"
+   },
+   "text": {
+    "en": "Raghavan sir's white one? It went past after ten, fast. I couldn't see the driver.",
+    "ta": "ராகவன் சார் வெள்ளை வண்டியா? பத்துக்கு அப்புறம் வேகமா போச்சு. டிரைவர பாக்க முடியல."
+   },
+   "at": "22:05"
+  },
+  {
+   "id": "dinesh_suv",
+   "who": "dinesh",
+   "topic": "vehicle:white_suv",
+   "firsthand": false,
+   "confidence": 0.5,
+   "seen": {
+    "en": "talk at the station",
+    "ta": "ஸ்டேஷன் பேச்சு"
+   },
+   "text": {
+    "en": "The Lawley Road camera caught it at ten-twelve; it's in your case file. They say the man at the wheel wore a cap.",
+    "ta": "லாலி ரோடு கேமரா பத்து பன்னிரண்டுக்கு அத பிடிச்சுது; உங்க கேஸ் ஃபைல்லயே இருக்கு. ஓட்டினவன் தொப்பி போட்டிருந்தான்னு சொல்றாங்க."
+   },
+   "at": "22:12"
+  },
+  {
+   "id": "joseph_raghavan",
+   "who": "joseph_d",
+   "topic": "person:raghavan",
+   "firsthand": true,
+   "confidence": 0.95,
+   "seen": {
+    "en": "Day 3, 10:30 AM, the bank's counter",
+    "ta": "நாள் 3, காலை 10:30, வங்கி கவுண்டர்"
+   },
+   "text": {
+    "en": "You drew the four lakhs on his signed letter. I checked the signature myself. It was his order, not yours.",
+    "ta": "அவர் கையெழுத்து போட்ட லெட்டர் வச்சுதான் நீங்க நாலு லட்சம் எடுத்தீங்க. கையெழுத்த நானே சரி பார்த்தேன். அது அவர் உத்தரவு, உங்களுது இல்ல."
+   }
+  },
+  {
+   "id": "vasanthi_suresh",
+   "who": "vasanthi",
+   "topic": "person:suresh",
+   "firsthand": true,
+   "confidence": 0.8,
+   "seen": {
+    "en": "at her flower basket, every Friday",
+    "ta": "வெள்ளிக்கிழமை தோறும் பூக்கூடை அருகே"
+   },
+   "text": {
+    "en": "Suresh sir? The one with the big green stone ring, always turning it. Buys jasmine for his wife, never haggles.",
+    "ta": "சுரேஷ் சாரா? பெரிய பச்சைக்கல் மோதிரம், எப்பவும் சுத்திக்கிட்டே இருப்பார். மனைவிக்கு மல்லிகை வாங்குவார், பேரம் பேசமாட்டார்."
+   }
+  }
  ],
- "dont_know": {"en": ["I don't know anything about that, thambi.", "Me? I didn't see anything.", "Ask someone else, I wasn't there."],
-  "ta": ["அதைப் பத்தி எனக்கு ஒண்ணும் தெரியாது தம்பி.", "நானா? நான் எதுவும் பாக்கல.", "வேற யார்கிட்டயாவது கேளுங்க, நான் அங்க இல்ல."]}
+ "dont_know": {
+  "en": [
+   "I don't know anything about that, thambi.",
+   "Me? I didn't see anything.",
+   "Ask someone else, I wasn't there."
+  ],
+  "ta": [
+   "அதைப் பத்தி எனக்கு ஒண்ணும் தெரியாது தம்பி.",
+   "நானா? நான் எதுவும் பாக்கல.",
+   "வேற யார்கிட்டயாவது கேளுங்க, நான் அங்க இல்ல."
+  ]
+ },
+ "timeline": [
+  {
+   "tag": "E07",
+   "at": "21:39",
+   "en": "The lobby camera: a man in a cap comes in, a card opens the office door (21:40), out 21:58",
+   "ta": "லாபி கேமரா: தொப்பி போட்டவன் உள்ளே, கார்டு ஆபீஸ் கதவைத் திறக்குது (21:40), வெளியே 21:58"
+  },
+  {
+   "tag": "E06",
+   "at": "21:40",
+   "en": "The watchman: a man in a cap goes up with a card",
+   "ta": "வாட்ச்மேன்: தொப்பி போட்டவன் கார்டோட மேலே போனான்"
+  },
+  {
+   "tag": "E05",
+   "at": "22:21",
+   "en": "Ashwin's doorbell, Saravanampatti: my face at his door",
+   "ta": "அஷ்வின் வீட்டு டோர்பெல், சரவணம்பட்டி: என் முகம்"
+  },
+  {
+   "tag": "E08",
+   "at": "22:35",
+   "en": "Sekar's tea stall: the white SUV turns in to Pudhur; a black sedan parked nose-out",
+   "ta": "சேகர் டீ கடை: வெள்ளை எஸ்யூவி புதூருக்குள்; கருப்பு சேடன் நிறுத்தியிருந்தது"
+  },
+  {
+   "tag": "E17",
+   "at": "22:40",
+   "en": "The post-mortem: death between 22:40 and 23:10",
+   "ta": "போஸ்ட்மார்ட்டம்: மரணம் 22:40 முதல் 23:10 வரை"
+  },
+  {
+   "tag": "E13",
+   "at": "22:30",
+   "en": "Pandi's phone at the site, 22:30 to 23:00",
+   "ta": "பாண்டியின் ஃபோன் சைட்டில், 22:30 முதல் 23:00 வரை"
+  }
+ ]
 }
