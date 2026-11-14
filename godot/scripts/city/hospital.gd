@@ -66,6 +66,8 @@ func _process(dt: float) -> void:
 		set_meta("tested", true)
 		if _test == "hunger":
 			life.energy = 0.0
+		if "--hospitalbroke" in OS.get_cmdline_user_args() and city.fines:   # (testing: ₹200 to his name)
+			city.fines.sim.money = 200
 		admit(_test, 0.7)
 		return
 	if _test != "" and has_meta("tested") and not has_meta("left") and city.indoors and Time.get_ticks_msec() > get_meta("woke", 1e12) + 4000:
@@ -111,6 +113,9 @@ func admit(why: String, how_bad := 0.5) -> void:
 		if w.get("anim"):
 			w.anim.play("Idle", 0.3)
 		await _go_down(w)
+	var called := 0.0
+	if city.get("citizens"):                             # (the people near come round; one calls the 108,
+		called = 10.0 if city.citizens.gather(at) > 0 else 0.0   #  which takes a while to come)
 	var lids := create_tween()                           # the street swimming, his eyes half shut
 	lids.tween_property(life.body, "lids_hold", 0.55, 1.5)
 	await get_tree().create_timer(1.5).timeout
@@ -128,11 +133,22 @@ func admit(why: String, how_bad := 0.5) -> void:
 		low.far = prev.far
 		low.cull_mask = prev.cull_mask
 	add_child(low)
-	low.global_position = at + to_road * 2.6 + side * 1.2 + Vector3(0, 1.8, 0)   # him there on the ground a moment
+	low.global_position = at + to_road * 4.5 + side * 2.0 + Vector3(0, 2.6, 0)   # him there on the ground a moment
 	low.look_at(at + Vector3(0, 0.2, 0))                                           # (from the road: the kerb side is
 																				   #  walls and parked cars),
 	low.make_current()
 	await get_tree().create_timer(2.0).timeout
+	var waited := 0.0                                    # (until the first who came running is by him, or 20 s)
+	while called > 0.0 and waited < 20.0 and not city.citizens.gathered():
+		await get_tree().create_timer(0.5).timeout
+		waited += 0.5
+	if called > 0.0:
+		await get_tree().create_timer(3.0).timeout
+	if _test != "" and city.get("citizens"):
+		for c in city.citizens.people:
+			if c.get("gather_t", 0.0) > 0.0 and c["node"] != null:
+				print("HOSPITAL gathered %s at %.1f m, path %d/%d, clip %s" % [c["d"]["id"], (c["node"] as Node3D).global_position.distance_to(at),
+					c["pi"], c["path"].size(), (c["anim"] as AnimationPlayer).current_animation])
 	await _shot("down")
 	low.global_position = at - to_road * 0.5 + Vector3(0, 0.4, 0)              # then as he sees it: from the ground,
 	low.look_at(path[0] + Vector3(0, 1.0, 0))                                      #  the 108 coming
@@ -201,8 +217,13 @@ func _go_down(w: Node3D) -> void:
 	tw.tween_property(m, "rotation:z", -0.08, 0.4)
 	tw.set_parallel(true)
 	tw.tween_property(m, "rotation:x", -PI / 2.0, 0.7).set_ease(Tween.EASE_IN).set_trans(Tween.TRANS_QUAD).set_delay(0.9)
-	tw.tween_property(m, "position:y", 0.18, 0.7).set_delay(0.9)
 	await tw.finished
+	var space := (w as Node3D).get_world_3d().direct_space_state   # (on the ground itself: what's under him, a ray)
+	var q := PhysicsRayQueryParameters3D.create(w.global_position + Vector3.UP * 1.0, w.global_position + Vector3.DOWN * 3.0)
+	q.exclude = [(w as CollisionObject3D).get_rid()]
+	var hit := space.intersect_ray(q)
+	if not hit.is_empty():
+		m.global_position.y = float(hit["position"].y) + 0.14
 
 
 ## The 108 up the road to him: along the nearest street, 50 m back, its lights going, the siren; it stops beside him.

@@ -62,6 +62,16 @@
   {"id": "meera", "name": {"en": "Meera", "ta": "மீரா"}, "sex": "w", "age": 26, "model": "crowd_w2", "role": {"en": "nurse; the night shift at the government hospital", "ta": "அரசு மருத்துவமனை செவிலியர்"},
    "home": [-150, -120], "work": "bus_stand",
    "day": [[0, "away", "work"], [450, "wait", "bus_stand"], [480, "walk", "home"], [510, "sleep", "home"], [900, "home", "home"], [1110, "walk", "lunch_kovai"], [1125, "eat", "lunch_kovai"], [1155, "walk", "bus_stand"], [1170, "wait", "bus_stand"], [1200, "away", "work"]]}
+,
+  {"id": "muniyandi", "story": "muniyandi", "sex": "m", "age": 63, "role": {"en": "night watchman, Raghavan Developers' building", "ta": "ராகவன் டெவலப்பர்ஸ் கட்டிட இரவுக் காவலர்"},
+   "home": [-760, 80], "work": "office_building",
+   "day": [[0, "guard", "work"], [420, "walk", "home"], [480, "sleep", "home"], [960, "home", "home"], [1200, "walk", "work"], [1260, "guard", "work"]]},
+  {"id": "sekar", "story": "sekar", "sex": "m", "age": 57, "role": {"en": "runs Murugan Tea Stall at the Pudhur Vayal turn", "ta": "புதூர் வயல் திருப்பம் முருகன் டீ ஸ்டால்"},
+   "home": [-11500, 1520], "work": "sekar",
+   "day": [[0, "sleep", "home"], [300, "walk", "work"], [330, "open", "work"], [345, "work", "work"], [780, "eat", "work"], [810, "work", "work"], [1230, "close", "work"], [1245, "walk", "home"], [1290, "sleep", "home"]]},
+  {"id": "ganesan", "story": "ganesan", "sex": "m", "age": 50, "role": {"en": "doorman, The Siruvani Grand", "ta": "சிறுவாணி கிராண்ட் வாயில்காப்பாளர்"},
+   "home": [2700, -560], "work": "grand_hotel",
+   "day": [[0, "sleep", "home"], [390, "home", "home"], [420, "walk", "work"], [450, "guard", "work"], [810, "eat", "work"], [840, "guard", "work"], [1230, "walk", "home"], [1260, "home", "home"], [1380, "sleep", "home"]]}
  ],
  "say": {
   "open":  {"en": ["Opening up, thambi. Give me ten minutes.", "Shutter's stuck again. Every morning."], "ta": ["இப்போதான் திறக்கிறேன் தம்பி. பத்து நிமிஷம்.", "ஷட்டர் தினமும் இப்படித்தான் மாட்டுது."]},

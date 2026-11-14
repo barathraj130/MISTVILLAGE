@@ -634,7 +634,8 @@ def walk_phase(a, t):
     ~1.5 m/s). The legs follow the gait curves; the pelvis is lowest as both feet are down and rides up over the
     standing leg, shifts a little over it, turns with the leg that swings forward and dips on the swinging side; the
     chest turns against the pelvis, the body leans a touch forward; the arms swing against the legs (a little behind
-    them, further forward than back, the elbow bending as the arm comes forward); the head stays level and steady."""
+    them, ~16° forward and ~12° back from the shoulder, the forearm trailing a moment behind and bending to ~30° as
+    the arm comes forward, the wrist loose; not held stiff at the sides); the head stays level and steady."""
     w = 2.0 * math.pi * t
     for side, g in (("l", t - 0.25), ("r", t - 0.75)):
         turn(a, "thigh_" + side, 'X', -gait(GAIT_HIP, g) * stride)
@@ -653,8 +654,10 @@ def walk_phase(a, t):
     turn(a, "spine_03", 'Z', -5.0 * math.sin(w))
     for side, sg in (("l", 1.0), ("r", -1.0)):
         s = sg * math.sin(2.0 * math.pi * (t - 0.05))     # +1: this arm furthest back
-        turn(a, "upperarm_" + side, 'X', 11.0 * s - 1.5)
-        turn(a, "lowerarm_" + side, 'X', -(8.0 + 10.0 * max(0.0, -s)))
+        sl = sg * math.sin(2.0 * math.pi * (t - 0.12))    # (the forearm a moment behind: it follows the upper arm)
+        turn(a, "upperarm_" + side, 'X', 12.0 * max(0.0, s) - 16.0 * max(0.0, -s) - 2.0)   # ~16° forward, ~12° back
+        turn(a, "lowerarm_" + side, 'X', -(10.0 + 20.0 * max(0.0, -sl)))      # the elbow soft, bending as it comes forward
+        turn(a, "hand_" + side, 'X', 7.0 * sl)                                # the wrist loose, trailing the swing
     turn(a, "neck_01", 'Z', 2.0 * math.sin(w))
     turn(a, "neck_01", 'X', -2.0)
 

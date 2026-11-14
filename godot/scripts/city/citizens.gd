@@ -10,11 +10,17 @@ extends Node
 ##           place or walking the footpaths to the next (a route on the footpaths' graph, crossing where the
 ##           city's walkers cross), at a person's pace, the Walk clip played to it; at their place what the activity
 ##           shows (serving, arms folded at a gate, on the phone at the bus stop, talking with another there)
-##   far     past 100 m: the body is put away again
+##   middle  within 300 m (the footpaths' graph round him), no body: a walk goes on along its real route at a
+##           person's pace, so whoever comes into sight is where they'd really be by now
+##   far     past 100 m: the body is put away again (the middle tier carries on from where it was)
 ## Indoors (home, asleep, eating inside, away) they aren't seen. A walk takes the time it takes at a person's pace:
 ## seen, they arrive when they arrive (the game's minutes run faster than a man walks); unseen, they're where the
 ## schedule says. Karthik (on foot) can greet one (E): they turn to him, and answer as what they're doing has them
 ## (`say`). What they know and remember is phase 3 (knowledge.gd).
+## Story people with a day of their own ("story": their key in slice.json's people, their model from there): while
+## the story has them on stage (story.gd `cast`), the story's is the only one.
+## They react: in the rain they hurry (running), and those standing about chatting or shopping go in; someone
+## collapsing or knocked down near them (`gather`, hospital.gd) brings the near ones round, one on the phone.
 ##   --citizentest[=HH:MM]   (testing) on foot at Gandhipuram at that hour; every 10 s who's where; pictures (--shots=DIR)
 
 const Prof := preload("res://scripts/drive/prof.gd")
@@ -26,6 +32,9 @@ const STORY := "res://story/slice.json"
 const NEAR := 70.0
 const FAR := 100.0
 const PACE := 1.3                       # m/s, a person walking with somewhere to be
+const RAIN_PACE := 2.6                  # in the rain: hurrying, half running
+const MID := 300.0
+const HELP_PACE := 3.6                  # running to someone who's gone down
 const STRIDE := 1.25                    # metres the crowd's Walk clip covers in a cycle
 const SEEN := ["walk", "open", "work", "close", "guard", "wait", "chat", "shop"]   # (the rest: indoors, unseen)
 
@@ -54,7 +63,12 @@ func _ready() -> void:
 		var p: Dictionary = story["places"][k]
 		_places[k] = Vector2(float(p.get("x", 0.0)), float(p.get("z", 0.0)))
 	say = d.get("say", {})
+	var cast: Dictionary = story.get("people", {})
 	for p in d.get("people", []):
+		if p.has("story") and not p.has("model"):         # (a story person: the model the story gives him)
+			p["model"] = str(cast.get(p["story"], {}).get("model", "crowd_m1"))
+		if p.has("story") and not p.has("name"):
+			p["name"] = cast.get(p["story"], {"en": p["story"]})
 		people.append({"d": p, "act": "", "place": "", "node": null, "path": [], "pi": 0, "wait": 0.0, "pos": Vector3.INF})
 	_label = Label.new()
 	_label.add_theme_font_size_override("font_size", 18)
@@ -148,10 +162,28 @@ func _think(c: Dictionary, m: float, me: Vector3, off: bool) -> void:
 	var day: Array = p["day"]
 	var i := _entry(day, m)
 	var act := str(day[i][1])
+	if p.has("story") and city.story and city.story.get("cast") is Dictionary and city.story.cast.has(p["story"]):
+		if c["node"] != null:                            # (the story has him: its own, not a second)
+			_away(c)
+		return
+	if _rain() and act in ["chat", "shop"]:             # (rain: no standing about, they go in)
+		act = "away"
+	if c.get("gather_t", 0.0) > 0.0 and c["node"] != null and (off or (c["node"] as Node3D).global_position.distance_to(me) > FAR):
+		c["gather_t"] = 0.0                              # (he's gone from there: so are they)
+	if c.get("gather_t", 0.0) > 0.0:                     # (round someone who's gone down)
+		c["gather_t"] -= 0.5
+		if c["gather_t"] > 0.0:
+			return
+		c["place"] = ""
 	var target_key := str(day[(i + 1) % day.size()][2]) if act == "walk" else str(day[i][2])
 	var target_raw = day[(i + 1) % day.size()][2] if act == "walk" else day[i][2]
 	var w2 := _where(c, m)
+	if c["node"] == null and c["pos"] != Vector3.INF and c.get("mid_act", "") == act:   # (the middle tier's place)
+		w2 = Vector2(c["pos"].x, c["pos"].z)
 	var near := Vector2(me.x, me.z).distance_to(w2 if c["node"] == null else Vector2(c["node"].global_position.x, c["node"].global_position.z))
+	if c["node"] == null and act in SEEN and near < MID and near > NEAR and not off and _astar.get_point_count() > 0:
+		_middle(c, act, target_key, day[(i + 1) % day.size()][2] if act == "walk" else day[i][2], w2)
+		return
 	var changed: bool = act != c["act"] or target_key != c["place"]
 	c["act"] = act
 	c["place"] = target_key
@@ -162,6 +194,14 @@ func _think(c: Dictionary, m: float, me: Vector3, off: bool) -> void:
 		if spot == Vector3.INF:
 			return
 		_bring(c, spot)
+		if c.get("mid_act", "") == act and not c.get("mid_path", []).is_empty():   # (on with the walk it was on)
+			c["path"] = c["mid_path"]
+			c["pi"] = int(c.get("mid_pi", 0))
+			c["dest"] = c.get("mid_dest", [spot, 0.0])
+			c["act"] = act
+			c["place"] = target_key
+			_play(c, "Walk" if c["pi"] < c["path"].size() else _pose(act))
+			return
 		changed = true
 	elif off or near > FAR:
 		_away(c)
@@ -179,6 +219,72 @@ func _think(c: Dictionary, m: float, me: Vector3, off: bool) -> void:
 		c["path"] = _route(c["node"].global_position, dest[0])
 		c["pi"] = 0
 		_play(c, "Walk" if c["path"].size() > 1 else _pose(act))
+
+
+## No body, but on their way: along the real route at a person's pace (half-second steps).
+func _middle(c: Dictionary, act: String, key: String, raw, at: Vector2) -> void:
+	var p: Dictionary = c["d"]
+	if c.get("mid_act", "") != act or c.get("mid_key", "") != key or c["pos"] == Vector3.INF:
+		c["mid_act"] = act
+		c["mid_key"] = key
+		var start := _spot_near(Vector3(at.x, 0.0, at.y))
+		if start == Vector3.INF:
+			return
+		c["pos"] = start
+		var dest := _spot_for(raw, p, 0)
+		if dest[0] == Vector3.INF:
+			c["mid_path"] = []
+			return
+		c["mid_dest"] = dest
+		c["mid_path"] = _route(start, dest[0]) if act == "walk" or c["pos"].distance_to(dest[0]) > 3.0 else []
+		c["mid_pi"] = 0
+	var path: Array = c.get("mid_path", [])
+	var left := (RAIN_PACE if _rain() else PACE) * 0.5
+	while left > 0.0 and int(c["mid_pi"]) < path.size():
+		var tgt: Vector3 = path[c["mid_pi"]]
+		var d: float = c["pos"].distance_to(tgt)
+		if d <= left:
+			c["pos"] = tgt
+			c["mid_pi"] = int(c["mid_pi"]) + 1
+			left -= d
+		else:
+			c["pos"] = c["pos"] + (tgt - c["pos"]).normalized() * left
+			left = 0.0
+
+
+func _rain() -> bool:
+	return city.fines != null and str(city.fines.sim.weather) == "rain"
+
+
+## Someone gone down near them (a collapse, a knock-down): the near ones come round and stand a while, one on the
+## phone (for the 108), the others shaking their heads, looking on.
+## Has the first of those gathering reached him?
+func gathered() -> bool:
+	for c in people:
+		if c.get("gather_t", 0.0) > 0.0 and c["node"] != null and int(c["pi"]) >= (c["path"] as Array).size():
+			return true
+	return false
+
+
+func gather(at: Vector3) -> int:
+	var k := 0
+	for c in people:
+		if c["node"] == null or not is_instance_valid(c["node"]):
+			continue
+		if (c["node"] as Node3D).global_position.distance_to(at) > 45.0:
+			continue
+		var ang := k * 1.3
+		var spot := at + Vector3(cos(ang), 0.0, sin(ang)) * (2.6 + 0.4 * (k % 3))
+		c["path"] = _route(c["node"].global_position, spot)
+		c["pi"] = 0
+		c["dest"] = [spot, atan2(at.x - spot.x, at.z - spot.z)]
+		c["gather_t"] = 45.0
+		c["gather_clip"] = "crowd/Phone" if k == 0 else ("crowd/Shake" if k % 2 == 1 else "Idle")
+		_play(c, "Walk")
+		k += 1
+	if k > 0:
+		print("CITIZENS %d gather round at %.0f,%.0f" % [k, at.x, at.z])
+	return k
 
 
 ## A body for them: their model, the crowd's clips, a head that turns to Karthik.
@@ -221,7 +327,13 @@ func _ground(p: Vector3, path_y: float) -> float:
 
 
 func _away(c: Dictionary) -> void:
-	if c["node"] and is_instance_valid(c["node"]):
+	if c["node"] != null and is_instance_valid(c["node"]):
+		c["pos"] = (c["node"] as Node3D).global_position    # (the middle tier carries on from here)
+		c["mid_act"] = c["act"]
+		c["mid_key"] = c["place"]
+		c["mid_path"] = c["path"]
+		c["mid_pi"] = c["pi"]
+		c["mid_dest"] = c.get("dest", [c["pos"], 0.0])
 		c["node"].queue_free()
 	c["node"] = null
 	c["path"] = []
@@ -242,7 +354,8 @@ func _move(c: Dictionary, dt: float) -> void:
 			if c["pi"] >= path.size():
 				_arrive(c)
 			return
-		var step := d.normalized() * minf(PACE * dt, d.length())
+		var pace := HELP_PACE if c.get("gather_t", 0.0) > 0.0 else (RAIN_PACE if _rain() else PACE)   # (hurrying)
+		var step := d.normalized() * minf(pace * dt, d.length())
 		n.global_position += step
 		n.global_position.y = lerpf(n.global_position.y, _ground(n.global_position, tgt.y), 1.0 - exp(-dt * 6.0))
 		n.rotation.y = lerp_angle(n.rotation.y, atan2(d.x, d.z), 1.0 - exp(-dt * 8.0))
@@ -250,6 +363,8 @@ func _move(c: Dictionary, dt: float) -> void:
 	var face: float = c.get("face", n.rotation.y)
 	n.rotation.y = lerp_angle(n.rotation.y, face, 1.0 - exp(-dt * 4.0))
 	c["gest"] -= dt
+	if c.get("gather_t", 0.0) > 0.0:                    # (gathered round: they stay with it)
+		return
 	if c["gest"] <= 0.0:                               # now and then, what the work looks like
 		c["gest"] = randf_range(5.0, 11.0)
 		_play(c, _gesture(c), 0.4)
@@ -267,6 +382,9 @@ func _arrive(c: Dictionary) -> void:
 				return
 	if c.has("dest"):
 		c["face"] = c["dest"][1]
+	if c.get("gather_t", 0.0) > 0.0:
+		_play(c, str(c.get("gather_clip", "Idle")))
+		return
 	_play(c, _pose(act))
 
 
@@ -293,7 +411,12 @@ func _play(c: Dictionary, clip: String, blend := 0.3) -> void:
 		clip = "Idle"
 	if ap.current_animation != clip:
 		ap.play(clip, blend)
-	ap.speed_scale = (PACE / STRIDE) if clip == "Walk" else 1.0
+	if clip == "Walk" and (_rain() or c.get("gather_t", 0.0) > 0.0) and ap.has_animation("Run"):
+		clip = "Run"                                   # (hurrying: out of the rain, or to someone down)
+		if ap.current_animation != clip:
+			ap.play(clip, blend)
+	var run_pace := HELP_PACE if c.get("gather_t", 0.0) > 0.0 else RAIN_PACE
+	ap.speed_scale = (PACE / STRIDE) if clip == "Walk" else ((run_pace / 3.9) if clip == "Run" else 1.0)
 
 
 # ---- the footpaths' graph -----------------------------------------------------------------------------------------
@@ -483,8 +606,12 @@ func _run_test(dt: float) -> void:
 				var np: Vector3 = (c["node"] as Node3D).global_position
 				var gy: float = city.streamer.height_at(np.x, np.z)
 				parts.append("%s %s (%+.1f m)" % [c["d"]["id"], c["act"], np.y - gy])
-		print("CITIZENTEST %s: %d near (%s); graph %d" % [city.fines.sim.clock_text(_now()) if city.fines else "",
-			seen, ", ".join(parts), _astar.get_point_count()])
+		var mids: Array = []
+		for c in people:
+			if c["node"] == null and c["pos"] != Vector3.INF and c.get("mid_act", "") in SEEN:
+				mids.append("%s %s %.0f m" % [c["d"]["id"], c["mid_act"], Vector2(c["pos"].x, c["pos"].z).distance_to(Vector2(city.streamer.target.global_position.x, city.streamer.target.global_position.z))])
+		print("CITIZENTEST %s%s: %d near (%s); middle: %s; graph %d" % [city.fines.sim.clock_text(_now()) if city.fines else "",
+			" rain" if _rain() else "", seen, ", ".join(parts), ", ".join(mids), _astar.get_point_count()])
 		if _shots != "" and seen > 0 and not has_meta("portraits") and Time.get_ticks_msec() > 40000:
 			set_meta("portraits", true)                    # each one there, from a few metres in front
 			var prev := get_viewport().get_camera_3d()
