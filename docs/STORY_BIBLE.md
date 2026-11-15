@@ -229,7 +229,7 @@ Advocate Sundaram), or **disputed** when a source contradicts it. Each item has 
 | E12 | Bala's chats and memory: Suresh asking about Karthik's day | Bala | The leak | Second twist | Act 5 |
 | E13 | Pandi's phone location at the site, 22:30–23:00 | court order | Pandi was there | Leads to his confession | Act 6 |
 | E14 | Family photos: Karthik never in a cap | Amma's albums (a Pongal photo, taken in the game in their front room) | He doesn't wear caps | Disputes E02 | Act 4 (slice: Day 7, after Sekar's "a cap") |
-| E15 | Suresh's debts to the money-lender | Joseph, the accountant | Suresh's motive | Motive | Act 6 |
+| E15 | Suresh's debts to the money-lender: Joseph's copy of the lender's ledger, from the steel almirah in the Kongu Green Estates godown at Pudhur Vayal (E15T: Joseph's recorded word, kept if the ledger is lost) | Joseph, the accountant | Suresh's motive | Motive | Act 6 |
 | E16 | Land records: Pudhur Vayal plots registered to "Kongu Green Estates", a firm of Suresh's wife, a week before the murder | District Collectorate, patta counter | Suresh already owned the deal Raghavan refused to sign | Motive (with E09, E15) | Act 4 |
 | E17 | Post-mortem: death between 22:40 and 23:10 | Government Hospital, through Priya | When he died | Karthik was home or on the road from Saravanampatti then (E05) | Act 4 |
 | E18 | The Siruvani Grand: Suresh lunching with two land buyers, Day 2; the doorman remembers his ring | the hotel's doorman, Ganesan | Suresh was selling Green Valley before it was signed | Motive, and a witness who saw Suresh's ring tell | Act 4 |
@@ -302,6 +302,11 @@ The days are game days, at 48 real minutes each (GAME_RULES.md §1).
   - The meeting with Suresh is a trap. The player must stay lawful: don't take the bait, and call Sundaram.
   - Sundaram files for E10 and E13. Pandi tries to leave town from the Gandhipuram bus stand (E19) and is held; cornered,
     he turns approver. Joseph opens the books (E15), meeting Karthik at the trade fair complex, away from Suresh.
+  - Joseph's word (E15T) at the trade fair is not enough on its own: the ledger copy is in Suresh's godown at Pudhur
+    Vayal. That night Joseph lets him in (9 PM); Suresh's men arrive; Joseph slips out the back. Ten men in three waves
+    (F hit, right mouse block, Space step back; the sacks are cover). Lose and they take the ledger. Then Divya: men at
+    the gate, don't come home. He lies low in the fields till dawn while four men search with torches (Z: low); found,
+    they take the ledger if he still has it. Sekar finds him at first light. No jumpscares: the tension is the torches.
   - The trial: Karthik's journey reconstruction is played in court, minute by minute on the map.
   - Murugesan, convinced at last, arrests Suresh.
 - **Ending:**
@@ -383,7 +388,7 @@ The slice grew into the whole of Part 1. Day by day, as it plays now:
 | 14–15 | The key-cutters, found by asking (no pin): Town Hall's pavement, three umbrellas (a cobbler, a phone-cover boy, the key-cutter) and a flower seller; then R.S. Puram's shops by the flyover (a mobile shop, a sweet shop, a pharmacy, Vinayaga Key Works); Bala Motors' job card; the key programmer's PIN, found in the workshop (the sticky note, his first bike's plate in a photo, a decoy on the calendar) opens its log; Bala's chats (forgive him, or walk out); Suresh calls | E11, E11L, E12 |
 | 16 | The trap at the site at 6:40 (call Sundaram, or go). Gone: played on foot, Suresh needling him (the cash bag on his car's roof, Amma's vegetable seller, Divya walking home) while his anger rises (Space: breathe); walk away, or grab his collar (or lose his temper), or take the bag; a police jeep waits with its lights off down the field road, for whoever looks | |
 | 17 | The court orders; Pandi at the Gandhipuram bus stand: pick him out of the crowd by Selvi's description (black cap, dark jacket, grey trousers) before the Salem bus leaves; a wrong man costs time; miss it and the patrol stops the bus at a signal | E10, E13, E19 |
-| 18 | Joseph at the CODISSIA fair (the Kovai Agri Expo): record him on the phone at the red tractor without looking at him; stare and he walks off, leaving only his pages | E15 |
+| 18 | Joseph at the CODISSIA fair (the Kovai Agri Expo): record him on the phone at the red tractor without looking at him; stare and he walks off, leaving only his pages (E15T). That night, the godown at Pudhur Vayal: the ledger from the almirah (E15), the ten-man fight (fight.gd; lost: the ledger taken), then hiding in the fields till dawn from four men with torches (hide.gd; found: the ledger taken if he has it) | E15T, E15 |
 | 19 | The trial in the Principal Sessions Court: the prosecution's six points answered with the evidence found (bought evidence objected to, and the job card too unless the programmer's log backs it), the night replayed on the map; Pandi's testimony; Suresh arrested; Karthik discharged | |
 | 20 | Meenakshi and Priya at the door: the keys of The Mist Village; at dawn he rides north on his scooter to the ghat, and the game hands over to the mountain world: the nine hairpins at sunrise, ridden, not watched, to The Mist Village's gate, where Part 1 ends on its title ("Part 2 begins here") and he can walk in | |
 

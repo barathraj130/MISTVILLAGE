@@ -59,6 +59,8 @@ const Tasks := preload("res://scripts/story/tasks.gd")
 const Table := preload("res://scripts/story/table.gd")
 const Wall := preload("res://scripts/story/wall.gd")
 const Interact := preload("res://scripts/story/interactable.gd")
+const Fight := preload("res://scripts/story/fight.gd")
+const Hide := preload("res://scripts/story/hide.gd")
 const Dvr := preload("res://scripts/story/dvr.gd")
 const Doorbell := preload("res://scripts/story/doorbell.gd")
 const Keypad := preload("res://scripts/story/keypad.gd")
@@ -165,6 +167,8 @@ var _note := ""                       # home: a line under the goal for a few se
 var _note_t := 0.0
 var room: Node3D                    # the room a scene is playing in, under the street
 var interact: Node3D                # its things he can use on foot (interactable.gd), if it has any
+var _fight: Node                     # the godown's fight while it's on (fight.gd)
+var _hide: Node                      # the night in the fields (hide.gd)
 var face_light: SpotLight3D         # a soft key light on whoever is speaking (close-ups)
 const ROOMS := "res://assets/interiors/room_%s.glb"
 
@@ -550,7 +554,7 @@ func _next() -> void:
 		_f2f_off()
 	if _climbing and not str(cur["do"]) in ["talk", "choose"]:     # out of the dark building, back to the street
 		_end_climb()
-	if room != null and not str(cur["do"]) in ["room", "task", "talk", "comfort_verdict", "deliver_verdict", "card", "home", "choose",
+	if room != null and not str(cur["do"]) in ["room", "task", "talk", "comfort_verdict", "deliver_verdict", "card", "home", "choose", "fight",
 			"give", "take", "note", "message", "contact", "pin", "call", "table", "dvr", "deal", "money", "bail", "snapshot", "evidence", "record"]:
 		_unload_room()
 		_cams_back()
@@ -578,6 +582,27 @@ func _next() -> void:
 	if cur.get("doorbell", false):                     # (at Ashwin's door: his doorbell camera is recording)
 		_doorbell_capture()
 	match str(cur["do"]):
+		"fight":                                         # the godown: Suresh's men (fight.gd); won or lost, on
+			_load_room(str(cur["room"]), str(cur.get("at", data["spawn"])))
+			_walk_in(str(cur.get("start", "karthik")))
+			_fight = Fight.new()
+			_fight.name = "Fight"
+			_fight.city = city
+			_fight.story = self
+			_fight.room = room
+			add_child(_fight)
+			_fight.finished.connect(_fight_done)
+			_fight.start(cur)
+			return
+		"hide":                                          # the night after: hidden in the fields till dawn (hide.gd)
+			_hide = Hide.new()
+			_hide.name = "Hide"
+			_hide.city = city
+			_hide.story = self
+			add_child(_hide)
+			_hide.finished.connect(_hide_done)
+			_hide.start(cur, place_pos(str(cur.get("at", data["spawn"]))))
+			return
 		"message":                                       # a text arrives (from, en/ta)
 			city.phone.message(cur["from"], cur["text"], str(cur.get("time", "")))
 			_next()
@@ -1101,6 +1126,44 @@ func _load_room(name: String, at_key: String) -> void:
 			room.add_child(l)
 	interact = Interact.attach(room, name, city, self)
 	city.indoors = true
+
+
+## The fight is over: "win" or "lose" set (lost: they have the ledger), and on.
+func _fight_done(won: bool) -> void:
+	flags[str(cur.get("win", "fight_won"))] = won
+	flags[str(cur.get("lose", "fight_lost"))] = not won
+	if not won:
+		_taken(cur.get("takes", []))
+	if _fight:
+		_fight.queue_free()
+	_fight = null
+	_next()
+
+
+## The night is over: "caught" set if they found him (and took the ledger if he had it).
+func _hide_done(caught: bool) -> void:
+	flags[str(cur.get("caught", "hide_caught"))] = caught
+	if caught:
+		_taken(cur.get("takes", []))
+	if _hide:
+		_hide.queue_free()
+	_hide = null
+	_next()
+
+
+## Taken off him (the fight lost, found in the night): "takes" = [{"tag": evidence, "item": in his pocket,
+## "memory": the wall's card}]: gone from his pocket, the wall and what he can put before the court.
+func _taken(list: Array) -> void:
+	for t in list:
+		var tag := str(t.get("tag", ""))
+		if tag != "" and evidence.has(tag):
+			evidence.erase(tag)
+			flags["ev_" + tag] = "lost"
+			print("STORY evidence %s taken from him" % tag)
+		if t.has("item"):
+			city.hands.take(str(t["item"]))
+		if t.has("memory") and wall.has_method("remove"):
+			wall.remove(str(t["memory"]))
 
 
 func _unload_room() -> void:

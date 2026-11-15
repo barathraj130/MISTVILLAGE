@@ -1951,7 +1951,7 @@ def police_detail(T):
 
 DETAIL = {"home": home_detail, "dev_office": office_detail, "coopbank": bank_detail, "mess": mess_detail,
           "police": police_detail, "fine_dining": fine_dining_detail, "cctv_shop": lambda T: None, "prison": lambda T: None,
-          "court": lambda T: None}
+          "court": lambda T: None, "godown": lambda T: None}
 
 
 def court(T):
@@ -2089,8 +2089,219 @@ def court(T):
     shot("gallery", (0.0, 1.5, 2.4), (0.0, -6.0, 1.0))
 
 
+# ---- sandbags: burlap sacks, filled, on pallets (the godown) ----
+def _burlap_texture():
+    """Burlap, made here (no picture from outside): a loose plain weave (threads over and under, each its own shade),
+    the fibres' fuzz, dust low down, and two dark green stripes across the sack near one end (u = the sack's length,
+    v = its width; a sack's top is the middle of the image)."""
+    path = os.path.join(TEX, "burlap_sack.jpg")
+    n = 512
+    rng = np.random.default_rng(31)
+    y, x = np.mgrid[0:n, 0:n] / n
+    cnt = 128                                               # threads across the image (4 px a thread)
+    wu = np.sin(x * cnt * math.pi)                          # the weave: warp and weft crossing, over one, under one
+    wv = np.sin(y * cnt * math.pi)
+    over = ((np.floor(x * cnt) + np.floor(y * cnt)) % 2) > 0.5
+    thread = np.where(over, np.abs(wu), np.abs(wv)) ** 0.6
+    tw = rng.normal(0, 0.07, cnt)                           # each thread a shade of its own
+    tf = rng.normal(0, 0.07, cnt)
+    shade_w = np.where(over, tw[np.floor(y * cnt).astype(int) % cnt], tf[np.floor(x * cnt).astype(int) % cnt])
+    fuzz = rng.normal(0, 0.05, (n, n))
+    base = np.array([0.62, 0.5, 0.33])
+    lum = 0.72 + 0.22 * thread + shade_w + fuzz
+    img = base[None, None, :] * lum[:, :, None]
+    dust = np.clip((y - 0.85) * 3.0, 0, 1) + np.clip((0.15 - y) * 3.0, 0, 1)   # (the sides it sat on)
+    img = img * (1 - 0.18 * dust[:, :, None]) + np.array([0.5, 0.47, 0.42]) * 0.18 * dust[:, :, None]
+    green = np.array([0.16, 0.3, 0.14])
+    for c in (0.2, 0.245):                                  # two stripes across, a hand from one end
+        band = np.abs(x - c) < 0.012
+        img[band] = img[band] * 0.35 + green * 0.65 * (0.8 + 0.2 * thread[band])[:, None]
+    img = np.clip(img, 0, 1)
+    im = bpy.data.images.new("burlap_sack", n, n)
+    im.pixels = np.concatenate([img[::-1].reshape(-1, 3), np.ones((n * n, 1))], 1).ravel()
+    im.filepath_raw = path
+    im.file_format = 'JPEG'
+    im.save()
+    return path
+
+
+_BAGS = {}
+
+
+def _sandbag_mesh(key, L, W, H, full, seed):
+    """One filled sack (L long, W wide, H high when lying): a finely cut box pulled into a pillow: the middle bulging
+    (more the fuller it is), the bottom flatter where it rests, the corners pinched in where the cloth is stitched and
+    gathered, a seam ridge round its middle, the cloth a little uneven. UVs: u along it, v across (the texture's
+    stripes near one end)."""
+    if key in _BAGS:
+        return _BAGS[key]
+    rng = random.Random(seed)
+    bm = bmesh.new()
+    bmesh.ops.create_cube(bm, size=2.0)
+    bmesh.ops.subdivide_edges(bm, edges=list(bm.edges), cuts=7, use_grid_fill=True)
+    ph = [rng.uniform(0, 6.28) for _ in range(4)]
+    for v in bm.verts:
+        x, y, z = v.co.x, v.co.y, v.co.z                    # each -1..1
+        pinch = 1.0 - 0.55 * abs(x) ** 6 * abs(y) ** 3      # the corners gathered in
+        top = (1.0 - x * x) ** 0.5 * (1.0 - y * y) ** 0.45     # the bulge, highest in the middle
+        zz = z * (0.28 + 0.72 * top) * (1.0 + 0.12 * (full - 0.5))
+        if z < 0:                                           # resting: the bottom flatter
+            zz = -0.75 - 0.25 * (-z) * top
+        seam = 0.06 * (1.0 - abs(z)) ** 6                   # the stitched seam round its middle, a ridge
+        bx = x * (1.0 + seam) * pinch
+        by = y * (1.0 + seam) * (1.0 - 0.12 * abs(x) ** 8)
+        wob = 0.025 * math.sin(x * 5.0 + ph[0]) * math.sin(y * 4.0 + ph[1]) + 0.015 * math.sin(x * 11.0 + y * 7.0 + ph[2])
+        v.co = Vector((bx * L / 2, by * W / 2, (zz + wob) * H / 2 + H / 2))
+    bm.normal_update()
+    uv = bm.loops.layers.uv.verify()
+    for f in bm.faces:
+        for lp in f.loops:
+            co = lp.vert.co
+            lp[uv].uv = (co.x / L + 0.5, co.y / W + 0.5)
+    me = bpy.data.meshes.new("Sandbag_" + key)
+    bm.to_mesh(me)
+    bm.free()
+    for poly in me.polygons:
+        poly.use_smooth = True
+    _BAGS[key] = me
+    return me
+
+
+SANDBAGS = {"A": (0.68, 0.47, 0.17, 0.6, 1), "B": (0.65, 0.45, 0.18, 0.8, 2), "C": (0.7, 0.48, 0.155, 0.45, 3),
+            "D": (0.66, 0.46, 0.19, 0.95, 4)}
+
+
+def sandbag(x, y, z, yaw, kind, m, label=None):
+    L, W, H, full, seed = SANDBAGS[kind]
+    me = _sandbag_mesh(kind, L, W, H, full, seed)
+    if not me.materials:
+        me.materials.append(m)
+    ob = _link(bpy.data.objects.new("Sandbag_" + kind, me))
+    ob.location = (x, y, z)
+    ob.rotation_euler = (0, 0, yaw)
+    if label is not None:                                   # a stencil on the top ones: SAND, in the stripes' green
+        t = text("SAND", (x, y, z + H * 0.98), 0.13, label)
+        t.rotation_euler = (0, 0, yaw + math.pi / 2)
+        t.location = (x - 0.06 * math.cos(yaw), y - 0.06 * math.sin(yaw), z + H * 0.995)
+    return H
+
+
+def pallet(x, y, yaw, wood, L=1.2, W=1.0):
+    """A wooden pallet: three runners of blocks, deck boards across them with gaps between, a little worn."""
+    c, s_ = math.cos(yaw), math.sin(yaw)
+
+    def at(u, v, z):
+        return (x + u * c - v * s_, y + u * s_ + v * c, z)
+    for v in (-W / 2 + 0.06, 0.0, W / 2 - 0.06):            # the blocks and stringers
+        box(at(0.0, v, 0.055), (L, 0.09, 0.1) if abs(c) > 0.5 else (0.09, L, 0.1), wood, 0.004, rot=(0, 0, 0))
+    n = 7
+    for k in range(n):                                     # deck boards, gaps between
+        u = -L / 2 + 0.07 + k * (L - 0.14) / (n - 1)
+        box(at(u, 0.0, 0.125), (0.1, W, 0.022) if abs(c) > 0.5 else (W, 0.1, 0.022), wood, 0.003)
+    return 0.137
+
+
+def bag_stack(x, y, yaw, across, deep, layers, wood, burlap, label, rng):
+    """Sacks on pallets: `deep` rows of `across` bags side by side (a sack's length along yaw), `layers` high, every
+    other layer laid shifted half a bag so the seams don't line up (one fewer bag across), each sack a little off true;
+    SAND stencilled on the top layer."""
+    W, Lb = 0.46, 0.66
+    c, s_ = math.cos(yaw), math.sin(yaw)
+
+    def at(u, v):                                          # u along a sack, v across
+        return x + u * c - v * s_, y + u * s_ + v * c
+    span_v = across * W + 0.05
+    span_u = deep * Lb + 0.05
+    nu, nv = max(1, round(span_u / 1.2)), max(1, round(span_v / 1.0))
+    for i in range(nu):                                    # pallets under the whole stack
+        for j in range(nv):
+            px, py = at((i - (nu - 1) / 2) * 1.2, (j - (nv - 1) / 2) * 1.0)
+            pallet(px, py, yaw, wood, 1.2, 1.0)
+    z = 0.137
+    kinds = list(SANDBAGS)
+    for layer in range(layers):
+        n = across if layer % 2 == 0 else across - 1
+        hmax = 0.0
+        for r in range(deep):
+            u = (r - (deep - 1) / 2) * Lb
+            for i in range(n):
+                v = (i - (n - 1) / 2) * W
+                kd = kinds[(i * 3 + layer * 5 + r * 7) % 4]
+                bx, by = at(u + rng.uniform(-0.025, 0.025), v + rng.uniform(-0.02, 0.02))
+                h = sandbag(bx, by, z, yaw + rng.uniform(-0.05, 0.05), kd, burlap,
+                            label if layer == layers - 1 else None)
+                hmax = max(hmax, h)
+        z += hmax * 0.8                                     # (each layer settles into the one below)
+
+
+def godown(T):
+    """Suresh's godown at Pudhur Vayal (Day 18, the night: docs/OPEN_WORLD_PLAN_2026-11-14.md, the user's choice b):
+    a tin-roofed fertiliser store off the Thondamuthur road, in the firm of his wife's name (Kongu Green Estates).
+    The rolling shutter at the front, a small door at the back; jute sacks stacked chest-high along the walls and in
+    two rows across (cover, and the way through), blue drums, a bag-stitching table; at the back, the accounts corner:
+    a steel almirah (Joseph's copy of the money-lender's ledger is in it), a table with the stock register and a
+    hurricane lamp, two plastic chairs. Two tube lights and the lamp. Marks: door, joseph (by the almirah), almirah,
+    karthik (inside the shutter), back_door, gang_0..9 (where the men come in: the shutter and the back), fight (the
+    open floor)."""
+    W, D, h = 16.0, 11.0, 4.6
+    floor = mat("cement_floor", (0.55, 0.53, 0.5), 0.9)
+    wall = mat("wall_lime_godown", (0.76, 0.74, 0.66), 0.95, normal=os.path.join(DTEX, "plaster_normal.jpg"), scale=2.5)
+    roof = mat("tin_roof", (0.36, 0.37, 0.38), 0.45, 0.6)
+    shell(W, D, h, floor, wall, roof, mat("dado_godown", (0.42, 0.36, 0.3), 0.8), 1.0, door_w=3.2, door_x=0.0)
+    for k in range(9):                                   # the roof's trusses
+        box((-W / 2 + 1.0 + k * 1.75, 0.0, h - 0.25), (0.08, D, 0.18), mat("truss", (0.25, 0.2, 0.16), 0.7))
+    shutter = mat("shutter", (0.45, 0.46, 0.48), 0.4, 0.6)
+    box((0.0, -D / 2 - 0.02, h - 0.7), (3.4, 0.1, 1.2), shutter)          # the shutter, rolled up, its box over the door
+    burlap = mat("burlap_sack", (1, 1, 1), 0.95, tex=_burlap_texture(), normal=os.path.join(DTEX, "plaster_normal.jpg"))
+    label = mat("stencil_green", (0.05, 0.17, 0.06), 0.9)
+    pine = mat("pallet_wood", (0.55, 0.4, 0.24), 0.8)
+    rng = random.Random(18)
+    # sacks on pallets, each stack its sacks lengthwise (yaw: the way a sack's length points)
+    bag_stack(-6.4, -2.2, math.pi / 2, 4, 2, 5, pine, burlap, label, rng)  # along the left wall, the big ones
+    bag_stack(-6.4, 1.6, math.pi / 2, 4, 2, 4, pine, burlap, label, rng)
+    bag_stack(-4.6, 4.3, 0.0, 4, 2, 4, pine, burlap, label, rng)           # at the back, by the chairs
+    bag_stack(-2.6, -1.2, 0.0, 4, 2, 4, pine, burlap, label, rng)          # in front, across the floor: cover
+    bag_stack(2.4, 1.6, 0.0, 4, 2, 3, pine, burlap, label, rng)
+    bag_stack(1.4, 4.3, 0.0, 4, 2, 4, pine, burlap, label, rng)            # near the chairs
+    drum = mat("drum_blue", (0.1, 0.25, 0.6), 0.5)
+    for (x, y) in ((6.6, -4.2), (6.6, -3.5), (5.9, -4.2), (6.6, 2.2)):
+        cyl((x, y, 0.45), 0.29, 0.9, drum, 20)
+    wood = mat("table_wood", (0.4, 0.26, 0.14), 0.6)
+    steel = mat("steel", (0.74, 0.75, 0.77), 0.32, 0.55)
+    table(5.6, -1.2, 1.4, 0.7, 0.78, wood, steel)        # the bag-stitching table, a needle and twine on it
+    cyl((5.4, -1.2, 0.83), 0.06, 0.08, mat("twine", (0.7, 0.6, 0.4), 0.9), 12)
+    # the accounts corner, at the back on the right
+    almirah(6.6, 4.9, math.pi, False)
+    table(4.2, 4.3, 1.2, 0.65, 0.76, wood, steel)
+    box((4.0, 4.3, 0.79), (0.32, 0.24, 0.04), mat("register_red", (0.55, 0.1, 0.08), 0.6), 0.004)
+    cyl((4.6, 4.4, 0.88), 0.07, 0.2, mat("lamp_glass", (0.9, 0.8, 0.55), 0.1, emit=(1.0, 0.7, 0.35), strength=2.0), 12)
+    chair_poly(4.2, 3.6, 0.0, (0.15, 0.3, 0.6))
+    chair_poly(3.2, 3.8, 0.4, (0.6, 0.15, 0.15))
+    sign("KONGU GREEN ESTATES", (0.0, D / 2 - 0.05, 2.9), 3.6, 0.45, mat("board_green", (0.1, 0.35, 0.2), 0.5),
+         mat("letters_white", (0.97, 0.97, 0.97), 0.4), "-y", 0.2)
+    box((5.0, D / 2 - 0.05, 1.05), (0.9, 0.08, 2.1), mat("back_door", (0.3, 0.22, 0.14), 0.7))   # the back door
+    for k, (x, y) in enumerate(((-3.5, 0.5), (3.0, -2.0))):
+        box((x, y, h - 0.3), (1.2, 0.08, 0.05), mat("tube_white", (1, 1, 1), 0.3, emit=(1.0, 0.98, 0.95), strength=4.0))
+        light("tube", (x, y, h - 0.45), k)
+    light("lamp", (4.6, 4.4, 1.0), 0)
+    mark("karthik", 0.0, -D / 2 + 1.2, 0.0)
+    mark("door", 0.0, -D / 2 + 0.3, 0.0)
+    mark("joseph", 5.6, 4.1, math.pi * 0.85)
+    mark("almirah", 6.6, 4.3, math.pi)
+    mark("back_door", 5.0, D / 2 - 0.5, math.pi)
+    mark("fight", 0.5, 0.5, 0.0)
+    gang = [(-1.2, -D / 2 + 0.6), (0.0, -D / 2 + 0.5), (1.2, -D / 2 + 0.6), (-0.6, -D / 2 + 1.4), (0.6, -D / 2 + 1.4),
+            (4.4, D / 2 - 0.7), (5.6, D / 2 - 0.8), (5.0, D / 2 - 1.6), (-1.8, -D / 2 + 1.0), (1.8, -D / 2 + 1.0)]
+    for k, (x, y) in enumerate(gang):
+        mark("gang_%d" % k, x, y, math.pi if y > 0 else 0.0)
+    shot("wide", (-6.0, -4.6, 3.0), (2.0, 2.0, 1.0))
+    shot("almirah", (3.6, 2.2, 1.7), (6.4, 4.6, 1.2))
+    shot("door", (3.0, 3.0, 2.2), (0.0, -D / 2, 1.4))
+    shot("sacks", (0.2, -3.6, 1.7), (-2.6, -1.2, 0.6))
+
+
 ROOMS = {"home": home, "dev_office": dev_office, "coopbank": coopbank, "mess": mess, "police": police,
-         "fine_dining": fine_dining, "cctv_shop": cctv_shop, "prison": prison, "court": court}
+         "fine_dining": fine_dining, "cctv_shop": cctv_shop, "prison": prison, "court": court, "godown": godown}
 
 
 def reset():

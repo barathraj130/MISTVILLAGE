@@ -53,6 +53,20 @@ func add(item: Dictionary) -> void:
 	pool.append(item)
 
 
+## Gone from what he has (taken from him): the card, its pin and any threads tied to it.
+func remove(id: String) -> void:
+	for i in range(pool.size() - 1, -1, -1):
+		if str(pool[i]["id"]) == id:
+			pool.remove_at(i)
+	state["pins"].erase(id)
+	var keep: Array = []
+	for t in state["threads"]:
+		if not (id in [str(t[0]), str(t[1])] if t is Array else str(t).contains(id)):
+			keep.append(t)
+	state["threads"] = keep
+	queue_redraw()
+
+
 func pinned() -> int:
 	return state["pins"].size()
 

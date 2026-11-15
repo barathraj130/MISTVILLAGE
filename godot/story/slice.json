@@ -14403,8 +14403,8 @@
     "id": "e15_ledger",
     "kind": "paper",
     "title": {
-     "en": "Joseph's ledger pages",
-     "ta": "ஜோசப் கணக்கு பக்கங்கள்"
+     "en": "Joseph's notes",
+     "ta": "ஜோசப் குறிப்புகள்"
     },
     "from": {
      "en": "Raghavan Developers, private accounts",
@@ -14419,17 +14419,17 @@
   {
    "do": "evidence",
    "speaker": "joseph",
-   "tag": "E15",
+   "tag": "E15T",
    "label": {
-    "en": "Joseph: Suresh's debts to the lender",
-    "ta": "ஜோசப்: வட்டிக்காரர் கிட்ட சுரேஷ் கடன்"
+    "en": "Joseph's word: Suresh's debts to the lender",
+    "ta": "ஜோசப் வாக்கு: வட்டிக்காரர் கிட்ட சுரேஷ் கடன்"
    },
    "memory": {
-    "id": "mem_e15",
+    "id": "mem_e15t",
     "kind": "card",
     "title": {
-     "en": "Suresh's debt (E15)",
-     "ta": "சுரேஷ் கடன் (E15)"
+     "en": "Joseph's word (E15)",
+     "ta": "ஜோசப் வாக்கு (E15)"
     },
     "body": {
      "en": "₹1.8 crore from Om Sakthi Traders at 3% a month, for Green Valley. A fair price for the farmers would have sunk him.",
@@ -14447,6 +14447,13 @@
      "ta": "ரெண்டு வாரம் பேசாம இருந்தேன். எனக்கும் ரெண்டு பொண்ணு இருக்காங்க, தம்பி. ...கோர்ட் கூப்பிட்டா, சொல்லுவேன். இப்போ மெதுவா நடந்து போ. அறுவடை இயந்திரங்கள பாரு.",
      "emotion": "nervous",
      "intensity": "medium"
+    },
+    {
+     "who": "joseph",
+     "en": "And the lender's own ledger. I copied it, page by page, two years. Yesterday Suresh's men took my bag. It's in his godown at Pudhur Vayal, in the steel almirah. They'll burn it before the court sits.",
+     "ta": "வட்டிக்காரரோட சொந்த லெட்ஜர். ரெண்டு வருஷமா பக்கம் பக்கமா நகல் எடுத்தேன். நேத்து சுரேஷ் ஆளுங்க என் பைய எடுத்துட்டாங்க. புதூர் வயல்ல அவரோட கோடவுன்ல, இரும்பு பீரோல இருக்கு. கோர்ட்டுக்கு முன்னாடி எரிச்சிடுவாங்க.",
+     "emotion": "nervous",
+     "intensity": "high"
     }
    ],
    "when": "joseph_taped"
@@ -14616,6 +14623,267 @@
       "en": "Out",
       "ta": "வெளியே"
      }
+    }
+   ]
+  },
+  {
+   "do": "message",
+   "from": {
+    "en": "Joseph",
+    "ta": "ஜோசப்"
+   },
+   "text": {
+    "en": "Nine tonight. The godown at Pudhur Vayal, behind the Kongu Green Estates board. The watchman goes home at nine. I still have the key: I keep their accounts. Come alone. – J",
+    "ta": "இன்னைக்கு ராத்திரி ஒன்பது மணி. புதூர் வயல் கோடவுன், கொங்கு கிரீன் எஸ்டேட்ஸ் போர்டுக்கு பின்னாடி. ஒன்பது மணிக்கு வாட்ச்மேன் வீட்டுக்கு போயிடுவாரு. சாவி இன்னும் என்கிட்ட இருக்கு: அவங்க கணக்கு நான் தான் பாக்கறேன். தனியா வா. – ஜோ"
+   }
+  },
+  {
+   "do": "pin",
+   "place": "pudhur_vayal"
+  },
+  {
+   "do": "drive",
+   "to": "pudhur_vayal",
+   "radius": 60,
+   "by": "21:15",
+   "goal": {
+    "en": "The godown at Pudhur Vayal, by nine",
+    "ta": "புதூர் வயல் கோடவுன், ஒன்பது மணிக்குள்ள"
+   }
+  },
+  {
+   "do": "home",
+   "room": "godown",
+   "at": "pudhur_vayal",
+   "start": "karthik",
+   "clock": "21:05",
+   "cast": {
+    "joseph": {
+     "mark": "joseph",
+     "anim": "Idle"
+    }
+   },
+   "keep": true,
+   "visits": [
+    {
+     "to": "joseph",
+     "auto": true,
+     "reach": 2.2,
+     "goal": {
+      "en": "Joseph, at the back, by the almirah",
+      "ta": "பின்னாடி, பீரோ பக்கத்துல ஜோசப்"
+     }
+    }
+   ]
+  },
+  {
+   "do": "talk",
+   "lines": [
+    {
+     "who": "joseph",
+     "en": "(He turns the key. His hands shake.) Om Sakthi Traders' ledger. My copy. Every rupee Suresh borrowed and every rupee he didn't pay back, in the lender's own columns.",
+     "ta": "(சாவிய திருப்பறார். கை நடுங்குது.) ஓம் சக்தி டிரேடர்ஸ் லெட்ஜர். என் நகல். சுரேஷ் வாங்கின ஒவ்வொரு ரூபாயும், திருப்பி கட்டாத ஒவ்வொரு ரூபாயும், வட்டிக்காரரோட சொந்த கணக்குல.",
+     "emotion": "nervous",
+     "intensity": "high"
+    },
+    {
+     "who": "karthik",
+     "en": "(A thick register in red cloth. Sir's farmers, the lender's money, Green Valley. All in one book.)",
+     "ta": "(சிவப்பு துணி அட்டை போட்ட தடிமனான பதிவேடு. சாரோட விவசாயிங்க, வட்டிக்காரர் பணம், கிரீன் வேலி. எல்லாம் ஒரே புத்தகத்துல.)"
+    },
+    {
+     "who": "joseph",
+     "en": "Take it. Take it and go, thambi. They know I still have a key.",
+     "ta": "எடுத்துக்கோ. எடுத்துட்டு போ, தம்பி. என்கிட்ட சாவி இருக்குன்னு அவங்களுக்கு தெரியும்.",
+     "emotion": "nervous",
+     "intensity": "high"
+    }
+   ]
+  },
+  {
+   "do": "give",
+   "item": {
+    "id": "e15_ledger_book",
+    "kind": "paper",
+    "title": {
+     "en": "Om Sakthi Traders' ledger (Joseph's copy)",
+     "ta": "ஓம் சக்தி டிரேடர்ஸ் லெட்ஜர் (ஜோசப் நகல்)"
+    },
+    "from": {
+     "en": "Om Sakthi Traders, Ukkadam",
+     "ta": "ஓம் சக்தி டிரேடர்ஸ், உக்கடம்"
+    },
+    "body": {
+     "en": "Account: S. Suresh Kumar / Kongu Green Estates.\nLent: ₹1,80,00,000, 3% a month. Security: the Green Valley plots, Pudhur Vayal.\nPaid: Day 5, ₹4,00,000 cash. Owing: ₹16,20,000 interest, three months.\nIn the margin, the lender's hand: 'Sale after R. signs. R. to be settled.'",
+     "ta": "கணக்கு: எஸ். சுரேஷ் குமார் / கொங்கு கிரீன் எஸ்டேட்ஸ்.\nகடன்: ₹1,80,00,000, மாசம் 3%. அடமானம்: கிரீன் வேலி பிளாட்டுகள், புதூர் வயல்.\nகட்டியது: 5ஆம் நாள், ₹4,00,000 ரொக்கம். நிலுவை: ₹16,20,000 வட்டி, மூணு மாசம்.\nஓரத்துல வட்டிக்காரர் கையெழுத்து: 'R. கையெழுத்து போட்டதும் விற்பனை. R.-ஐ முடிக்கணும்.'"
+    }
+   }
+  },
+  {
+   "do": "evidence",
+   "speaker": "joseph",
+   "tag": "E15",
+   "label": {
+    "en": "The lender's ledger: Suresh's debt",
+    "ta": "வட்டிக்காரர் லெட்ஜர்: சுரேஷ் கடன்"
+   },
+   "memory": {
+    "id": "mem_e15",
+    "kind": "card",
+    "title": {
+     "en": "The lender's ledger (E15)",
+     "ta": "வட்டிக்காரர் லெட்ஜர் (E15)"
+    },
+    "body": {
+     "en": "Om Sakthi Traders' own columns: ₹1.8 crore to Suresh against Green Valley, three months behind; the four lakhs paid to the lender on Day 5; 'R. to be settled.'",
+     "ta": "ஓம் சக்தி டிரேடர்ஸ் சொந்த கணக்கு: கிரீன் வேலி மேல சுரேஷுக்கு ₹1.8 கோடி, மூணு மாசம் பாக்கி; 5ஆம் நாள் வட்டிக்காரருக்கு கட்டின நாலு லட்சம்; 'R.-ஐ முடிக்கணும்.'"
+    }
+   }
+  },
+  {
+   "do": "talk",
+   "lines": [
+    {
+     "who": "karthik",
+     "en": "(Headlights through the gap under the shutter. Two vehicles. Doors.)",
+     "ta": "(ஷட்டர் கீழ இடைவெளி வழியா ஹெட்லைட். ரெண்டு வண்டி. கதவுகள்.)"
+    },
+    {
+     "who": "joseph",
+     "en": "They followed you. ...The back door. Go, go!",
+     "ta": "உன்ன பின்தொடர்ந்து வந்துட்டாங்க. ...பின் கதவு. போ, போ!",
+     "emotion": "fear",
+     "intensity": "high"
+    },
+    {
+     "who": "karthik",
+     "en": "(He's out through the back. The shutter goes up. Men in the light. I count them, and stop counting.)",
+     "ta": "(அவர் பின் கதவு வழியா போயிட்டாரு. ஷட்டர் மேல ஏறுது. வெளிச்சத்துல ஆளுங்க. எண்ணினேன், அப்புறம் எண்ணல.)"
+    }
+   ]
+  },
+  {
+   "do": "fight",
+   "room": "godown",
+   "at": "pudhur_vayal",
+   "start": "karthik",
+   "waves": [
+    3,
+    3,
+    4
+   ],
+   "win": "godown_won",
+   "lose": "godown_lost",
+   "takes": [
+    {
+     "tag": "E15",
+     "item": "e15_ledger_book",
+     "memory": "mem_e15"
+    }
+   ]
+  },
+  {
+   "do": "talk",
+   "when": "godown_won",
+   "lines": [
+    {
+     "who": "karthik",
+     "en": "(The last of them on the floor, not getting up. The ledger inside my shirt. The back door, and the dark, and the fields.)",
+     "ta": "(கடைசி ஆளும் தரையில, எந்திரிக்கல. லெட்ஜர் என் சட்டைக்குள்ள. பின் கதவு, இருட்டு, வயல்.)"
+    }
+   ]
+  },
+  {
+   "do": "talk",
+   "when": "godown_lost",
+   "lines": [
+    {
+     "who": "karthik",
+     "en": "(Hands in my shirt. The ledger gone. A boot, the floor, the tube light swinging.)",
+     "ta": "(என் சட்டைக்குள்ள கைகள். லெட்ஜர் போச்சு. ஒரு செருப்பு, தரை, ஆடுற டியூப் லைட்.)"
+    },
+    {
+     "who": "karthik",
+     "en": "(When I can stand, they've gone. With it. Joseph's notes, his voice on my phone. That's what I have.)",
+     "ta": "(நிக்க முடிஞ்சப்போ அவங்க போயிட்டாங்க. அதோட. ஜோசப் குறிப்புகள், என் ஃபோன்ல அவர் குரல். அது தான் என்கிட்ட இருக்கு.)"
+    }
+   ]
+  },
+  {
+   "do": "message",
+   "from": {
+    "en": "Divya",
+    "ta": "திவ்யா"
+   },
+   "text": {
+    "en": "Anna, two men on bikes outside our gate since nine. Amma is scared. Don't come home tonight. Where are you?",
+    "ta": "அண்ணா, ஒன்பது மணியிலிருந்து நம்ம கேட்டுக்கு வெளியே பைக்ல ரெண்டு ஆளுங்க. அம்மா பயப்படுறாங்க. இன்னைக்கு ராத்திரி வீட்டுக்கு வராத. எங்க இருக்க?"
+   }
+  },
+  {
+   "do": "talk",
+   "lines": [
+    {
+     "who": "karthik",
+     "en": "(Not home. Not the road: they know the scooter. The fields, till it's light.)",
+     "ta": "(வீடு இல்ல. ரோடு இல்ல: ஸ்கூட்டர அவங்களுக்கு தெரியும். வயல், வெளிச்சம் வர வரைக்கும்.)"
+    }
+   ]
+  },
+  {
+   "do": "hide",
+   "at": "pudhur_vayal",
+   "men": 4,
+   "caught": "night_caught",
+   "takes": [
+    {
+     "tag": "E15",
+     "item": "e15_ledger_book",
+     "memory": "mem_e15"
+    }
+   ]
+  },
+  {
+   "do": "talk",
+   "when": "night_caught",
+   "lines": [
+    {
+     "who": "karthik",
+     "en": "(A torch in my face. Hands. When they've gone the sky is grey over the paddy.)",
+     "ta": "(முகத்துல டார்ச். கைகள். அவங்க போனப்போ வயல் மேல வானம் சாம்பலா இருந்துச்சு.)"
+    }
+   ]
+  },
+  {
+   "do": "talk",
+   "when": "night_caught",
+   "unless": "godown_lost",
+   "lines": [
+    {
+     "who": "karthik",
+     "en": "(Inside my shirt, nothing. They found the ledger. Joseph's notes, his voice on my phone: that's what's left.)",
+     "ta": "(சட்டைக்குள்ள ஒண்ணும் இல்ல. லெட்ஜர அவங்க கண்டுபிடிச்சுட்டாங்க. ஜோசப் குறிப்புகள், என் ஃபோன்ல அவர் குரல்: அது தான் மிச்சம்.)"
+    }
+   ]
+  },
+  {
+   "do": "talk",
+   "unless": "night_caught",
+   "lines": [
+    {
+     "who": "karthik",
+     "en": "(The torches go, one by one. Engines on the road. The sky going grey over the paddy.)",
+     "ta": "(டார்ச்சுங்க ஒவ்வொண்ணா போகுது. ரோட்ல எஞ்சின் சத்தம். வயல் மேல வானம் சாம்பலா மாறுது.)"
+    }
+   ]
+  },
+  {
+   "do": "talk",
+   "lines": [
+    {
+     "who": "sekar",
+     "en": "(Opening his stall at the turn, he finds me by the pump house.) Thambi? ...Come. Tea first. Then home on my moped: nobody looks twice at Sekar's moped.",
+     "ta": "(திருப்பத்துல கடைய திறக்கும்போது பம்ப் ஹவுஸ் பக்கத்துல என்ன பாக்கறார்.) தம்பி? ...வா. முதல்ல டீ. அப்புறம் என் மொபெட்ல வீட்டுக்கு: சேகர் மொபெட்ட யாரும் ரெண்டாவது தடவ பாக்க மாட்டாங்க."
     }
    ]
   },
@@ -14919,7 +15187,8 @@
      "answers": [
       "E15",
       "E16",
-      "E18"
+      "E18",
+      "E15T"
      ],
      "answer": {
       "en": "The man who needed money owed one crore eighty lakhs at three percent a month, had bought the land through his wife's company, and was selling it at the Siruvani Grand before the victim would sign. Forty-two thousand is a motive, your honour. One crore eighty is a reason.",

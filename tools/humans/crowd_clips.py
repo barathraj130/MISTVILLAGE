@@ -384,6 +384,96 @@ def stand_up(a, u):
     _sit_shift(a, 1.0 - u)
 
 
+# ---- a fight (the godown, Day 18): stance, punch, the gang's telegraphed haymaker, block, being hit, a dodge ----
+def _guard_stance(a, k=0.0):
+    """Fists up by the chin, elbows in, knees bent, the left foot ahead, the body turned a little side-on."""
+    SC.idle(a, 0.2 * k)
+    SC.turn(a, "pelvis", 'Z', 18.0)
+    SC.turn(a, "spine_03", 'Z', -8.0)
+    for side in ("l", "r"):
+        SC.turn(a, "thigh_" + side, 'X', -14.0)
+        SC.turn(a, "calf_" + side, 'X', 22.0)
+        SC.turn(a, "foot_" + side, 'X', -8.0)
+    SC.lower(a, "pelvis", -0.05)
+    bpy.context.view_layer.update()
+    SC.turn(a, "spine_01", 'X', 8.0)
+    chin = SC.head_of(a, "head") + Vector((0.0, -0.12, -0.08))
+    for side, sg in (("l", 1.0), ("r", -1.0)):
+        w = chin + Vector((sg * 0.1, -0.12 if side == "l" else -0.04, -0.06 + 0.01 * k))
+        SM.arm_to(a, side, w, Vector((sg * 0.6, 0.3, -1.0)), w + Vector((0.0, -0.06, 0.1)))
+        SC.curl_fingers(a, side, 80.0, 40.0)
+
+
+def punch(a, u):
+    """A straight right from the guard: the hip and shoulder turn into it, the arm drives out to the chin's height;
+    u 0..1 out and back."""
+    _guard_stance(a)
+    e = math.sin(math.pi * min(u * 1.6, 1.0)) if u < 0.62 else max(0.0, 1.0 - (u - 0.62) / 0.38) * 0.0
+    SC.turn(a, "spine_02", 'Z', -16.0 * e)
+    SC.turn(a, "spine_01", 'X', 6.0 * e)
+    sh = SC.head_of(a, "upperarm_r")
+    out = sh + Vector((0.08, -0.62, 0.02))
+    home = SC.head_of(a, "head") + Vector((-0.1, -0.16, -0.14))
+    w = home.lerp(out, e)
+    SM.arm_to(a, "r", w, Vector((-0.7, 0.3, -0.7)), w + Vector((0.0, -0.1, 0.0)))
+    SC.curl_fingers(a, "r", 85.0, 45.0)
+
+
+def haymaker(a, u):
+    """The gang's swing, telegraphed: the right arm drawn far back and up (u to 0.6: the wind-up you can see coming),
+    then round in a wide arc across."""
+    SC.idle(a, 0.2)
+    if u < 0.6:
+        e = u / 0.6
+        SC.turn(a, "spine_02", 'Z', 25.0 * e)
+        sh = SC.head_of(a, "upperarm_r")
+        w = sh + Vector((-0.35 * e, 0.25 * e, 0.12 * e - 0.3 * (1.0 - e)))
+        SM.arm_to(a, "r", w, Vector((-0.8, 0.5, 0.2)), w + Vector((0.0, -0.1, 0.05)))
+    else:
+        e = (u - 0.6) / 0.4
+        SC.turn(a, "spine_02", 'Z', 25.0 - 50.0 * e)
+        SC.turn(a, "spine_01", 'X', 8.0 * e)
+        sh = SC.head_of(a, "upperarm_r")
+        ang = math.radians(-60.0 + 140.0 * e)
+        w = sh + Vector((0.5 * math.sin(ang) - 0.1, -0.5 * math.cos(ang) + 0.1, 0.0))
+        SM.arm_to(a, "r", w, Vector((-0.6, 0.6, 0.2)), w + Vector((0.1, -0.05, 0.0)))
+    SC.curl_fingers(a, "r", 85.0, 45.0)
+
+
+def block(a, k):
+    """Forearms up before the face, the head down behind them."""
+    _guard_stance(a, k)
+    SC.turn(a, "neck_01", 'X', 12.0)
+    f = SC.head_of(a, "head") + Vector((0.0, -0.2, 0.0))
+    for side, sg in (("l", 1.0), ("r", -1.0)):
+        w = f + Vector((sg * 0.06, -0.04, 0.05))
+        SM.arm_to(a, side, w, Vector((sg * 0.3, -0.2, -1.0)), w + Vector((0.0, 0.0, 0.15)))
+
+
+def hit_react(a, u):
+    """Hit: the chest and head snap back, the arms fly a little, then come back to the guard."""
+    _guard_stance(a)
+    e = math.sin(math.pi * min(u * 2.0, 1.0)) if u < 0.5 else max(0.0, 1.0 - (u - 0.5) * 2.0)
+    SC.turn(a, "spine_01", 'X', -14.0 * e)
+    SC.turn(a, "spine_02", 'X', -8.0 * e)
+    SC.turn(a, "neck_01", 'X', -16.0 * e)
+    SC.turn(a, "spine_02", 'Z', 10.0 * e)
+
+
+def dodge(a, u):
+    """A quick step back and down out of the swing's reach, then up again."""
+    _guard_stance(a)
+    e = math.sin(math.pi * u)
+    pb = a.pose.bones.get("pelvis")
+    if pb is not None:
+        m = a.matrix_world @ pb.matrix
+        m.translation.y += 0.22 * e
+        m.translation.z -= 0.08 * e
+        pb.matrix = a.matrix_world.inverted() @ m
+        bpy.context.view_layer.update()
+    SC.turn(a, "spine_01", 'X', -10.0 * e)
+
+
 def clips(arm):
     for name, fn, keys in (("Namaste", namaste, (0, 1, 1, 0)), ("Wave", wave, (-1, 1, -1, 1, -1)), ("Nod", nod, (0, 1, 0, 1, 0)),
                            ("Wobble", wobble, (0, 1, -1, 1, 0)), ("Shake", shake, (0, 1, -1, 1, -1, 0)), ("Laugh", laugh, (-1, 1, -1, 1, -1, 1, -1)),
@@ -415,6 +505,13 @@ def clips(arm):
     SC.clip(arm, "SitWait", [(1 + 24 * i, (lambda kk, ll: (lambda a: SC.sit_idle(a, kk, ll)))(k, l))
                              for i, (k, l) in enumerate(((-1, 0), (1, 25), (-1, 25), (1, -20), (-1, 0)))])
     SC.clip(arm, "SitDown", [(1 + 3 * i, (lambda uu: (lambda a: sit_down(a, uu)))(i / 10.0)) for i in range(11)])
+    # a fight: Guard loops; Punch 0.5 s, Haymaker 1.2 s (0.7 of it the wind-up), Block loops, HitReact 0.5 s, Dodge 0.45 s
+    SC.clip(arm, "Guard", [(1 + 12 * i, (lambda kk: (lambda a: _guard_stance(a, kk)))(k)) for i, k in enumerate((-1, 1, -1))])
+    SC.clip(arm, "Punch", [(1 + i, (lambda uu: (lambda a: punch(a, uu)))(i / 12.0)) for i in range(13)])
+    SC.clip(arm, "Haymaker", [(1 + 2 * i, (lambda uu: (lambda a: haymaker(a, uu)))(i / 14.0)) for i in range(15)])
+    SC.clip(arm, "Block", [(1 + 12 * i, (lambda kk: (lambda a: block(a, kk)))(k)) for i, k in enumerate((-1, 1, -1))])
+    SC.clip(arm, "HitReact", [(1 + i, (lambda uu: (lambda a: hit_react(a, uu)))(i / 12.0)) for i in range(13)])
+    SC.clip(arm, "Dodge", [(1 + i, (lambda uu: (lambda a: dodge(a, uu)))(i / 10.0)) for i in range(11)])
     SC.clip(arm, "StandUp", [(1 + 3 * i, (lambda uu: (lambda a: stand_up(a, uu)))(i / 10.0)) for i in range(11)])
     for tr in arm.animation_data.nla_tracks:
         tr.mute = False
@@ -446,7 +543,10 @@ def strip(arm, out_dir):
                      ("type", lambda a: type_(a, 1)), ("write", lambda a: write(a, 1)), ("arrange", lambda a: arrange(a, 1)),
                      ("wipe", lambda a: wipe(a, 0.25)), ("headload", lambda a: head_load(a, 0.25)),
                      ("behind", lambda a: hands_behind(a, 1)), ("front", lambda a: hands_front(a, 1)), ("hip", lambda a: hip_hand(a, 1)),
-                     ("nervous", lambda a: nervous(a, 1)), ("sitdown", lambda a: sit_down(a, 0.5))):
+                     ("nervous", lambda a: nervous(a, 1)), ("sitdown", lambda a: sit_down(a, 0.5)),
+                     ("guard", lambda a: _guard_stance(a, 0)), ("punch", lambda a: punch(a, 0.31)),
+                     ("haywind", lambda a: haymaker(a, 0.55)), ("hayswing", lambda a: haymaker(a, 0.85)),
+                     ("block", lambda a: block(a, 0)), ("hit", lambda a: hit_react(a, 0.25)), ("dodge", lambda a: dodge(a, 0.5))):
         SC.rest(arm)
         SC.arms_down(arm)
         fn(arm)
