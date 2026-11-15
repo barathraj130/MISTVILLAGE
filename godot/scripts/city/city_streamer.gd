@@ -1724,8 +1724,9 @@ func _life(life: Array, out: Dictionary, roads: Array = []) -> void:
 		elif SF_STANDS_FOR.has(nm0):
 			var grp: Array = sf_kinds.get(SF_STANDS_FOR[nm0], [])
 			var hsh := floori(v[0] * 7.0 + v[2] * 13.0)
-			if not grp.is_empty() and posmod(hsh, 3) == 0:
-				kind = grp[posmod(hsh / 3, grp.size())]
+			var women: bool = SF_STANDS_FOR[nm0] == "women"
+			if not grp.is_empty() and (posmod(hsh, 3) != 2 if women else posmod(hsh, 3) == 0):   # (two in three of the
+				kind = grp[posmod(hsh / 3, grp.size())]                                          #  women: the real ones)
 				if OS.is_debug_build() and "--where=people" in OS.get_cmdline_user_args():
 					print("PERSON %s at %.1f,%.1f,%.1f yaw %.2f" % [life_names[kind], v[0], v[1], v[2], v[3]])
 		if nm0.begins_with("fleet_") or nm0.begins_with("bike_") or nm0 == "cart":
