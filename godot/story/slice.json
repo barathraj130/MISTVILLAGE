@@ -15330,6 +15330,117 @@
     },
     "murugesan": {
      "mark": "murugesan",
+     "anim": "Sit"
+    },
+    "selvi": {
+     "mark": "selvi",
+     "anim": "Idle"
+    },
+    "bala": {
+     "mark": "bala",
+     "anim": "Sit"
+    },
+    "pandi": {
+     "mark": "witness",
+     "anim": "Idle"
+    }
+   },
+   "keep_room": true,
+   "when": "convicted",
+   "shots": [
+    {
+     "line": {
+      "who": "prosecutor",
+      "en": "Your honour, an approver who was paid forty thousand rupees, and promised more. Against him, the accused's own phone, the accused's own lie to the police, and nothing that answers them.",
+      "ta": "மாண்புமிகு நீதிபதி அவர்களே, நாற்பதாயிரம் ரூபாய் வாங்கின, இன்னும் வாக்குறுதி வாங்கின ஒரு அப்ரூவர். அவருக்கு எதிரா, குற்றம் சாட்டப்பட்டவரோட சொந்த ஃபோன், போலீஸ் கிட்ட அவர் சொன்ன சொந்த பொய், அதுக்கு பதில் சொல்ல ஒண்ணுமில்ல."
+     },
+     "cam": "wide",
+     "fixed_cam": true
+    },
+    {
+     "line": {
+      "who": "judge",
+      "en": "An approver's word needs something beside it, and the defence has put nothing beside it. The prosecution's case stands unanswered. The accused Karthik M. is found guilty of murder under Section 103 of the Bharatiya Nyaya Sanhita, and sentenced to imprisonment for life.",
+      "ta": "ஒரு அப்ரூவரோட வார்த்தைக்கு பக்கத்துல ஏதாவது நிக்கணும், எதிர் தரப்பு எதையும் நிறுத்தல. அரசு தரப்பு வழக்குக்கு பதில் இல்ல. குற்றம் சாட்டப்பட்ட கார்த்திக் ம., பாரதிய நியாய சன்ஹிதா பிரிவு 103-இன் கீழ் கொலைக் குற்றவாளி என தீர்ப்பளிக்கப்பட்டு, ஆயுள் தண்டனை விதிக்கப்படுகிறார்."
+     },
+     "cam": "judge",
+     "fixed_cam": true
+    },
+    {
+     "line": {
+      "who": "sundaram",
+      "en": "(His hand on my arm.) We appeal, thambi. The High Court. ...I'm sorry. The ledger would have been enough.",
+      "ta": "(என் கையில அவர் கை.) மேல்முறையீடு பண்ணுவோம், தம்பி. ஹைகோர்ட். ...மன்னிச்சுக்கோ. அந்த லெட்ஜர் போதுமா இருந்திருக்கும்."
+     }
+    },
+    {
+     "line": {
+      "who": "karthik",
+      "en": "(Amma in the gallery, not crying. Not yet. Divya's hand over her mouth. Suresh doesn't look at me at all.)",
+      "ta": "(கேலரில அம்மா, அழல. இன்னும் இல்ல. திவ்யா வாய் மேல கை. சுரேஷ் என்ன பாக்கவே இல்ல.)"
+     }
+    }
+   ]
+  },
+  {
+   "do": "card",
+   "when": "convicted",
+   "big": {
+    "en": "Life imprisonment",
+    "ta": "ஆயுள் தண்டனை"
+   },
+   "small": {
+    "en": "Part 1 ends here, this way. The ledger was the proof. Back to the morning of Day 18, to try again.",
+    "ta": "பாகம் 1 இங்க, இப்படி முடியுது. அந்த லெட்ஜர் தான் ஆதாரம். பதினெட்டாம் நாள் காலைக்கு திரும்பி, மறுபடியும்."
+   }
+  },
+  {
+   "do": "retry",
+   "when": "convicted"
+  },
+  {
+   "do": "room",
+   "room": "court",
+   "at": "court",
+   "cast": {
+    "judge": {
+     "mark": "judge",
+     "anim": "Sit"
+    },
+    "sundaram": {
+     "mark": "sundaram",
+     "anim": "Idle"
+    },
+    "prosecutor": {
+     "mark": "prosecutor",
+     "anim": "Idle"
+    },
+    "karthik": {
+     "mark": "karthik",
+     "anim": "Idle"
+    },
+    "amma": {
+     "mark": "amma",
+     "anim": "Sit"
+    },
+    "divya": {
+     "mark": "divya",
+     "anim": "Sit"
+    },
+    "meenakshi": {
+     "mark": "meenakshi",
+     "anim": "Sit"
+    },
+    "priya": {
+     "mark": "priya",
+     "anim": "Sit"
+    },
+    "suresh": {
+     "mark": "suresh",
+     "anim": "Sit"
+    },
+    "murugesan": {
+     "mark": "murugesan",
      "anim": "Idle"
     },
     "selvi": {

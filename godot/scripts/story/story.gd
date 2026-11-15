@@ -738,6 +738,11 @@ func _next() -> void:
 			table.lang = lang
 			table.life = city.life
 			table.start(cur, lang, _skip, pick)
+		"retry":                                         # convicted: never a game over: back to the last morning saved
+			print("STORY convicted: back to the save (day %d)" % fines.sim.day)
+			Engine.set_meta("story_continue", true)
+			get_tree().reload_current_scene.call_deferred()
+			return
 		"finale":                                        # Part 1 done: the ride up the ghat, in the mountain world
 			flags["part1_done"] = true
 			_story_save()
@@ -3341,8 +3346,11 @@ func _court_done(result: Dictionary) -> void:
 	_in_task = false
 	flags["court_points"] = int(result["won"])
 	flags["court_won"] = int(result["won"]) * 2 > int(result["of"])
+	# the critical evidence irrecoverably lost: almost nothing answered and the ledger taken (Pandi's paid word
+	# alone doesn't hold): the one ending that convicts him (docs/OPEN_WORLD_PLAN_2026-11-14.md phase 9)
+	flags["convicted"] = int(result["won"]) <= 1 and not evidence.has("E15")
 	flags["court_done"] = true                       # (the wall's cards: "before the court")
-	print("STORY court: %d of %d points" % [result["won"], result["of"]])
+	print("STORY court: %d of %d points%s" % [result["won"], result["of"], " (convicted)" if flags["convicted"] else ""])
 	_next()
 
 

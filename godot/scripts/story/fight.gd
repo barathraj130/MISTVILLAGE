@@ -152,7 +152,7 @@ func _shots(dir: String) -> void:
 			var want := mid + Vector3(sin(ang), 0.0, cos(ang)) * 3.6 + Vector3.UP * 1.3
 			var rq := PhysicsRayQueryParameters3D.create(mid + Vector3.UP * 1.3, want)   # (not inside a wall)
 			rq.exclude = [city.walker.get_rid(), pc.target.body.get_rid()] if pc.target else [city.walker.get_rid()]
-			var hit := city.walker.get_world_3d().direct_space_state.intersect_ray(rq)
+			var hit: Dictionary = city.walker.get_world_3d().direct_space_state.intersect_ray(rq)
 			cam.global_position = want if hit.is_empty() else (hit["position"] as Vector3).lerp(mid + Vector3.UP * 1.3, 0.12)
 			cam.look_at(mid + Vector3.UP * 0.9, Vector3.UP)
 			cam.make_current()
