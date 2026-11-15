@@ -313,6 +313,8 @@ func _animate(delta: float) -> void:
 	if model == null or scripted:
 		return
 	if combat != null and combat.engaged:                # (a fight: the clips are its; he faces the way it says)
+		if gait and gait.tree and gait.tree.active:     # (the walk's tree off: it would play over every fight clip;
+			gait.tree.active = false                     #  gait.update, which would, isn't run in a fight)
 		model.global_rotation = Vector3(0.0, _model_yaw, 0.0)
 		model.position.y = 0.0
 		_last_pos = global_position

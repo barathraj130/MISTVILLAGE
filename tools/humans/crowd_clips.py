@@ -963,6 +963,9 @@ def _body(a, keys, u, breath=0.0):
         knee, ball = None, None
         if mode == "up":
             knee = hp + Vector((0.0, -0.9, 0.7))
+        elif mode == "side":                            # (cross-legged: the knees out to the sides, low)
+            sg = 1.0 if side == "l" else -1.0
+            knee = hip + Vector((sg * 1.0, -0.6, -0.2))
         elif mode == "front":
             knee = ank + Vector((0.0, -1.0, 0.4))
         elif mode in ("floor", "prone"):
@@ -1014,6 +1017,21 @@ def kneel_idle(a, k):
     """On one knee, a hand on it, getting his breath."""
     _body(a, [KNEEL], 0.0, k)
     SC.turn(a, "spine_02", 'X', 3.0 * k)
+
+
+def sit_floor(a, k, pray=False):
+    """Sitting on the floor cross-legged (a temple, a home): the hips on the floor, the back upright with a little
+    lean, the shins crossed in front (the left under the right), the knees out and low; the hands on the knees, or
+    joined at the chest in prayer; breathing."""
+    _body(a, [(0.0, (0.0, 0.08, -0.84, 4.0, 0.0, 0.0), (-0.16, -0.3, 0.0), (0.16, -0.34, 0.05),
+               "knee", "knee", ("side", "side"), (6.0, 0.0))], 0.0, k)
+    SC.turn(a, "spine_02", 'X', 2.0 * k)
+    if pray:                                            # (palms together before the chest, the elbows soft and out)
+        c = SC.head_of(a, "spine_03") + Vector((0.0, -0.22, 0.02))
+        for side, sg in (("l", 1.0), ("r", -1.0)):
+            w = c + Vector((sg * 0.02, 0.0, 0.0))
+            SM.arm_to(a, side, w, w + Vector((sg * 0.6, 0.2, -0.5)), w + Vector((0.0, -0.02, 0.15)))
+            SC.curl_fingers(a, side, 5.0, 5.0)
 
 
 def relief(a, k):
@@ -1068,7 +1086,8 @@ def combat_clips(arm):
     for name, n in (("KnockDown", 19), ("FallF", 19), ("FallSide", 19), ("GetUp", 25), ("GetUpF", 25)):
         SC.clip(arm, name, [(1 + 2 * i, (lambda nn, uu: (lambda a: floor_move(a, uu, nn)))(name, i / float(n - 1))) for i in range(n)])
     for name, fn in (("DownIdle", lambda a, k: down_idle(a, k)), ("DownIdleF", lambda a, k: down_idle(a, k, "FallF")),
-                     ("KneelIdle", kneel_idle), ("Relief", relief), ("GuardLow", guard_low)):
+                     ("KneelIdle", kneel_idle), ("Relief", relief), ("GuardLow", guard_low),
+                     ("SitFloor", lambda a, k: sit_floor(a, k)), ("SitFloorPray", lambda a, k: sit_floor(a, k, True))):
         SC.clip(arm, name, [(1 + 24 * i, (lambda ff, kk: (lambda a: ff(a, kk)))(fn, k)) for i, k in enumerate((-1, 1, -1))])
     for name, (d, lead) in STEPS.items():
         SC.clip(arm, name, [(1 + i, (lambda dd, ll, uu: (lambda a: guard_step(a, uu, dd, ll)))(d, lead, i / 16.0)) for i in range(17)])
@@ -1139,12 +1158,16 @@ def strip(arm, out_dir):
               ("fk_chamber", lambda a: front_kick(a, 0.25)), ("fk", lambda a: front_kick(a, 0.45)),
               ("lk_wind", lambda a: low_kick(a, 0.22)), ("lk", lambda a: low_kick(a, 0.5)),
               ("bk_wind", lambda a: body_kick(a, 0.22)), ("bk", lambda a: body_kick(a, 0.5)),
+              ("sitfloor", lambda a: sit_floor(a, 0)), ("sitpray", lambda a: sit_floor(a, 0, True)),
               ("knee", lambda a: knee_strike(a, 0.45)), ("sk_chamber", lambda a: side_kick(a, 0.3)), ("sk", lambda a: side_kick(a, 0.5))) + tuple(
               ("%s_%02d" % (nm, int(uu * 100)), (lambda n2, u2: (lambda a: floor_move(a, u2, n2)))(nm, uu))
               for nm, us in (("KnockDown", (0.2, 0.45, 0.65, 0.82, 1.0)), ("FallF", (0.2, 0.45, 0.7, 1.0)),
                              ("FallSide", (0.2, 0.45, 0.72, 1.0)), ("GetUp", (0.15, 0.32, 0.45, 0.6, 0.78, 0.9)),
                              ("GetUpF", (0.22, 0.42))) for uu in us) + (("relief", lambda a: relief(a, 0)), ("kneel", lambda a: kneel_idle(a, 0)))
     only = sys.argv[sys.argv.index("--only") + 1] if "--only" in sys.argv else ""
+    if "--names" in sys.argv:                           # (just these poses: --names a,b)
+        keep = sys.argv[sys.argv.index("--names") + 1].split(",")
+        combat = tuple(c for c in combat if c[0] in keep)
     for name, fn in combat if only == "combat" else (("phone", lambda a: phone(a, 1)), ("look", lambda a: phone_look(a, 1)),
                      ("walkphone", lambda a: walk_phone(a, 0.25)), ("carry", lambda a: walk_carry(a, 0.25)),
                      ("namaste", lambda a: namaste(a, 1)), ("wave", lambda a: wave(a, 1)), ("laugh", lambda a: laugh(a, 1)),

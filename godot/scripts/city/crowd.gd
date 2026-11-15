@@ -97,6 +97,9 @@ static func fill(room: Node3D, body: StaticBody3D, key: String, fill := 0.7, kin
 		npc.global_rotation = Vector3(0, atan2(f.x, f.z) + rng.randf_range(-0.15, 0.15), 0)
 		var choices: Array = ["Talk", "Talk", "crowd/Nod", "crowd/Wobble", "crowd/Laugh"] if pose == "talk" else \
 			(SIT_DO.get(kind, SIT_WAIT) if pose == "sit" else STAND_DO)
+		if kind.begins_with("temple") and pose != "talk" and rng.randf() < 0.35:   # (a temple: some sit on the floor, praying)
+			choices = ["crowd/SitFloorPray", "crowd/SitFloor", "crowd/SitFloorPray"]
+			pose = "floor"
 		busy(npc, choices, rng, 0.0)
 		var aps := npc.find_children("*", "AnimationPlayer", true, false)
 		if not aps.is_empty():
