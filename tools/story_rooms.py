@@ -476,7 +476,13 @@ def light(kind, loc, k):
 
 
 def chair_poly(x, y, yaw, colour=None):
-    """The CC0 Poly Haven monobloc chair, if it's on disk, else a simple one."""
+    """The CC0 Poly Haven monobloc chair, if it's on disk, else a simple one (either one a movable: _movable)."""
+    before0 = set(bpy.data.objects)
+    _chair_poly(x, y, yaw, colour)
+    _movable("chair", before0)
+
+
+def _chair_poly(x, y, yaw, colour=None):
     if os.path.exists(CHAIR):
         before = set(bpy.data.objects)
         bpy.ops.import_scene.gltf(filepath=CHAIR)
@@ -743,7 +749,39 @@ def table(x, y, w, d, h, top, legs, bev=0.01):
             box((x + sx * (w / 2 - 0.05), y + sy * (d / 2 - 0.05), (h - 0.04) / 2), (0.045, 0.045, h - 0.04), legs)
 
 
+_MOVE = [0]
+
+
+def _movable(kind, before):
+    """The meshes made since `before` joined into one object, "Move_<kind>_<n>": exported as its own node (export),
+    which the game makes a body you can push about (story.gd _load_room: a chair, a bin), not part of the room."""
+    new = [o for o in bpy.data.objects if o not in before and o.type == 'MESH']
+    if not new:
+        return None
+    bpy.ops.object.select_all(action='DESELECT')
+    for o in new:
+        o.select_set(True)
+    bpy.context.view_layer.objects.active = new[0]
+    bpy.ops.object.parent_clear(type='CLEAR_KEEP_TRANSFORM')
+    if len(new) > 1:
+        bpy.ops.object.join()
+    ob = bpy.context.view_layer.objects.active
+    bpy.ops.object.transform_apply(location=False, rotation=True, scale=True)
+    bpy.ops.object.origin_set(type='ORIGIN_GEOMETRY', center='BOUNDS')
+    _MOVE[0] += 1
+    ob.name = "Move_%s_%d" % (kind, _MOVE[0])
+    for o in [o for o in bpy.data.objects if o not in before and o.type == 'EMPTY' and not o.children]:
+        bpy.data.objects.remove(o, do_unlink=True)      # (an imported chair's empty parents, now childless)
+    return ob
+
+
 def office_chair(x, y, yaw):
+    before = set(bpy.data.objects)
+    _office_chair(x, y, yaw)
+    _movable("chair", before)
+
+
+def _office_chair(x, y, yaw):
     black = mat("chair_black", (0.04, 0.04, 0.045), 0.5)
     chrome = mat("chrome", (0.82, 0.82, 0.84), 0.2, 0.6)
     cyl((x, y, 0.25), 0.02, 0.42, chrome, 10)
@@ -995,7 +1033,7 @@ def dev_office(T):
     table(1.6, -2.4, 1.0, 0.6, 0.75, mat("desk_top", (0.75, 0.68, 0.55), 0.5), steel)   # Karthik's desk
     box((1.45, -2.45, 0.76), (0.075, 0.15, 0.01), mat("phone_black", (0.02, 0.02, 0.025), 0.15), 0.003)
     box((1.75, -2.3, 0.77), (0.04, 0.03, 0.03), mat("charger_white", (0.93, 0.93, 0.9), 0.4))
-    cyl((1.25, -2.3, 0.82), 0.035, 0.12, steel, 16)
+    # (his steel tumbler, the fuel slips and a pen are things he can pick up: story/interactables.json "inspect")
     office_chair(1.6, -1.9, math.pi)
     # Raghavan's cabin, back left behind glass with a frosted band, a wooden door
     box((-0.7, -0.2, h / 2), (0.06, 0.06, h), steel)
@@ -2315,11 +2353,12 @@ def reset():
 
 def export(name):
     """The room as one mesh ("Room"), but each dish (Food_<kind> parts) and name board (Sign_<place>) one object of
-    its own the game can show or hide."""
+    its own the game can show or hide, and each movable thing (Move_<kind>_<n>: a chair) its own, to be pushed about."""
     groups = {}
     for o in bpy.data.objects:
         if o.type == 'MESH':
-            groups.setdefault(o.name.split("_part")[0] if o.name.startswith(("Food_", "Sign_")) else "Room", []).append(o)
+            groups.setdefault(o.name.split("_part")[0] if o.name.startswith(("Food_", "Sign_")) else
+                              (o.name if o.name.startswith("Move_") else "Room"), []).append(o)
     for gname, obs in groups.items():
         bpy.ops.object.select_all(action='DESELECT')
         for o in obs:

@@ -1,10 +1,15 @@
 extends Node3D
 ## Things in a room he can use on foot (story/interactables.json): sir's photo, the files on his desk, his own
-## drawer, the light switch. Walk up, face it, E. Played, not read: the camera comes close to the thing and his
+## drawer, the light switch, small things he picks up and turns over (inspect). Walk up, face it, E. Played, not read: the camera comes close to the thing and his
 ## thought is a subtitle; a drawer slides out with what's in it; a switch puts the tube lights out. Nothing here is
 ## evidence (the story's own steps give that): it's what he notices, the room made solid.
 ##   attach(room, name, city, story)  one per room, from story.gd _load_room and city_doors.gd enter
 ##   offer(walker) → "the photo..."   what E would do where he stands ("" for nothing)
+##   inspect   a small thing (model: tumbler, pen, file, key, phone; made here) on a desk: E lifts it smoothly to
+##             in front of the close camera (never through it), the mouse dragged or WASD / the arrows turn it, E or
+##             Esc puts it back exactly where it lay (nothing is taken: the story's own steps give things)
+##   drawer    slides out along its runners with a wooden sound; if something stands in front of it (a chair, a
+##             person) it only knocks against it: "(Something's in the way.)"
 ##   go(walker)                       do it
 ## Seen things are remembered as story flags ("seen_<id>") when there's a story.
 ##   --interacttest  testing: in the first room that has things, every one used in turn, a picture of each
@@ -26,6 +31,9 @@ var _was: Camera3D
 var _hold := 0.0
 var _e_was := true
 var _test := -1
+var _held: Node3D                    # the thing in his hands, inspected
+var _held_home := Transform3D()
+var _things := {}                    # inspect id → its node
 
 
 static func attach(room: Node3D, name: String, city_ref, story_ref) -> Node3D:
@@ -68,6 +76,8 @@ func _build() -> void:
 				_drawers[it["id"]] = _drawer(it)
 			"switch":
 				_switch(it)
+			"inspect":
+				_things[it["id"]] = _thing(it)
 	if "--interacttest" in OS.get_cmdline_user_args():
 		_test = 0
 
@@ -119,6 +129,123 @@ func _drawer(it: Dictionary) -> Node3D:
 		p.rotation.y = float(th.get("turn", 0.0))
 	root.set_meta("closed", root.position)
 	return root
+
+
+## A small thing lying where it is ("at": its foot on the surface), made of a few simple shapes.
+func _thing(it: Dictionary) -> Node3D:
+	var root := Node3D.new()
+	root.name = "Thing_" + str(it["id"])
+	add_child(root)
+	root.global_transform = Transform3D(_room.global_basis.rotated(_room.global_basis.y.normalized(), float(it.get("yaw", 0.0))), _w(it["at"]))
+	var m := StandardMaterial3D.new()
+	m.roughness = 0.6
+	match str(it.get("model", "")):
+		"tumbler":                                      # a steel tumbler, a little tea in it
+			m.albedo_color = Color(0.8, 0.81, 0.83)
+			m.metallic = 0.9
+			m.roughness = 0.25
+			var c := CylinderMesh.new()
+			c.top_radius = 0.036
+			c.bottom_radius = 0.03
+			c.height = 0.11
+			var mi := MeshInstance3D.new()
+			mi.mesh = c
+			mi.material_override = m
+			mi.position.y = 0.055
+			root.add_child(mi)
+			var tea := StandardMaterial3D.new()
+			tea.albedo_color = Color(0.55, 0.36, 0.2)
+			var t := CylinderMesh.new()
+			t.top_radius = 0.032
+			t.bottom_radius = 0.032
+			t.height = 0.004
+			var ti := MeshInstance3D.new()
+			ti.mesh = t
+			ti.material_override = tea
+			ti.position.y = 0.075
+			root.add_child(ti)
+		"pen":
+			m.albedo_color = Color(0.12, 0.2, 0.6)
+			var c2 := CylinderMesh.new()
+			c2.top_radius = 0.004
+			c2.bottom_radius = 0.004
+			c2.height = 0.145
+			var mi2 := MeshInstance3D.new()
+			mi2.mesh = c2
+			mi2.material_override = m
+			mi2.rotation.z = PI * 0.5
+			mi2.position.y = 0.004
+			root.add_child(mi2)
+		"file":                                         # slips clipped in a khaki file cover
+			m.albedo_color = Color(0.72, 0.6, 0.38)
+			_slab(root, Vector3(0.24, 0.006, 0.32), Vector3(0, 0.003, 0), m)
+			var paper := StandardMaterial3D.new()
+			paper.albedo_color = Color(0.95, 0.94, 0.9)
+			paper.albedo_texture = _letter_tex()
+			_slab(root, Vector3(0.21, 0.004, 0.29), Vector3(0, 0.008, 0), paper)
+			var clip := StandardMaterial3D.new()
+			clip.albedo_color = Color(0.2, 0.2, 0.22)
+			clip.metallic = 0.7
+			_slab(root, Vector3(0.06, 0.008, 0.03), Vector3(0, 0.012, -0.13), clip)
+		"key":
+			m.albedo_color = Color(0.78, 0.62, 0.3)
+			m.metallic = 0.85
+			m.roughness = 0.3
+			_slab(root, Vector3(0.012, 0.003, 0.055), Vector3(0, 0.002, 0.02), m)
+			var bow := CylinderMesh.new()
+			bow.top_radius = 0.014
+			bow.bottom_radius = 0.014
+			bow.height = 0.003
+			var bi := MeshInstance3D.new()
+			bi.mesh = bow
+			bi.material_override = m
+			bi.position = Vector3(0, 0.002, -0.015)
+			root.add_child(bi)
+		_:                                              # a phone, face down
+			m.albedo_color = Color(0.05, 0.05, 0.06)
+			_slab(root, Vector3(0.075, 0.009, 0.155), Vector3(0, 0.0045, 0), m)
+	return root
+
+
+## A drawer's runners: a wooden slide, made here (a rumble of noise, softer as it ends).
+func _slide_sound(at: Vector3, out: bool) -> void:
+	var p := AudioStreamPlayer3D.new()
+	var gen := AudioStreamGenerator.new()
+	gen.mix_rate = 22050.0
+	gen.buffer_length = 0.5
+	p.stream = gen
+	p.unit_size = 2.0
+	p.volume_db = -8.0
+	add_child(p)
+	p.global_position = at
+	p.play()
+	var pb := p.get_stream_playback() as AudioStreamGeneratorPlayback
+	if pb:
+		var n := int(22050 * (0.32 if out else 0.26))
+		var lp := 0.0
+		for i in n:
+			var u := float(i) / n
+			var env := sin(PI * minf(u * 1.4, 1.0)) * (1.0 - u * 0.5)
+			lp = lerpf(lp, randf_range(-1.0, 1.0), 0.18)       # (low-passed: wood, not hiss)
+			var a := lp * env * 0.7 + (0.5 if u > 0.93 and not out else 0.0) * randf_range(-1.0, 1.0) * exp(-(u - 0.93) * 60.0)
+			pb.push_frame(Vector2(a, a))
+	get_tree().create_timer(0.8).timeout.connect(p.queue_free)
+
+
+## Is there something in front of the drawer, within its travel (a chair pushed against the desk, a person)?
+func _blocked(dr: Node3D, travel: float) -> bool:
+	var fwd := -dr.global_basis.z.normalized()
+	var s: Array = []
+	for it in items:
+		if _drawers.get(it["id"]) == dr:
+			s = it.get("size", [0.42, 0.5, 0.12])
+	var front := dr.global_position + fwd * (float(s[1]) * 0.5 + 0.03 if not s.is_empty() else 0.28)
+	var q := PhysicsRayQueryParameters3D.create(front, front + fwd * (travel + 0.03))
+	var ex: Array[RID] = []
+	if city and city.walker:
+		ex.append((city.walker as CollisionObject3D).get_rid())
+	q.exclude = ex
+	return not dr.get_world_3d().direct_space_state.intersect_ray(q).is_empty()
 
 
 func _slab(parent: Node3D, size: Vector3, at: Vector3, m: Material) -> MeshInstance3D:
@@ -274,12 +401,35 @@ func _use(it: Dictionary, w: Node3D) -> void:
 			if _open.has(it["id"]):
 				_open.erase(it["id"])
 				create_tween().tween_property(dr, "position", closed, 0.35).set_trans(Tween.TRANS_SINE)
+				_slide_sound(dr.global_position, false)
 				return
-			_open[it["id"]] = dr
 			var out: Array = it.get("out", [0, 0.3, 0])
 			var to := closed + Vector3(float(out[0]), float(out[2]), -float(out[1]))
+			if _blocked(dr, (to - closed).length()):         # (it would open into something: a knock, no more)
+				var bump := closed + (to - closed).normalized() * 0.02
+				var tb := create_tween()
+				tb.tween_property(dr, "position", bump, 0.06)
+				tb.tween_property(dr, "position", closed, 0.1)
+				_think({"line": {"en": "(Something's in the way.)", "ta": "(ஏதோ இடைஞ்சலா இருக்கு.)"}})
+				return
+			_open[it["id"]] = dr
 			create_tween().tween_property(dr, "position", to, 0.45).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
+			_slide_sound(dr.global_position, true)
 			_close_look(_room.global_transform * to, it, w, 0.45)
+		"inspect":                                       # picked up: brought up before his eyes, to turn over
+			var th: Node3D = _things[it["id"]]
+			_close_look(th.global_position, it, w, 0.0)
+			_hold = 60.0
+			_held = th
+			_held_home = th.global_transform
+			await get_tree().create_timer(0.35).timeout
+			if _held == th and _cam and is_instance_valid(_cam):
+				var eye := _cam.global_transform
+				var to2 := Transform3D(eye.basis, eye.origin - eye.basis.z * float(it.get("near", 0.34)) - eye.basis.y * 0.02)
+				var tw := create_tween()
+				tw.tween_method(func(k: float):
+					if _held == th:
+						th.global_transform = _held_home.interpolate_with(to2, k), 0.0, 1.0, 0.4).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
 		_:
 			_close_look(_w(it["at"]), it, w, 0.0)
 	_think(it)
@@ -372,6 +522,14 @@ func _close_look(p: Vector3, it: Dictionary, w: Node3D, delay: float) -> void:
 func _back() -> void:
 	busy = false
 	_unbox()
+	if _held and is_instance_valid(_held):               # (put back exactly where it lay)
+		var th := _held
+		var from := th.global_transform
+		var home := _held_home
+		_held = null
+		create_tween().tween_method(func(k: float):
+			if is_instance_valid(th):
+				th.global_transform = from.interpolate_with(home, k), 0.0, 1.0, 0.3).set_trans(Tween.TRANS_SINE)
 	if _cam:
 		_cam.queue_free()
 		_cam = null
@@ -388,6 +546,17 @@ func _process(dt: float) -> void:
 		lang = str(story.lang)
 	if busy:
 		_hold -= dt
+		if _held and is_instance_valid(_held) and _cam and is_instance_valid(_cam):   # (turning it over in his hands)
+			var yaw := (float(Input.is_key_pressed(KEY_D) or Input.is_key_pressed(KEY_RIGHT)) - float(Input.is_key_pressed(KEY_A) or Input.is_key_pressed(KEY_LEFT))) * 2.2 * dt
+			var pitch := (float(Input.is_key_pressed(KEY_S) or Input.is_key_pressed(KEY_DOWN)) - float(Input.is_key_pressed(KEY_W) or Input.is_key_pressed(KEY_UP))) * 2.2 * dt
+			yaw += _drag_turn.x
+			pitch += _drag_turn.y
+			_drag_turn = Vector2.ZERO
+			if yaw != 0.0 or pitch != 0.0:
+				var b := _held.global_basis
+				b = Basis(_cam.global_basis.y, yaw) * b
+				b = Basis(_cam.global_basis.x, pitch) * b
+				_held.global_basis = b.orthonormalized()
 		var e := Input.is_key_pressed(KEY_E) or Input.is_key_pressed(KEY_ESCAPE)
 		if (e and not _e_was and _hold < 4.0) or _hold <= 0.0:
 			_back()
@@ -395,6 +564,14 @@ func _process(dt: float) -> void:
 		return
 	if _test >= 0:
 		_run_test(dt)
+
+
+var _drag_turn := Vector2.ZERO
+
+
+func _input(ev: InputEvent) -> void:
+	if busy and _held and ev is InputEventMouseMotion and (ev.button_mask & MOUSE_BUTTON_MASK_LEFT):
+		_drag_turn += Vector2(ev.relative.x, ev.relative.y) * 0.01   # (the mouse held and moved: it turns)
 
 
 # ---- testing ----

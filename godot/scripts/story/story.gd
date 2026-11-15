@@ -1095,10 +1095,13 @@ func _load_room(name: String, at_key: String) -> void:
 	var body := StaticBody3D.new()                       # walls and furniture are solid (cameras keep out of them)
 	room.add_child(body)
 	for mi in room.find_children("*", "MeshInstance3D", true, false):
+		if str(mi.name).begins_with("Move_"):           # (a chair: a body of its own, below)
+			continue
 		var cs := CollisionShape3D.new()
 		cs.shape = (mi as MeshInstance3D).mesh.create_trimesh_shape()
 		cs.transform = room.global_transform.affine_inverse() * (mi as MeshInstance3D).global_transform
 		body.add_child(cs)
+	_movables(room)
 	var lights := room.find_children("Light_*", "", true, false)
 	for e in lights:                                     # the room's own lights (tools/story_rooms.py Light_ empties)
 		var l := OmniLight3D.new()
@@ -1158,6 +1161,38 @@ func _hide_done(caught: bool) -> void:
 		_hide.queue_free()
 	_hide = null
 	_next()
+
+
+## The room's movable things (tools/story_rooms.py Move_<kind>_<n>: chairs): each a RigidBody3D with its own mass,
+## a convex shape from its mesh, friction and damping, so walking into one pushes it (player.gd) and it settles
+## where it stops; the room's floor and walls stop it. Sleeping until touched (no cost standing still).
+const MOVE_MASS := {"chair": 7.0, "bin": 2.0, "box": 4.0}
+
+
+func _movables(r: Node3D) -> void:
+	var mat := PhysicsMaterial.new()
+	mat.friction = 0.8
+	mat.bounce = 0.0
+	for mi in r.find_children("Move_*", "MeshInstance3D", true, false):
+		var m := mi as MeshInstance3D
+		var xf := m.global_transform
+		var rb := RigidBody3D.new()
+		rb.name = "Body_" + str(m.name)
+		rb.mass = float(MOVE_MASS.get(str(m.name).get_slice("_", 1), 5.0))
+		rb.physics_material_override = mat
+		rb.linear_damp = 2.5                            # (feet, castors, a tiled floor: it slides a little, then stops)
+		rb.angular_damp = 4.0
+		rb.can_sleep = true
+		rb.set_meta("movable", true)
+		var cs := CollisionShape3D.new()
+		cs.shape = m.mesh.create_convex_shape(true, true)
+		rb.add_child(cs)
+		r.add_child(rb)
+		rb.global_transform = xf
+		m.get_parent().remove_child(m)
+		rb.add_child(m)
+		m.transform = Transform3D.IDENTITY
+		rb.sleeping = true
 
 
 ## Taken off him (the fight lost, found in the night): "takes" = [{"tag": evidence, "item": in his pocket,

@@ -19,6 +19,7 @@ signal dish_chosen(food: String)                # (a meal out: the dish picked f
 
 const Kit := preload("res://scripts/ui/ui_kit.gd")
 const Hud := preload("res://scripts/ui/hud_style.gd")
+const Art := preload("res://scripts/ui/item_art.gd")
 const PAPER := Color(0.97, 0.94, 0.86)
 const INK := Color(0.08, 0.15, 0.55)
 const DARK := Color(0.12, 0.12, 0.14)
@@ -53,6 +54,19 @@ var _counting := -1
 var _drag := false
 var _thing := Vector2.ZERO
 var _home := Vector2.ZERO
+# the key box (hang, a key): which hook the mouse is over, the close look at the key in hand, the key flying back to
+# his hand after a wrong hook (from, 0..1), where the press began (a click looks, a drag hangs), the hook it went on
+var _hover := -1
+var _inspect := false
+var _ret_from := Vector2.ZERO
+var _ret_t := -1.0
+var _press_at := Vector2.ZERO
+var _hung := -1
+var _snd: AudioStreamPlayer
+# the pockets: the keyboard's item, things on their way into the pocket (item → 0..1) or back to their place
+var _pk_focus := -1
+var _pk_in := {}
+var _pk_back := {}
 # ready
 const ALL_CHORES := ["alarm", "brush", "bath", "dress", "eat", "pocket"]
 var chores: Array = ALL_CHORES                  # this visit's chores (the morning is walked: a few at each place)
@@ -210,6 +224,8 @@ func _button(i: int, n: int) -> Rect2:
 
 
 func _targets() -> Array:
+	if kind == "hang" and str(spec.get("thing", "key")) == "key":
+		return _hooks()
 	var p := _panel()
 	var out := []
 	var ts: Array = spec.get("targets", [])
@@ -217,6 +233,138 @@ func _targets() -> Array:
 		var x := p.position.x + p.size.x * (0.18 + 0.64 * (float(i) / maxf(ts.size() - 1, 1)))
 		out.append(Rect2(x - 55.0, p.position.y + p.size.y * 0.25, 110.0, 150.0))
 	return out
+
+
+# ---- the key box (a hang task with a key): a wooden board by the door, four brass hooks, the key in his hand ----
+## The board: dark wood, sized to the window.
+func _board() -> Rect2:
+	var vs := get_viewport_rect().size
+	var k := _k()
+	var w := minf(880.0 * k, vs.x - 64.0 * k)
+	var h := minf(600.0 * k, vs.y - 200.0 * k)
+	return Rect2((vs.x - w) * 0.5, (vs.y - h) * 0.5 - 20.0 * k, w, h)
+
+
+## Each hook's area: the hook, the key under it and its plate (one Rect2 per target).
+func _hooks() -> Array:
+	var b := _board()
+	var k := _k()
+	var ts: Array = spec.get("targets", [])
+	var out := []
+	var inner := b.size.x - 120.0 * k
+	for i in ts.size():
+		var x := b.position.x + 60.0 * k + inner * (float(i) + 0.5) / float(maxi(ts.size(), 1))
+		out.append(Rect2(x - 80.0 * k, b.position.y + 92.0 * k, 160.0 * k, 270.0 * k))
+	return out
+
+
+func _key_size() -> float:
+	return 120.0 * _k()
+
+
+func _hook_point(i: int) -> Vector2:
+	var r: Rect2 = _hooks()[i]
+	return Vector2(r.get_center().x, r.position.y + 28.0 * _k())
+
+
+## Where a key hangs on a hook: its ring on the hook's curl.
+func _hook_tip(i: int) -> Vector2:
+	return _hook_point(i) + Vector2(0.09, 0.45) * _key_size()
+
+
+func _key_home() -> Vector2:
+	var b := _board()
+	return Vector2(b.get_center().x, b.end.y - 178.0 * _k())
+
+
+## Which key belongs on hook i (by its label): the right one is the SUV's (the one in his hand).
+func _key_kind(i: int) -> String:
+	var ts: Array = spec.get("targets", [])
+	if ts[i].get("right", false):
+		return "suv"
+	var lab = ts[i].get("label", "")
+	var en := (str(lab.get("en", "")) if lab is Dictionary else str(lab)).to_lower()
+	for kk in ["gate", "store", "garden", "suv"]:
+		if en.contains(kk):
+			return kk
+	return "house"
+
+
+## What each hook is for (shown as the mouse comes over it, or the keyboard does).
+func _hook_about(kk: String) -> String:
+	match kk:
+		"gate":
+			return L("The front gate's padlock.", "முன் கேட் பூட்டு.")
+		"store":
+			return L("The store room behind the kitchen.", "சமையலறைக்கு பின்னாடி ஸ்டோர் ரூம்.")
+		"garden":
+			return L("The garden shed and the tap.", "தோட்டக் கொட்டகையும் குழாயும்.")
+		"suv":
+			return L("Sir's SUV. Its own hook.", "சார் கார். அதுக்குன்னே ஒரு கொக்கி.")
+	return ""
+
+
+func _hang_input(e: InputEvent) -> void:
+	if _hung >= 0:
+		return
+	if e is InputEventMouseMotion:
+		_hover = -1
+		var rs := _hooks()
+		for i in rs.size():
+			if (rs[i] as Rect2).has_point(e.position):
+				_hover = i
+		if _hover >= 0:
+			_focus = -1                                  # (the mouse is used: the keyboard's ring goes)
+		if _drag:
+			_thing = e.position
+	elif e is InputEventMouseButton and e.button_index == MOUSE_BUTTON_LEFT:
+		if _inspect:
+			if not e.pressed:
+				_inspect = false
+			return
+		var k := _k()
+		if e.pressed and Rect2(_thing - Vector2(48, 30) * k, Vector2(96, 150) * k).has_point(e.position):
+			_drag = true
+			_press_at = e.position
+			_ret_t = -1.0
+		elif not e.pressed and _drag:
+			_drag = false
+			if e.position.distance_to(_press_at) < 6.0 * k:   # a click, not a drag: a close look at it
+				_inspect = true
+			else:
+				_drop()
+	queue_redraw()
+
+
+## The key box by keyboard: ←/→ (or Tab) choose a hook, Enter (Space, E) hangs it there; I looks at the key closely;
+## Esc puts the close look away.
+func _hang_key(code: int) -> void:
+	var n: int = (spec.get("targets", []) as Array).size()
+	if _hung >= 0 or n == 0:
+		return
+	if code == KEY_ESCAPE:
+		if _inspect:
+			_inspect = false
+		elif _drag:
+			_drag = false
+			_send_back()
+	elif code in [KEY_LEFT, KEY_RIGHT, KEY_TAB]:
+		_inspect = false
+		_focus = 0 if _focus < 0 else (_focus + (-1 if code == KEY_LEFT else 1) + n) % n
+	elif code == KEY_I:
+		_inspect = not _inspect
+	elif code in [KEY_ENTER, KEY_KP_ENTER, KEY_SPACE, KEY_E]:
+		if _inspect:
+			_inspect = false
+		elif _focus >= 0:
+			_thing = _hook_tip(_focus)
+			_drop()
+	queue_redraw()
+
+
+func _send_back() -> void:
+	_ret_from = _thing
+	_ret_t = 0.0
 
 
 func _phone() -> Rect2:
@@ -271,6 +419,9 @@ func _gui_input(e: InputEvent) -> void:
 					_answer(true)
 				queue_redraw()
 		"hang":
+			if str(spec.get("thing", "key")) == "key":
+				_hang_input(e)
+				return
 			if e is InputEventMouseButton and e.button_index == MOUSE_BUTTON_LEFT:
 				if e.pressed and Rect2(_thing - Vector2(50, 50), Vector2(100, 100)).has_point(e.position):
 					_drag = true
@@ -329,6 +480,12 @@ func _unhandled_key_input(e: InputEvent) -> void:
 		accept_event()
 	elif kind == "count" and _closing <= 0.0:
 		_count_key(e.keycode)
+		accept_event()
+	elif kind == "hang" and str(spec.get("thing", "key")) == "key":
+		_hang_key(e.keycode)
+		accept_event()
+	elif kind == "ready" and chore < chores.size() and chores[chore] == "pocket":
+		_pocket_key(e.keycode)
 		accept_event()
 
 
@@ -389,17 +546,49 @@ func _answer(says_short: bool) -> void:
 func _drop() -> void:
 	var ts: Array = spec.get("targets", [])
 	var rs := _targets()
+	var keybox := str(spec.get("thing", "key")) == "key"
 	for i in rs.size():
 		if (rs[i] as Rect2).grow(20.0).has_point(_thing):
 			if ts[i].get("right", false):
-				_thing = (rs[i] as Rect2).get_center() + Vector2(0, 20)
-				_say(L("Done.", "முடிஞ்சது."), GOOD)
+				_thing = _hook_tip(i) if keybox else (rs[i] as Rect2).get_center() + Vector2(0, 20)
+				_hung = i
+				_say(L("On its own hook.", "அதோட கொக்கியில.") if keybox else L("Done.", "முடிஞ்சது."), GOOD)
+				_click(0.9)
 				queue_redraw()
 				get_tree().create_timer(0.9).timeout.connect(func(): _done({"placed": true}))
 				return
 			_say(t_(ts[i].get("wrong", {"en": "Not there.", "ta": "அங்க இல்ல."})), BAD)
-	_thing = _home
+	if keybox:
+		_send_back()                                     # (back into his hand: he can try again)
+	else:
+		_thing = _home
 	queue_redraw()
+
+
+## A soft click (a key onto its hook, a thing into a pocket): made here, no sound file.
+func _click(pitch := 1.0) -> void:
+	if _snd == null:
+		_snd = AudioStreamPlayer.new()
+		_snd.volume_db = -14.0
+		var rate := 22050
+		var n := int(rate * 0.06)
+		var data := PackedByteArray()
+		data.resize(n * 2)
+		var rng := RandomNumberGenerator.new()
+		rng.seed = 3
+		for i in n:
+			var tt := float(i) / rate
+			var v := (sin(TAU * 1900.0 * tt) * 0.5 + rng.randf_range(-1.0, 1.0) * 0.5) * exp(-tt * 90.0)
+			data.encode_s16(i * 2, int(clampf(v, -1.0, 1.0) * 26000.0))
+		var w := AudioStreamWAV.new()
+		w.format = AudioStreamWAV.FORMAT_16_BITS
+		w.mix_rate = rate
+		w.data = data
+		_snd.stream = w
+		add_child(_snd)
+	_snd.pitch_scale = pitch
+	_snd.play()
+
 
 
 func _otp_key(k: String) -> void:
@@ -459,10 +648,26 @@ func _process(dt: float) -> void:
 			_say(groom.said, DARK)
 		if groom.done and not skip:
 			_next_chore()
-	if kind == "hang" and _home == Vector2.ZERO:
+	if kind == "hang" and str(spec.get("thing", "key")) == "key":
+		_home = _key_home()
+		if _ret_t >= 0.0:                                # (back to his hand, quickly, easing in)
+			_ret_t = minf(_ret_t + dt / Kit.NORMAL, 1.0)
+			_thing = _ret_from.lerp(_home, Kit.ease_out(_ret_t))
+			if _ret_t >= 1.0:
+				_ret_t = -1.0
+		elif not _drag and _hung < 0:
+			_thing = _home
+	elif kind == "hang" and _home == Vector2.ZERO:
 		var p := _panel()
 		_home = Vector2(p.get_center().x, p.end.y - 70.0)
 		_thing = _home
+	if kind == "ready":
+		for it in _pk_in.keys():                         # (things sliding into the pocket, or back to their place)
+			_pk_in[it]["t"] = minf(float(_pk_in[it]["t"]) + dt / Kit.NORMAL, 1.0)
+		for it in _pk_back.keys():
+			_pk_back[it]["t"] = minf(float(_pk_back[it]["t"]) + dt / Kit.NORMAL, 1.0)
+			if _pk_back[it]["t"] >= 1.0:
+				_pk_back.erase(it)
 	if skip and _t > 1.5:
 		match kind:
 			"sign":
@@ -526,7 +731,7 @@ func _draw() -> void:
 	if not visible or _away:
 		return
 	var vs := get_viewport_rect().size
-	if kind == "sign" or kind == "count":
+	if kind == "sign" or kind == "count" or kind == "hang" or kind == "ready":
 		Kit.scrim(self, 0.66)
 	else:
 		draw_rect(Rect2(Vector2.ZERO, vs), Color(0, 0, 0, 0.55))
@@ -547,8 +752,9 @@ func _draw() -> void:
 			_draw_meal(p)
 		"phone":
 			_draw_phone()
-	if _msg_t > 0.0 and _msg != "" and (kind == "sign" or kind == "count"):
-		var area := _slip() if kind == "sign" else _counter()
+	var keybox := kind == "hang" and str(spec.get("thing", "key")) == "key"
+	if _msg_t > 0.0 and _msg != "" and (kind == "sign" or kind == "count" or keybox or kind == "ready"):
+		var area := _slip() if kind == "sign" else (_counter() if kind == "count" else (_board() if keybox else _ready_card()))
 		Kit.banner(self, Vector2(area.get_center().x, area.position.y - 58.0 * _k()), _msg, _msg_col != BAD, _k(), clampf(_msg_t * 2.0, 0.0, 1.0))
 	elif _msg_t > 0.0 and _msg != "":
 		var mb := Rect2(p.position.x + p.size.x * 0.25, p.end.y + 12.0, p.size.x * 0.5, 40.0)
@@ -750,8 +956,102 @@ func _ring(k: float) -> StyleBoxFlat:
 	return sb
 
 
+## The key box by Raghavan sir's door: a dark wooden board with a brass plate, four brass hooks with their keys and
+## engraved plates (the SUV's hook empty), the SUV key in his hand below; under it, what the hook under the mouse (or
+## the keyboard) is for. A click on the key: a close look at it.
+func _draw_keybox() -> void:
+	var b := _board()
+	var k := _k()
+	var ks := _key_size()
+	# the board: dark wood, a darker frame, the grain running across
+	Art._shadow(self, b, 14.0 * k, 0.45)
+	Art._rr(self, b, Color(0.2, 0.12, 0.07), 14.0 * k)
+	var inner := b.grow(-12.0 * k)
+	Art._rr(self, inner, Color(0.29, 0.18, 0.1), 8.0 * k)
+	var y := inner.position.y + 6.0 * k
+	var n := 0
+	while y < inner.end.y - 4.0 * k:
+		var a := 0.05 + 0.05 * absf(sin(n * 1.7))
+		draw_line(Vector2(inner.position.x + 4.0 * k, y), Vector2(inner.end.x - 4.0 * k, y + sin(n * 0.9) * 2.0 * k),
+			Color(0.1, 0.05, 0.02, a), maxf(1.5 * k, 1.0))
+		y += (9.0 + 7.0 * absf(sin(n * 2.3))) * k
+		n += 1
+	# its brass name plate
+	var title := t_(spec.get("title", ""))
+	var tw := Hud.width_of(title, 17.0 * k, 600) + 56.0 * k
+	var tp := Rect2(b.get_center().x - tw * 0.5, b.position.y + 28.0 * k, tw, 38.0 * k)
+	Art._shadow(self, tp, 4.0 * k, 0.4)
+	Art._rr(self, tp, Art.BRASS, 4.0 * k, Art.BRASS_DARK, maxf(k, 1.0))
+	Hud.text(self, Vector2(tp.position.x, tp.get_center().y + 6.0 * k), title, 17.0 * k, Color(0.2, 0.13, 0.05), 600,
+		HORIZONTAL_ALIGNMENT_CENTER, tp.size.x)
+	# the hooks, their keys, their plates
+	var ts: Array = spec.get("targets", [])
+	var rs := _hooks()
+	var over := -1                                       # (the hook a dragged key is over: the one it would go on)
+	for i in rs.size():
+		if _drag and (rs[i] as Rect2).grow(20.0).has_point(_thing):
+			over = i
+	for i in rs.size():
+		var r: Rect2 = rs[i]
+		var kk := _key_kind(i)
+		var hot := i == _hover or i == _focus or i == over
+		var hp := _hook_point(i)
+		Art.hook(self, hp, ks, hot)
+		if kk != "suv":
+			Art.key(self, _hook_tip(i), kk, ks, 5.0 * k if hot else 0.0)
+		elif i != _hung and (_drag or _focus == i):        # (its own hook, empty: a faint ring where the key goes)
+			draw_arc(_hook_tip(i), 10.0 * k, 0, TAU, 20, Hud.fade(Hud.GREEN, 0.5 + 0.3 * sin(_t * 5.0)), 2.0 * k)
+		var pr := Rect2(r.get_center().x - 66.0 * k, r.end.y - 34.0 * k, 132.0 * k, 28.0 * k)
+		Art.plate(self, pr, t_(ts[i]["label"]), k, hot)
+		if i == _focus:                                   # (the keyboard's hook: a ring round it)
+			Art._rr(self, r.grow(4.0 * k), Color(0, 0, 0, 0), 10.0 * k, Hud.fade(Kit.BLUE, 0.9), 2.0 * k)
+	# his hand: a dark patch on the board's foot with the SUV key in it (until it's hung)
+	var tray := Rect2(b.get_center().x - 150.0 * k, b.end.y - 214.0 * k, 300.0 * k, 186.0 * k)
+	Art._rr(self, tray, Color(0, 0, 0, 0.22), 12.0 * k, Color(1, 1, 1, 0.06), k)
+	Hud.text(self, tray.position + Vector2(14.0 * k, 24.0 * k), L("IN YOUR HAND", "உங்க கையில"), 12.0 * k,
+		Color(0.95, 0.9, 0.8, 0.55), 700)
+	if _hung >= 0:
+		Art.key(self, _hook_tip(_hung), "suv", ks)
+	else:
+		var near := not _drag and _mouse.distance_to(_thing + Vector2(0, 60.0 * k)) < 70.0 * k
+		Art.key(self, _thing, "suv", ks * (1.08 if _drag else 1.0), 4.0 * k if near else 0.0)
+	# what the hook is for, or what to do
+	var sel := _hover if _hover >= 0 else _focus
+	if _drag and over >= 0:
+		sel = over
+	var bar := Rect2(b.position.x, b.end.y + 14.0 * k, b.size.x, 54.0 * k)
+	Hud.panel(self, bar, k)
+	if sel >= 0:
+		var lbl := t_(ts[sel]["label"])
+		Hud.text(self, Vector2(bar.position.x + 22.0 * k, bar.get_center().y + 6.5 * k), lbl, 18.0 * k, Hud.AMBER, 600)
+		Hud.text(self, Vector2(bar.position.x + 34.0 * k + Hud.width_of(lbl, 18.0 * k, 600), bar.get_center().y + 6.5 * k),
+			_hook_about(_key_kind(sel)), 17.0 * k, Hud.INK)
+	else:
+		Hud.text(self, Vector2(bar.position.x + 22.0 * k, bar.get_center().y + 6.5 * k),
+			L("Hang the SUV key on its hook: drag it there, or ← → and Enter.  Click it to look closer.",
+			"கார் சாவியை அதோட கொக்கியில மாட்டுங்க: இழுத்து வையுங்க, அல்லது ← → பிறகு Enter.  கிட்ட பார்க்க கிளிக் பண்ணுங்க."),
+			16.0 * k, Hud.DIM)
+	# a close look at the key in his hand
+	if _inspect:
+		Kit.scrim(self, 0.55)
+		var vs := get_viewport_rect().size
+		var cr := Rect2(vs.x * 0.5 - 250.0 * k, vs.y * 0.5 - 250.0 * k, 500.0 * k, 470.0 * k)
+		Hud.panel(self, cr, k)
+		Art.key(self, Vector2(cr.get_center().x, cr.position.y + 40.0 * k), "suv", 290.0 * k)
+		Hud.text(self, Vector2(cr.position.x, cr.end.y - 104.0 * k), L("The SUV key", "கார் சாவி"), 22.0 * k, Hud.INK, 700,
+			HORIZONTAL_ALIGNMENT_CENTER, cr.size.x)
+		Hud.text(self, Vector2(cr.position.x + 30.0 * k, cr.end.y - 72.0 * k),
+			L("A black fob, lock and unlock, the steel key in it. Sir's car.", "கருப்பு ஃபோப், பூட்டவும் திறக்கவும், உள்ள இரும்புச் சாவி. சார் கார்."),
+			16.0 * k, Hud.DIM, 400, HORIZONTAL_ALIGNMENT_CENTER, cr.size.x - 60.0 * k)
+		Hud.text(self, Vector2(cr.position.x, cr.end.y - 26.0 * k), L("Click, or Esc, to hold it again", "மறுபடி கையில எடுக்க கிளிக், அல்லது Esc"),
+			14.0 * k, Hud.fade(Hud.INK, 0.5), 400, HORIZONTAL_ALIGNMENT_CENTER, cr.size.x)
+
+
 func _draw_hang(p: Rect2) -> void:
 	var thing := str(spec.get("thing", "key"))
+	if thing == "key":
+		_draw_keybox()
+		return
 	if thing == "key":
 		draw_rect(p.grow_individual(-p.size.x * 0.08, 0, -p.size.x * 0.08, 0), Color(0.45, 0.3, 0.17))   # the wooden key board
 		_text(p.position + Vector2(0, 40), t_(spec.get("title", "")), 22, Color.WHITE, p.size.x, HORIZONTAL_ALIGNMENT_CENTER)
@@ -882,9 +1182,12 @@ func _chore_rects() -> Dictionary:
 			for i in 4:
 				out["idli%d" % i] = Rect2(c + Vector2(-150 + (i % 2) * 150, -110 + (i / 2) * 110), Vector2(120, 90))
 		"pocket":
+			var area := Rect2(p.position.x + 250.0, p.position.y + 24.0, p.size.x - 280.0, p.size.y - 110.0)
+			var cw := minf(area.size.x / 4.0, 170.0)
+			var x0 := area.get_center().x - cw * 2.0
 			for i in _pocket_items.size():
-				out[_pocket_items[i]] = Rect2(c + Vector2(-330 + i * 140, -170), Vector2(120, 90))
-			out["pocket"] = Rect2(c + Vector2(-150, 30), Vector2(300, 160))
+				out[_pocket_items[i]] = Rect2(x0 + i * cw + 8.0, area.position.y + 66.0, cw - 16.0, cw - 16.0)
+			out["pocket"] = Rect2(area.get_center().x - 150.0, area.position.y + 66.0 + cw + 34.0, 300.0, minf(176.0, area.end.y - (area.position.y + 66.0 + cw + 34.0)))
 	return out
 
 
@@ -926,20 +1229,69 @@ func _ready_input(e: InputEvent) -> void:
 								get_tree().create_timer(0.9).timeout.connect(_next_chore)
 				"pocket":
 					for it in _pocket_items:
-						if r[it].has_point(e.position) and not _picked.has(it):
+						if r[it].has_point(e.position) and not _picked.has(it) and not _pk_back.has(it):
 							_drag_item = it
-							_thing = e.position
+							_press_at = r[it].get_center() - e.position     # (held where it was taken: no jump)
+							_thing = e.position + _press_at
+							_pk_focus = -1
 		else:
 			if ch == "pocket" and _drag_item != "":
 				if r["pocket"].grow(30.0).has_point(_thing):
-					_picked[_drag_item] = true
-					if _picked.size() == _pocket_items.size():
-						_next_chore()
+					_pack(_drag_item, _thing)
+				else:                                    # (not the pocket: it slides back to its place)
+					_pk_back[_drag_item] = {"from": _thing, "t": 0.0}
 				_drag_item = ""
 	elif e is InputEventMouseMotion:
+		_mouse = e.position
 		if ch == "pocket" and _drag_item != "":
-			_thing = e.position
+			_thing = e.position + _press_at
 	queue_redraw()
+
+
+## Into the pocket (from where it was let go): it slides in, a soft click; all four in, the next chore.
+func _pack(it: String, from: Vector2) -> void:
+	if _picked.has(it):
+		return
+	_picked[it] = true
+	_pk_in[it] = {"from": from, "t": 0.0}
+	_click(1.0 + 0.08 * _picked.size())
+	if _picked.size() == _pocket_items.size():
+		_say(L("Wallet, phone, keys. Ready.", "பர்ஸ், ஃபோன், சாவி. ரெடி."), GOOD)
+		get_tree().create_timer(0.6).timeout.connect(_next_chore)
+
+
+## The pockets by keyboard: ←/→ choose a thing, Enter (Space, E) puts it in the pocket.
+func _pocket_key(code: int) -> void:
+	var left: Array = _pocket_items.filter(func(it): return not _picked.has(it))
+	if left.is_empty():
+		return
+	if code in [KEY_LEFT, KEY_RIGHT, KEY_TAB]:
+		var at := left.find(_pocket_items[_pk_focus]) if _pk_focus >= 0 else -1
+		at = 0 if at < 0 else (at + (-1 if code == KEY_LEFT else 1) + left.size()) % left.size()
+		_pk_focus = _pocket_items.find(left[at])
+	elif code in [KEY_ENTER, KEY_KP_ENTER, KEY_SPACE, KEY_E] and _pk_focus >= 0 and not _picked.has(_pocket_items[_pk_focus]):
+		var it: String = _pocket_items[_pk_focus]
+		_pack(it, (_chore_rects()[it] as Rect2).get_center())
+		var rest: Array = _pocket_items.filter(func(x): return not _picked.has(x))
+		_pk_focus = _pocket_items.find(rest[0]) if not rest.is_empty() else -1
+	queue_redraw()
+
+
+func _ready_card() -> Rect2:
+	return _panel()
+
+
+## One of his things, drawn in its card's box (b) at size s.
+func _draw_item(it: String, centre: Vector2, s: float) -> void:
+	match it:
+		"wallet":
+			Art.wallet(self, centre, s)
+		"phone":
+			Art.phone(self, centre, s)
+		"scooter key":
+			Art.key(self, centre - Vector2(0, s * 0.42), "scooter", s)
+		"house key":
+			Art.key(self, centre - Vector2(0, s * 0.42), "house", s)
 
 
 func _next_chore() -> void:
@@ -981,20 +1333,29 @@ func _hand_over() -> void:
 
 
 func _draw_ready(p: Rect2) -> void:
-	# the house: a whitewashed room in morning light, the checklist of chores on the left
-	draw_rect(p, Color(0.93, 0.9, 0.82))
-	draw_rect(Rect2(p.position.x, p.end.y - 70, p.size.x, 70), Color(0.62, 0.5, 0.38))          # red-oxide floor
-	draw_rect(Rect2(p.end.x - 190, p.position.y + 40, 140, 120), Color(0.75, 0.88, 1.0))      # the window
-	draw_rect(Rect2(p.end.x - 190, p.position.y + 40, 140, 120), Color(0.3, 0.45, 0.3), false, 6.0)
+	# the morning card: ivory paper, the chores down the left, the clock and the deadline in a footer
+	var kp := 1.0
+	Kit.paper(self, p, kp)
+	var side := Rect2(p.position, Vector2(228.0, p.size.y - 64.0))
+	Art._rr(self, side, Color(0.2, 0.36, 0.25, 0.08), 0.0)
+	Hud.text(self, p.position + Vector2(24, 42), L("THIS MORNING", "இன்னைக்கு காலை"), 13.0, Color(0.2, 0.36, 0.25), 700)
 	var names := {"alarm": L("Wake up", "எழுந்திரு"), "brush": L("Brush your teeth", "பல் தேய்"), "bath": L("Bath", "குளி"),
 		"dress": L("Get dressed", "டிரஸ் பண்ணு"), "eat": L("Breakfast", "சாப்பிடு"), "pocket": L("Wallet, phone, keys", "பர்ஸ், ஃபோன், சாவி")}
 	for i in chores.size():
-		var y := p.position.y + 50 + i * 40
-		var col := GOOD if i < chore else (DARK if i == chore else Color(0.55, 0.55, 0.55))
-		_text(Vector2(p.position.x + 24, y), ("✔ " if i < chore else ("▸ " if i == chore else "   ")) + str(names[chores[i]]), 19, col)
+		var y := p.position.y + 84 + i * 38
+		var col := Color(0.2, 0.45, 0.28) if i < chore else (Kit.CHARCOAL if i == chore else Color(0.5, 0.5, 0.5))
+		if i == chore:
+			Art._rr(self, Rect2(p.position.x + 12, y - 24, 204, 34), Color(0.2, 0.36, 0.25, 0.12), 6.0)
+		Hud.text(self, Vector2(p.position.x + 24, y), ("✓  " if i < chore else ("›  " if i == chore else "    ")) + str(names[chores[i]]),
+			17.0, col, 600 if i == chore else 400)
+	var foot := Rect2(p.position.x, p.end.y - 64.0, p.size.x, 64.0)
+	Art._rr(self, foot, Color(0.13, 0.135, 0.15, 0.94), 0.0)
 	var h := 6 * 60 + 30 + minutes
-	_text(Vector2(p.position.x + 24, p.end.y - 28), L("Clock: ", "நேரம்: ") + "%d:%02d AM" % [h / 60, h % 60] +
-		L("   (leave by 7:15)", "   (7:15-க்குள் கிளம்பணும்)"), 18, BAD if minutes > 45 else DARK)
+	Hud.text(self, Vector2(foot.position.x + 24, foot.get_center().y + 7), "%d:%02d AM" % [h / 60, h % 60], 22.0,
+		Hud.RED if minutes > 45 else Hud.INK, 600)
+	Hud.text(self, Vector2(foot.position.x + 130, foot.get_center().y + 6), L("Leave by 7:15", "7:15-க்குள் கிளம்பணும்") +
+		("  ·  " + L("%d min left" % maxi(45 - minutes, 0), "இன்னும் %d நிமிஷம்" % maxi(45 - minutes, 0)) if minutes <= 45 else
+		"  ·  " + L("late", "லேட்")), 16.0, Hud.DIM)
 	if chore >= chores.size():
 		return
 	var r := _chore_rects()
@@ -1038,19 +1399,51 @@ func _draw_ready(p: Rect2) -> void:
 			_text(Vector2(c.x - 300, c.y + 200), L("Click each idli to eat it", "ஒவ்வொரு இட்லியையும் கிளிக் பண்ணி சாப்பிடு"), 18, DARK, 600, HORIZONTAL_ALIGNMENT_CENTER)
 		"pocket":
 			var pk: Rect2 = r["pocket"]
-			draw_rect(pk, Color(0.35, 0.35, 0.45))                                                   # the trouser pocket
-			_text(pk.position + Vector2(0, pk.size.y * 0.55), L("Pocket", "பாக்கெட்"), 22, Color.WHITE, pk.size.x, HORIZONTAL_ALIGNMENT_CENTER)
-			var icol := {"wallet": Color(0.4, 0.25, 0.12), "phone": Color(0.1, 0.1, 0.12), "scooter key": Color(0.8, 0.7, 0.3), "house key": Color(0.7, 0.7, 0.72)}
+			var area := Rect2(p.position.x + 250.0, p.position.y + 24.0, p.size.x - 280.0, p.size.y - 110.0)
+			Hud.text(self, area.position + Vector2(0, 26), L("Your things", "உங்க பொருட்கள்"), 22.0, Kit.CHARCOAL, 700)
+			Hud.text(self, area.position + Vector2(0, 50), L("Into your trouser pocket before you go.", "கிளம்பறதுக்கு முன்னாடி பேண்ட் பாக்கெட்டுக்குள்ள."),
+				15.0, Kit.PRINT)
+			var foot_r := Rect2(p.end.x - 300.0, p.end.y - 64.0, 280.0, 64.0)   # the packing progress, in the footer
+			Hud.text(self, Vector2(foot_r.position.x, foot_r.get_center().y + 6), L("Packed", "வச்சது"), 15.0, Hud.DIM)
+			Kit.progress(self, Rect2(foot_r.position.x + 70, foot_r.get_center().y - 4, 130, 8), float(_picked.size()) / _pocket_items.size(), 1.0, Hud.GREEN, _pocket_items.size())
+			Hud.text(self, Vector2(foot_r.position.x + 212, foot_r.get_center().y + 6), "%d / %d" % [_picked.size(), _pocket_items.size()], 16.0, Hud.INK, 600)
+			# the pocket, glowing when something's over it; what's in it peeking from its mouth
+			Art.pocket(self, pk, 1.0, _drag_item != "" and pk.grow(30.0).has_point(_thing))
+			var inside := 0
 			for it in _pocket_items:
-				if _picked.has(it):
-					continue
+				if _picked.has(it) and float(_pk_in.get(it, {"t": 1.0})["t"]) >= 1.0:
+					_draw_item(it, Vector2(pk.position.x + 60.0 + inside * 60.0, pk.position.y + 34.0), 52.0)
+					inside += 1
+			Art._rr(self, Rect2(pk.position, Vector2(pk.size.x, pk.size.y * 0.16)), Color(0.12, 0.16, 0.24), 4.0)   # (the mouth over them)
+			if _picked.is_empty() and _drag_item == "":
+				Hud.text(self, Vector2(pk.position.x, pk.get_center().y + 18), L("Drop them here", "இங்க போடுங்க"), 15.0,
+					Color(1, 1, 1, 0.55), 500, HORIZONTAL_ALIGNMENT_CENTER, pk.size.x)
+			# the things, each on its card (taken, packed or sliding back)
+			for i in _pocket_items.size():
+				var it: String = _pocket_items[i]
 				var b: Rect2 = r[it]
-				var at := b
+				var hov := b.has_point(_mouse) and _drag_item == "" and not _picked.has(it)
+				var foc := i == _pk_focus
+				Art._rr(self, b, Color(1, 1, 1, 0.55) if not hov else Color(1, 1, 1, 0.85), 10.0,
+					Kit.BLUE if foc else Color(0, 0, 0, 0.08), 2.0 if foc else 1.0)
+				Hud.text(self, Vector2(b.position.x, b.end.y + 20), _item_name(it), 14.0, Kit.PRINT if not _picked.has(it) else Color(0.6, 0.6, 0.6),
+					500, HORIZONTAL_ALIGNMENT_CENTER, b.size.x)
+				if _picked.has(it):
+					var tin: Dictionary = _pk_in.get(it, {"t": 1.0, "from": b.get_center()})
+					if float(tin["t"]) < 1.0:                # (sliding into the pocket, getting smaller)
+						var e := Kit.ease_out(float(tin["t"]))
+						_draw_item(it, (tin["from"] as Vector2).lerp(pk.get_center() - Vector2(0, 20), e), lerpf(b.size.x * 0.8, 52.0, e))
+					else:
+						Hud.text(self, Vector2(b.position.x, b.get_center().y + 6), "✓", 26.0, Color(0.2, 0.45, 0.28), 700, HORIZONTAL_ALIGNMENT_CENTER, b.size.x)
+					continue
+				var at := b.get_center()
 				if it == _drag_item:
-					at = Rect2(_thing - b.size * 0.5, b.size)
-				draw_rect(Rect2(at.position + Vector2(20, 10), at.size - Vector2(40, 30)), icol[it])
-				_text(Vector2(at.position.x - 10, at.end.y + 12), _item_name(it), 16, DARK, at.size.x + 20, HORIZONTAL_ALIGNMENT_CENTER)
-			_text(Vector2(c.x - 300, pk.end.y + 30), L("Drag everything into your pocket", "எல்லாத்தையும் பாக்கெட்டுக்குள்ள இழு"), 18, DARK, 600, HORIZONTAL_ALIGNMENT_CENTER)
+					at = _thing
+				elif _pk_back.has(it):                      # (let go off the pocket: back to its place)
+					at = (_pk_back[it]["from"] as Vector2).lerp(b.get_center(), Kit.ease_out(float(_pk_back[it]["t"])))
+				_draw_item(it, at + (Vector2(0, -4) if hov else Vector2.ZERO), b.size.x * (0.86 if it == _drag_item else 0.8))
+			Hud.text(self, Vector2(area.position.x, area.end.y + 4), L("Drag each into the pocket, or ← → and Enter", "ஒவ்வொண்ணையும் பாக்கெட்டுக்குள்ள இழுங்க, அல்லது ← → பிறகு Enter"),
+				14.0, Kit.PRINT, 400, HORIZONTAL_ALIGNMENT_CENTER, area.size.x)
 
 
 # ---- meals ----
