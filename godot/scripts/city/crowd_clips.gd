@@ -33,12 +33,16 @@ static func add(person: Node, sex: String) -> bool:
 	var ap := aps[0] as AnimationPlayer
 	if ap.has_animation_library("crowd"):
 		return true
+	if ap.has_animation("Phone"):                       # (a living Sketchfab person: only the clips made for HER bones
+		var own := AnimationLibrary.new()               #  when she was built (sketchfab_living.py retargets them to her
+		for pair in _source(sex):                       #  rest pose); the crowd's own tracks, copied straight across,
+			if ap.has_animation(pair[0]):               #  twisted her (her bones rest at other angles): one lay flat)
+				own.add_animation(pair[0], ap.get_animation(pair[0]))
+		ap.add_animation_library("crowd", own)
+		return true
 	var skel_path := String(ap.get_node(ap.root_node).get_path_to(sks[0]))
 	var lib := AnimationLibrary.new()
 	for pair in _source(sex):
-		if ap.has_animation(pair[0]):                   # (a living Sketchfab person: the clips made for her bones
-			lib.add_animation(pair[0], ap.get_animation(pair[0]))   #  when she was built; the newer ones, moved over)
-			continue
 		var a := (pair[1] as Animation).duplicate(true) as Animation
 		for t in a.get_track_count():                   # (its rig's node name → this person's)
 			var p := String(a.track_get_path(t))
