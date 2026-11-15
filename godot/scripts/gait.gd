@@ -58,6 +58,10 @@ var _back_t := 0.0
 var _turn_w := 0.0
 var _move_w := 0.0
 var _tired_w := 0.0
+var _still := 0.0                     # how long he's stood still
+var _pocket := false                  # hands in his pockets (IdlePocket), for a while
+var _pocket_at := 8.0
+var _pocket_w := 0.0
 var _shift_was := false
 var _shift_t := -9.0                  # when Shift was last pressed (a second press soon after: a sprint)
 var _sprint_latch := false
@@ -115,8 +119,20 @@ func _build(model: Node3D) -> void:
 		var an := AnimationNodeAnimation.new()
 		an.animation = c
 		root.add_node(c.to_lower(), an)
+	var idle_in := "idle"
+	if ap.has_animation("IdlePocket"):                   # standing a while: the hands into his pockets, now and then
+		ap.get_animation("IdlePocket").loop_mode = Animation.LOOP_LINEAR
+		var pk := AnimationNodeAnimation.new()
+		pk.animation = "IdlePocket"
+		root.add_node("idlepocket", pk)
+		var pm := AnimationNodeBlend2.new()
+		pm.sync = true                                   # (the two stand alike: the weight shifting together)
+		root.add_node("pocketmix", pm)
+		root.connect_node("pocketmix", 0, "idle")
+		root.connect_node("pocketmix", 1, "idlepocket")
+		idle_in = "pocketmix"
 	root.add_node("rest", AnimationNodeBlend2.new())
-	root.connect_node("rest", 0, "idle")
+	root.connect_node("rest", 0, idle_in)
 	root.connect_node("rest", 1, "tired")
 	root.add_node("stand", AnimationNodeBlend2.new())
 	root.connect_node("stand", 0, "rest")
@@ -416,6 +432,17 @@ func _blend(delta: float, sp: float, turning: float, down: bool) -> void:
 	var tired := clampf((55.0 - stamina) / 45.0, 0.0, 1.0) if (spent or stamina < 55.0) else 0.0
 	_tired_w = lerpf(_tired_w, tired, 1.0 - exp(-delta * 2.0))
 	tree.set("parameters/rest/blend_amount", _tired_w)
+	if sp < 0.1 and not down and not backing and _tired_w < 0.3:   # standing still: the hands go into his pockets
+		_still += delta                                  # after a while, come out again, go back in...
+		if _still > _pocket_at:
+			_pocket = not _pocket
+			_pocket_at = _still + (randf_range(12.0, 25.0) if _pocket else randf_range(15.0, 30.0))
+	else:
+		_still = 0.0
+		_pocket = false
+		_pocket_at = 8.0
+	_pocket_w = move_toward(_pocket_w, 1.0 if _pocket else 0.0, delta * (1.2 if _pocket else 3.0))
+	tree.set("parameters/pocketmix/blend_amount", _pocket_w)
 	tree.set("parameters/out/blend_amount", _move_w)
 	_crouch_w = move_toward(_crouch_w, 1.0 if crouched else 0.0, delta * 3.5)   # (down or up in about a third of a second)
 	tree.set("parameters/crouchmix/blend_amount", _crouch_w)

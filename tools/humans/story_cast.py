@@ -580,41 +580,80 @@ def clip(arm, name, frames):
     tr.strips.new(name, int(frames[0][0]), act)
 
 
+def _leg_to(a, side, ankle, ball, pole):
+    """A leg's ankle to `ankle` (two-bone IK, the knee toward `pole`), the foot laid so its ball is at `ball`."""
+    hip = head_of(a, "thigh_" + side)
+    kn0, an0 = head_of(a, "calf_" + side), head_of(a, "foot_" + side)
+    knee = two_bone(hip, ankle, (kn0 - hip).length, (an0 - kn0).length, pole)
+    aim(a, "thigh_" + side, lambda: head_of(a, "calf_" + side), knee)
+    aim(a, "calf_" + side, lambda: head_of(a, "foot_" + side), ankle)
+    if "ball_" + side in a.pose.bones:
+        aim(a, "foot_" + side, lambda: head_of(a, "ball_" + side), ball)
+
+
 def idle(a, k, b=0.0):
     """Standing at ease, as a man waits on a street: k is where his weight is (-1 the right leg, +1 the left, between
-    as it shifts), b his breath (-1 out .. +1 in). The feet stay where they are, a shoulder's width apart, toes turned a
-    little out; the leg he stands on is nearly straight (never locked), the other knee eases forward and its foot sits
-    a touch further out; the hips go over the standing leg and drop a little on the easy side, the chest balances
-    back over them; breathing lifts the chest and the shoulders slightly; the arms hang loose, elbows soft; a small
-    look about. Each sole is kept level (the ankle takes back what the hip and knee turned)."""
+    as it shifts), b his breath (-1 out .. +1 in). The feet are PLANTED (they don't slide as the weight moves): about
+    26 cm apart under him, toes turned ~9° out, the easy foot a few cm ahead; the hips go over the standing leg and drop
+    on the easy side, and each leg reaches its own foot (two-bone IK, the knee forward): the standing leg nearly
+    straight, never locked, the easy knee bent by the hip's drop; the chest balances back over the hips; breathing
+    lifts the chest and the shoulders; the arms hang in by the body, elbows soft; a small look about."""
     w_l = 0.5 + 0.5 * k                                    # how much of him is on the left leg
-    for side, sg, w in (("l", 1.0, w_l), ("r", -1.0, 1.0 - w_l)):
-        ease = 1.0 - w                                     # 1: this is the easy leg
-        hip = 1.5 + 4.0 * ease                             # the thigh a little forward (degrees of flexion)
-        knee = 3.5 + 9.0 * ease                            # never locked; the easy knee forward
-        turn(a, "thigh_" + side, 'Z', sg * (6.0 + 3.0 * ease))   # toes out (the whole leg turned out from the hip)
-        turn(a, "thigh_" + side, 'Y', -sg * 1.2 * ease)          # the easy foot a touch wider
-        turn(a, "thigh_" + side, 'X', -hip)
-        turn(a, "calf_" + side, 'X', knee)
-        turn(a, "foot_" + side, 'X', hip - knee)                 # the sole level on the ground
+    feet = {}
+    for side, sg in (("l", 1.0), ("r", -1.0)):            # where his feet are as he stands made (before anything moves)
+        feet[side] = (head_of(a, "foot_" + side), head_of(a, "ball_" + side) if "ball_" + side in a.pose.bones else None)
+    cx = (feet["l"][0].x + feet["r"][0].x) * 0.5
+    cy = (feet["l"][0].y + feet["r"][0].y) * 0.5
     pb = a.pose.bones.get("pelvis")
-    if pb is not None:                                     # hips over the standing foot, and down with the soft knees
+    if pb is not None:                                     # the hips over the standing foot, and down with soft knees
         m = a.matrix_world @ pb.matrix
-        m.translation.x += 0.016 * k
-        m.translation.z -= 0.008
+        m.translation.x += 0.035 * k
+        m.translation.z -= 0.02
         pb.matrix = a.matrix_world.inverted() @ m
         bpy.context.view_layer.update()
-    turn(a, "pelvis", 'Y', -2.0 * k)                       # the easy side's hip drops
-    turn(a, "spine_01", 'Y', 1.4 * k)                      # the chest balancing back over
-    turn(a, "spine_02", 'Y', 0.8 * k)
+    turn(a, "pelvis", 'Y', -4.0 * k)                       # the easy side's hip drops
+    for side, sg, w in (("l", 1.0, w_l), ("r", -1.0, 1.0 - w_l)):
+        ease = 1.0 - w                                     # 1: this is the easy leg
+        f0, ball0 = feet[side]
+        ankle = Vector((cx + sg * 0.13, cy - 0.06 * ease, f0.z + 0.004 * ease))   # (the easy heel just lighter)
+        toe_out = math.radians(8.0 + 4.0 * ease)
+        if ball0 is not None:
+            L = Vector((ball0.x - f0.x, ball0.y - f0.y, 0.0)).length
+            ball = ankle + Vector((sg * math.sin(toe_out) * L, -math.cos(toe_out) * L, ball0.z - f0.z))
+        else:
+            ball = ankle + Vector((0.0, -0.1, -0.06))
+        _leg_to(a, side, ankle, ball, Vector((sg * 0.15, -1.0, 0.0)))   # (the knee forward, a little out)
+    turn(a, "spine_01", 'Y', 2.6 * k)                      # the chest balancing back over
+    turn(a, "spine_02", 'Y', 1.4 * k)
     turn(a, "spine_02", 'X', -1.4 * b)                     # breathing: the chest lifts
     turn(a, "spine_03", 'X', -0.6 * b)
     for side, sg in (("l", 1.0), ("r", -1.0)):
         turn(a, "clavicle_" + side, 'Y', -sg * 0.8 * b)    # the shoulders rise a little with it
+        turn(a, "upperarm_" + side, 'Y', sg * 5.0)         # the arms in by the body, not held off it
         turn(a, "lowerarm_" + side, 'X', -9.0)             # elbows soft, the arms hanging loose
         turn(a, "hand_" + side, 'X', -4.0)
     turn(a, "neck_01", 'Y', -0.8 * k)
     turn(a, "head", 'Z', 2.5 * k)
+
+
+def idle_pocket(a, k, b=0.0):
+    """Standing the same way with the right hand in the right trouser pocket (the left hangs relaxed as in idle): the
+    wrist at the pocket's mouth (at the hip joint's height, on the front of the thigh, under the shirt's hem), the
+    fingers down into the pocket (inside the trousers, hidden), the thumb left out over the edge; the elbow bent and a
+    little back; the right shoulder a touch lower, the chest balancing it."""
+    idle(a, k, b)
+    turn(a, "clavicle_r", 'Y', 2.5)                       # the right shoulder eased down
+    turn(a, "spine_02", 'Y', -1.0)
+    top = head_of(a, "thigh_r")
+    mouth = top + Vector((-0.06, -0.035, 0.02))            # (the pocket's opening: front-side of the thigh, by the hip)
+    wrist = mouth + Vector((0.0, 0.0, 0.02))
+    sh = head_of(a, "upperarm_r")
+    el0, wr0 = head_of(a, "lowerarm_r"), head_of(a, "hand_r")
+    elbow = two_bone(sh, wrist, (el0 - sh).length, (wr0 - el0).length, Vector((-0.7, 0.7, -0.2)))
+    aim(a, "upperarm_r", lambda: head_of(a, "lowerarm_r"), elbow)
+    aim(a, "lowerarm_r", lambda: head_of(a, "hand_r"), wrist)
+    if "middle_01_r" in a.pose.bones:
+        aim(a, "hand_r", lambda: head_of(a, "middle_01_r"), mouth + Vector((0.015, 0.03, -0.12)))   # the fingers down in
 
 
 def talk(a, k):                     # the right hand comes up and moves with the words, the head nods
@@ -1249,6 +1288,8 @@ def animate(arm):
         return -math.copysign(abs(c) ** 0.5, c)            # (dwelling near each leg, quick across)
     clip(arm, "Idle", [(1 + 12 * i, (lambda ii: (lambda a: idle(a, shift(ii), math.sin(math.pi * 2.0 * ii / 8.0))))(i))
                        for i in range(17)])
+    clip(arm, "IdlePocket", [(1 + 12 * i, (lambda ii: (lambda a: idle_pocket(a, shift(ii) * 0.8, math.sin(math.pi * 2.0 * ii / 8.0))))(i))
+                             for i in range(17)])
     clip(arm, "Talk", [(1, lambda a: talk(a, -1)), (13, lambda a: talk(a, 1)), (25, lambda a: talk(a, -0.4)),
                        (37, lambda a: talk(a, 1)), (49, lambda a: talk(a, -1))])
     clip(arm, "Walk", [(1 + k, (lambda kk: (lambda a: walk_phase(a, (kk % 24) / 24.0)))(k)) for k in range(25)])

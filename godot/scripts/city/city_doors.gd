@@ -80,6 +80,8 @@ func _ready() -> void:
 			_door_test.call_deferred(int(a.get_slice("=", 1)))
 		if a == "--socialtest":                         # (testing: into the nearest office: social.gd's test)
 			_social_test.call_deferred()
+		if a.begins_with("--roomtest="):                # (testing: into the nearest of each kind of room, a picture
+			_room_test.call_deferred(a.get_slice("=", 1).split(","))   #  of its people at work: --shots)
 	var layer := CanvasLayer.new()
 	layer.layer = 5
 	add_child(layer)
@@ -311,7 +313,7 @@ func enter(d: Dictionary, walker: Node3D) -> void:
 			if mat and mat.resource_name.to_lower().contains("glass"):
 				cs.set_meta("see_through", true)
 		body.add_child(cs)
-	var people := Crowd.fill(_room, body, d["key"])        # the station's travellers, the mall's shoppers...
+	var people := Crowd.fill(_room, body, d["key"], 0.7, str(d["room"]))   # the station's travellers, the mall's shoppers...
 	var walking := RoomWalkers.new()                       # and some walking through
 	walking.name = "Walkers"
 	_room.add_child(walking)
@@ -360,12 +362,12 @@ func enter(d: Dictionary, walker: Node3D) -> void:
 			npc.global_position = staff.global_position
 			var to_door := _exit - staff.global_position
 			npc.rotation.y = atan2(to_door.x, to_door.z)
-			var aps := npc.find_children("*", "AnimationPlayer", true, false)
-			if not aps.is_empty():
-				var ap := aps[0] as AnimationPlayer
-				if ap.has_animation("Idle"):
-					ap.get_animation("Idle").loop_mode = Animation.LOOP_LINEAR
-					ap.play("Idle")
+			var sdo: Array = Crowd.STAFF_DO.get(str(d["room"]), ["Idle", "crowd/HandsFront"])   # at their work
+			Crowd.busy(npc, sdo, srng, 0.0)
+			var life := Crowd.Life.new()
+			life.name = "StaffLife"
+			life.people.append([npc, sdo, srng.randf_range(12.0, 30.0)])
+			_room.add_child(life)
 	_things = Interact.attach(_room, ROOM_MODEL.get(d["room"], d["room"]), city, city.story if "story" in city else null)
 	social = Social.attach(_room, str(d["room"]), str(d["key"]), city)
 	var at: Vector3 = entry.global_position if entry else _room.global_position
@@ -697,4 +699,45 @@ func _social_test() -> void:
 			enter(d, w)
 			return
 	print("SOCIALTEST no office near")
+	tree.quit()
+
+
+func _room_test(kinds: Array) -> void:
+	var tree := get_tree()
+	await tree.create_timer(12.0).timeout
+	city.toggle_on_foot()
+	await tree.create_timer(1.5).timeout
+	var w: Node3D = city.walker
+	var home: Vector3 = w.global_position
+	for kind in kinds:
+		var seen := {}
+		var found := false
+		for k in 600:
+			var d := _a_door(home, seen)
+			if d.is_empty():
+				break
+			seen[d["key"]] = true
+			if str(d["room"]) != str(kind):
+				continue
+			found = true
+			w.global_position = d["pos"] + d["out"] * 0.9 + Vector3(0, 0.6, 0)
+			await tree.physics_frame
+			enter(d, w)
+			await tree.create_timer(3.0).timeout
+			if "_pitch" in w:
+				w._pitch = -0.2
+				w.head.rotation.x = -0.2
+			await tree.create_timer(0.4).timeout
+			await RenderingServer.frame_post_draw
+			var doing := []
+			for n in _room.find_children("*", "Node3D", true, false):
+				if n.has_meta("doing"):
+					doing.append(str(n.get_meta("doing")).trim_prefix("crowd/"))
+			print("ROOMTEST %s (%s): %s" % [kind, d["key"], ", ".join(doing)])
+			get_viewport().get_texture().get_image().save_jpg("%s/room_%s.jpg" % [city.shots_dir, kind], 0.85)
+			leave(w)
+			await tree.create_timer(1.0).timeout
+			break
+		if not found:
+			print("ROOMTEST no %s near" % kind)
 	tree.quit()

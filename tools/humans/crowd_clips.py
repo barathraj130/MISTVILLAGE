@@ -195,6 +195,195 @@ def give(a, k):
     _hands_to(a, c + Vector((0.07, 0.0, 0.0)), c + Vector((-0.07, 0.0, 0.0)), c + Vector((0.07, -0.1, 0.02)), c + Vector((-0.07, -0.1, 0.02)))
 
 
+# ---- at work: what people do for a living, where you can see it ----
+def _chest(a):
+    return SC.head_of(a, "spine_03")
+
+
+def _lean(a, deg, knees=0.0):
+    SC.turn(a, "spine_01", 'X', deg * 0.6)
+    SC.turn(a, "spine_02", 'X', deg * 0.4)
+    if knees:
+        for side in ("l", "r"):
+            SC.turn(a, "thigh_" + side, 'X', -knees)
+            SC.turn(a, "calf_" + side, 'X', knees * 1.3)
+            SC.turn(a, "foot_" + side, 'X', -knees * 0.3)
+        SC.lower(a, "pelvis", -0.0035 * knees)
+        bpy.context.view_layer.update()
+
+
+def sweep(a, k):
+    """Sweeping the footpath with a short broom (a coconut-frond broom): bent over from the hips, the knees soft, the
+    right hand low sweeping side to side, the left on the knee; the head up enough to see the way."""
+    SC.idle(a, 0.2)
+    _lean(a, 38.0, 14.0)
+    SC.turn(a, "neck_01", 'X', -16.0)
+    feet = (SC.head_of(a, "foot_l") + SC.head_of(a, "foot_r")) * 0.5
+    w = feet + Vector((-0.12 + 0.22 * k, -0.5, 0.52))
+    SM.arm_to(a, "r", w, Vector((-0.9, 0.2, -0.5)), w + Vector((0.05 * k, -0.1, -0.15)))
+    SM.grip(a, "r")
+    knee = SC.head_of(a, "calf_l")
+    SM.arm_to(a, "l", knee + Vector((0.0, -0.09, 0.08)), Vector((0.9, 0.2, -0.3)), knee + Vector((0.0, -0.2, 0.0)))
+
+
+def pour_tea(a, k):
+    """Pulling tea (the tea master's long pour): the jug high in the right hand, the glass low in the left, the
+    stream between them lengthening and shortening; the head down, watching the glass."""
+    SC.idle(a, 0.3)
+    c = _chest(a)
+    SC.turn(a, "neck_01", 'X', 10.0)
+    hi = c + Vector((-0.27, -0.3, 0.46 + 0.07 * k))       # (the jug above the head, out to the side)
+    lo = c + Vector((0.14, -0.32, -0.36 - 0.05 * k))
+    SM.arm_to(a, "r", hi, Vector((-0.9, 0.3, -0.5)), hi + Vector((0.08, -0.04, 0.02)))
+    SM.arm_to(a, "l", lo, Vector((0.9, 0.3, -0.7)), lo + Vector((-0.05, -0.1, 0.0)))
+    SM.grip(a, "r")
+    SM.grip(a, "l")
+
+
+def stir(a, t):
+    """At the stove: the ladle round the pot in the right hand (a circle a second), the left hand on the counter."""
+    SC.idle(a, 0.3 * math.sin(2.0 * math.pi * t))
+    _lean(a, 9.0)
+    c = _chest(a)
+    w = c + Vector((-0.08 + 0.07 * math.cos(2.0 * math.pi * t), -0.44 + 0.07 * math.sin(2.0 * math.pi * t), -0.3))
+    SM.arm_to(a, "r", w, Vector((-0.9, 0.2, -0.6)), w + Vector((0.0, -0.05, -0.12)))
+    SM.grip(a, "r")
+    l = c + Vector((0.22, -0.38, -0.34))
+    SM.arm_to(a, "l", l, Vector((0.9, 0.2, -0.6)), l + Vector((0.0, -0.12, -0.02)))
+
+
+def type_(a, k):
+    """At a desk, typing: sitting, a little forward, the hands at the keyboard, the fingers going, the eyes on the
+    screen."""
+    SC.sit(a)
+    _lean(a, 9.0)
+    SC.turn(a, "neck_01", 'X', 4.0)
+    c = _chest(a)
+    for side, sg in (("l", 1.0), ("r", -1.0)):
+        w = c + Vector((sg * 0.13, -0.4, -0.17 + 0.012 * k * sg))   # (the desk's height, not the lap)
+        SM.arm_to(a, side, w, Vector((sg * 0.9, 0.3, -0.6)), w + Vector((0.0, -0.12, -0.03)))
+        SC.curl_fingers(a, side, 22.0 + 10.0 * k * sg, 8.0)
+
+
+def write(a, k):
+    """At a desk, writing: the head down over the paper, the right hand writing (small strokes), the left holding the
+    page."""
+    SC.sit(a)
+    _lean(a, 13.0)
+    SC.turn(a, "neck_01", 'X', 12.0)
+    SC.turn(a, "head", 'X', 6.0)
+    c = _chest(a)
+    r = c + Vector((-0.07 + 0.02 * k, -0.38, -0.2))
+    SM.arm_to(a, "r", r, Vector((-0.9, 0.3, -0.6)), r + Vector((0.03, -0.1, -0.05)))
+    SM.grip(a, "r")
+    l = c + Vector((0.16, -0.36, -0.21))
+    SM.arm_to(a, "l", l, Vector((0.9, 0.3, -0.6)), l + Vector((-0.06, -0.12, -0.02)))
+
+
+def arrange(a, k):
+    """At a stall: bent a little over the goods, picking one up and setting it down, the hands taking turns."""
+    SC.idle(a, 0.4 * k)
+    _lean(a, 15.0)
+    SC.turn(a, "neck_01", 'X', 10.0)
+    c = _chest(a)
+    r = c + Vector((-0.12 + 0.05 * k, -0.45, -0.42 + 0.05 * max(k, 0.0)))
+    l = c + Vector((0.14 - 0.05 * k, -0.42, -0.4 + 0.05 * max(-k, 0.0)))
+    SM.arm_to(a, "r", r, Vector((-0.9, 0.2, -0.6)), r + Vector((0.0, -0.08, -0.1)))
+    SM.arm_to(a, "l", l, Vector((0.9, 0.2, -0.6)), l + Vector((0.0, -0.08, -0.1)))
+
+
+def wipe(a, t):
+    """Wiping a counter (or an auto's seat) with a cloth: the right hand going round, the left resting by it."""
+    SC.idle(a, 0.3 * math.sin(2.0 * math.pi * t))
+    _lean(a, 14.0)
+    SC.turn(a, "neck_01", 'X', 8.0)
+    c = _chest(a)
+    r = c + Vector((-0.1 + 0.09 * math.cos(2.0 * math.pi * t), -0.46 + 0.06 * math.sin(2.0 * math.pi * t), -0.42))
+    SM.arm_to(a, "r", r, Vector((-0.9, 0.2, -0.6)), r + Vector((0.0, -0.1, -0.12)))
+    l = c + Vector((0.2, -0.4, -0.4))
+    SM.arm_to(a, "l", l, Vector((0.9, 0.2, -0.6)), l + Vector((0.0, -0.1, -0.1)))
+
+
+def head_load(a, t):
+    """Walking with a load on the head (a basket, a bundle): both hands up steadying it, the elbows out, the head
+    and neck held still under it."""
+    SC.walk_phase(a, t)
+    top = SC.head_of(a, "head") + Vector((0.0, 0.0, 0.2))
+    bob = 0.01 * math.sin(4.0 * math.pi * t)
+    for side, sg in (("l", 1.0), ("r", -1.0)):
+        w = top + Vector((sg * 0.14, -0.02, bob))
+        SM.arm_to(a, side, w, Vector((sg * 0.9, 0.1, 0.1)), w + Vector((-sg * 0.1, 0.0, 0.03)))
+
+
+# ---- standing and sitting as people do (the body-language brief) ----
+def stand_wait(a, k, look):
+    SC.idle(a, k)
+    SC.turn(a, "neck_01", 'Z', look * 0.35)
+    SC.turn(a, "head", 'Z', look * 0.65)
+
+
+def hands_behind(a, k):
+    """Hands clasped behind the back (an elder, a policeman, someone patient): the chest a little up."""
+    SC.idle(a, k * 0.7)
+    SC.turn(a, "spine_02", 'X', -2.5)
+    p = SC.head_of(a, "pelvis") + Vector((0.0, 0.14, 0.1))
+    for side, sg in (("l", 1.0), ("r", -1.0)):
+        w = p + Vector((sg * 0.05, 0.0, 0.0))
+        SM.arm_to(a, side, w, Vector((sg * 0.9, 0.6, -0.3)), w + Vector((-sg * 0.08, 0.04, 0.0)))
+
+
+def hands_front(a, k):
+    """Hands loosely together in front (a receptionist, a respectful listener)."""
+    SC.idle(a, k * 0.6)
+    SC.turn(a, "head", 'X', 3.0)
+    p = SC.head_of(a, "pelvis") + Vector((0.0, -0.17, 0.02))
+    for side, sg in (("l", 1.0), ("r", -1.0)):
+        w = p + Vector((sg * 0.035, 0.0, 0.0))
+        SM.arm_to(a, side, w, Vector((sg * 0.9, 0.2, -0.6)), w + Vector((-sg * 0.08, -0.03, -0.02)))
+
+
+def hip_hand(a, k):
+    """One hand on the hip (the right), the weight on that side: casual, waiting."""
+    SC.idle(a, 0.6 + 0.4 * k)
+    hip = SC.head_of(a, "thigh_r") + Vector((-0.11, 0.0, 0.1))
+    SM.arm_to(a, "r", hip, Vector((-1.0, 0.4, 0.2)), hip + Vector((0.03, 0.0, -0.1)))
+
+
+def nervous(a, k):
+    """Uneasy: the hands rubbing in front, small shifts, the eyes going here and there."""
+    SC.idle(a, 0.3 * k)
+    p = SC.head_of(a, "pelvis") + Vector((0.0, -0.2, 0.1))
+    SM.arm_to(a, "l", p + Vector((0.03 + 0.015 * k, 0.0, 0.01 * k)), Vector((0.9, 0.2, -0.6)), p + Vector((-0.06, -0.03, 0.0)))
+    SM.arm_to(a, "r", p + Vector((-0.03 + 0.015 * k, 0.0, -0.01 * k)), Vector((-0.9, 0.2, -0.6)), p + Vector((0.06, -0.03, 0.0)))
+    SC.turn(a, "head", 'Z', 9.0 * k)
+
+
+def _sit_shift(a, u):
+    """Between standing and the chair, u 0..1: the hips back and down onto the seat, knees and hips bending together,
+    the chest forward to balance and back up as the weight settles, the hands to the thighs."""
+    e = u * u * (3.0 - 2.0 * u)
+    pb = a.pose.bones.get("pelvis")
+    if pb is not None:
+        m = a.matrix_world @ pb.matrix
+        m.translation.y += 0.42 * e                        # back onto the seat (the feet stay where they are)
+        m.translation.z -= 0.42 * e
+        pb.matrix = a.matrix_world.inverted() @ m
+        bpy.context.view_layer.update()
+    for side in ("l", "r"):
+        SC.turn(a, "thigh_" + side, 'X', -84.0 * e)
+        SC.turn(a, "calf_" + side, 'X', 84.0 * e)
+    SC.turn(a, "spine_01", 'X', 26.0 * math.sin(math.pi * e))
+    SC.turn(a, "neck_01", 'X', -10.0 * math.sin(math.pi * e))
+
+
+def sit_down(a, u):
+    _sit_shift(a, u)
+
+
+def stand_up(a, u):
+    _sit_shift(a, 1.0 - u)
+
+
 def clips(arm):
     for name, fn, keys in (("Namaste", namaste, (0, 1, 1, 0)), ("Wave", wave, (-1, 1, -1, 1, -1)), ("Nod", nod, (0, 1, 0, 1, 0)),
                            ("Wobble", wobble, (0, 1, -1, 1, 0)), ("Shake", shake, (0, 1, -1, 1, -1, 0)), ("Laugh", laugh, (-1, 1, -1, 1, -1, 1, -1)),
@@ -208,6 +397,25 @@ def clips(arm):
     SC.clip(arm, "PhoneLook", [(1, lambda a: phone_look(a, -1)), (37, lambda a: phone_look(a, 1)), (73, lambda a: phone_look(a, -1))])
     SC.clip(arm, "WalkPhone", [(1 + k, (lambda kk: (lambda a: walk_phone(a, (kk % 24) / 24.0)))(k)) for k in range(25)])
     SC.clip(arm, "WalkCarry", [(1 + k, (lambda kk: (lambda a: walk_carry(a, (kk % 24) / 24.0)))(k)) for k in range(25)])
+    # at work
+    SC.clip(arm, "Sweep", [(1 + 9 * i, (lambda kk: (lambda a: sweep(a, kk)))(k)) for i, k in enumerate((-1, 1, -1, 1, -1))])
+    SC.clip(arm, "PourTea", [(1 + 12 * i, (lambda kk: (lambda a: pour_tea(a, kk)))(k)) for i, k in enumerate((-1, 1, -1, 1, -1))])
+    SC.clip(arm, "Stir", [(1 + k, (lambda kk: (lambda a: stir(a, (kk % 24) / 24.0)))(k)) for k in range(0, 25, 3)])
+    SC.clip(arm, "Type", [(1 + 3 * i, (lambda kk: (lambda a: type_(a, kk)))(k)) for i, k in enumerate((-1, 1, -1, 1, 0, 0, -1, 1, -1))])
+    SC.clip(arm, "Write", [(1 + 6 * i, (lambda kk: (lambda a: write(a, kk)))(k)) for i, k in enumerate((-1, 1, -1, 1, -1, 1, -1))])
+    SC.clip(arm, "Arrange", [(1 + 18 * i, (lambda kk: (lambda a: arrange(a, kk)))(k)) for i, k in enumerate((-1, 1, -1))])
+    SC.clip(arm, "Wipe", [(1 + k, (lambda kk: (lambda a: wipe(a, (kk % 24) / 24.0)))(k)) for k in range(0, 25, 3)])
+    SC.clip(arm, "HeadLoad", [(1 + k, (lambda kk: (lambda a: head_load(a, (kk % 24) / 24.0)))(k)) for k in range(25)])
+    # standing and sitting
+    SC.clip(arm, "StandWait", [(1 + 24 * i, (lambda kk, ll: (lambda a: stand_wait(a, kk, ll)))(k, l))
+                               for i, (k, l) in enumerate(((-1, 0), (-1, 28), (0, 28), (1, 0), (1, -32), (1, -32), (0, 0), (-1, 0)))])
+    for name, fn in (("HandsBehind", hands_behind), ("HandsFront", hands_front), ("HipHand", hip_hand)):
+        SC.clip(arm, name, [(1 + 48 * i, (lambda ff, kk: (lambda a: ff(a, kk)))(fn, k)) for i, k in enumerate((-1, 1, -1))])
+    SC.clip(arm, "Nervous", [(1 + 8 * i, (lambda kk: (lambda a: nervous(a, kk)))(k)) for i, k in enumerate((-1, 1, -1, 1, -1, 1, -1))])
+    SC.clip(arm, "SitWait", [(1 + 24 * i, (lambda kk, ll: (lambda a: SC.sit_idle(a, kk, ll)))(k, l))
+                             for i, (k, l) in enumerate(((-1, 0), (1, 25), (-1, 25), (1, -20), (-1, 0)))])
+    SC.clip(arm, "SitDown", [(1 + 3 * i, (lambda uu: (lambda a: sit_down(a, uu)))(i / 10.0)) for i in range(11)])
+    SC.clip(arm, "StandUp", [(1 + 3 * i, (lambda uu: (lambda a: stand_up(a, uu)))(i / 10.0)) for i in range(11)])
     for tr in arm.animation_data.nla_tracks:
         tr.mute = False
 
@@ -233,7 +441,12 @@ def strip(arm, out_dir):
                      ("namaste", lambda a: namaste(a, 1)), ("wave", lambda a: wave(a, 1)), ("laugh", lambda a: laugh(a, 1)),
                      ("shrug", lambda a: shrug(a, 1)), ("point", lambda a: point(a, 1)), ("argue", lambda a: argue(a, 1)),
                      ("fold", lambda a: fold(a, 1)), ("wobble", lambda a: wobble(a, 1)), ("handshake", lambda a: handshake(a, 1)),
-                     ("comfort", lambda a: comfort(a, 1)), ("give", lambda a: give(a, 1))):
+                     ("comfort", lambda a: comfort(a, 1)), ("give", lambda a: give(a, 1)),
+                     ("sweep", lambda a: sweep(a, 1)), ("pourtea", lambda a: pour_tea(a, 1)), ("stir", lambda a: stir(a, 0.25)),
+                     ("type", lambda a: type_(a, 1)), ("write", lambda a: write(a, 1)), ("arrange", lambda a: arrange(a, 1)),
+                     ("wipe", lambda a: wipe(a, 0.25)), ("headload", lambda a: head_load(a, 0.25)),
+                     ("behind", lambda a: hands_behind(a, 1)), ("front", lambda a: hands_front(a, 1)), ("hip", lambda a: hip_hand(a, 1)),
+                     ("nervous", lambda a: nervous(a, 1)), ("sitdown", lambda a: sit_down(a, 0.5))):
         SC.rest(arm)
         SC.arms_down(arm)
         fn(arm)

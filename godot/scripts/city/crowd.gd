@@ -21,7 +21,60 @@ const CLOTH := [Color(0.85, 0.85, 0.82), Color(0.15, 0.22, 0.45), Color(0.55, 0.
 
 
 ## Fill room's marks (about `fill` of them; a big stand fewer) and give the standing ones a body in `body`.
-static func fill(room: Node3D, body: StaticBody3D, key: String, fill := 0.7) -> int:
+const CrowdClips := preload("res://scripts/city/crowd_clips.gd")
+## What people do in a room, by the room (city_doors.gd's room name) and how they are there: seated ones at a desk
+## work (type, write), at a table eat or talk, elsewhere wait; standing ones stand as people do (waiting, hands behind,
+## a hand on the hip, the phone, arms folded, hands in front). Each keeps at it a while (Life below).
+const SIT_DO := {"office": ["crowd/Type", "crowd/Type", "crowd/Write"], "police": ["crowd/Write", "crowd/Write", "Sit"],
+	"collectorate": ["crowd/Write", "crowd/SitWait", "Sit"], "restaurant": ["SitEat", "SitTalk", "SitEat"],
+	"mess": ["SitEat", "SitTalk", "SitEat"], "fine_dining": ["SitTalk", "SitEat", "SitTalk"], "tea": ["SitTalk", "Sit"],
+	"house_mid": ["SitTalk", "Sit"], "house_old": ["SitTalk", "Sit"], "house_flat": ["SitTalk", "Sit"]}
+const SIT_WAIT := ["crowd/SitWait", "crowd/SitWait", "Sit", "SitTalk"]
+const STAND_DO := ["Idle", "crowd/StandWait", "crowd/StandWait", "crowd/HandsBehind", "crowd/HipHand", "crowd/PhoneLook",
+	"crowd/Fold", "crowd/HandsFront", "crowd/Phone"]
+const HOLDS := {"crowd/Sweep": "broom", "crowd/PourTea": "tea", "crowd/Stir": "ladle", "crowd/Wipe": "cloth",
+	"crowd/Phone": "phone", "crowd/PhoneLook": "phone", "crowd/Write": "pen"}
+## The counter person, by the room: the tea stall's tea master, the kirana's shopkeeper...
+const STAFF_DO := {"tea": ["crowd/PourTea", "crowd/PourTea", "crowd/Wipe"], "kirana": ["crowd/Arrange", "crowd/Give", "crowd/HandsFront"],
+	"medical": ["crowd/Arrange", "crowd/Give"], "hardware": ["crowd/Arrange", "crowd/Give"],
+	"restaurant": ["crowd/Wipe", "crowd/HandsFront", "crowd/Give"], "mess": ["crowd/Wipe", "crowd/Give"],
+	"bank": ["crowd/HandsFront", "Talk"], "coopbank": ["crowd/HandsFront", "Talk"], "hotel": ["crowd/HandsFront", "crowd/Namaste"],
+	"office": ["crowd/HandsFront", "crowd/Phone", "Talk"], "fuel": ["crowd/Arrange", "crowd/HandsFront"]}
+
+
+## What one of them does now: a clip for where they are and how; it's played, what goes in the hand with it.
+static func busy(person: Node3D, choices: Array, rng: RandomNumberGenerator, blend := 0.6) -> void:
+	var aps := person.find_children("*", "AnimationPlayer", true, false)
+	if aps.is_empty() or choices.is_empty():
+		return
+	var ap := aps[0] as AnimationPlayer
+	CrowdClips.add(person, str(person.get_meta("sex", "m")))
+	var clip: String = choices[rng.randi() % choices.size()]
+	if not ap.has_animation(clip):
+		clip = "Sit" if clip.contains("Sit") and ap.has_animation("Sit") else "Idle"
+	CrowdClips.hold(person, str(HOLDS.get(clip, "")))
+	ap.get_animation(clip).loop_mode = Animation.LOOP_LINEAR
+	ap.play(clip, blend)
+	ap.seek(rng.randf() * ap.current_animation_length, true)
+	person.set_meta("doing", clip)
+
+
+## A room's people, each now and then (15–40 s) turning to something else of what they'd do there.
+class Life extends Node:
+	var people: Array = []                            # [node, choices, next change]
+	var rng := RandomNumberGenerator.new()
+
+	func _process(dt: float) -> void:
+		for p in people:
+			if not is_instance_valid(p[0]):
+				continue
+			p[2] = float(p[2]) - dt
+			if float(p[2]) <= 0.0:
+				p[2] = rng.randf_range(15.0, 40.0)
+				load("res://scripts/city/crowd.gd").busy(p[0], p[1], rng)
+
+
+static func fill(room: Node3D, body: StaticBody3D, key: String, fill := 0.7, kind := "") -> int:
 	var marks := room.find_children("Crowd_*", "", true, false)
 	if marks.is_empty():
 		return 0
@@ -29,6 +82,7 @@ static func fill(room: Node3D, body: StaticBody3D, key: String, fill := 0.7) -> 
 	rng.seed = hash(key)
 	var share := fill if marks.size() < 80 else fill * 0.65
 	var n := 0
+	var life: Life = null
 	for m in marks:
 		if rng.randf() > share:
 			continue
@@ -41,15 +95,18 @@ static func fill(room: Node3D, body: StaticBody3D, key: String, fill := 0.7) -> 
 		npc.global_position = mk.global_position
 		var f := -mk.global_basis.z                        # the mark faces +Y in Blender: -Z here
 		npc.global_rotation = Vector3(0, atan2(f.x, f.z) + rng.randf_range(-0.15, 0.15), 0)
+		var choices: Array = ["Talk", "Talk", "crowd/Nod", "crowd/Wobble", "crowd/Laugh"] if pose == "talk" else \
+			(SIT_DO.get(kind, SIT_WAIT) if pose == "sit" else STAND_DO)
+		busy(npc, choices, rng, 0.0)
 		var aps := npc.find_children("*", "AnimationPlayer", true, false)
 		if not aps.is_empty():
-			var ap := aps[0] as AnimationPlayer
-			var clip: String = POSE.get(pose, "Idle")
-			if ap.has_animation(clip):
-				ap.get_animation(clip).loop_mode = Animation.LOOP_LINEAR
-				ap.play(clip)
-				ap.seek(rng.randf() * ap.current_animation_length, true)
-				ap.speed_scale = rng.randf_range(0.85, 1.15)
+			(aps[0] as AnimationPlayer).speed_scale = rng.randf_range(0.85, 1.15)
+		if life == null:
+			life = Life.new()
+			life.name = "CrowdLife"
+			life.rng.seed = hash(key + "life")
+			room.add_child(life)
+		life.people.append([npc, choices, rng.randf_range(10.0, 40.0)])
 		if pose != "sit" and body:                         # you walk round them, not through
 			var cs := CollisionShape3D.new()
 			var cap := CapsuleShape3D.new()
@@ -78,6 +135,7 @@ static func person(parent: Node, rng: RandomNumberGenerator) -> Node3D:
 			return lv
 	if ResourceLoader.exists(CROWD % key):
 		var p := (load(CROWD % key) as PackedScene).instantiate() as Node3D
+		p.set_meta("sex", key.left(1))
 		parent.add_child(p)
 		p.scale = Vector3.ONE * rng.randf_range(0.96, 1.04)
 		p.set_meta("stride", STRIDE.get(key, 1.18))    # (the cast's Walk: 1.18 m a cycle, measured on the clip)

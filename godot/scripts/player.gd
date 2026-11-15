@@ -669,6 +669,21 @@ func _stand_test(tag: String) -> void:
 	camera.make_current()
 	await tree.create_timer(0.4).timeout
 	await _fall_snap("stand_%s_play" % tag)
+	if gait:                                             # the hands in his pockets: stood still a while
+		gait._still = 0.0
+		gait._pocket = true
+		gait._pocket_at = 9999.0
+		await tree.create_timer(1.5).timeout
+		for v in [["front", fwd], ["right", right], ["back", -fwd], ["close", fwd * 0.45 + right * 0.35]]:
+			cam.global_position = base + (v[1] as Vector3) * (3.4 if v[0] != "close" else 2.0) + Vector3.UP * (0.95 if v[0] != "close" else 1.0)
+			cam.look_at(base + Vector3.UP * 0.95, Vector3.UP)
+			cam.make_current()
+			await tree.create_timer(0.3).timeout
+			await _fall_snap("stand_%s_pocket_%s" % [tag, v[0]])
+		gait._pocket = false
+		gait._still = 0.0
+		gait._pocket_at = 8.0
+		camera.make_current()
 	if gait:                                             # his hands: close, from the front, in each pose
 		for pose in ["", "open", "point", "phone", "papers", "fist", "grip"]:
 			gait.hand_test = pose

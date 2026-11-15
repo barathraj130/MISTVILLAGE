@@ -537,7 +537,8 @@ func _move(c: Dictionary, dt: float) -> void:
 	if c.get("gather_t", 0.0) > 0.0:                    # (gathered round: they stay with it)
 		return
 	if c["gest"] <= 0.0:                               # now and then, what the work looks like
-		c["gest"] = randf_range(5.0, 11.0)
+		var at_work: bool = not _job(c).is_empty() and str(c["act"]) in ["work", "open", "close", "guard", "wait"]
+		c["gest"] = randf_range(12.0, 25.0) if at_work else randf_range(5.0, 11.0)   # (a job is kept at a while)
 		_play(c, _gesture(c), 0.4)
 
 
@@ -573,6 +574,9 @@ func _arrive(c: Dictionary) -> void:
 	if c.get("gather_t", 0.0) > 0.0:
 		_play(c, str(c.get("gather_clip", "Idle")))
 		return
+	if not _job(c).is_empty() and act in ["work", "open", "close", "guard", "wait"]:
+		_play(c, _gesture(c))                            # (at work: straight to it)
+		return
 	_play(c, _pose(act))
 
 
@@ -580,8 +584,36 @@ static func _pose(act: String) -> String:
 	return {"guard": "crowd/Fold", "wait": "Idle", "chat": "Talk", "shop": "Idle", "open": "Idle", "close": "Idle"}.get(act, "Idle")
 
 
+## The work their job is, as you'd see it (crowd_clips.py's work clips; what they hold: crowd_clips.gd hold): by a
+## word in what they do (citizens.json "role"), for their "work" (and opening, closing) hours.
+const JOBS := [["tea stall", ["crowd/PourTea", "crowd/PourTea", "crowd/Wipe", "crowd/Give"]],
+	["cook", ["crowd/Stir", "crowd/Stir", "crowd/Wipe"]], ["waiter", ["crowd/Wipe", "crowd/Give", "crowd/HandsFront"]],
+	["serves", ["crowd/Give", "crowd/Wipe", "crowd/Arrange"]], ["runs", ["crowd/Give", "crowd/Wipe", "crowd/Arrange", "Talk"]],
+	["sells", ["crowd/Arrange", "crowd/Arrange", "crowd/Give", "crowd/StandWait"]], ["sweeps", ["crowd/Sweep"]],
+	["guard", ["crowd/HandsBehind", "crowd/StandWait", "crowd/HandsBehind"]], ["watchman", ["crowd/HandsBehind", "crowd/StandWait"]],
+	["doorman", ["crowd/HandsFront", "crowd/Namaste", "crowd/HandsFront"]], ["constable", ["crowd/Point", "crowd/Wave", "crowd/HandsBehind"]],
+	["auto driver", ["crowd/Wipe", "crowd/HipHand", "crowd/StandWait", "crowd/PhoneLook"]],
+	["bank", ["crowd/HandsFront", "Talk", "crowd/Nod"]], ["manager", ["crowd/HandsFront", "crowd/Arrange", "Talk"]],
+	["clerk", ["crowd/HandsFront", "crowd/PhoneLook", "Talk"]], ["student", ["crowd/PhoneLook", "crowd/StandWait", "crowd/HipHand"]],
+	["nurse", ["crowd/HandsFront", "crowd/StandWait"]], ["retired", ["crowd/HandsBehind", "crowd/StandWait"]]]
+## What each work clip has in the hand.
+const HOLDS := {"crowd/Sweep": "broom", "crowd/PourTea": "tea", "crowd/Stir": "ladle", "crowd/Wipe": "cloth",
+	"crowd/Phone": "phone", "crowd/PhoneLook": "phone"}
+
+
+func _job(c: Dictionary) -> Array:
+	var role := str(c["d"].get("role", {}).get("en", "")).to_lower()
+	for j in JOBS:
+		if role.contains(str(j[0])):
+			return j[1]
+	return []
+
+
 func _gesture(c: Dictionary) -> String:
 	var act := str(c["act"])
+	var job := _job(c)
+	if not job.is_empty() and act in ["work", "open", "close", "guard", "wait"]:
+		return job[randi() % job.size()]
 	var opts: Array = {"work": ["Talk", "crowd/Give", "crowd/Nod", "Idle"], "open": ["crowd/Give", "Idle"],
 		"close": ["crowd/Give", "Idle"], "guard": ["crowd/Fold", "Idle", "crowd/Shake"],
 		"wait": ["crowd/PhoneLook", "Idle", "crowd/Phone"], "chat": ["Talk", "crowd/Laugh", "crowd/Nod", "crowd/Wobble"],
@@ -593,8 +625,7 @@ func _play(c: Dictionary, clip: String, blend := 0.3) -> void:
 	var ap: AnimationPlayer = c.get("anim")
 	if ap == null or not is_instance_valid(ap):
 		return
-	var held := clip.ends_with("Phone") or clip.ends_with("PhoneLook")
-	CrowdClips.hold(c["node"], "phone" if held else "")
+	CrowdClips.hold(c["node"], str(HOLDS.get(clip, "")))
 	if not ap.has_animation(clip):
 		clip = "Idle"
 	if ap.current_animation != clip:

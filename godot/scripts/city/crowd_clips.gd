@@ -33,16 +33,12 @@ static func add(person: Node, sex: String) -> bool:
 	var ap := aps[0] as AnimationPlayer
 	if ap.has_animation_library("crowd"):
 		return true
-	if ap.has_animation("Phone"):                       # (a living Sketchfab person: these clips are already hers,
-		var own := AnimationLibrary.new()               #  made for her bones: "crowd/..." the same ones)
-		for pair in _source(sex):
-			if ap.has_animation(pair[0]):
-				own.add_animation(pair[0], ap.get_animation(pair[0]))
-		ap.add_animation_library("crowd", own)
-		return true
 	var skel_path := String(ap.get_node(ap.root_node).get_path_to(sks[0]))
 	var lib := AnimationLibrary.new()
 	for pair in _source(sex):
+		if ap.has_animation(pair[0]):                   # (a living Sketchfab person: the clips made for her bones
+			lib.add_animation(pair[0], ap.get_animation(pair[0]))   #  when she was built; the newer ones, moved over)
+			continue
 		var a := (pair[1] as Animation).duplicate(true) as Animation
 		for t in a.get_track_count():                   # (its rig's node name → this person's)
 			var p := String(a.track_get_path(t))
@@ -55,19 +51,72 @@ static func add(person: Node, sex: String) -> bool:
 	return true
 
 
+static func _slot(sk: Skeleton3D, name: String, bone: String) -> BoneAttachment3D:
+	var att: BoneAttachment3D = sk.get_node_or_null(name)
+	if att == null:
+		att = BoneAttachment3D.new()
+		att.name = name
+		att.bone_name = bone
+		sk.add_child(att)
+	for c in att.get_children():
+		c.queue_free()
+	return att
+
+
+static func _part(att: Node3D, mesh: Mesh, mat: Material, at: Vector3, rot := Vector3.ZERO) -> MeshInstance3D:
+	var mi := MeshInstance3D.new()
+	mi.mesh = mesh
+	mi.material_override = mat
+	mi.position = at
+	mi.rotation = rot
+	mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	att.add_child(mi)
+	return mi
+
+
+static func _cyl(r: float, h: float, top := -1.0) -> CylinderMesh:
+	var c := CylinderMesh.new()
+	c.top_radius = r if top < 0.0 else top
+	c.bottom_radius = r
+	c.height = h
+	c.radial_segments = 10
+	c.rings = 1
+	return c
+
+
+## What a worker holds (made here, plain shapes in the hand bones' frames: +Y along the fingers):
+##   "broom" a short coconut-frond broom; "tea" a steel jug (right) and a glass (left); "ladle"; "pen"; "cloth";
+##   "load" a basket on the head; and the old "phone", "bag"; "" nothing.
 static func hold(person: Node, what: String) -> void:
 	var sks := person.find_children("*", "Skeleton3D", true, false)
 	if sks.is_empty():
 		return
 	var sk := sks[0] as Skeleton3D
-	var att: BoneAttachment3D = sk.get_node_or_null("Held")
-	if att == null:
-		att = BoneAttachment3D.new()
-		att.name = "Held"
-		att.bone_name = "hand_r"
-		sk.add_child(att)
-	for c in att.get_children():
-		c.queue_free()
+	var att := _slot(sk, "Held", "hand_r")
+	var left := _slot(sk, "HeldL", "hand_l")
+	var top := _slot(sk, "HeldHead", "head")
+	var steel := Kit.mat("crowd_steel", Color(0.78, 0.78, 0.8), 0.25, 0.85, false)
+	match what:
+		"broom":                                      # the stick in the fist, the fronds fanning down past the fingers
+			_part(att, _cyl(0.018, 0.32), Kit.mat("crowd_twine", Color(0.55, 0.42, 0.25), 0.9), Vector3(0, 0.04, 0.02))
+			_part(att, _cyl(0.03, 0.42, 0.012), Kit.mat("crowd_fronds", Color(0.62, 0.55, 0.3), 0.95), Vector3(0, 0.38, 0.02))
+		"tea":
+			_part(att, _cyl(0.045, 0.14), steel, Vector3(0, 0.05, 0.04))
+			_part(left, _cyl(0.028, 0.1, 0.033), Kit.mat("crowd_glass", Color(0.85, 0.75, 0.55), 0.1, 0.0, false), Vector3(0, 0.05, 0.035))
+		"ladle":
+			_part(att, _cyl(0.007, 0.42), steel, Vector3(0, 0.18, 0.02))
+			_part(att, _cyl(0.04, 0.03), steel, Vector3(0, 0.39, 0.02))
+		"pen":
+			_part(att, _cyl(0.004, 0.14), Kit.mat("crowd_pen", Color(0.1, 0.15, 0.5), 0.4), Vector3(0, 0.06, 0.015), Vector3(0.4, 0, 0))
+		"cloth":
+			var b := BoxMesh.new()
+			b.size = Vector3(0.12, 0.1, 0.03)
+			_part(att, b, Kit.mat("crowd_cloth", Color(0.85, 0.85, 0.8), 0.95), Vector3(0, 0.06, 0.03))
+		"load":                                       # a cane basket on a coiled cloth, on the head
+			_part(top, _cyl(0.24, 0.16, 0.2), Kit.mat("crowd_basket", Color(0.6, 0.45, 0.25), 0.9), Vector3(0, 0.22, 0))
+			_part(top, _cyl(0.1, 0.03), Kit.mat("crowd_coil", Color(0.75, 0.2, 0.2), 0.95), Vector3(0, 0.13, 0))
+		"phone", "bag":
+			pass
 	if what == "phone":                                 # a black phone in the palm (the hand bone's +Y: the fingers)
 		var b := BoxMesh.new()
 		b.size = Vector3(0.072, 0.15, 0.009)
