@@ -53,6 +53,7 @@ const AVATAR := "res://assets/people/person_man_shirt.glb"
 static var avatar := ""            # who you are on foot, when not the default (the story: Karthik himself)
 var avatar_run_stride := false     # a story cast model: its Run covers ~3.9 m/s at speed 1
 var scripted := false              # a scene moves him (brush3d.gd): his clips and facing are its, not the walk's
+var combat = null                   # in a fight (combat/player_combat.gd): his moves, facing and clips are its
 const FootIK := preload("res://scripts/foot_ik.gd")
 const Gait := preload("res://scripts/gait.gd")
 const Reach := preload("res://scripts/reach.gd")
@@ -216,6 +217,13 @@ func _physics_process_timed(delta: float) -> void:
 		set_crouch(not gait.crouched)
 	if _down > 0.0:
 		_downed(delta)
+	elif active and combat != null and combat.engaged:  # (a fight: the keys are its; the body still slides on walls)
+		var cin := Input.get_vector("move_left", "move_right", "move_forward", "move_back") if auto_input == Vector2.INF else auto_input
+		var cdir := (transform.basis * Vector3(cin.x, 0.0, cin.y))
+		cdir.y = 0.0
+		var cv: Vector3 = combat.steer(cdir.normalized() * minf(cin.length(), 1.0), delta)
+		velocity.x = cv.x
+		velocity.z = cv.z
 	elif active:
 		if Input.is_action_just_pressed("jump") and is_on_floor():
 			velocity.y = jump_velocity
@@ -303,6 +311,11 @@ func _physics_process_timed(delta: float) -> void:
 
 func _animate(delta: float) -> void:
 	if model == null or scripted:
+		return
+	if combat != null and combat.engaged:                # (a fight: the clips are its; he faces the way it says)
+		model.global_rotation = Vector3(0.0, _model_yaw, 0.0)
+		model.position.y = 0.0
+		_last_pos = global_position
 		return
 	if _last_pos.distance_to(global_position) > 3.0:
 		_model_yaw = rotation.y + PI
