@@ -24,7 +24,7 @@ words, mouth-corner-puller, mouth-depression, the brows up, down, inner up, the 
     the first ten's), when the model has none yet
 
 Writes godot/assets/people/sfa_<name>.glb (+ sf_<name>.glb, sfa_<name>_t<i>.jpg).
-    Blender -b --factory-startup --python tools/sketchfab_living.py -- [names...] [--faceshot DIR] [--tris N]
+    Blender -b --factory-startup --python tools/sketchfab_living.py -- [names...] [--faceshot DIR] [--tris N] [--suffix _lo]
 --faceshot: a picture of each face from the front (1 px a mm, a line each cm; DIR/face_<name>.png, its corner's
 place printed) to find the eyes and the mouth for FACE below.
 """
@@ -53,10 +53,11 @@ REF = {"w": [os.path.join(OUT, "crowd_w1.glb"), os.path.join(OUT, "crowd_clips_w
 # cloth's hue ranges in degrees, and each variant's turn of them)
 PEOPLE = {
     "woman_saree_yellow": dict(file="sareewoman/sareewoman.glb", h=1.58, sex="w", skirt=True, tris=45000, far=True,
-                               rebuild=True, tints=dict(hues=[(38, 75), (255, 350)], turns=[-55, 150, 95])),
+                               rebuild=True, tints=dict(hues=[(38, 75), (255, 350)], turns=[-55, 150, 95, 200, -25, 260])),
     "woman_saree_pink": dict(file="pink_saree_lady_3d_model/pink_saree_lady_3d_model.glb", h=1.56, sex="w", skirt=True,
-                             tris=45000, rig="auto", far=True, rebuild=True, tints=dict(hues=[(285, 360), (0, 8)], turns=[-120, 160])),
-    "woman_saree_green": dict(file="indian_woman_in_saree.glb", h=1.58, sex="w", skirt=True, tris=65000),
+                             tris=45000, rig="auto", far=True, rebuild=True, tints=dict(hues=[(285, 360), (0, 8)], turns=[-120, 160, 60, 100, -60, 30])),
+    "woman_saree_green": dict(file="indian_woman_in_saree.glb", h=1.58, sex="w", skirt=True, tris=65000,
+                              tints=dict(hues=[(70, 170)], turns=[-100, 180, 120, -70, 150, 60])),
     "woman_office": dict(file="claudia_rigged_002_-_3d_rigged_business_women.glb", h=1.60, sex="w", tris=22000),
     "woman_office2": dict(file="carla_rigged_001_-_rigged_3d_business_women.glb", h=1.58, sex="w", tris=22000),
     "man_kurta_blue": dict(file="indian-man-with-blue-clothes.glb", h=1.70, sex="m", tris=30000),
@@ -982,6 +983,9 @@ def far_one(name, arm, meshes, budget=16000):
     print("FAR", path, "%.1f MB" % (os.path.getsize(path) / 1e6), flush=True)
 
 
+SUFFIX = ""
+
+
 def build(name, faceshot_dir=None, budget=None):
     spec = PEOPLE[name]
     reset()
@@ -1069,14 +1073,14 @@ def build(name, faceshot_dir=None, budget=None):
     clips = [] if "--noclips" in sys.argv else retarget(arm, spec["sex"])     # (--noclips: trying the face out)
     if not rebuilt:                                        # (a rebuilt face has its template's units)
         face_shapes(name, arm, meshes)
-    if spec.get("tints") and clips:
+    if spec.get("tints") and clips and not SUFFIX:          # (a lighter copy wears the full one's colour pictures)
         tints(name, meshes, spec["tints"])
-    if spec.get("far") and clips:
+    if spec.get("far") and clips and not SUFFIX:
         far_one(name, arm, meshes)
     bpy.ops.object.select_all(action='DESELECT')
     for o in [arm] + meshes:
         o.select_set(True)
-    out = os.path.join(OUT, "sfa_%s.glb" % name)
+    out = os.path.join(OUT, "sfa_%s%s.glb" % (name, SUFFIX))
     bpy.ops.export_scene.gltf(filepath=out, export_format='GLB', use_selection=True, export_skins=True, export_morph=True,
                               export_animations=True, export_animation_mode='ACTIONS', export_image_format='WEBP')
     print("LIVE wrote", out, "%.1f MB" % (os.path.getsize(out) / 1e6), len(clips), "clips", flush=True)
@@ -1382,6 +1386,8 @@ def main():
         return
     shot = args[args.index("--faceshot") + 1] if "--faceshot" in args else None
     budget = int(args[args.index("--tris") + 1]) if "--tris" in args else None
+    global SUFFIX                                          # --suffix _lo: written as sfa_<name>_lo.glb (a crowd's copy,
+    SUFFIX = args[args.index("--suffix") + 1] if "--suffix" in args else ""   # with --tris: fewer triangles)
     names = [a for a in args if a in PEOPLE] or list(PEOPLE)
     for n in names:
         build(n, shot, budget)

@@ -209,6 +209,10 @@ func _person(sex: String, kind := "") -> Node3D:
 		return _pool[sex].pop_back()
 	var list: Array = WOMEN if sex == "w" else MEN
 	var nm: String = list[randi() % list.size()]
+	if nm.trim_prefix("crowd_") in Living.SAREE_CROWD:   # (a saree: one of the real women, the full one this near)
+		var sw := Living.saree_woman(randi(), false)
+		if sw:
+			return sw
 	if not _scenes.has(nm):
 		_scenes[nm] = load("res://assets/people/%s.glb" % nm)
 	var n := (_scenes[nm] as PackedScene).instantiate() as Node3D

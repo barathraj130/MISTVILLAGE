@@ -24,6 +24,7 @@ const CROWD := "res://assets/people/crowd_%s.glb"
 const KINDS := ["m1", "m2", "m3", "m4", "m5", "m6", "w1", "w2", "w3", "w4", "w5", "w6"]
 const STRIDE := 1.25
 const CrowdClips := preload("res://scripts/city/crowd_clips.gd")
+const Living := preload("res://scripts/city/sf_living.gd")
 const SPAWN_MIN := 35.0
 const SPAWN_MAX := 85.0
 const NEAR := 50.0
@@ -51,7 +52,11 @@ func _ready() -> void:
 	var keys := scenes.keys()
 	for i in count:
 		var kk: String = keys[i % keys.size()]
-		var node := (scenes[kk] as PackedScene).instantiate() as Node3D
+		var node: Node3D = null
+		if kk in Living.SAREE_CROWD:                       # (a saree: one of the real women, in a colour)
+			node = Living.saree_woman(i * 7 + 3)
+		if node == null:
+			node = (scenes[kk] as PackedScene).instantiate() as Node3D
 		node.visible = false
 		add_child(node)
 		var aps := node.find_children("*", "AnimationPlayer", true, false)

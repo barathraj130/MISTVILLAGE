@@ -546,6 +546,10 @@ func _door_test(n: int) -> void:
 			await tree.process_frame
 		await tree.create_timer(2.5).timeout
 		if shots != "":
+			if "_pitch" in w:                               # (the view level, looking into the room)
+				w._pitch = -0.2
+				w.head.rotation.x = -0.2
+			await tree.create_timer(0.3).timeout
 			await RenderingServer.frame_post_draw
 			get_viewport().get_texture().get_image().save_jpg("%s/door_%02d_in_%s.jpg" % [shots, k, d["room"]], 0.85)
 		if "--doorwatch" in OS.get_cmdline_user_args():   # (and a few seconds of the people in it)

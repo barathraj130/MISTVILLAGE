@@ -15,8 +15,24 @@ const PEOPLE := {"woman_saree_yellow": "w", "woman_saree_pink": "w", "woman_sare
 const PATH := "res://assets/people/sfa_%s.glb"
 const TINT := "res://assets/people/sfa_%s_t%d.jpg"
 
+## The crowd women who wear a saree (crowd_cast.py w1, w2, w3, w6): wherever one of them would be made, one of the real
+## saree women is made instead (saree_woman), in one of her colours; in a crowd, her lighter copy (sfa_<name>_lo.glb).
+const SAREE_CROWD := ["w1", "w2", "w3", "w6"]
+const SAREE := ["woman_saree_yellow", "woman_saree_pink", "woman_saree_green"]
+
 static var _scenes := {}
 static var _tints := {}
+
+
+## One of the real saree women, picked by n (any whole number: the same n, the same woman), in a colour; light: her
+## crowd copy if it's built. null if none is built.
+static func saree_woman(n: int, light := true) -> Node3D:
+	var nm: String = SAREE[posmod(n, SAREE.size())]
+	var ts: Array = [0] + tints(nm)
+	var tint: int = ts[posmod(n / SAREE.size(), ts.size())]
+	if light and ResourceLoader.exists(PATH % (nm + "_lo")):
+		return make(nm + "_lo", tint)
+	return make(nm, tint)
 
 
 static func names() -> Array:
@@ -56,10 +72,11 @@ static func make(name: String, tint := 0) -> Node3D:
 	for a in n.find_children("*", "AnimationPlayer", true, false):
 		for clip in (a as AnimationPlayer).get_animation_list():
 			(a as AnimationPlayer).get_animation(clip).loop_mode = Animation.LOOP_LINEAR
-	if tint > 0:
-		retexture(n, load(TINT % [name, tint - 1]) as Texture2D)
-	n.set_meta("sex", sex(name))
-	n.set_meta("living", name)
+	var base := name.trim_suffix("_lo")                 # (a crowd copy wears the full one's colours)
+	if tint > 0 and ResourceLoader.exists(TINT % [base, tint - 1]):
+		retexture(n, load(TINT % [base, tint - 1]) as Texture2D)
+	n.set_meta("sex", sex(base))
+	n.set_meta("living", base)
 	return n
 
 

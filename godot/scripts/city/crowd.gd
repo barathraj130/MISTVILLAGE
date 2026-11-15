@@ -65,20 +65,15 @@ static func fill(room: Node3D, body: StaticBody3D, key: String, fill := 0.7) -> 
 
 ## One of our people, chosen and dressed by rng, added under parent (null if the model isn't there).
 const Living := preload("res://scripts/city/sf_living.gd")
-const SAREE := ["woman_saree_yellow", "woman_saree_pink", "woman_saree_green"]
-const SAREE_PER_ROOM := 4             # (the real ones are ~60 000 triangles each: a few to a room)
 
 
 static func person(parent: Node, rng: RandomNumberGenerator) -> Node3D:
 	var key: String = CROWD_WHO[rng.randi() % CROWD_WHO.size()]
-	var had: int = int(parent.get_meta("saree_women", 0))
-	if key.begins_with("w") and had < SAREE_PER_ROOM and rng.randf() < 0.6:   # one of the real saree women, in a colour
-		var nm: String = SAREE[rng.randi() % SAREE.size()]
-		var ts: Array = [0] + Living.tints(nm)
-		var lv := Living.make(nm, int(ts[rng.randi() % ts.size()]))
+	if key in Living.SAREE_CROWD:                       # a woman in a saree: one of the real ones, in a colour
+		var lv := Living.saree_woman(rng.randi())
 		if lv:
 			parent.add_child(lv)
-			parent.set_meta("saree_women", had + 1)
+			lv.scale = Vector3.ONE * rng.randf_range(0.97, 1.03)
 			lv.set_meta("stride", 1.18)
 			return lv
 	if ResourceLoader.exists(CROWD % key):
