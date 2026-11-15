@@ -53,6 +53,7 @@ var on_stairs := false
 var state := "idle"                   # idle, slow, walk, fast, jog, sprint, back, turn (for the debug and the tests)
 var crouched := false                 # low (Z): player.gd shortens him; the Crouch clips here
 var _crouch_w := 0.0
+var held := false                     # a scene of his own (sitting down): the tree keeps out of it
 var backing := false                  # stepping backwards (a short S): facing on, the slow clip reversed
 var _back_t := 0.0
 var _turn_w := 0.0
@@ -380,7 +381,9 @@ func decel(from: float) -> float:
 ## Each physics frame from player.gd after it moved: his breath, the ground, the clips, the head, the camera.
 func update(delta: float, sp: float, turning: float, down: bool) -> void:
 	var _p0 := Time.get_ticks_usec()
-	var externally: bool = ap.is_playing() or p.scripted or not p.is_physics_processing()
+	if ap.is_playing() and sp > 0.3 and p.is_physics_processing() and not p.scripted and not down:
+		ap.stop()                                        # (he's moving: whatever was played on him is over, the tree again)
+	var externally: bool = ap.is_playing() or p.scripted or not p.is_physics_processing() or held
 	if externally and tree.active:                       # (someone else is playing his clips: leave them be)
 		tree.active = false
 	elif not externally and not tree.active:

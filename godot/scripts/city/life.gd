@@ -265,16 +265,19 @@ func _pass(mins: float, caption: String, seat: Node3D, d: Dictionary) -> void:
 	if w:
 		w.set_physics_process(false)
 	var sleep: bool = d.get("sleep", false)
-	if sleep:
+	var sits: bool = seat != null and w != null and not sleep and str(d.get("pose", "")).begins_with("Sit") and w.has_method("sit_down_at")
+	if sits:                                           # (a chair, a stand's seat: he goes and sits down in it, seen)
+		await w.sit_down_at(seat.global_position - Vector3(0, float(d.get("drop", 0.0)), 0), seat.global_rotation.y + PI, str(d["pose"]))
+	elif sleep:
 		await body.eyes(true, 2.0)                     # his eyes close
 	else:
 		await _fade(1.0, 0.6)
-	if seat and w:                                     # (the stand, the cot: there he is)
+	if seat and w and not sits:                        # (the cot: there he is)
 		w.global_position = seat.global_position - Vector3(0, float(d.get("drop", 0.0)), 0)
 		w.rotation.y = seat.global_rotation.y + PI
-		if d.has("pose") and w.anim and w.anim.has_animation(d["pose"]):   # sitting in his seat with everyone
+		if d.has("pose") and w.anim and w.anim.has_animation(d["pose"]):
 			w.anim.play(d["pose"], 0.3)
-	if not sleep and seat:
+	if not sleep and seat and not sits:
 		await _fade(0.0, 0.6)                          # we watch him there while the hours go
 	var was: Array[int] = [roundi(energy), roundi(tiredness), roundi(stress)]
 	await _run_clock(mins, clampf(mins / 60.0 * 1.6, 3.0, 9.0))
@@ -289,6 +292,8 @@ func _pass(mins: float, caption: String, seat: Node3D, d: Dictionary) -> void:
 	elif _card.color.a > 0.0:
 		await _fade(0.0, 0.6)
 	if w and is_instance_valid(w):
+		if sits:                                       # (and up out of it again)
+			await w.stand_up_from_seat()
 		w.set_physics_process(true)
 		(w as CharacterBody3D).velocity = Vector3.ZERO
 	save()
@@ -325,11 +330,15 @@ func sit_wait(seat: Node3D, until_min: float, pose := "Sit") -> void:
 	busy = true
 	waiting = true
 	w.set_physics_process(false)
-	if seat:
-		w.global_position = seat.global_position
-		w.rotation.y = seat.global_rotation.y + PI
-	if w.anim and w.anim.has_animation(pose):
-		w.anim.play(pose, 0.3)
+	var sits: bool = seat != null and pose.begins_with("Sit") and w.has_method("sit_down_at")
+	if sits:                                           # (he goes and sits down on it, seen)
+		await w.sit_down_at(seat.global_position, seat.global_rotation.y + PI, pose)
+	else:
+		if seat:
+			w.global_position = seat.global_position
+			w.rotation.y = seat.global_rotation.y + PI
+		if w.anim and w.anim.has_animation(pose):
+			w.anim.play(pose, 0.3)
 	var f = city.fines
 	await get_tree().create_timer(0.6).timeout
 	while waiting:
@@ -345,6 +354,8 @@ func sit_wait(seat: Node3D, until_min: float, pose := "Sit") -> void:
 		_clock = _clock_now()
 	waiting = false
 	if is_instance_valid(w):
+		if sits:
+			await w.stand_up_from_seat()
 		w.set_physics_process(true)
 		if w.anim and w.anim.has_animation("Idle"):
 			w.anim.play("Idle", 0.3)

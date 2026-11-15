@@ -168,6 +168,9 @@ func activate() -> void:
 		if a.begins_with("--standtest=") and not active and not has_meta("standtest"):
 			set_meta("standtest", true)
 			_stand_test.call_deferred(a.get_slice("=", 1))
+	if not active and "--sittest" in OS.get_cmdline_user_args() and not has_meta("sittest"):
+		set_meta("sittest", true)
+		_sit_test.call_deferred()
 	if not active and "--gaittest" in OS.get_cmdline_user_args() and not has_meta("gaittest"):
 		set_meta("gaittest", true)
 		_gait_test.call_deferred()
@@ -743,3 +746,95 @@ func set_crouch(low: bool) -> bool:
 	_capsule.height = 1.15 if low else 1.75
 	_shape.position.y = _capsule.height * 0.5
 	return low
+
+
+## Into a seat as a person sits: to just in front of it (his back to it), then down onto it (crowd_clips.py SitDown:
+## the feet stay where they are, the knees and hips bend, the chest forward for balance), then seated (pose). seat: where
+## his hips go, yaw: the way he faces seated (as rotation.y). Awaitable. Without the clip: straight into the pose.
+const CrowdClips := preload("res://scripts/city/crowd_clips.gd")
+const SIT_BACK := 0.42               # (SitDown's hips travel back this far onto the seat: its feet stand this far ahead)
+
+
+func sit_down_at(seat: Vector3, yaw: float, pose := "Sit") -> void:
+	if anim == null or model == null:
+		return
+	CrowdClips.add(model, "m")
+	if gait:                                               # (his own tree out of the way while he sits)
+		gait.held = true
+		gait.tree.active = false
+	rotation.y = yaw
+	var my := yaw + PI                                     # (the model faces +Z)
+	var fwd := Vector3(sin(my), 0.0, cos(my))
+	var feet := seat + fwd * SIT_BACK
+	feet.y = global_position.y if absf(global_position.y - seat.y) < 1.2 else seat.y
+	var d := Vector2(feet.x - global_position.x, feet.z - global_position.z).length()
+	if d > 0.15 and anim.has_animation("Walk"):            # (a few steps to the seat's front)
+		anim.play("Walk", 0.25)
+		var walk_yaw := atan2(feet.x - global_position.x, feet.z - global_position.z)
+		model.global_rotation = Vector3(0.0, walk_yaw, 0.0)
+		var tw := create_tween()
+		tw.tween_property(self, "global_position", Vector3(feet.x, global_position.y, feet.z), clampf(d / 1.2, 0.25, 2.5))
+		await tw.finished
+	model.global_rotation = Vector3(0.0, my, 0.0)          # (turned, his back to the seat)
+	_model_yaw = my
+	if anim.has_animation("crowd/SitDown"):
+		var a := anim.get_animation("crowd/SitDown")
+		a.loop_mode = Animation.LOOP_NONE
+		anim.play("crowd/SitDown", 0.25)
+		await get_tree().create_timer(a.length - 0.05).timeout
+	global_position = Vector3(seat.x, seat.y, seat.z)      # (the hips over the seat: the seated pose's own place)
+	if anim.has_animation(pose):
+		anim.play(pose, 0.15)
+
+
+## Up out of the seat he's in (the reverse: the feet first, the chest forward, up); then standing. Awaitable.
+func stand_up_from_seat() -> void:
+	if anim == null or model == null:
+		return
+	var my := model.global_rotation.y
+	var fwd := Vector3(sin(my), 0.0, cos(my))
+	if anim.has_animation("crowd/StandUp"):
+		global_position += fwd * SIT_BACK                 # (StandUp starts with the hips SIT_BACK behind the feet)
+		var a := anim.get_animation("crowd/StandUp")
+		a.loop_mode = Animation.LOOP_NONE
+		anim.play("crowd/StandUp", 0.15)
+		await get_tree().create_timer(a.length - 0.05).timeout
+	if anim.has_animation("Idle"):
+		anim.play("Idle", 0.3)
+	if gait:
+		gait.held = false
+		anim.stop()                                        # (the tree has him again, standing)
+
+
+func _sit_test() -> void:
+	var tree := get_tree()
+	await tree.create_timer(2.0).timeout
+	set_physics_process(false)
+	var my := _model_yaw
+	var fwd := Vector3(sin(my), 0.0, cos(my))
+	var seat := global_position - fwd * 1.0                # a chair a metre behind him, facing the way he does
+	var chair := MeshInstance3D.new()
+	var b := BoxMesh.new()
+	b.size = Vector3(0.45, 0.46, 0.45)
+	chair.mesh = b
+	get_parent().add_child(chair)
+	chair.global_position = seat + Vector3.UP * 0.23 - fwd * 0.05
+	var cam := Camera3D.new()
+	cam.fov = 45.0
+	get_parent().add_child(cam)
+	var right := fwd.cross(Vector3.UP)
+	cam.global_position = seat + fwd * 2.6 + right * 1.3 + Vector3.UP * 1.3   # (from in front, a little to his side)
+	cam.look_at(seat + fwd * 0.2 + Vector3.UP * 0.6, Vector3.UP)
+	cam.make_current()
+	sit_down_at.call_deferred(seat, my - PI, "Sit")       # (the sitting runs; the pictures are taken as it goes)
+	await tree.create_timer(1.55).timeout
+	await _fall_snap("sit_1_going_down")
+	await tree.create_timer(1.6).timeout
+	await _fall_snap("sit_2_seated")
+	stand_up_from_seat.call_deferred()
+	await tree.create_timer(0.6).timeout
+	await _fall_snap("sit_3_getting_up")
+	await tree.create_timer(1.4).timeout
+	await _fall_snap("sit_4_up")
+	print("SITTEST done")
+	tree.quit()
