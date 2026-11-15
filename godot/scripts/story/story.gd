@@ -585,6 +585,8 @@ func _next() -> void:
 		"fight":                                         # the godown: Suresh's men (fight.gd); won or lost, on
 			_load_room(str(cur["room"]), str(cur.get("at", data["spawn"])))
 			_walk_in(str(cur.get("start", "karthik")))
+			for k in cast:                               # (whoever was with him is gone: Joseph out the back)
+				(cast[k] as Node3D).visible = false
 			_fight = Fight.new()
 			_fight.name = "Fight"
 			_fight.city = city

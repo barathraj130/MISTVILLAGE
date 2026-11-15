@@ -95,12 +95,23 @@ func _process(dt: float) -> void:
 	if story and story.fines:                           # the night going: to half past five as the time runs out
 		var end := 5.5 * 60.0 + (24.0 * 60.0 if _clock0 > 12.0 * 60.0 else 0.0)
 		var m := lerpf(_clock0, end, clampf(_t / LENGTH, 0.0, 1.0))
-		story.fines.sim.minute = fmod(m, 24.0 * 60.0)
+		_to_clock(m)
 	for m in men:
 		_search(m, w, dt)
 	_shout = maxf(_shout - dt, 0.0)
 	if _t >= LENGTH:
 		_end(false)
+
+
+## The night's clock: m counted on from the evening (past 1440: the next day; the day turns once, at midnight).
+var _turned := false
+
+
+func _to_clock(m: float) -> void:
+	if m >= 24.0 * 60.0 and not _turned:
+		_turned = true
+		story.fines.sim.day += 1
+	story.fines.sim.minute = fmod(m, 24.0 * 60.0)
 
 
 func _search(m: Dictionary, w: Node3D, dt: float) -> void:
@@ -168,7 +179,7 @@ func _end(caught: bool) -> void:
 	_done = true
 	if caught:
 		if story and story.fines:                       # (left in the paddy till they've gone: it's light when he's up)
-			story.fines.sim.minute = 5.5 * 60.0
+			_to_clock(5.5 * 60.0 + (24.0 * 60.0 if _clock0 > 12.0 * 60.0 else 0.0))
 		if city.life:
 			city.life.add_hurt(25.0)
 		if city.walker:

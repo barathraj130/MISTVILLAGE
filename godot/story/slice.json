@@ -14920,18 +14920,6 @@
       "en": "the wall",
       "ta": "சுவர்"
      }
-    },
-    {
-     "to": "karthik_room",
-     "sleep_until": "07:00",
-     "goal": {
-      "en": "Sleep",
-      "ta": "தூங்குங்க"
-     },
-     "prompt": {
-      "en": "lie down",
-      "ta": "படுங்க"
-     }
     }
    ]
   },
