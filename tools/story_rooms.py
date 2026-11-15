@@ -2252,6 +2252,9 @@ def godown(T):
         box((-W / 2 + 1.0 + k * 1.75, 0.0, h - 0.25), (0.08, D, 0.18), mat("truss", (0.25, 0.2, 0.16), 0.7))
     shutter = mat("shutter", (0.45, 0.46, 0.48), 0.4, 0.6)
     box((0.0, -D / 2 - 0.02, h - 0.7), (3.4, 0.1, 1.2), shutter)          # the shutter, rolled up, its box over the door
+    night = mat("night_yard", (0.02, 0.025, 0.035), 1.0, emit=(0.03, 0.04, 0.06), strength=0.6)
+    box((0.0, -D / 2 - 2.6, 1.6), (9.0, 0.1, 3.4), night)                # outside it: the yard at night, dark (not a white void)
+    box((0.0, -D / 2 - 1.3, -0.02), (9.0, 2.6, 0.04), mat("yard", (0.16, 0.14, 0.12), 0.95))   # the yard's ground
     burlap = mat("burlap_sack", (1, 1, 1), 0.95, tex=_burlap_texture(), normal=os.path.join(DTEX, "plaster_normal.jpg"))
     label = mat("stencil_green", (0.05, 0.17, 0.06), 0.9)
     pine = mat("pallet_wood", (0.55, 0.4, 0.24), 0.8)

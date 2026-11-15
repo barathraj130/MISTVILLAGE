@@ -25,12 +25,26 @@ static func _source(sex: String) -> Array:
 	return out
 
 
-static func add(person: Node, sex: String) -> bool:
+static func add(person: Node, sex: String, same_rig := false) -> bool:
 	var aps := person.find_children("*", "AnimationPlayer", true, false)
 	var sks := person.find_children("*", "Skeleton3D", true, false)
 	if aps.is_empty() or sks.is_empty():
 		return false
 	var ap := aps[0] as AnimationPlayer
+	if same_rig:                                        # (one of the story's own people, built on the crowd's rig
+		var skp := String(ap.get_node(ap.root_node).get_path_to(sks[0]))   #  (story_cast.py): every clip he lacks,
+		var have: AnimationLibrary = ap.get_animation_library("crowd") if ap.has_animation_library("crowd") else null
+		if have == null:                                #  added to his "crowd" set, whatever's there already)
+			have = AnimationLibrary.new()
+			ap.add_animation_library("crowd", have)
+		for pair in _source(sex):
+			if have.has_animation(pair[0]):
+				continue
+			var c := (pair[1] as Animation).duplicate(true) as Animation
+			for t in c.get_track_count():
+				c.track_set_path(t, NodePath(skp + ":" + String(c.track_get_path(t)).get_slice(":", 1)))
+			have.add_animation(pair[0], c)
+		return true
 	if ap.has_animation_library("crowd"):
 		return true
 	if ap.has_animation("Phone"):                       # (a living Sketchfab person: only the clips made for HER bones

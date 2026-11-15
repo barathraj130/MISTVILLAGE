@@ -594,6 +594,7 @@ func _next() -> void:
 			_fight.room = room
 			add_child(_fight)
 			_fight.finished.connect(_fight_done)
+			_refresh()                                   # (the screen clear: no cover, no talk box)
 			_fight.start(cur)
 			return
 		"hide":                                          # the night after: hidden in the fields till dawn (hide.gd)
@@ -603,6 +604,7 @@ func _next() -> void:
 			_hide.story = self
 			add_child(_hide)
 			_hide.finished.connect(_hide_done)
+			_refresh()
 			_hide.start(cur, place_pos(str(cur.get("at", data["spawn"]))))
 			return
 		"message":                                       # a text arrives (from, en/ta)
