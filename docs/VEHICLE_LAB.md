@@ -369,3 +369,22 @@ getting going, stopping), read by jeep.gd and by gait.gd, Karthik on foot. Same 
 
 Still to look at: the auto-rickshaw holds 0.8 g at 12° of roll (a real one would be near tipping well before that); a
 bus brakes the same wet and dry (its brakes, 0.55 g, are below wet grip, as a bus's are).
+
+## Cornering limits (2026-11-15)
+The cars' corner was set by their steering, not their tyres: at 40 km/h the speed-sensitive lock allowed 8°, so a
+sedan could only ask 0.67 g however good its tyres; and Godot's wheels hold far more sideways than any tyre, so the
+auto-rickshaw held 0.8 g at 12° of roll (a real one is near lifting a wheel at about half that). Two changes
+(jeep.gd): the lock falls away as s^0.75 instead of sqrt(s) (10.5° at 40 km/h, the highway end unchanged), and every
+four- and three-wheeler has a `lat_g` (DRIVE): the steering asks no more turn than that holds, less in the wet and
+off the road (as the two-wheelers' bars already did).
+
+| vehicle | 40 km/h corner before | after | 60–0 dry / wet |
+|---|---|---|---|
+| sedan | 0.67 g, 2.4° | 0.82 g, 2.9° | 16.4 / 19.8 m (as before) |
+| hatchback | 0.72 g, 2.7° | 0.81 g, 3.0° | 16.4 / 19.8 m |
+| luxury SUV | 0.58 g, 1.8° | 0.74 g, 2.3° | 16.4 / 19.8 m |
+| auto-rickshaw | 0.80 g, 12.2° | 0.52 g, 11.4° | (top 54 km/h) |
+| bus | 0.31 g, 1.0° | 0.39 g, 1.2° | 25.0 / 25.0 m |
+
+A handbrake pulled at 40 km/h with the wheel half turned now swings a car's tail out (sedan 123°), as it does; the
+turning circle at a crawl is a little tighter (sedan 4.8 m radius, was 5.6).

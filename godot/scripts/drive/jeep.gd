@@ -47,19 +47,23 @@ const REDLINE := 4500.0
 ##   idle, redline, up   rpm; up: the upshift point at light and at full throttle
 ##   brake_g  full braking, in g (scaled to the mass: a bus and a hatchback stop as they weigh)
 ##   cda      drag area (Cd × frontal m²): air drag ½ρ·CdA·v²;  crr: rolling resistance × weight
-##   grip     tyre friction (VehicleWheel3D's friction slip); wet and off-road scale it
+##   grip     tyre friction (VehicleWheel3D's friction slip)
+##   lat_g    the most a corner asks of it, g, dry tarmac (less wet and off the road): the steering asks no more turn
+##            than this holds (as the two-wheelers' bars): cars 0.85, SUVs 0.78, the auto-rickshaw 0.55 (three wheels,
+##            light and high: past that it would lift a wheel), buses 0.4. Godot's wheels hold far more sideways than
+##            any tyre, so without it a car's corner was set only by its steering (docs/VEHICLE_LAB.md); wet and off-road scale it
 ##   wet_k    how much of the wet's loss these tyres feel (1 a car's; a scooter's narrow small tyres more)
 const DRIVE := {
 	"diesel_suv": {"torque": [[780.0, 220.0], [1600.0, 450.0], [2800.0, 450.0], [4500.0, 300.0]], "ratios": [4.46, 2.61, 1.66, 1.24, 1.0, 0.83],
-		"final": 3.6, "reverse": 4.0, "idle": 780.0, "redline": 4500.0, "up": [2000.0, 3600.0], "brake_g": 0.85, "cda": 0.95, "crr": 0.015, "grip": 4.6},
+		"final": 3.6, "reverse": 4.0, "idle": 780.0, "redline": 4500.0, "up": [2000.0, 3600.0], "brake_g": 0.85, "cda": 0.95, "crr": 0.015, "grip": 4.6, "lat_g": 0.78},
 	"petrol_car": {"torque": [[800.0, 70.0], [2000.0, 100.0], [4200.0, 113.0], [6200.0, 95.0]], "ratios": [3.55, 1.95, 1.29, 0.97, 0.78],
-		"final": 4.1, "reverse": 3.5, "idle": 800.0, "redline": 6200.0, "up": [2600.0, 5600.0], "brake_g": 0.85, "cda": 0.65, "crr": 0.013, "grip": 4.6,
+		"final": 4.1, "reverse": 3.5, "idle": 800.0, "redline": 6200.0, "up": [2600.0, 5600.0], "brake_g": 0.85, "cda": 0.65, "crr": 0.013, "grip": 4.6, "lat_g": 0.85,
 		"rear_grip": 1.08},
 	"sport": {"torque": [[800.0, 250.0], [1800.0, 420.0], [5000.0, 420.0], [6800.0, 330.0]], "ratios": [3.8, 2.3, 1.6, 1.25, 1.0, 0.82],
-		"final": 3.5, "reverse": 3.5, "idle": 850.0, "redline": 6800.0, "up": [2800.0, 6200.0], "brake_g": 0.95, "cda": 0.6, "crr": 0.012, "grip": 5.0,
+		"final": 3.5, "reverse": 3.5, "idle": 850.0, "redline": 6800.0, "up": [2800.0, 6200.0], "brake_g": 0.95, "cda": 0.6, "crr": 0.012, "grip": 5.0, "lat_g": 0.95,
 		"rear_grip": 0.94},
 	"auto": {"torque": [[1200.0, 8.0], [3000.0, 12.5], [5000.0, 12.0], [6500.0, 9.0]], "ratios": [3.9, 2.4, 1.6, 1.15],
-		"final": 8.5, "reverse": 3.9, "idle": 1200.0, "redline": 6500.0, "up": [3500.0, 5800.0], "brake_g": 0.6, "cda": 1.2, "crr": 0.02, "grip": 4.0},
+		"final": 8.5, "reverse": 3.9, "idle": 1200.0, "redline": 6500.0, "up": [3500.0, 5800.0], "brake_g": 0.6, "cda": 1.2, "crr": 0.02, "grip": 4.0, "lat_g": 0.55},
 	"scooter": {"torque": [[1500.0, 6.0], [5000.0, 8.8], [7500.0, 8.0], [9000.0, 6.0]], "cvt": [22.0, 8.0], "rpm_band": [3200.0, 7000.0],
 		"final": 1.0, "reverse": 0.0, "idle": 1500.0, "redline": 9000.0, "up": [0.0, 0.0], "brake_g": 0.7, "cda": 0.6, "crr": 0.015, "grip": 4.0,
 		"wet_k": 1.55},
@@ -67,11 +71,11 @@ const DRIVE := {
 		"final": 1.0, "reverse": 0.0, "idle": 1400.0, "redline": 9500.0, "up": [4000.0, 8500.0], "brake_g": 0.8, "cda": 0.5, "crr": 0.015, "grip": 4.4,
 		"wet_k": 1.3},
 	"heavy": {"torque": [[600.0, 400.0], [1200.0, 800.0], [1800.0, 800.0], [2600.0, 600.0]], "ratios": [4.5, 2.8, 1.8, 1.3, 1.0],
-		"final": 4.0, "reverse": 4.5, "idle": 600.0, "redline": 2600.0, "up": [1400.0, 2300.0], "brake_g": 0.55, "cda": 6.5, "crr": 0.008, "grip": 4.2},
+		"final": 4.0, "reverse": 4.5, "idle": 600.0, "redline": 2600.0, "up": [1400.0, 2300.0], "brake_g": 0.55, "cda": 6.5, "crr": 0.008, "grip": 4.2, "lat_g": 0.4},
 	"light_truck": {"torque": [[700.0, 120.0], [1500.0, 250.0], [2800.0, 250.0], [3800.0, 190.0]], "ratios": [5.0, 2.9, 1.8, 1.25, 1.0],
-		"final": 4.3, "reverse": 4.5, "idle": 700.0, "redline": 3800.0, "up": [1800.0, 3200.0], "brake_g": 0.65, "cda": 2.6, "crr": 0.01, "grip": 4.4},
+		"final": 4.3, "reverse": 4.5, "idle": 700.0, "redline": 3800.0, "up": [1800.0, 3200.0], "brake_g": 0.65, "cda": 2.6, "crr": 0.01, "grip": 4.4, "lat_g": 0.5},
 	"tractor": {"torque": [[800.0, 120.0], [1400.0, 180.0], [2200.0, 170.0]], "ratios": [9.0, 6.0, 4.0, 2.6], "final": 6.0, "reverse": 9.0,
-		"idle": 800.0, "redline": 2200.0, "up": [1300.0, 2000.0], "brake_g": 0.4, "cda": 3.0, "crr": 0.03, "grip": 5.0},
+		"idle": 800.0, "redline": 2200.0, "up": [1300.0, 2000.0], "brake_g": 0.4, "cda": 3.0, "crr": 0.03, "grip": 5.0, "lat_g": 0.4},
 }
 ## Which profile each vehicle has, and its own scale of the engine ("tq") where it differs from its kind's.
 const DRIVE_OF := {"luxury_suv": ["diesel_suv", 1.0], "xuv": ["diesel_suv", 1.0], "suv": ["diesel_suv", 0.75], "van": ["diesel_suv", 0.6],
@@ -239,7 +243,7 @@ const SPECS := {
 		"boxes": [[Vector3(1.74, 0.72, 4.35), Vector3(0, 0.6, 0)], [Vector3(1.4, 0.55, 2.4), Vector3(0, 1.15, -0.2)]],
 		"ind": [Vector3(0.7, 0.5, 2.18), Vector3(0.62, 0.78, -2.2), Vector3(0.4, 0.45, -2.21)]},
 	"auto": {"name": "Auto-rickshaw", "glb": "res://assets/vehicles/fleet_auto.glb", "mass": 450.0,
-		"com": Vector3(0, 0.45, -0.2), "radius": 0.22, "rest": 0.14, "travel": 0.12, "stiff": 30.0, "torque": 0.2,
+		"com": Vector3(0, 0.55, -0.2), "radius": 0.22, "rest": 0.14, "travel": 0.12, "stiff": 30.0, "torque": 0.2,
 		"top": 15.0, "seat": Vector3(0, 1.45, 0.3), "nocab": true, "glass": "Glass",
 		"head": ["Headlight"], "tail": ["TailBar"], "lamp": Vector3(0.0, 0.82, 1.4),
 		"boxes": [[Vector3(1.3, 1.3, 2.6), Vector3(0, 0.95, 0)]],
@@ -1625,7 +1629,13 @@ func _physics_process_body(delta: float) -> void:
 	# speed-sensitive steering: full lock at a crawl, a few degrees at highway speed
 	# full lock only at a crawl (hairpins, parking); it falls away quickly once you're moving
 	var s := smoothstep(0.0, 18.0, absf(speed))
-	var max_s := lerpf(MAX_STEER, HIGH_SPEED_STEER, sqrt(s)) * (lerpf(1.0, steer_sens, s) if not autopilot else 1.0)
+	# (s^0.75: at 40 km/h about 10.5° of lock, enough for a car to use its ~0.8 g; sqrt(s) had held it to 8°, 0.67 g,
+	#  under what the tyres hold; the highway end is unchanged)
+	var max_s := lerpf(MAX_STEER, HIGH_SPEED_STEER, pow(s, 0.75)) * (lerpf(1.0, steer_sens, s) if not autopilot else 1.0)
+	var lat_g := float(DRIVE.get(drive_kind, {}).get("lat_g", 0.0)) if not two_wheeler else 0.0
+	if lat_g > 0.0 and _wheels.size() >= 2 and absf(speed) > 3.0:   # (the wheel turned no further than the tyres hold)
+		var wbc := maxf(absf((_wheels[0] as Node3D).position.z - (_wheels[_wheels.size() - 1] as Node3D).position.z), 1.0)
+		max_s = minf(max_s, atan(wbc * lat_g * _wet_grip() * _surface_grip * 9.81 / maxf(speed * speed, 1.0)))
 	if two_wheeler and _wheels.size() >= 2:              # (a rider's bars ask no more turn than the tyres hold: ~0.95 g)
 		var wb := maxf(absf((_wheels[0] as Node3D).position.z - (_wheels[_wheels.size() - 1] as Node3D).position.z), 0.8)
 		max_s = minf(max_s, atan(wb * 0.95 * _wet_grip() * _surface_grip * 9.81 / maxf(speed * speed, 1.0)))
