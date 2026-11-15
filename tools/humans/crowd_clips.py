@@ -660,7 +660,7 @@ def front_kick(a, u):
     c = STRIKES["FrontKick"][1]
     e = _strike_curve(max(0.0, (u - 0.25) / 0.75), (c - 0.25) / 0.75, 0.08) if u > 0.25 else 0.0
     up = _smooth(u / 0.25) if u < 0.25 else (1.0 if u < 0.8 else 1.0 - _smooth((u - 0.8) / 0.2))
-    feet = _stance(a, shift=-0.07 * e, turn=-8.0 * up, low=0.06 * up, toes={"l": 10.0 * up})   # (the standing knee bent)
+    feet = _stance(a, shift=-0.07 * e, turn=-8.0 * up, low=0.04 * up, toes={"l": 10.0 * up})   # (the standing knee bent)
     SC.turn(a, "spine_01", 'X', -14.0 * e)
     knee = (0.0, -0.08, 0.5)
     out = (0.02, -0.72, 0.78)
@@ -684,7 +684,7 @@ def round_kick(a, u, name):
     off = _path(keys, u)
     t = -(45.0 + 15.0 * high) * e
     lift = _smooth(u / 0.22) if u < 0.22 else (1.0 if u < 0.8 else 1.0 - _smooth((u - 0.8) / 0.2))
-    feet = _stance(a, shift=-0.03 * e, turn=t, low=0.02 + 0.05 * lift, toes={"l": -6.0 + (60.0 + 15.0 * high) * e},
+    feet = _stance(a, shift=-0.03 * e, turn=t, low=0.02 + 0.03 * lift, toes={"l": -6.0 + (60.0 + 15.0 * high) * e},
                    heels={"l": 0.05 * e * high})
     SC.turn(a, "spine_02", 'Z', 0.5 * t)
     SC.turn(a, "spine_01", 'Y', -(6.0 + 4.0 * high) * e)  # (leaning away from the kick: enough to balance, not to fall)
@@ -699,7 +699,7 @@ def knee_strike(a, u):
     c = STRIKES["KneeStrike"][1]
     e = _strike_curve(u, c, 0.08)
     reach = _smooth(u / 0.3) if u < 0.3 else (1.0 if u < 0.7 else 1.0 - _smooth((u - 0.7) / 0.3))
-    feet = _stance(a, shift=-0.06 * e, turn=-10.0 * e, low=0.02 + 0.04 * e)
+    feet = _stance(a, shift=-0.06 * e, turn=-10.0 * e, low=0.02 + 0.025 * e)
     SC.turn(a, "spine_01", 'X', 6.0 * e)
     knee_at = Vector((0.02, -0.25 - 0.15 * e, 0.12 + 0.3 * e))
     _kick_leg(a, feet, Vector((0.0, 0.15, 0.0)).lerp(knee_at, e), (0.0, 0.2, -1.0), (0.0, -1.0, 0.8))
@@ -721,7 +721,7 @@ def side_kick(a, u):
     up = _smooth(u / 0.3) if u < 0.3 else (1.0 if u < 0.78 else 1.0 - _smooth((u - 0.78) / 0.22))
     e = _strike_curve(max(0.0, (u - 0.3) / 0.7), (c - 0.3) / 0.7, 0.08) if u > 0.3 else 0.0
     t = -55.0 * up
-    feet = _stance(a, turn=t, low=0.07 * up, toes={"l": -6.0 + 70.0 * up})
+    feet = _stance(a, turn=t, low=0.05 * up, toes={"l": -6.0 + 70.0 * up})
     SC.turn(a, "spine_01", 'Y', -8.0 * e)
     chamber = Vector((0.12, -0.12, 0.5))
     out = Vector((0.18, -0.85, 0.7))

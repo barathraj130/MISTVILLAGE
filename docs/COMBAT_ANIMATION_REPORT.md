@@ -69,3 +69,33 @@ moves while it's carrying weight (the travelling moves carry the travel in the f
   fight (`gait.held`). One thing drives the bones at a time, so two systems never fight over a bone.
 - Physics: every man is a CharacterBody3D; dodges and staggers move the body along the clip's own curve through
   `move_and_slide`, so walls, sacks, cars and people stop them. No impulses on a CharacterBody3D, no ragdoll.
+
+## Kicks: frame-by-frame corrections (2026-11-15)
+Sheets: `docs/combat_kicks_before.jpg` and `docs/combat_kicks_after.jpg` (rows: side, front, behind; columns: front
+kick chamber and extension, low round kick, body round kick, knee strike, side kick chamber and extension). The
+right leg kicks in every one, the left stands; nothing is mirrored by accident. Measured on the rig by the
+strip (`KNEE` lines): the standing knee's bend, the kicking knee's bend, the standing foot's height off the floor.
+
+| Pose | Before | Correction | After (measured) |
+|---|---|---|---|
+| Front kick, chamber | standing leg near straight (a pole); both hands at the face | the hips 4 cm lower as the knee lifts; the right hand eases down to balance, the left guards | standing knee ~40°, kicking knee 136° folded, the standing foot flat |
+| Front kick, extension | standing leg straight | as above; the hips drive 7 cm forward, the chest leans back 14° (not more) | kicking knee 80°: extended, not locked |
+| Low round kick | at first a knee lift (the target inside the leg's reach folded the knee); the right arm flung out with a bent wrist | contact point moved out to thigh height so the leg swings through nearly straight; the front foot turns out 60° on its ball; the right arm drops close by the ribs, the elbow back, the wrist in line | kicking knee 41° at contact; standing foot flat |
+| Body round kick | the same knee lift; leaned back ~18° (looked like falling) | contact at rib height; lean cut to 10°; the front heel lifts a little as it pivots | kicking knee 61°; the standing heel up ~2 cm on its ball (the pivot) |
+| Knee strike | (new) | both hands to the other man's shoulders, pulling down as the knee drives up and in | kicking knee 107° (a knee, not a kick) |
+| Side kick | (new) | turned side-on 55° on the front foot's ball (toes out 64°), the knee across in the chamber, the leg straight out heel-first, the knee pointing across | chamber 141°, extension 54° |
+
+Throughout: the standing ankle stays at the same place on the floor in every pose (no slide); the kicking leg's
+target is clamped to the leg's reach so the knee can only bend forward in its own plane (never backwards or folded
+the wrong way); the kicking foot is laid along the kick (the ball up for the front kick, the instep for the round
+kicks, the heel and blade for the side kick). Each kick runs: guard, weight onto the standing leg, knee up, extend,
+contact, back to the chamber, the foot down where it started, guard (a missed kick leaves him off balance a moment:
+fighter.gd RECOVERING).
+
+In the game, Karthik's foot IK (foot_ik.gd) keeps each foot's clip height and adds only the ground under it, so it
+never pulls a kicking foot down, and on a kerb or a slope the standing foot still finds its ground.
+
+Animation blending: the clips are crossfaded on Karthik's AnimationPlayer (0.05–0.25 s by move) while the walking
+AnimationTree is held off (`gait.held`). That gives one owner of the bones at any time, and the transitions the brief
+asks for (kick to block, dodge, stagger, back to footwork and walking) are the fighter's states choosing the next
+clip. A separate AnimationNodeStateMachine would duplicate fighter.gd's state machine, so none was added.
