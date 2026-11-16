@@ -141,9 +141,9 @@ func _thing(it: Dictionary) -> Node3D:
 	m.roughness = 0.6
 	match str(it.get("model", "")):
 		"tumbler":                                      # a steel tumbler, a little tea in it
-			m.albedo_color = Color(0.8, 0.81, 0.83)
-			m.metallic = 0.9
-			m.roughness = 0.25
+			m.albedo_color = Color(0.86, 0.87, 0.89)         # (brushed steel: light, not a black mirror of the room)
+			m.metallic = 0.25
+			m.roughness = 0.35
 			var c := CylinderMesh.new()
 			c.top_radius = 0.036
 			c.bottom_radius = 0.03
@@ -345,10 +345,12 @@ func _at(w: Node3D) -> Dictionary:
 			p = (_open[it["id"]] as Node3D).global_position
 		var to := Vector3(p.x - w.global_position.x, 0.0, p.z - w.global_position.z)
 		var d := to.length()
-		if d > float(it.get("reach", 1.2)) or (d > 0.3 and fwd.dot(to / d) < FACING):
+		var dot := fwd.dot(to / d) if d > 0.001 else 1.0
+		if d > float(it.get("reach", 1.2)) or (d > 0.3 and dot < FACING):
 			continue
-		if d < bd:
-			bd = d
+		var score := d * 0.4 + (1.0 - dot) * 3.0          # (the one he's looking at, not only the nearest: things
+		if score < bd:                                   #  side by side on a desk)
+			bd = score
 			best = it
 	return best
 
@@ -422,10 +424,11 @@ func _use(it: Dictionary, w: Node3D) -> void:
 			_hold = 60.0
 			_held = th
 			_held_home = th.global_transform
-			await get_tree().create_timer(0.35).timeout
+			var look_from: Vector3 = th.global_position + _wd(it.get("view", [0, -0.6, 0.2]))   # (where the close camera ends up)
+			var eye := Transform3D(Basis.looking_at(th.global_position - look_from, Vector3.UP), look_from)
+			await get_tree().create_timer(0.25).timeout
 			if _held == th and _cam and is_instance_valid(_cam):
-				var eye := _cam.global_transform
-				var to2 := Transform3D(eye.basis, eye.origin - eye.basis.z * float(it.get("near", 0.34)) - eye.basis.y * 0.02)
+				var to2 := Transform3D(th.global_basis, eye.origin - eye.basis.z * float(it.get("near", 0.34)) - eye.basis.y * 0.02)
 				var tw := create_tween()
 				tw.tween_method(func(k: float):
 					if _held == th:
