@@ -610,6 +610,7 @@ func _otp_key(k: String) -> void:
 func _test_shot(name: String) -> void:
 	for a in OS.get_cmdline_user_args():
 		if a.begins_with("--storyshots="):
+			await get_tree().process_frame                # (the state just set drawn first)
 			await RenderingServer.frame_post_draw
 			get_viewport().get_texture().get_image().save_jpg("%s/task_%s%s.jpg" % [a.get_slice("=", 1), name, "_ta" if lang == "ta" else ""], 0.88)
 
@@ -696,10 +697,21 @@ func _process(dt: float) -> void:
 						get_tree().create_timer(0.3).timeout.connect(func(): _test_shot("count_answer"))
 			"hang":
 				var ts: Array = spec.get("targets", [])
+				if str(spec.get("thing", "key")) == "key" and not has_meta("half_shot"):   # (testing: the board, a hook hovered)
+					set_meta("half_shot", true)
+					_hover = 1
+					queue_redraw()
+					await _test_shot("keybox")
+					_hover = -1
+					_inspect = true
+					queue_redraw()
+					await _test_shot("keybox_close")
+					_inspect = false
 				for i in ts.size():
 					if ts[i].get("right", false):
 						_thing = (_targets()[i] as Rect2).get_center()
 				if _t > 2.2:
+					await _test_shot("keybox_hung")
 					_done({"placed": true})
 			"otp":
 				_code = str(spec.get("code", ""))
@@ -714,6 +726,13 @@ func _process(dt: float) -> void:
 					var price := 0 if spec.get("home", false) or menu.is_empty() else int(menu[0]["price"])
 					_done({"paid": price, "ate": true, "meal": str(spec.get("food", "meals")), "minutes": int(spec.get("minutes", 15))})
 			"ready":
+				if chore < chores.size() and chores[chore] == "pocket" and not has_meta("half_shot"):   # (testing: two in, a picture)
+					set_meta("half_shot", true)
+					_picked = {"wallet": true, "phone": true}
+					_pk_in = {"wallet": {"from": Vector2.ZERO, "t": 1.0}, "phone": {"from": Vector2.ZERO, "t": 1.0}}
+					_pk_focus = 2
+					queue_redraw()
+					await _test_shot("pockets")
 				if _t > 1.6:
 					_t = 1.0
 					if chores[chore] == "dress":
@@ -1036,7 +1055,8 @@ func _draw_keybox() -> void:
 		Kit.scrim(self, 0.55)
 		var vs := get_viewport_rect().size
 		var cr := Rect2(vs.x * 0.5 - 250.0 * k, vs.y * 0.5 - 250.0 * k, 500.0 * k, 470.0 * k)
-		Hud.panel(self, cr, k)
+		Art._shadow(self, cr, 12.0 * k, 0.5)
+		Art._rr(self, cr, Kit.CHARCOAL, 12.0 * k, Color(1, 1, 1, 0.1), k)   # (solid: the board doesn't show through)
 		Art.key(self, Vector2(cr.get_center().x, cr.position.y + 40.0 * k), "suv", 290.0 * k)
 		Hud.text(self, Vector2(cr.position.x, cr.end.y - 104.0 * k), L("The SUV key", "கார் சாவி"), 22.0 * k, Hud.INK, 700,
 			HORIZONTAL_ALIGNMENT_CENTER, cr.size.x)

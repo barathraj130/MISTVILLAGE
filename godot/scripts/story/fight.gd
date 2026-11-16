@@ -148,12 +148,23 @@ func _shots(dir: String) -> void:
 			var him: Vector3 = city.walker.global_position
 			var other: Vector3 = pc.target.body.global_position if pc.target else him + Vector3(0, 0, 1)
 			var mid := (him + other) * 0.5
-			var ang := float((n / 2) % 4) * PI * 0.5 + atan2(other.x - him.x, other.z - him.z) + PI * 0.5
-			var want := mid + Vector3(sin(ang), 0.0, cos(ang)) * 3.6 + Vector3.UP * 1.3
-			var rq := PhysicsRayQueryParameters3D.create(mid + Vector3.UP * 1.3, want)   # (not inside a wall)
-			rq.exclude = [city.walker.get_rid(), pc.target.body.get_rid()] if pc.target else [city.walker.get_rid()]
-			var hit: Dictionary = city.walker.get_world_3d().direct_space_state.intersect_ray(rq)
-			cam.global_position = want if hit.is_empty() else (hit["position"] as Vector3).lerp(mid + Vector3.UP * 1.3, 0.12)
+			var base_ang := float((n / 2) % 4) * PI * 0.5 + atan2(other.x - him.x, other.z - him.z) + PI * 0.5
+			var space := city.walker.get_world_3d().direct_space_state
+			var ex: Array[RID] = [city.walker.get_rid()]
+			if pc.target:
+				ex.append(pc.target.body.get_rid())
+			var placed := false
+			for tries in 8:                             # (round him till a side with room for the camera)
+				var ang := base_ang + float(tries) * PI * 0.25
+				var want := mid + Vector3(sin(ang), 0.0, cos(ang)) * 3.0 + Vector3.UP * 1.5
+				var rq := PhysicsRayQueryParameters3D.create(mid + Vector3.UP * 1.2, want)
+				rq.exclude = ex
+				if space.intersect_ray(rq).is_empty():
+					cam.global_position = want
+					placed = true
+					break
+			if not placed:
+				cam.global_position = mid + Vector3.UP * 3.2   # (no side free: from above)
 			cam.look_at(mid + Vector3.UP * 0.9, Vector3.UP)
 			cam.make_current()
 			view = ["side", "back", "side2", "front"][(n / 2) % 4]
