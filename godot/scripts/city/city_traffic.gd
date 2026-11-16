@@ -16,6 +16,30 @@ const DIMS := {"hatchback": Vector3(1.7, 1.5, 3.9), "sedan": Vector3(1.75, 1.45,
 	"auto": Vector3(1.4, 1.75, 2.7), "bus": Vector3(2.55, 3.2, 11.0), "lorry": Vector3(2.5, 3.3, 8.2)}
 const MASS := {"hatchback": 1050.0, "sedan": 1250.0, "taxi": 1250.0, "auto": 400.0, "bus": 11000.0, "lorry": 9000.0}
 const LIFT := 0.09                         # road surface above its centreline points (= streamer RANK + 0.06)
+const Dents := preload("res://scripts/drive/dents.gd")
+## Drivers, each their own way: how fast they like to go (× the road's cruise), how far behind the one ahead they
+## keep (seconds), how hard they pull away and brake (× the vehicle's own), whether they go on an amber, and how far
+## they look ahead (seconds of travel) for someone crossing or a car coming across a junction.
+const DRIVERS := {
+	"careful": {"cruise": 0.9, "headway": 2.2, "accel": 0.8, "brake": 0.85, "amber": false, "look": 4.0},
+	"normal": {"cruise": 1.0, "headway": 1.6, "accel": 1.0, "brake": 1.0, "amber": true, "look": 3.2},
+	"aggressive": {"cruise": 1.18, "headway": 0.9, "accel": 1.35, "brake": 1.3, "amber": true, "look": 2.2},
+	"slow": {"cruise": 0.72, "headway": 2.5, "accel": 0.7, "brake": 0.8, "amber": false, "look": 4.0},
+	"new": {"cruise": 0.85, "headway": 2.0, "accel": 0.75, "brake": 1.15, "amber": false, "look": 2.6},
+	"commercial": {"cruise": 1.05, "headway": 1.3, "accel": 1.0, "brake": 1.0, "amber": true, "look": 3.0}}
+const DRIVER_MIX := [["careful", 0.22], ["normal", 0.44], ["aggressive", 0.13], ["slow", 0.12], ["new", 0.09]]
+## What each vehicle can do: pulling away, braking (m/s²), and how slow it takes a bend (× the car's): a bus is
+## slow away, long to stop, wide and careful round a corner; an auto nips away but brakes and corners gently.
+const DYN := {"hatchback": [2.2, 5.5, 1.0], "sedan": [2.3, 5.8, 1.0], "taxi": [2.3, 5.6, 1.0], "auto": [1.6, 3.8, 0.85],
+	"bus": [0.9, 3.0, 0.7], "lorry": [0.8, 2.8, 0.72]}
+## How many are about by the hour (× the busy count): the morning's school and office rush, a quieter afternoon,
+## the evening's rush the busiest, few at night.
+const BY_HOUR := [0.22, 0.15, 0.12, 0.12, 0.18, 0.35, 0.6, 0.9, 1.1, 1.05, 0.85, 0.75, 0.75, 0.8, 0.75, 0.8, 0.95,
+	1.1, 1.15, 1.05, 0.8, 0.6, 0.45, 0.3]
+var crashes: Array = []                    # (testing) [time, kinds, severity, closing m/s]
+var _touching := {}                        # "a,b" (instance ids) → the time they last touched: a crash counted once
+var _ped_t := 0.0
+var _peds: Array = []                      # people on the road now (crossing): [position, way]
 
 @export var count := 36                    # out in the suburbs; more in the centre (BUSY)
 var busy := 70                             # vehicles around you in central Coimbatore (graphics.gd "traffic")
@@ -62,6 +86,7 @@ func _physics_process_timed(delta: float) -> void:
 	var cd := Vector2(me.x, me.z).length()
 	if cd < CENTRE_R:
 		want = int(lerpf(float(busy), float(count), smoothstep(CENTRE_R * 0.5, CENTRE_R, cd)))
+	want = maxi(4, int(round(want * _hour_k())))
 	var tries := 0
 	while vehicles.size() < want and tries < 8:
 		tries += 1
@@ -73,8 +98,34 @@ func _physics_process_timed(delta: float) -> void:
 		if not _veh_grid.has(c):
 			_veh_grid[c] = []
 		_veh_grid[c].append(v)
+	_ped_t -= delta
+	if _ped_t <= 0.0:                                       # (who's on the road on foot, a few times a second)
+		_ped_t = 0.25
+		_gather_peds()
 	for i in vehicles.size():
 		_drive(vehicles[i], delta, me, (i + _tick) % THINK_EVERY == 0 or not vehicles[i].has("target"))
+	_collide(delta)
+
+
+## The hour's share of the busy count (BY_HOUR), from the city's clock; 1 without one.
+func _hour_k() -> float:
+	var city = get_parent()
+	if city == null or not ("fines" in city) or city.fines == null:
+		return 1.0
+	var h: float = fposmod(float(city.fines.sim.minute) / 60.0, 24.0)
+	var a := int(h)
+	return lerpf(float(BY_HOUR[a]), float(BY_HOUR[(a + 1) % 24]), h - a)
+
+
+## People on foot on the road now: the walkers crossing (city_walkers.gd "cross"), the citizens off the footpath.
+func _gather_peds() -> void:
+	_peds.clear()
+	var city = get_parent()
+	var w = city.get_node_or_null("Walkers") if city else null
+	if w and "people" in w:
+		for q in w.people:
+			if q["state"] == "cross" and (q["node"] as Node3D).visible:
+				_peds.append((q["node"] as Node3D).global_position)
 
 
 static func _cell(p: Vector3) -> Vector2i:
@@ -138,6 +189,9 @@ func _spawn(me: Vector3) -> void:
 		dir = 1
 	var i0 := 0 if dir > 0 else n - 1
 	var at := _pt(p, i0)
+	for o in _near(_veh_grid, at):                          # (never on top of one already there: one waiting at the end)
+		if (o["pos"] as Vector3).distance_to(at) < 10.0:
+			return
 	var d := at.distance_to(me)
 	var behind := (at - me).dot(player.call("forward") if player.has_method("forward") else Vector3.ZERO) < 0.0
 	if d > 400.0 or d < (50.0 if behind else 140.0):
@@ -165,16 +219,29 @@ func _spawn(me: Vector3) -> void:
 	body.add_child(cs)
 	body.add_child(Fleet.model(kind, Fleet.paint_for(kind, _rng)))
 	add_child(body)
+	var driver := "commercial" if kind in ["bus", "lorry", "taxi"] or (kind == "auto" and _rng.randf() < 0.6) else _pick_driver()
 	var v := {"body": body, "kind": kind, "road": r, "road_node": r["node"], "dir": dir, "i": i0, "t": 0.0,
-		"speed": float(CRUISE.get(r["c"], 8.0)) * 0.6, "half": dims.z * 0.5, "pos": at, "fwd": Vector3.FORWARD,
-		"wait": 0.0, "off": Vector3.ZERO, "yaw": 0.0, "push": Vector3.ZERO, "spin": 0.0, "stunned": 0.0, "dents": {}}
+		"speed": float(CRUISE.get(r["c"], 8.0)) * 0.6, "half": dims.z * 0.5, "w": dims.x * 0.5, "pos": at, "fwd": Vector3.FORWARD,
+		"wait": 0.0, "off": Vector3.ZERO, "yaw": 0.0, "push": Vector3.ZERO, "spin": 0.0, "stunned": 0.0, "dents": {},
+		"driver": driver, "d": DRIVERS[driver], "pass": 0.0, "held": 0.0}
 	vehicles.append(v)
 	_place(v)
+
+
+func _pick_driver() -> String:
+	var roll := _rng.randf()
+	for dm in DRIVER_MIX:
+		roll -= float(dm[1])
+		if roll <= 0.0:
+			return str(dm[0])
+	return "normal"
 
 
 func _remove(v: Dictionary) -> void:
 	if is_instance_valid(v["body"]):
 		v["body"].queue_free()
+	if v.has("out") and is_instance_valid(v["out"]):
+		v["out"].queue_free()
 	vehicles.erase(v)
 
 
@@ -210,7 +277,7 @@ func _place(v: Dictionary) -> void:
 	var fwd := (b - a)
 	var flat := Vector3(fwd.x, 0, fwd.z).normalized()
 	var left := Vector3(flat.z, 0, -flat.x)
-	var c := a.lerp(b, float(v["t"])) + left * _lane(r) + Vector3(0, LIFT, 0)
+	var c := a.lerp(b, float(v["t"])) + left * (_lane(r) - float(v.get("pass", 0.0))) + Vector3(0, LIFT, 0)
 	v["pos"] = c
 	v["fwd"] = flat
 	c += v.get("off", Vector3.ZERO)
@@ -334,6 +401,10 @@ func _knocked(v: Dictionary, delta: float) -> bool:
 		v["stunned"] = float(v["stunned"]) - delta
 		v["speed"] = 0.0
 		_place(v)
+		if float(v["stunned"]) <= 0.0 and v.has("out"):        # (back in: on his way)
+			if is_instance_valid(v["out"]):
+				v["out"].queue_free()
+			v.erase("out")
 		return true
 	if off.length() > 0.01 or absf(float(v["yaw"])) > 0.01:              # back into the lane as it moves off
 		var k := minf(1.0, delta * 0.6)
@@ -353,7 +424,9 @@ func _drive(v: Dictionary, delta: float, me: Vector3, think := true) -> void:
 	var r: Dictionary = v["road"]
 	var p: PackedFloat32Array = r["p"]
 	var n := p.size() / 3
-	var target: float = CRUISE.get(r["c"], 8.0) * (0.75 if v["kind"] in ["bus", "lorry", "auto"] else 1.0) * (1.0 - 0.2 * wet)
+	var dd: Dictionary = v["d"]
+	var target: float = CRUISE.get(r["c"], 8.0) * (0.75 if v["kind"] in ["bus", "lorry", "auto"] else 1.0) * (1.0 - 0.2 * wet) \
+		* float(dd["cruise"])
 	var pos: Vector3 = v["pos"]
 	var fwd: Vector3 = v["fwd"]
 	# the road ahead: slow for the end of the piece when it bends
@@ -374,23 +447,73 @@ func _drive(v: Dictionary, delta: float, me: Vector3, think := true) -> void:
 	while k != last and to_end < 40.0:
 		to_end += _pt(p, k).distance_to(_pt(p, k + int(v["dir"])))
 		k += int(v["dir"])
-	if to_end < 18.0:
-		target = minf(target, 6.0 + to_end * 0.35)
+	if to_end < 18.0:                                     # (a bus or lorry slower into the turn: its size)
+		target = minf(target, (6.0 + to_end * 0.35) * float(DYN.get(v["kind"], [0, 0, 1.0])[2]))
 	# vehicles and you ahead in my lane
 	var gap := 999.0
+	var blocker = null
+	var side := Vector3(fwd.z, 0, -fwd.x)
+	var spd0: float = v["speed"]
+	var look_m := maxf(12.0, spd0 * float(dd["look"]))
 	for o in _near(_veh_grid, pos):
 		if o == v:
 			continue
 		var rel: Vector3 = o["pos"] - pos
 		var along := rel.dot(fwd)
-		if along > 0.0 and along < 40.0 and absf(rel.dot(Vector3(fwd.z, 0, -fwd.x))) < 2.2:
-			gap = minf(gap, along - float(o["half"]) - float(v["half"]))
+		var tie := along > -0.5 and along <= 0.0 and (v["body"] as Object).get_instance_id() > (o["body"] as Object).get_instance_id()
+		if (along > 0.0 or tie) and along < 40.0 and absf(rel.dot(side)) < 1.2 + float(o.get("w", 0.9)) + float(v.get("w", 0.9)) * 0.3:
+			var g := along - float(o["half"]) - float(v["half"])
+			if g < gap:
+				gap = g
+				blocker = o
+			continue
+		# across my way at a junction: a vehicle coming over it. Where our two lines meet, who's there first? The
+		# later one gives way (it waits for the other to be by), never both into the same place.
+		var ofwd: Vector3 = o["fwd"]
+		if absf(ofwd.dot(fwd)) > 0.6 or along < 0.0 or along > look_m + 10.0:
+			continue
+		var den := fwd.x * ofwd.z - fwd.z * ofwd.x
+		if absf(den) < 0.05:
+			continue
+		var d0: Vector3 = o["pos"] - pos
+		var tm := (d0.x * ofwd.z - d0.z * ofwd.x) / den           # (along my way to the crossing point, m)
+		var to := (d0.x * fwd.z - d0.z * fwd.x) / den             # (along its way, m; negative: it's past it)
+		if tm < 0.0 or tm > look_m + 6.0 or to < -float(o["half"]) - 2.0 or to > 30.0:
+			continue
+		var my_t := tm / maxf(spd0, 1.0)
+		var its_t := maxf(to, 0.0) / maxf(float(o["speed"]), 0.5)
+		if to < 2.5 or my_t > its_t - 0.3:                       # (it's there first, or it's in it now: I wait)
+			var g2 := tm - 4.0 - float(v["half"])
+			if g2 < gap:
+				gap = g2
+	for o in _near(_veh_grid, pos):                           # any other way two would meet in the next 1.5 s (a bus
+		if o == v or ((o["pos"] as Vector3) - pos).length() > 25.0:   # swinging round a corner, one turning across): the
+			continue                                              # one with the lesser claim waits for it to clear
+		var tw := _will_meet(v, o)
+		if tw >= 0.0 and (_claim(v) < _claim(o) or float(o["speed"]) < 1.0):   # (one standing in the way: always)
+			gap = minf(gap, 0.0 if tw <= 1.6 else maxf(0.0, spd0 * tw - 2.0))   # (soon: stop and let it by)
+	if to_end < 30.0:                                         # round the corner: one standing just past my road's end
+		var endp := _pt(p, last)                              # (out of the straight line I look along)
+		for o in _near(_veh_grid, endp):
+			if o == v:
+				continue
+			var de := Vector2((o["pos"] as Vector3).x - endp.x, (o["pos"] as Vector3).z - endp.z).length()
+			if de < 9.0 and ((o["pos"] as Vector3) - pos).dot(fwd) > -2.0 and float(o["speed"]) < 2.0:
+				gap = minf(gap, to_end + de - float(o["half"]) - float(v["half"]))
+	for pp in _peds:                                          # someone crossing in front of me: I stop for them
+		var relq: Vector3 = (pp as Vector3) - pos
+		var aq := relq.dot(fwd)
+		if aq > 0.0 and aq < look_m + 8.0 and absf(relq.dot(side)) < float(v.get("w", 0.9)) + 1.6:
+			gap = minf(gap, aq - float(v["half"]) - 1.5)
 	var relp := me - pos
 	var alongp := relp.dot(fwd)
 	if alongp > 0.0 and alongp < 40.0 and absf(relp.dot(Vector3(fwd.z, 0, -fwd.x))) < 2.4:
 		gap = minf(gap, alongp - 2.4 - float(v["half"]))
-	if gap < 40.0:
-		target = minf(target, maxf(0.0, (gap - 4.0) * 0.55))
+	if gap < 40.0:                                        # (as far behind as this driver keeps: a time gap)
+		target = minf(target, maxf(0.0, (gap - 3.0) / float(dd["headway"])))
+		var can_brake: float = float(DYN.get(v["kind"], [2.0, 5.0, 1.0])[1]) * float(dd["brake"]) * 1.6
+		target = minf(target, sqrt(2.0 * can_brake * maxf(gap - 2.0, 0.0)))   # (never faster than it can stop in)
+	_pass(v, blocker, gap, delta * (THINK_EVERY if think else 1.0))
 	# red (or amber, if not already committed) signals facing me, just ahead
 	for s in _near(sig_grid, pos):
 		var sp: Vector3 = s[0]
@@ -402,18 +525,239 @@ func _drive(v: Dictionary, delta: float, me: Vector3, think := true) -> void:
 		if face.dot(fwd) > -0.7:
 			continue
 		var st: int = Streamer.signal_state(float(s[2]))
-		if st == 2 or (st == 1 and ahead2 > 12.0):
+		var amber_go: bool = bool(dd["amber"]) and ahead2 < 12.0 + spd0 * 0.6   # (too near to stop: on through it)
+		if st == 2 or (st == 1 and not amber_go):
 			target = minf(target, maxf(0.0, (ahead2 - 6.0) * 0.5))
+	if v.has("blind"):                                     # (testing: a driver who doesn't look: --traffictest's crashes)
+		target = float(v["blind"])
 	v["target"] = target
+	if gap < 1.0 and float(v["speed"]) < 3.0 and not v.has("blind"):   # (creeping up to the one ahead: stopped, not into it)
+		v["speed"] = 0.0
 	_move(v, target, delta)
 
 
 func _move(v: Dictionary, target: float, delta: float) -> void:
 	var spd: float = v["speed"]
-	spd = move_toward(spd, target, delta * (5.0 if target < spd else 1.8))
+	var dy: Array = DYN.get(v["kind"], [2.0, 5.0, 1.0])
+	var dd: Dictionary = v.get("d", DRIVERS["normal"])
+	var brake: float = float(dy[1]) * float(dd["brake"])
+	if target < spd - 4.0:                                    # (a sudden need: harder, as hard as it can)
+		brake *= 1.6
+	spd = move_toward(spd, target, delta * (brake if target < spd else float(dy[0]) * float(dd["accel"])))
 	v["speed"] = spd
 	_advance(v, spd * delta)
 	_place(v)
+
+
+## Round a vehicle stopped in my lane that isn't going anywhere (crashed, its driver out, broken down): after a few
+## seconds behind it, out to the right as far as a lane, when nothing's coming the other way, by it, and back in.
+func _pass(v: Dictionary, blocker, gap: float, dt: float) -> void:
+	var want := 0.0
+	if blocker != null and gap < 12.0 and float(blocker["speed"]) < 0.5 and float(blocker["stunned"]) > 0.0:
+		v["held"] = float(v["held"]) + dt
+		if float(v["held"]) > 3.0 and int(v["road"]["o"]) != 1 or float(v["held"]) > 3.0 and float(v["road"]["w"]) > 7.0:
+			var clear := true
+			var fwd: Vector3 = v["fwd"]
+			for o in _near(_veh_grid, v["pos"]):           # (the other way, within 35 m: wait)
+				if o != v and (o["fwd"] as Vector3).dot(fwd) < -0.6 and ((o["pos"] as Vector3) - (v["pos"] as Vector3)).dot(fwd) > -5.0 \
+						and ((o["pos"] as Vector3) - (v["pos"] as Vector3)).length() < 35.0:
+					clear = false
+			if clear:
+				want = 3.0
+	elif float(v.get("pass", 0.0)) > 0.0 and blocker != null and gap < 4.0:
+		want = float(v["pass"])                             # (still alongside it)
+	else:
+		v["held"] = 0.0
+	v["pass"] = move_toward(float(v.get("pass", 0.0)), want, dt * 1.2)
+
+
+## Two of them touching (their boxes overlap, flat): a crash, once (not again while they stay in contact). How
+## hard by how fast they closed on each other along the hit, and their masses: low (a bump, a knock), medium (both
+## shoved and turned, dented, the drivers out), high (spun, badly dented, a loud one). Momentum shared as in a real
+## crumpling hit (they part at about their common speed), off-centre hits turning them.
+func _collide(_delta: float) -> void:
+	var now := Time.get_ticks_msec() / 1000.0
+	for v in vehicles:
+		for o in _near(_veh_grid, v["pos"]):
+			if o == v or (o["body"] as Object).get_instance_id() < (v["body"] as Object).get_instance_id():
+				continue
+			var pa: Vector3 = v["pos"] + v.get("off", Vector3.ZERO)
+			var pb: Vector3 = o["pos"] + o.get("off", Vector3.ZERO)
+			if Vector2(pa.x - pb.x, pa.z - pb.z).length() > float(v["half"]) + float(o["half"]) + 0.5:
+				continue
+			var n := _overlap(v, o)
+			var key := "%d,%d" % [(v["body"] as Object).get_instance_id(), (o["body"] as Object).get_instance_id()]
+			if n == Vector3.ZERO:
+				if _touching.has(key) and now - float(_touching[key]) > 1.5:
+					_touching.erase(key)
+				continue
+			var fresh := not _touching.has(key)
+			_touching[key] = now
+			if fresh and _closing(v, o, n) >= 1.0:              # (a touch in a queue isn't a crash)
+				_crash(v, o, n, (pa + pb) * 0.5)
+
+
+## When (s, within 1.5 s) `a` and `b` would be in each other going on as they are now; -1 if they won't. (Already in
+## each other: not counted here, _collide has it.)
+func _will_meet(a: Dictionary, b: Dictionary) -> float:
+	if _overlap(a, b) != Vector3.ZERO:
+		return -1.0
+	var pa: Vector3 = a["pos"]
+	var pb: Vector3 = b["pos"]
+	var va: Vector3 = (a["fwd"] as Vector3) * maxf(float(a["speed"]), 1.5)    # (a stopped one as about to go)
+	var vb: Vector3 = (b["fwd"] as Vector3) * float(b["speed"])
+	for k in [0.4, 0.8, 1.2, 1.6, 2.0, 2.4]:
+		a["pos"] = pa + va * k
+		b["pos"] = pb + vb * k
+		var hit := _overlap(a, b) != Vector3.ZERO
+		a["pos"] = pa
+		b["pos"] = pb
+		if hit:
+			return k
+	return -1.0
+
+
+## Right of way where two would meet: the bigger road's, then the one already going faster, then (a tie) a fixed
+## order; a vehicle stopped after a crash claims nothing (it isn't moving off).
+func _claim(v: Dictionary) -> float:
+	if float(v["stunned"]) > 0.0:
+		return 1e6                                            # (others must go round it, not wait for it to give way)
+	return float(BIG.get(v["road"]["c"], 1.0)) * 100.0 + float(v["speed"]) * 5.0 + float((v["body"] as Object).get_instance_id() % 997) * 0.001
+
+
+## The way to push `a` off `b` if their footprints overlap (flat boxes, separating axes), or ZERO.
+func _overlap(a: Dictionary, b: Dictionary) -> Vector3:
+	var ca: Vector3 = a["pos"] + a.get("off", Vector3.ZERO)
+	var cb: Vector3 = b["pos"] + b.get("off", Vector3.ZERO)
+	var fa: Vector3 = (a["fwd"] as Vector3).rotated(Vector3.UP, float(a.get("yaw", 0.0)))
+	var fb: Vector3 = (b["fwd"] as Vector3).rotated(Vector3.UP, float(b.get("yaw", 0.0)))
+	var axes := [fa, Vector3(fa.z, 0, -fa.x), fb, Vector3(fb.z, 0, -fb.x)]
+	var ext_a := [float(a["half"]), float(a.get("w", 0.9))]
+	var ext_b := [float(b["half"]), float(b.get("w", 0.9))]
+	var d := cb - ca
+	d.y = 0.0
+	var best := INF
+	var best_ax := Vector3.ZERO
+	for ax in axes:
+		var ra: float = ext_a[0] * absf(fa.dot(ax)) + ext_a[1] * absf(Vector3(fa.z, 0, -fa.x).dot(ax))
+		var rb: float = ext_b[0] * absf(fb.dot(ax)) + ext_b[1] * absf(Vector3(fb.z, 0, -fb.x).dot(ax))
+		var pen: float = ra + rb - absf(d.dot(ax))
+		if pen <= 0.0:
+			return Vector3.ZERO
+		if pen < best:
+			best = pen
+			best_ax = ax if d.dot(ax) < 0.0 else -ax           # (from b toward a)
+	return best_ax
+
+
+func _closing(a: Dictionary, b: Dictionary, n: Vector3) -> float:
+	var va: Vector3 = (a["fwd"] as Vector3) * float(a["speed"]) + (a["push"] as Vector3)
+	var vb: Vector3 = (b["fwd"] as Vector3) * float(b["speed"]) + (b["push"] as Vector3)
+	return maxf((vb - va).dot(n), 0.0)
+
+
+func _crash(a: Dictionary, b: Dictionary, n: Vector3, at: Vector3) -> void:
+	var ma: float = MASS.get(a["kind"], 1200.0)
+	var mb: float = MASS.get(b["kind"], 1200.0)
+	var va: Vector3 = (a["fwd"] as Vector3) * float(a["speed"]) + (a["push"] as Vector3)
+	var vb: Vector3 = (b["fwd"] as Vector3) * float(b["speed"]) + (b["push"] as Vector3)
+	var closing := maxf((vb - va).dot(n), 0.0)                 # (n points from b to a: b coming on at a)
+	var common := (ma * va + mb * vb) / (ma + mb)              # (a crumpling hit: they move off together)
+	var sev := clampf(closing / 14.0, 0.0, 1.0)
+	var level := "low" if closing < 3.0 else ("medium" if closing < 8.0 else "high")
+	var info := "TRAFFIC crash %s %s-%s, closing %.1f m/s at %s (speeds %.1f/%.1f, headings %.2f, roads %s/%s same %s, i %d/%d, claims %.0f/%.0f, targets %.1f/%.1f)" % [
+		level, a["kind"], b["kind"], closing, str(at.snapped(Vector3.ONE * 0.1)), float(a["speed"]), float(b["speed"]),
+		(a["fwd"] as Vector3).dot(b["fwd"]), a["road"]["c"], b["road"]["c"], str(a["road"] == b["road"]), int(a["i"]), int(b["i"]),
+		_claim(a), _claim(b), float(a.get("target", -1.0)), float(b.get("target", -1.0))]
+	for pr in [[a, ma, mb, 1.0], [b, mb, ma, -1.0]]:
+		var v: Dictionary = pr[0]
+		var share: float = float(pr[2]) / (float(pr[1]) + float(pr[2]))   # (the lighter one moves more)
+		var vel: Vector3 = (v["fwd"] as Vector3) * float(v["speed"]) + (v["push"] as Vector3)
+		var shove := (common - vel) * minf(1.0, 0.6 + share) + n * float(pr[3]) * (0.6 + closing * share * 0.35)
+		v["push"] = vel + shove
+		v["speed"] = 0.0
+		var arm: Vector3 = v["fwd"]
+		v["spin"] = clampf(float(v["spin"]) + arm.cross(n * float(pr[3])).y * closing * share * 0.3, -2.5, 2.5)
+		v["stunned"] = maxf(float(v["stunned"]), {"low": 2.5, "medium": 9.0, "high": 16.0}[level])
+		if level != "low" and is_instance_valid(v["body"]):
+			Dents.dent(v["body"], at + Vector3.UP * 0.7, n * float(pr[3]) * -1.0, 0.5 + sev * 0.8, 0.05 + sev * 0.28, v["dents"])
+		if level != "low":
+			_driver_out(v, at)
+	_crash_sound(at, sev)
+	crashes.append([Time.get_ticks_msec() / 1000.0, "%s-%s" % [a["kind"], b["kind"]], level, closing])
+	print(info)
+	var city = get_parent()
+	var w = city.get_node_or_null("Walkers") if city else null
+	if w and w.has_method("look_at_crash"):
+		w.look_at_crash(at, sev)
+	if city and "car" in city and city.car and level == "high" and city.has_method("shake") \
+			and (city.car as Node3D).global_position.distance_to(at) < 30.0:
+		city.shake(0.4 * sev)
+
+
+## A crash's sound: a thump and the crunch of panels, louder and longer the harder it was (made here, no file).
+var _crash_wav: AudioStreamWAV
+
+func _crash_sound(at: Vector3, sev: float) -> void:
+	if _crash_wav == null:
+		var rate := 22050
+		var nsm := int(rate * 0.9)
+		var data := PackedByteArray()
+		data.resize(nsm * 2)
+		var rng := RandomNumberGenerator.new()
+		rng.seed = 7
+		var lp := 0.0
+		for i in nsm:
+			var t := float(i) / rate
+			var thump := sin(TAU * 55.0 * t) * exp(-t * 18.0)
+			lp = lerpf(lp, rng.randf_range(-1.0, 1.0), 0.35)       # (the crunch: noise, darker)
+			var crunch := lp * exp(-t * 5.0) * (0.6 + 0.4 * sin(TAU * 13.0 * t))
+			var tink := rng.randf_range(-1.0, 1.0) * exp(-maxf(t - 0.12, 0.0) * 14.0) * (0.25 if t > 0.12 else 0.0)
+			data.encode_s16(i * 2, int(clampf((thump * 0.9 + crunch * 0.7 + tink) * 0.8, -1.0, 1.0) * 32000.0))
+		_crash_wav = AudioStreamWAV.new()
+		_crash_wav.format = AudioStreamWAV.FORMAT_16_BITS
+		_crash_wav.mix_rate = rate
+		_crash_wav.data = data
+	var pl := AudioStreamPlayer3D.new()
+	pl.stream = _crash_wav
+	pl.volume_db = lerpf(-14.0, 6.0, sev)
+	pl.pitch_scale = lerpf(1.25, 0.85, sev)                       # (a big one deeper)
+	pl.unit_size = 12.0
+	add_child(pl)
+	pl.global_position = at
+	pl.play()
+	pl.finished.connect(pl.queue_free)
+
+
+## A driver out of the vehicle after a crash that wasn't a mere knock: standing by the door, arguing, looking at
+## the damage, back in when it moves off again.
+const CrowdClips := preload("res://scripts/city/crowd_clips.gd")
+
+func _driver_out(v: Dictionary, at: Vector3) -> void:
+	if v.has("out") and is_instance_valid(v["out"]):
+		return
+	var kk := "m%d" % (1 + _rng.randi() % 6)
+	var path := "res://assets/people/crowd_%s.glb" % kk
+	if not ResourceLoader.exists(path):
+		return
+	var person := (load(path) as PackedScene).instantiate() as Node3D
+	add_child(person)
+	var fwd: Vector3 = v["fwd"]
+	var right := fwd.cross(Vector3.UP)
+	var door: Vector3 = v["pos"] + v.get("off", Vector3.ZERO) + right * (float(v.get("w", 0.9)) + 0.6) + fwd * 0.4
+	var g: float = streamer.height_at(door.x, door.z) if streamer else NAN
+	person.global_position = Vector3(door.x, door.y if is_nan(g) else g, door.z)
+	person.look_at(Vector3(at.x, person.global_position.y, at.z), Vector3.UP, true)
+	var aps := person.find_children("*", "AnimationPlayer", true, false)
+	if not aps.is_empty():
+		var ap := aps[0] as AnimationPlayer
+		var clip := "Talk"
+		if CrowdClips.add(person, "m") and ap.has_animation("crowd/Argue"):
+			clip = "crowd/Argue"
+		if ap.has_animation(clip):
+			ap.get_animation(clip).loop_mode = Animation.LOOP_LINEAR
+			ap.play(clip)
+	v["out"] = person
 
 
 ## Along the road by `step` metres: on to the next piece at its end.

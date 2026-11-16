@@ -830,6 +830,7 @@ func toggle_on_foot() -> bool:
 		Walker.avatar = "res://assets/people/story_karthik.glb"     # you on foot are Karthik, the story's own man
 		walker = Walker.new()
 		walker.name = "OnFoot"
+		walker.collision_mask |= 4                             # (the street's furniture: solid to him on foot, city_streamer.gd)
 		walker.walk_speed = 1.4                                # (a person's walking pace; the clips play to it)
 		walker.run_speed = 4.2
 		add_child(walker)
@@ -877,7 +878,9 @@ func toggle_on_foot() -> bool:
 func _ped_check() -> void:
 	await get_tree().create_timer(16.0).timeout
 	var space := get_world_3d().direct_space_state
-	var counts := {"checked": 0, "on_vehicle": 0, "in_vehicle": 0, "above": 0, "below": 0}
+	var counts := {"checked": 0, "on_vehicle": 0, "in_vehicle": 0, "in_furniture": 0, "above": 0, "below": 0,
+		"walked_through": 0}
+	var last_at := {}                                    # (each person a second ago: walked through anything since?)
 	var shots := 0
 	var seen_bad := {}
 	for t in 100:
@@ -894,6 +897,15 @@ func _ped_check() -> void:
 			var n: Node3D = e[0]
 			var p := n.global_position
 			counts["checked"] += 1
+			var was: Vector3 = last_at.get(n.get_instance_id(), Vector3.INF)
+			last_at[n.get_instance_id()] = p
+			if was != Vector3.INF and was.distance_to(p) < 4.0 and was.distance_to(p) > 0.05:
+				var tq := PhysicsRayQueryParameters3D.create(was + Vector3.UP * 0.8, p + Vector3.UP * 0.8)
+				var th := space.intersect_ray(tq)          # (a tree, a pole, a stall, a car, a wall between: through it)
+				if not th.is_empty() and absf((th["normal"] as Vector3).y) < 0.6:
+					counts["walked_through"] += 1
+					if counts["walked_through"] <= 6:
+						print("PEDCHECK walked through %s: %s (%s) from %s to %s" % [str(th["collider"]), n.name, e[1], str(was.snapped(Vector3.ONE * 0.1)), str(p.snapped(Vector3.ONE * 0.1))])
 			var bad := ""
 			var hq := PhysicsRayQueryParameters3D.create(p + Vector3.UP * 0.3, p + Vector3.DOWN * 1.2)
 			var hit := space.intersect_ray(hq)
@@ -902,9 +914,13 @@ func _ped_check() -> void:
 			if bad == "":
 				var pq := PhysicsPointQueryParameters3D.new()
 				pq.position = p + Vector3.UP * 0.6
+				pq.collision_mask = 0xFFFFFFFF
 				for r in space.intersect_point(pq, 4):
 					if _is_vehicle(r["collider"]):
 						bad = "in_vehicle"
+						hit = {"collider": r["collider"]}
+					elif r["collider"] == streamer.street_body:
+						bad = "in_furniture"
 						hit = {"collider": r["collider"]}
 			if bad == "":
 				# (the surface under the feet, from a metre above them: an awning or a stall's roof overhead isn't ground)
@@ -980,6 +996,116 @@ func _ped_check() -> void:
 
 func _is_vehicle(o) -> bool:
 	return o is VehicleBody3D or o is RigidBody3D or o is AnimatableBody3D or (streamer and o == streamer.parked_body)
+
+
+## (testing) --traffictest: a minute of ordinary traffic round the car (stopped by the road): its drivers, the
+## nearest any follows another (seconds), any through a red, any two in each other without a crash counted; then
+## two crashes staged (a driver who doesn't look into one stopped ahead: at a walking pace, then at 50 km/h), the
+## street watched: user://traffic_<n>.jpg.
+func _traffic_test() -> void:
+	await get_tree().create_timer(14.0).timeout
+	car.freeze = true
+	var kinds := {}
+	var worst_head := 99.0
+	var red_runs := 0
+	var inside := 0
+	var t := 0.0
+	var seen_drivers := {}
+	while t < 60.0:
+		await get_tree().physics_frame
+		t += get_physics_process_delta_time()
+		for v in traffic.vehicles:
+			seen_drivers[str(v["driver"])] = int(seen_drivers.get(str(v["driver"]), 0)) + 1
+			var fwd: Vector3 = v["fwd"]
+			var sp: float = v["speed"]
+			for o in traffic.vehicles:
+				if o == v:
+					continue
+				var rel: Vector3 = o["pos"] - v["pos"]
+				var along := rel.dot(fwd)
+				if along > 0.0 and along < 30.0 and absf(rel.dot(Vector3(fwd.z, 0, -fwd.x))) < 1.5 and sp > 3.0 and (o["fwd"] as Vector3).dot(fwd) > 0.8:
+					worst_head = minf(worst_head, (along - float(o["half"]) - float(v["half"])) / sp)
+				if o["body"].get_instance_id() > v["body"].get_instance_id() and traffic._overlap(v, o) != Vector3.ZERO:
+					inside += 1
+					var okey := "%d,%d" % [v["body"].get_instance_id(), o["body"].get_instance_id()]
+					if not seen_drivers.has("ov" + okey) and inside < 4000:
+						seen_drivers["ov" + okey] = 0
+						print("TRAFFICTEST overlap %s %.1f m/s / %s %.1f m/s, headings %.2f, same road %s, i %d/%d t %.2f/%.2f, stunned %.1f/%.1f, pass %.1f/%.1f at %s" % [
+							v["kind"], v["speed"], o["kind"], o["speed"], (v["fwd"] as Vector3).dot(o["fwd"]), str(v["road"] == o["road"]),
+							int(v["i"]), int(o["i"]), float(v["t"]), float(o["t"]), float(v["stunned"]), float(o["stunned"]),
+							float(v.get("pass", 0.0)), float(o.get("pass", 0.0)), str((v["pos"] as Vector3).snapped(Vector3.ONE * 0.1))])
+			for sg in traffic.signals:                      # (past a red head facing it, moving)
+				var rel2: Vector3 = (sg[0] as Vector3) - (v["pos"] as Vector3)
+				var face := Vector3(sin(float(sg[1])), 0, cos(float(sg[1])))
+				if face.dot(fwd) < -0.7 and absf(rel2.dot(fwd)) < 0.3 and absf(rel2.dot(Vector3(fwd.z, 0, -fwd.x))) < 10.0 \
+						and sp > 3.0 and Streamer.signal_state(float(sg[2])) == 2:
+					red_runs += 1
+	var share := {}
+	var tot := 0
+	for k in seen_drivers:
+		if not str(k).begins_with("ov"):
+			tot += int(seen_drivers[k])
+	for k in seen_drivers:
+		if not str(k).begins_with("ov"):
+			share[k] = snappedf(float(seen_drivers[k]) / maxf(tot, 1), 0.01)
+	print("TRAFFICTEST a minute: %d vehicles now, drivers %s, nearest following %.2f s, through a red %d, in each other %d (physics steps), crashes %d" % [
+		traffic.vehicles.size(), str(share), worst_head, red_runs, inside, traffic.crashes.size()])
+	var shot := 0
+	for test in [["low", 2.5], ["high", 14.0]]:
+		var pair := _crash_pair()
+		if pair.is_empty():
+			print("TRAFFICTEST no pair for the %s crash" % test[0])
+			continue
+		var a: Dictionary = pair[0]
+		var b: Dictionary = pair[1]
+		b["blind"] = 0.0
+		b["speed"] = 0.0
+		a["blind"] = float(test[1])
+		a["speed"] = float(test[1])
+		var before: int = traffic.crashes.size()
+		var cam2 := Camera3D.new()
+		add_child(cam2)
+		cam2.make_current()
+		var tt := 0.0
+		while tt < 9.0 and traffic.crashes.size() == before:
+			await get_tree().physics_frame
+			tt += get_physics_process_delta_time()
+			var mid: Vector3 = ((a["pos"] as Vector3) + (b["pos"] as Vector3)) * 0.5
+			var fw: Vector3 = b["fwd"]
+			cam2.global_position = mid + fw.cross(Vector3.UP) * 11.0 + Vector3.UP * 5.0 - fw * 2.0
+			cam2.look_at(mid + Vector3.UP * 0.8, Vector3.UP)
+		a.erase("blind")
+		b.erase("blind")
+		for k in 3:                                        # (the moment, and after)
+			await get_tree().create_timer(0.05 if k == 0 else 1.2).timeout
+			await RenderingServer.frame_post_draw
+			shot += 1
+			get_viewport().get_texture().get_image().save_jpg(ProjectSettings.globalize_path("user://traffic_%d.jpg" % shot), 0.85)
+		var cr: Array = traffic.crashes[traffic.crashes.size() - 1] if traffic.crashes.size() > before else []
+		print("TRAFFICTEST staged %s at %.0f km/h: %s; stunned %.1f s / %.1f s, driver out %s / %s, dents %d / %d" % [test[0], float(test[1]) * 3.6,
+			str(cr), float(a["stunned"]), float(b["stunned"]), str(a.has("out")), str(b.has("out")), (a["dents"] as Dictionary).size(), (b["dents"] as Dictionary).size()])
+		await get_tree().create_timer(3.0).timeout          # (no second crash while they stay touching)
+		print("TRAFFICTEST after 3 s: crashes %d (one counted for that pair: %s)" % [traffic.crashes.size(), str(traffic.crashes.size() == before + 1)])
+		cam2.queue_free()
+		cam.make_current()
+	get_tree().quit()
+
+
+## Two vehicles in one lane, one behind the other (20–45 m), on a straight bit, near the car: for a staged crash.
+func _crash_pair() -> Array:
+	for a in traffic.vehicles:
+		if a["stunned"] > 0.0 or (a["pos"] as Vector3).distance_to(car.global_position) > 300.0:
+			continue
+		var fwd: Vector3 = a["fwd"]
+		for b in traffic.vehicles:
+			if b == a or b["stunned"] > 0.0:
+				continue
+			var rel: Vector3 = (b["pos"] as Vector3) - (a["pos"] as Vector3)
+			var along := rel.dot(fwd)
+			if along > 12.0 and along < 45.0 and absf(rel.dot(Vector3(fwd.z, 0, -fwd.x))) < 1.6 and (b["fwd"] as Vector3).dot(fwd) > 0.9 \
+					and a["road"] == b["road"]:
+				return [a, b]
+	return []
 
 
 ## (testing) --taketest: out of the car, beside the nearest parked vehicle you can take, F: into it; a picture beside
@@ -1060,6 +1186,11 @@ func _take_test() -> void:
 		await get_tree().create_timer(1.0).timeout
 		get_viewport().get_texture().get_image().save_jpg(ProjectSettings.globalize_path("user://take_5_own.jpg"), 0.85)
 	get_tree().quit()
+
+
+## The view shaken a moment (a crash near him: city_traffic.gd).
+func shake(amount: float) -> void:
+	_shake = maxf(_shake, amount)
 
 
 var _left_behind: Array = []        # your own vehicles left parked when you took another: [Node3D, its kind]
@@ -1935,6 +2066,9 @@ func _process(dt: float) -> void:
 			if a == "--pedcheck" and not _sfv_started:
 				_sfv_started = true
 				_ped_check.call_deferred()
+			if a == "--traffictest" and not _sfv_started:
+				_sfv_started = true
+				_traffic_test.call_deferred()
 			if a == "--taketest" and not _sfv_started:
 				_sfv_started = true
 				_take_test.call_deferred()

@@ -68,6 +68,17 @@ const TREE_NEAR := 70.0                     # full trees this near (from their 6
 var life_far: Array = []                    # life kind → far Mesh or null (trees and bushes: veg_*_far)
 var life_meshes: Array = []                # life kind → Mesh (index.json life_kinds)
 var life_boxes: Array = []                 # life kind → its mesh's AABB, read here once (workers mustn't touch meshes)
+## The street's furniture is solid to people on foot (him, the walkers, the citizens; their eyes: ped_steer.gd), not to
+## cars: trees and palms, poles, signs, bollards, bins, drums, the people standing about (a cylinder each, their own
+## size), stalls, carts, thatched shops, benches, transformers, shrines, flex boards and goods (a box each, their
+## model's). On a layer of its own (FOOT_LAYER), one physics-server body a tile, as the parked vehicles are.
+const FOOT_LAYER := 4
+const SOLID_CYL := {"pole": [0.14, 7.0], "sign": [0.08, 2.6], "bollard": [0.12, 0.9], "bin": [0.3, 1.0], "drums": [0.42, 1.0],
+	"veg_neem1": [0.28, 3.0], "veg_neem2": [0.28, 3.0], "veg_rain1": [0.34, 3.0], "veg_gul1": [0.26, 3.0], "city_palm_1": [0.24, 4.0],
+	"city_palm_2": [0.24, 4.0], "veg_bush1": [0.45, 1.0], "veg_bush2": [0.45, 1.0], "veg_bush3": [0.45, 1.0]}
+const SOLID_BOX := ["stall0", "stall1", "thatched", "cart", "bhel", "bench", "transformer", "shrine", "flex0", "flex1", "flex2",
+	"goods", "flowers"]
+var street_body: StaticBody3D
 var parked_body: StaticBody3D              # parked cars, autos, lorries and bikes are solid (you can hit them): their
 var parked_rids := {}                      #  shapes are on physics-server bodies (one a tile) that report as this node
 var pothole_mesh: Mesh                     # potholes: a flat quad each, shaped by shaders/pothole.gdshader
@@ -128,6 +139,11 @@ func _ready() -> void:
 	parked_body = StaticBody3D.new()
 	parked_body.name = "ParkedVehicles"
 	add_child(parked_body)
+	street_body = StaticBody3D.new()
+	street_body.name = "StreetFurniture"
+	street_body.collision_layer = FOOT_LAYER
+	street_body.collision_mask = 0
+	add_child(street_body)
 	for a in OS.get_cmdline_user_args():
 		if a.begins_with("--kitnear="):
 			kit_near = float(a.get_slice("=", 1))
@@ -1728,6 +1744,7 @@ func _life(life: Array, out: Dictionary, roads: Array = []) -> void:
 	var by := {}
 	var parked: Array = []
 	var spots: Array = []                                     # stalls, carts, shades: [kind, position, yaw] (city_activity.gd)
+	var solids: Array = []                                    # the furniture: [pos, radius, height] or [Transform3D, AABB]
 	var names0: Array = life_names
 	var segs := _road_segs(roads)
 	for rec in life:
@@ -1775,6 +1792,14 @@ func _life(life: Array, out: Dictionary, roads: Array = []) -> void:
 		if not by.has(key):
 			by[key] = []
 		by[key].append(Transform3D(bs, Vector3(v[0], v[1], v[2])))
+		var lnm: String = names0[kind] if kind < names0.size() else ""
+		if lnm.begins_with("street_") or lnm.begins_with("sf_"):     # (someone standing about: a body's width)
+			solids.append([Vector3(v[0], v[1], v[2]), 0.26, 1.7])
+		elif SOLID_CYL.has(lnm):
+			var cy: Array = SOLID_CYL[lnm]
+			solids.append([Vector3(v[0], v[1], v[2]), float(cy[0]) * v[4], float(cy[1]) * v[4]])
+		elif lnm in SOLID_BOX and kind < life_boxes.size() and (life_boxes[kind] as AABB).size.length() > 0.1:
+			solids.append([Transform3D(bs, Vector3(v[0], v[1], v[2])), life_boxes[kind]])
 	var mms := []
 	var names: Array = life_names
 	for key in by:
@@ -1814,6 +1839,7 @@ func _life(life: Array, out: Dictionary, roads: Array = []) -> void:
 		mms.append([mm, far + LIFE_CELL * 0.71, 0.0])
 	out["life"] = mms
 	out["parked"] = parked
+	out["solids"] = solids
 	out["spots"] = spots
 
 
@@ -2622,6 +2648,32 @@ func _instance(k: Vector2i, d: Dictionary) -> void:
 			PhysicsServer3D.free_rid(prid)
 			for sh in shapes:
 				PhysicsServer3D.free_rid(sh))
+	var solid_list: Array = [] if no_parked or "--nosolids" in OS.get_cmdline_user_args() else d.get("solids", [])
+	if not solid_list.is_empty():
+		var srid := PhysicsServer3D.body_create()
+		PhysicsServer3D.body_set_mode(srid, PhysicsServer3D.BODY_MODE_STATIC)
+		PhysicsServer3D.body_set_space(srid, get_world_3d().space)
+		PhysicsServer3D.body_set_collision_layer(srid, FOOT_LAYER)
+		PhysicsServer3D.body_set_collision_mask(srid, 0)
+		PhysicsServer3D.body_attach_object_instance_id(srid, street_body.get_instance_id())
+		var sshapes: Array = []
+		for so in solid_list:
+			var sh2: RID
+			if so[0] is Transform3D:
+				var sx: Transform3D = so[0]
+				var sb: AABB = so[1]
+				sh2 = PhysicsServer3D.box_shape_create()
+				PhysicsServer3D.shape_set_data(sh2, sb.size * sx.basis.get_scale() * 0.5 * Vector3(0.95, 1.0, 0.95))
+				PhysicsServer3D.body_add_shape(srid, sh2, Transform3D(sx.basis.orthonormalized(), sx * sb.get_center()))
+			else:
+				sh2 = PhysicsServer3D.cylinder_shape_create()
+				PhysicsServer3D.shape_set_data(sh2, {"radius": float(so[1]), "height": float(so[2])})
+				PhysicsServer3D.body_add_shape(srid, sh2, Transform3D(Basis(), (so[0] as Vector3) + Vector3.UP * float(so[2]) * 0.5))
+			sshapes.append(sh2)
+		node.tree_exiting.connect(func() -> void:
+			PhysicsServer3D.free_rid(srid)
+			for sh3 in sshapes:
+				PhysicsServer3D.free_rid(sh3))
 	for lm in ([] if "--nolife" in OS.get_cmdline_user_args() else d.get("life", [])):
 		if await _due(node):
 			queued.erase(k)
@@ -2811,7 +2863,7 @@ func height_at(x: float, z: float) -> float:
 		if hit.is_empty():
 			return NAN
 		var o = hit["collider"]
-		if not (o == parked_body or o is AnimatableBody3D or o is PhysicsBody3D and not o is StaticBody3D):
+		if not (o == parked_body or o == street_body or o is AnimatableBody3D or o is PhysicsBody3D and not o is StaticBody3D):
 			return hit["position"].y
 		skip.append(hit["rid"])                        # (a vehicle or a body that moves: through it, to what's under)
 		q.exclude = skip
@@ -2830,7 +2882,7 @@ func ground_near(x: float, y: float, z: float, up := 1.0, down := 1.5) -> float:
 		if hit.is_empty():
 			return NAN
 		var o = hit["collider"]
-		if not (o == parked_body or o is AnimatableBody3D or o is PhysicsBody3D and not o is StaticBody3D):
+		if not (o == parked_body or o == street_body or o is AnimatableBody3D or o is PhysicsBody3D and not o is StaticBody3D):
 			return hit["position"].y
 		skip.append(hit["rid"])
 		q.exclude = skip
@@ -2841,17 +2893,23 @@ func ground_near(x: float, y: float, z: float, up := 1.0, down := 1.5) -> float:
 ## yours: anything that isn't the city)?
 var _ped_q: PhysicsShapeQueryParameters3D
 
-func vehicle_at(p: Vector3) -> bool:
+## vehicle_at, or the street's furniture (a tree, a pole, a stall, a bench): somewhere a person can't be.
+func solid_at(p: Vector3) -> bool:
+	return vehicle_at(p, not "--oldsight" in OS.get_cmdline_user_args())
+
+
+func vehicle_at(p: Vector3, furniture := false) -> bool:
 	var space := get_world_3d().direct_space_state
 	if _ped_q == null:                                   # (one ball, one query, kept: asked many times a second)
 		var ball := SphereShape3D.new()
 		ball.radius = 0.35
 		_ped_q = PhysicsShapeQueryParameters3D.new()
 		_ped_q.shape = ball
+	_ped_q.collision_mask = 0xFFFFFFFF                   # (the furniture's layer too)
 	for h in [0.5, 1.1]:
 		_ped_q.transform = Transform3D(Basis(), p + Vector3.UP * h)
 		for r in space.intersect_shape(_ped_q, 6):
 			var o = r["collider"]
-			if o == parked_body or o is AnimatableBody3D or o is VehicleBody3D or o is RigidBody3D:
+			if o == parked_body or o is AnimatableBody3D or o is VehicleBody3D or o is RigidBody3D or (furniture and o == street_body):
 				return true
 	return false

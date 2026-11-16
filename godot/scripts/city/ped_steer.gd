@@ -1,11 +1,13 @@
 extends RefCounted
-## A person on foot finding their way past what's in it (city_walkers.gd, citizens.gd): parked vehicles and cars
-## (anything that isn't the city itself: city_streamer.gd's parked vehicles, the traffic's AnimatableBody3D, VehicleBody3D, RigidBody3D) and other
-## people. Two rays at the knee and the chest along the way they want to go; if something's there, the nearest
-## clear way round it (a little to the left first, as people here keep left, then the right, wider each time), or
-## nothing (stop: wait for it, or turn back). People: a gentle push apart within a body's width or so, and one
-## coming the other way passed on the left.
+## A person on foot finding their way past what's in it (city_walkers.gd, citizens.gd): anything solid and upright
+## ahead (a car parked or going by, a tree, a pole, a bin, a bench, a stall, a wall, a compound wall, a gate: the
+## street's furniture is solid to people on foot, city_streamer.gd FOOT_LAYER) and other people. Two rays, at the
+## knee (above any kerb) and the chest, along the way they want to go; if something's there, the nearest clear way
+## round it (a little to the left first, as people here keep left, then the right, wider each time), or nothing
+## (stop: wait for it, or turn back). People: a gentle push apart within a body's width or so, and one coming the
+## other way passed on the left.
 
+static var OLD := "--oldsight" in OS.get_cmdline_user_args()   # (testing: only vehicles seen, as before)
 const LOOK := 2.4                      # m ahead they look
 const TRIES := [0.0, 0.45, -0.45, 0.9, -0.9, 1.35, -1.35]   # radians off the way they want, in this order
 
@@ -15,22 +17,23 @@ static func is_vehicle(o, parked_body) -> bool:
 	return o != null and (o == parked_body or o is VehicleBody3D or o is RigidBody3D or o is AnimatableBody3D)
 
 
-## Anything solid ahead of `from` along `dir` within `dist` (the knee and the chest)? A vehicle, or (walls=true)
-## a wall too. Returns the hit point, or Vector3.INF if it's clear.
+## Anything solid ahead of `from` along `dir` within `dist` (the knee, above a kerb, and the chest)? Anything
+## upright: a vehicle, the street's furniture, a wall (not the ground rising, a ramp). The hit point, or INF if it's
+## clear. (`walls` is kept for the callers: everything upright counts now.)
 static func blocked(space: PhysicsDirectSpaceState3D, from: Vector3, dir: Vector3, dist: float, parked_body,
 		walls := false) -> Vector3:
-	for h in [0.45, 1.1]:
+	for h in [0.65, 1.2]:
 		var a: Vector3 = from + Vector3.UP * float(h)
 		var q := PhysicsRayQueryParameters3D.create(a, a + dir * dist)
 		var hit := space.intersect_ray(q)
 		if hit.is_empty():
 			continue
-		if is_vehicle(hit["collider"], parked_body) or walls:
+		if is_vehicle(hit["collider"], parked_body) or (absf((hit["normal"] as Vector3).y) < 0.6 and not OLD):
 			return hit["position"]
 	return Vector3.INF
 
 
-## The way to go: `want` (flat, normalised) if it's clear of vehicles, else the nearest clear way round, else
+## The way to go: `want` (flat, normalised) if it's clear, else the nearest clear way round, else
 ## Vector3.ZERO (nothing clear: stop).
 static func steer(space: PhysicsDirectSpaceState3D, from: Vector3, want: Vector3, parked_body, dist := LOOK) -> Vector3:
 	for a in TRIES:

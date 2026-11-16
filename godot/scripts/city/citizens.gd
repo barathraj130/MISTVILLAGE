@@ -822,7 +822,7 @@ func _clear_spot(at: Vector3, nb: PackedInt64Array) -> Vector3:
 func _covered(p: Vector3) -> bool:
 	if city == null or city.streamer == null:
 		return false
-	return city.streamer.vehicle_at(p)
+	return city.streamer.solid_at(p)
 
 
 func _route(from: Vector3, to: Vector3) -> Array:

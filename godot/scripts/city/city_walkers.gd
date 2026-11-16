@@ -301,8 +301,8 @@ func _spawn(q: Dictionary, at: Vector3) -> void:
 		if seen and d < 60.0:
 			continue
 		var side0 := _road_side(st)
-		if city.streamer.vehicle_at(pos + _left(st, s, 1.0) * side0):
-			continue                                     # (not set down inside a car parked on the footpath)
+		if city.streamer.solid_at(pos + _left(st, s, 1.0) * side0):
+			continue                                     # (not set down inside a parked car, a tree, a stall)
 		q["strip"] = j
 		q["pts"] = st["p"]
 		q["s"] = s
@@ -520,6 +520,25 @@ func _move(q: Dictionary, dt: float) -> void:
 	node.rotation.y = q["yaw"]
 
 
+## A crash in the street (city_traffic.gd): those near stop and look (a bad one, those nearest step back from it).
+func look_at_crash(at: Vector3, sev: float) -> void:
+	for q in people:
+		if q["state"] == "off" or not (q["node"] as Node3D).visible:
+			continue
+		var node: Node3D = q["node"]
+		var d := node.global_position.distance_to(at)
+		if d > 10.0 + 20.0 * sev:
+			continue
+		if q["state"] == "cross":                          # (crossing: on over, quicker)
+			continue
+		q["state"] = "pause"
+		q["timer"] = _rng.randf_range(3.0, 6.0) + sev * 6.0
+		q["want"] = atan2(at.x - node.global_position.x, at.z - node.global_position.z)
+		if d < 6.0 and sev > 0.4:                          # (too near: a step back, off toward the buildings)
+			q["side"] = -signf(_road_side(_strips[q["strip"]])) * 0.6
+		_anim(q, "Idle", 1.0)
+
+
 ## What's in the way along the footpath (ped_steer.gd): a parked vehicle (or a car up on the footpath) ahead, a
 ## step round it on its clear side, back on the paving after; no room round it, they turn back. Someone coming
 ## the other way close ahead: passed on the left (they keep left here); someone stood in the way, a moment's wait.
@@ -533,9 +552,9 @@ func _make_way(q: Dictionary, i: int, node: Node3D) -> bool:
 	var at := node.global_position
 	var lft := _left(st, float(q["s"]), 1.0)              # (the strip's left: what "side" is measured along)
 	q["in_t"] = float(q.get("in_t", randf() * 0.5)) - 0.1
-	if q["in_t"] <= 0.0 and city.streamer.vehicle_at(at):   # (in one: a car parked onto them) out to the side that's clear
+	if q["in_t"] <= 0.0 and city.streamer.solid_at(at):   # (in one: a car parked onto them) out to the side that's clear
 		for side in [float(q["side"]) + 1.3, float(q["side"]) - 1.3, float(q["side"]) + 2.4, float(q["side"]) - 2.4]:
-			if absf(side) <= hw + 1.0 and not city.streamer.vehicle_at(at + lft * (side - float(q["side"]))):
+			if absf(side) <= hw + 1.0 and not city.streamer.solid_at(at + lft * (side - float(q["side"]))):
 				q["side"] = side
 				q["round_t"] = 4.0
 				return false
