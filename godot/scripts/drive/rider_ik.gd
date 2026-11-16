@@ -19,6 +19,11 @@ var foot_down := 0.0
 var lean := 0.0
 var look := 0.0
 var weight := 1.0
+##   limbs     each limb's own weight (getting on and off: a hand to the bar first, the right leg over the seat)
+##   over      a limb's target overridden (in the world), blended by its own weight: the right foot's path over the
+##             seat, the feet on the ground beside the scooter
+var limbs := {"arm_l": 1.0, "arm_r": 1.0, "leg_l": 1.0, "leg_r": 1.0, "body": 1.0}
+var over := {}                       # limb → [world point, weight 0..1]
 var forward := Vector3.FORWARD       # the vehicle's forward, in the world (the knees and elbows bend toward it)
 var up := Vector3.UP
 
@@ -28,18 +33,33 @@ func _process_modification_with_delta(_delta: float) -> void:
 	if sk == null or weight < 0.005:
 		return
 	# the body first: a little more lean into the turn, the head toward level and the way he's going
+	var w0 := weight
+	weight = w0 * float(limbs["body"])
 	_turn_bone(sk, "spine_02", forward, -lean * 0.25)
 	_turn_bone(sk, "neck_01", forward, lean * 0.55)
 	_turn_bone(sk, "head", up, look * 0.6)
 	if grip_l and grip_r:
-		_limb(sk, "upperarm_l", "lowerarm_l", "hand_l", grip_l.global_position, -forward * 0.6 + Vector3.DOWN - _side(sk) * 0.6)
-		_limb(sk, "upperarm_r", "lowerarm_r", "hand_r", grip_r.global_position, -forward * 0.6 + Vector3.DOWN + _side(sk) * 0.6)
+		weight = w0 * float(limbs["arm_l"])
+		_limb(sk, "upperarm_l", "lowerarm_l", "hand_l", _aim("arm_l", grip_l.global_position), -forward * 0.6 + Vector3.DOWN - _side(sk) * 0.6)
+		weight = w0 * float(limbs["arm_r"])
+		_limb(sk, "upperarm_r", "lowerarm_r", "hand_r", _aim("arm_r", grip_r.global_position), -forward * 0.6 + Vector3.DOWN + _side(sk) * 0.6)
 	if foot_l and foot_r:
 		var fl := foot_l.global_position.lerp(ground_l, foot_down)
-		_limb(sk, "thigh_l", "calf_l", "foot_l", fl, forward + Vector3.UP * 0.3)
-		_limb(sk, "thigh_r", "calf_r", "foot_r", foot_r.global_position, forward + Vector3.UP * 0.3)
+		weight = w0 * float(limbs["leg_l"])
+		_limb(sk, "thigh_l", "calf_l", "foot_l", _aim("leg_l", fl), forward + Vector3.UP * 0.3)
 		_flat_foot(sk, "foot_l", "ball_l")
+		weight = w0 * float(limbs["leg_r"])
+		_limb(sk, "thigh_r", "calf_r", "foot_r", _aim("leg_r", foot_r.global_position), forward + Vector3.UP * 0.3)
 		_flat_foot(sk, "foot_r", "ball_r")
+	weight = w0
+
+
+## A limb's target: its own, or overridden (blended by the override's weight).
+func _aim(limb: String, own: Vector3) -> Vector3:
+	if not over.has(limb):
+		return own
+	var o: Array = over[limb]
+	return own.lerp(o[0], clampf(float(o[1]), 0.0, 1.0))
 
 
 ## His right, in the world (from the vehicle's forward and up).

@@ -296,6 +296,8 @@ var _grips: Array = []             # [left, right] markers on the bar
 var _pegs: Array = []              # [left, right] where his feet rest (the floorboard)
 var _rik                           # rider_ik.gd on his skeleton
 var _foot_down := 0.0
+var _rider_seat := Vector3.ZERO     # where his model sits on the seat (in the vehicle's frame)
+var mounting := false              # getting on or off: the rider's pose is the sequence's, not the ride's
 var _paint := Color(0, 0, 0, 0)    # body colour of the car you took (alpha 0: the model's own)
 var kit: CockpitKit                # analog cluster, live door mirrors, wipers
 var night := 0.0                   # set by the game: dial backlighting
@@ -653,6 +655,89 @@ func _rider_hands(rider: Node3D) -> void:
 		_ride_test.call_deferred()
 
 
+## Where he stands beside a two-wheeler to get on or off (its left, by the seat), on the ground, in the world.
+func beside_point() -> Vector3:
+	var p := to_global(_rider_seat + Vector3(0.62, 0.0, 0.05))
+	var q := PhysicsRayQueryParameters3D.create(p + Vector3.UP * 1.5, p + Vector3.DOWN * 2.5)
+	q.exclude = [get_rid()]
+	var hit := get_world_3d().direct_space_state.intersect_ray(q)
+	return (hit["position"] as Vector3) if not hit.is_empty() else Vector3(p.x, global_position.y - 0.3, p.z)
+
+
+func _rider_ap() -> AnimationPlayer:
+	var aps := _rider.find_children("*", "AnimationPlayer", true, false)
+	return aps[0] as AnimationPlayer if not aps.is_empty() else null
+
+
+## Off: the right hand leaves the bar, he rises out of the seat as the right leg swings back over it, both feet on the
+## ground beside it, the left hand off last; standing (his model hidden then: the walker takes his place there).
+func dismount() -> void:
+	await _mount_seq(false)
+
+
+## On: standing beside it, the left hand to the bar, the right leg up and over the seat, he sits, the right hand to
+## its grip, the feet up on the floorboard; the ride's pose his again.
+func mount() -> void:
+	await _mount_seq(true)
+
+
+func _mount_seq(on: bool) -> void:
+	if _rider == null or _rik == null:
+		return
+	mounting = true
+	var ap := _rider_ap()
+	var stand_w := beside_point()
+	var stand := to_local(stand_w)                       # (his feet on the ground beside, in the vehicle's frame)
+	var origin_stand := Vector3(stand.x, stand.y, _rider_seat.z)
+	var seat_top := _rider_seat + RIDE_HIP + Vector3(0, 0.05, 0)
+	var over_seat := Vector3(0.0, seat_top.y + 0.28, _rider_seat.z - 0.45)   # (the right foot's highest point, over the seat's back)
+	var right_ground := Vector3(origin_stand.x - 0.22, stand.y + 0.08, origin_stand.z + 0.05)
+	var left_ground := Vector3(origin_stand.x + 0.05, stand.y + 0.08, origin_stand.z + 0.05)
+	_rider.visible = true
+	if ap and ap.has_animation("Idle"):
+		ap.play("Idle" if on else "Ride", 0.0)
+	var dur := 1.4
+	var t := 0.0
+	while t < dur:
+		var u := t / dur
+		var k := u if on else 1.0 - u                    # (0 standing beside .. 1 seated: off runs it backwards)
+		var lift := smoothstep(0.2, 0.75, k)             # his body from beside to the seat
+		_rider.position = origin_stand.lerp(_rider_seat, lift) + Vector3.UP * 0.12 * sin(PI * lift)
+		if ap:
+			var want := "Ride" if k > 0.45 else "Idle"
+			if ap.current_animation != want and ap.has_animation(want):
+				ap.play(want, 0.45)
+		_rik.limbs["body"] = smoothstep(0.6, 1.0, k)
+		_rik.limbs["arm_l"] = smoothstep(0.0, 0.2, k)    # the left hand to the bar first
+		_rik.limbs["arm_r"] = smoothstep(0.65, 0.9, k)   # the right one once he's sitting
+		_rik.limbs["leg_l"] = 1.0
+		_rik.limbs["leg_r"] = 1.0
+		var rf: Vector3                                  # the right foot: on the ground, up over the seat's back, down to its place
+		if k < 0.25:
+			rf = right_ground
+		elif k < 0.55:
+			rf = right_ground.lerp(over_seat, smoothstep(0.25, 0.55, k))
+		else:
+			rf = over_seat.lerp(to_local((_pegs[1] as Node3D).global_position), smoothstep(0.55, 0.9, k))
+		_rik.over["leg_r"] = [to_global(rf), 1.0 - smoothstep(0.88, 1.0, k)]
+		_rik.over["leg_l"] = [to_global(left_ground), 1.0 - smoothstep(0.8, 1.0, k)]   # (the left foot on the ground till he's up)
+		await get_tree().process_frame
+		t += get_process_delta_time()
+	_rik.over.clear()
+	for l in _rik.limbs:
+		_rik.limbs[l] = 1.0
+	if on:
+		_rider.position = _rider_seat
+		if ap and ap.has_animation("Ride"):
+			ap.play("Ride", 0.2)
+	else:
+		_rider.visible = false
+		_rider.position = _rider_seat
+		if ap and ap.has_animation("Ride"):
+			ap.play("Ride", 0.0)
+	mounting = false
+
+
 ## (testing) --ridetest: standing (his foot down), pulling away, a left turn at speed, a right one, braking to a
 ## stop; a picture from beside him at each (user://ride_<n>.jpg), the hands and feet printed.
 func _ride_test() -> void:
@@ -767,6 +852,7 @@ func _settle_rider(rider: Node3D, hip: Vector3, helmet: String) -> void:
 		var at := global_transform.affine_inverse() * (sk.global_transform * mid)     # his hips, in the scooter's frame
 		rider.position += hip - at
 		rider.force_update_transform()
+	_rider_seat = rider.position
 	if helmet != "" and ResourceLoader.exists(helmet):
 		_put_on_helmet(rider, helmet)
 	_rider_hands(rider)

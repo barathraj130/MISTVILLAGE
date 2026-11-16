@@ -814,10 +814,19 @@ var _sig_prev := {}
 
 
 ## F: step out of the car (driver's door, on the right) or back in when you're next to it.
+var _switching := false                    # (getting on or off a two-wheeler: the sequence is playing)
+
+
 func toggle_on_foot() -> bool:
+	if _switching:
+		return false
+	var bike: bool = car.get("two_wheeler") == true and car.get("_rik") != null
 	if walker == null:
 		if absf(car.speed) > 1.0:                               # (moving: nothing happens until he stops)
 			return false
+		if bike:                                                # (off a two-wheeler: he gets off it, then walks)
+			_get_off_bike()
+			return true
 		Walker.avatar = "res://assets/people/story_karthik.glb"     # you on foot are Karthik, the story's own man
 		walker = Walker.new()
 		walker.name = "OnFoot"
@@ -842,6 +851,9 @@ func toggle_on_foot() -> bool:
 		return true
 	if walker.global_position.distance_to(car.global_position) > 4.5:
 		return false
+	if bike:                                                    # (onto a two-wheeler: to its side, then on)
+		_get_on_bike()
+		return true
 	walker.deactivate()
 	walker.queue_free()
 	walker = null
@@ -853,6 +865,102 @@ func toggle_on_foot() -> bool:
 	traffic.player = car
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 	return true
+
+
+var _mt_started := false
+
+
+## (testing) --mounttest: off the scooter, a few steps away, back on; pictures from beside it partway through each
+## (user://mount_<n>.jpg).
+func _mount_test() -> void:
+	await get_tree().create_timer(4.0).timeout
+	var shot := func(n: String) -> void:
+		var c := Camera3D.new()
+		c.fov = 45.0
+		add_child(c)
+		var side: Vector3 = car.global_basis.x.normalized()
+		c.global_position = car.global_position + side * 2.6 + car.global_basis.z * 0.3 + Vector3.UP * 1.2
+		c.look_at(car.global_position + Vector3.UP * 0.8, Vector3.UP)
+		var was := get_viewport().get_camera_3d()
+		c.make_current()
+		for f in 3:
+			await RenderingServer.frame_post_draw
+		get_viewport().get_texture().get_image().save_jpg(ProjectSettings.globalize_path("user://mount_%s.jpg" % n), 0.85)
+		if was:
+			was.make_current()
+		c.queue_free()
+	toggle_on_foot()
+	for i in 4:
+		await get_tree().create_timer(0.3).timeout
+		await shot.call("off_%d" % i)
+	await get_tree().create_timer(1.0).timeout
+	print("MOUNT off: walker %s at %s, the scooter's rider shown %s" % [str(walker != null), str(walker.global_position) if walker else "-", str(car._rider.visible)])
+	await shot.call("off_done")
+	walker.global_position += car.global_basis.x.normalized() * 1.5   # (a step or two away, to walk back to it)
+	await get_tree().create_timer(1.0).timeout
+	toggle_on_foot()
+	for i in 6:
+		await get_tree().create_timer(0.4).timeout
+		await shot.call("on_%d" % i)
+	await get_tree().create_timer(1.5).timeout
+	print("MOUNT on: walker %s, the rider shown %s, mounting %s" % [str(walker != null), str(car._rider.visible), str(car.mounting)])
+	await shot.call("on_done")
+	get_tree().quit()
+
+
+## Off the scooter: the getting-off (jeep.gd dismount), then he's on his feet where he stood up.
+func _get_off_bike() -> void:
+	_switching = true
+	car.freeze = false
+	await car.dismount()
+	var at: Vector3 = car.beside_point()
+	Walker.avatar = "res://assets/people/story_karthik.glb"
+	walker = Walker.new()
+	walker.name = "OnFoot"
+	walker.walk_speed = 1.4
+	walker.run_speed = 4.2
+	add_child(walker)
+	Walker.avatar = ""
+	walker.spawn_at(at + Vector3(0, 0.1, 0), at + car.forward() * 12.0)
+	walker.activate()
+	_park_t = 3.0
+	_settle_parked()
+	streamer.target = walker
+	map.target = walker
+	traffic.player = walker
+	if not _taught_foot:
+		_taught_foot = true
+		hud.warn("WASD walk · Shift run · F at the scooter", 4.0)
+	_switching = false
+
+
+## Onto the scooter: he walks to its left side by the seat (a few steps at most), then gets on (jeep.gd mount); the
+## controls are his once he's sitting.
+func _get_on_bike() -> void:
+	_switching = true
+	var to: Vector3 = car.beside_point()
+	var t := 0.0
+	walker.active = false
+	while t < 2.5 and Vector2(walker.global_position.x - to.x, walker.global_position.z - to.z).length() > 0.25:
+		var d: Vector3 = to - walker.global_position
+		walker.rotation.y = atan2(-d.x, -d.z)               # (the keys' forward: toward his place by the seat)
+		walker.active = true
+		walker.auto_input = Vector2(0, -1)
+		await get_tree().physics_frame
+		t += get_physics_process_delta_time()
+	walker.auto_input = Vector2.INF
+	walker.deactivate()
+	walker.queue_free()
+	walker = null
+	cam.make_current()
+	car.freeze = false
+	streamer.target = car
+	map.target = car
+	traffic.player = car
+	await car.mount()
+	ask_shift()
+	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
+	_switching = false
 
 
 func _red_light_check() -> void:
@@ -1528,6 +1636,11 @@ func _drive_camera(dt: float) -> void:
 
 
 func _process(dt: float) -> void:
+	if car and car.get("_rider") != null and is_instance_valid(car._rider) and not car.mounting:
+		car._rider.visible = walker == null and not car.cockpit   # (on foot, he isn't also sitting on the scooter)
+	if not _mt_started and "--mounttest" in OS.get_cmdline_user_args() and car and car.get("_rik") != null:
+		_mt_started = true
+		_mount_test.call_deferred()
 	var _p0 := Time.get_ticks_usec()
 	_process_timed(dt)
 	if _park_t > 0.0:
