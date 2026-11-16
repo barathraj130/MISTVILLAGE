@@ -2796,12 +2796,62 @@ func _shape(node: Node3D, cs: CollisionShape3D, surface := "concrete") -> void:
 			cs.queue_free())
 
 
-## Ground height under (x, z) from loaded tiles, or NAN.
+## Ground height under (x, z) from loaded tiles, or NAN: what the city is built of there (the ground, a road, a
+## footpath, a flyover, a roof), never a vehicle: a parked one's box, a car going by, anything that moves (a person
+## stood "on the ground" beside a parked car had been put on its roof, one crossing on a passing car's bonnet).
 func height_at(x: float, z: float) -> float:
 	var k := Vector2i(floori(x / tile), floori(z / tile))
 	if not loaded.has(k):
 		return NAN
 	var space := get_world_3d().direct_space_state
 	var q := PhysicsRayQueryParameters3D.create(Vector3(x, 3000, z), Vector3(x, -500, z))
-	var hit := space.intersect_ray(q)
-	return hit["position"].y if hit else NAN
+	var skip: Array[RID] = []
+	for i in 6:
+		var hit := space.intersect_ray(q)
+		if hit.is_empty():
+			return NAN
+		var o = hit["collider"]
+		if not (o == parked_body or o is AnimatableBody3D or o is PhysicsBody3D and not o is StaticBody3D):
+			return hit["position"].y
+		skip.append(hit["rid"])                        # (a vehicle or a body that moves: through it, to what's under)
+		q.exclude = skip
+	return NAN
+
+
+## The ground to stand on at (x, z) near height `y` (a person's feet there now, a footpath's line): the surface
+## from `up` m above it down to `down` m below, vehicles not counted; an awning, a balcony, a stall's roof over
+## the footpath is higher than `up` and isn't ground. NAN if nothing's there (then the line's own height).
+func ground_near(x: float, y: float, z: float, up := 1.0, down := 1.5) -> float:
+	var space := get_world_3d().direct_space_state
+	var q := PhysicsRayQueryParameters3D.create(Vector3(x, y + up, z), Vector3(x, y - down, z))
+	var skip: Array[RID] = []
+	for i in 4:
+		var hit := space.intersect_ray(q)
+		if hit.is_empty():
+			return NAN
+		var o = hit["collider"]
+		if not (o == parked_body or o is AnimatableBody3D or o is PhysicsBody3D and not o is StaticBody3D):
+			return hit["position"].y
+		skip.append(hit["rid"])
+		q.exclude = skip
+	return NAN
+
+
+## Is a person's body (a 0.35 m ball at the knees and the chest) at `p` inside a vehicle (parked, in the traffic,
+## yours: anything that isn't the city)?
+var _ped_q: PhysicsShapeQueryParameters3D
+
+func vehicle_at(p: Vector3) -> bool:
+	var space := get_world_3d().direct_space_state
+	if _ped_q == null:                                   # (one ball, one query, kept: asked many times a second)
+		var ball := SphereShape3D.new()
+		ball.radius = 0.35
+		_ped_q = PhysicsShapeQueryParameters3D.new()
+		_ped_q.shape = ball
+	for h in [0.5, 1.1]:
+		_ped_q.transform = Transform3D(Basis(), p + Vector3.UP * h)
+		for r in space.intersect_shape(_ped_q, 6):
+			var o = r["collider"]
+			if o == parked_body or o is AnimatableBody3D or o is VehicleBody3D or o is RigidBody3D:
+				return true
+	return false

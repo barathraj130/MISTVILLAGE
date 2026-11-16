@@ -30,6 +30,7 @@ const Prof := preload("res://scripts/drive/prof.gd")
 const CrowdClips := preload("res://scripts/city/crowd_clips.gd")
 const Living := preload("res://scripts/city/sf_living.gd")
 const HeadLook := preload("res://scripts/story/head_look.gd")
+const PedSteer := preload("res://scripts/city/ped_steer.gd")
 const DATA := "res://story/citizens.json"
 const KNOW := "res://story/knowledge.json"
 const STORY := "res://story/slice.json"
@@ -252,6 +253,13 @@ func _think(c: Dictionary, m: float, me: Vector3, off: bool) -> void:
 			c["path"] = c["mid_path"]
 			c["pi"] = int(c.get("mid_pi", 0))
 			c["dest"] = c.get("mid_dest", [spot, 0.0])
+			var dp: Vector3 = c["dest"][0]                 # (worked out unseen: its tile's parked cars weren't there yet)
+			if dp != Vector3.INF and _astar.get_point_count() > 0:
+				var cl := _clear_spot(dp, _astar.get_point_connections(_astar.get_closest_point(dp)))
+				if cl != dp:
+					c["dest"] = [cl, c["dest"][1]]
+					if not (c["path"] as Array).is_empty():
+						c["path"][c["path"].size() - 1] = cl
 			c["act"] = act
 			c["place"] = target_key
 			_play(c, "Walk" if c["pi"] < c["path"].size() else _pose(act))
@@ -470,6 +478,8 @@ func _bring(c: Dictionary, at: Vector3) -> void:
 		return
 	add_child(n)
 	n.name = "Citizen_" + str(p["id"])
+	if _astar.get_point_count() > 0:                   # (never into a parked vehicle, where they come into sight)
+		at = _clear_spot(at, _astar.get_point_connections(_astar.get_closest_point(at)))
 	n.global_position = Vector3(at.x, _ground(at, at.y), at.z)
 	var aps := n.find_children("*", "AnimationPlayer", true, false)
 	if aps.is_empty():
@@ -491,9 +501,11 @@ func _bring(c: Dictionary, at: Vector3) -> void:
 
 ## The height to stand at: the footpath's own, unless the ground there is higher (some footpaths' lines lie under
 ## the ground the city built: the map's heights and the streets' differ); a footpath on a flyover stays up.
+## Never something over the footpath (a shop's awning, a roof, a balcony): only ground within a step or so of its line.
+## (Vehicles aren't ground at all: city_streamer.gd height_at looks through them.)
 func _ground(p: Vector3, path_y: float) -> float:
-	var g: float = city.streamer.height_at(p.x, p.z) if city.streamer else NAN
-	return path_y if is_nan(g) else maxf(path_y, g)
+	var g: float = city.streamer.ground_near(p.x, path_y, p.z, 1.0, 1.2) if city.streamer else NAN
+	return path_y if is_nan(g) else g                  # (the street as built: their feet on it, not in it, not over)
 
 
 func _away(c: Dictionary) -> void:
@@ -525,12 +537,50 @@ func _move(c: Dictionary, dt: float) -> void:
 				_arrive(c)
 			return
 		var pace := HELP_PACE if c.get("gather_t", 0.0) > 0.0 else (RAIN_PACE if _rain() else PACE)   # (hurrying)
-		var step := d.normalized() * minf(pace * dt, d.length())
-		_barge(c, n, d.normalized() * pace)
+		var go := d.normalized()
+		c["steer_t"] = float(c.get("steer_t", 0.0)) - dt
+		if c["steer_t"] <= 0.0:                          # (round a parked car, people; a few times a second)
+			c["steer_t"] = 0.2
+			var way := PedSteer.steer(n.get_world_3d().direct_space_state, n.global_position, go,
+				city.streamer.parked_body, minf(PedSteer.LOOK, d.length() + 0.5))
+			var others: Array = []
+			for o in people:
+				if o != c and o["node"] != null and is_instance_valid(o["node"]):
+					others.append((o["node"] as Node3D).global_position)
+			c["way"] = way
+			c["apart"] = PedSteer.apart(n.global_position, go, others)
+		var way2: Vector3 = c.get("way", go)
+		if way2 == Vector3.ZERO:                         # (nothing clear: a moment's wait, it may move)
+			c["blocked_t"] = float(c.get("blocked_t", 0.0)) + dt
+			if float(c["blocked_t"]) < 3.0:
+				return
+			way2 = go                                     # (still there: on as best they can, the way they meant)
+		else:
+			c["blocked_t"] = 0.0
+		var ap: Vector3 = c.get("apart", Vector3.ZERO)
+		go = (way2 + ap * 0.8)
+		go.y = 0.0
+		go = go.normalized() if go.length() > 0.01 else way2
+		var step := go * minf(pace * dt, d.length())
+		d = go * d.length()                              # (facing the way they step)
+		_barge(c, n, go * pace)
 		n.global_position += step
 		n.global_position.y = lerpf(n.global_position.y, _ground(n.global_position, tgt.y), 1.0 - exp(-dt * 6.0))
 		n.rotation.y = lerp_angle(n.rotation.y, atan2(d.x, d.z), 1.0 - exp(-dt * 8.0))
 		return
+	c["cover_t"] = float(c.get("cover_t", randf_range(1.0, 3.0))) - dt
+	if c["cover_t"] <= 0.0 and _astar.get_point_count() > 0:   # (a car parked where they stand: they step aside)
+		c["cover_t"] = 3.0
+		var here := n.global_position
+		if _covered(here):
+			var cl := _clear_spot(here, _astar.get_point_connections(_astar.get_closest_point(here)))
+			if cl != here:
+				c["path"] = [cl]
+				c["pi"] = 0
+				if c.get("dest", []) is Array and (c["dest"] as Array).size() > 1:
+					c["dest"] = [cl, c["dest"][1]]
+				_play(c, "Walk")
+				return
 	var face: float = c.get("face", n.rotation.y)
 	n.rotation.y = lerp_angle(n.rotation.y, face, 1.0 - exp(-dt * 4.0))
 	c["gest"] -= dt
@@ -742,9 +792,37 @@ func _spot_for(where, p: Dictionary, idx: int) -> Array:
 	if not nb.is_empty():                              # a step along the path, by who they are
 		var along := (_astar.get_point_position(nb[0]) - at).normalized()
 		at += along * float((idx + 1) / 2) * (1.0 if idx % 2 == 0 else -1.0) * 1.3   # (0, +1.3, -1.3, +2.6 ...)
+	at = _clear_spot(at, nb)
 	var to := Vector2(pl.x - at.x, pl.y - at.z)
 	var face := atan2(to.x, to.y) if to.length() > 0.5 else 0.0
 	return [at, face]
+
+
+## A spot to stand that no vehicle covers: this one, or the nearest along the footpath that's clear (a car parked
+## up on the footpath over the shop's spot: they stand beside it, not in it or on its roof).
+func _clear_spot(at: Vector3, nb: PackedInt64Array) -> Vector3:
+	if not _covered(at):
+		return at
+	var along := Vector3.RIGHT
+	if not nb.is_empty():
+		along = _astar.get_point_position(nb[0]) - at
+		along.y = 0.0
+		along = along.normalized() if along.length() > 0.01 else Vector3.RIGHT
+	for k in [1, -1, 2, -2, 3, -3, 4, -4, 5, -5]:
+		var p := at + along * 1.2 * float(k)
+		var g: float = city.streamer.ground_near(p.x, at.y, p.z) if city and city.streamer else NAN
+		if not is_nan(g):
+			p.y = g
+		if not _covered(p):
+			return p
+	return at
+
+
+## Is there a vehicle at (p) where a person would stand (the knees and the chest, a body's width round)?
+func _covered(p: Vector3) -> bool:
+	if city == null or city.streamer == null:
+		return false
+	return city.streamer.vehicle_at(p)
 
 
 func _route(from: Vector3, to: Vector3) -> Array:

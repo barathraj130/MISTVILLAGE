@@ -25,6 +25,8 @@ const KINDS := ["m1", "m2", "m3", "m4", "m5", "m6", "w1", "w2", "w3", "w4", "w5"
 const STRIDE := 1.25
 const CrowdClips := preload("res://scripts/city/crowd_clips.gd")
 const Living := preload("res://scripts/city/sf_living.gd")
+const PedSteer := preload("res://scripts/city/ped_steer.gd")
+const Prof := preload("res://scripts/drive/prof.gd")
 const SPAWN_MIN := 35.0
 const SPAWN_MAX := 85.0
 const NEAR := 50.0
@@ -38,6 +40,7 @@ var _strips_t := 0.0
 var _frame := 0
 var crossed := 0                               # (testing: crossings made, start to the far kerb)
 var gave_up := 0
+var _avoid := not "--noavoid" in OS.get_cmdline_user_args()   # (testing: the old way, to compare what it costs)
 
 
 func _ready() -> void:
@@ -157,6 +160,12 @@ func _test(dt: float, me: Node3D) -> void:
 
 
 func _process(dt: float) -> void:
+	var t0 := Time.get_ticks_usec()
+	_process_timed(dt)
+	Prof.add("walkers", t0)
+
+
+func _process_timed(dt: float) -> void:
 	if city == null or people.is_empty():
 		return
 	var me: Node3D = city.walker if city.walker else city.car
@@ -279,11 +288,14 @@ func _spawn(q: Dictionary, at: Vector3) -> void:
 		var seen := (pos - at).normalized().dot(look) > 0.5 and attempt < 9
 		if seen and d < 60.0:
 			continue
+		var side0 := _road_side(st)
+		if city.streamer.vehicle_at(pos + _left(st, s, 1.0) * side0):
+			continue                                     # (not set down inside a car parked on the footpath)
 		q["strip"] = j
 		q["pts"] = st["p"]
 		q["s"] = s
 		q["dir"] = 1.0 if _rng.randf() < 0.5 else -1.0
-		q["side"] = _road_side(st)                       # (on the paving by the road, not the verge behind it)
+		q["side"] = side0                                # (on the paving by the road, not the verge behind it)
 		q["state"] = "walk"
 		q["timer"] = 0.0
 		q["with"] = -1
@@ -315,6 +327,8 @@ func _think(q: Dictionary, i: int, dt: float, me: Node3D, on_foot: bool, vel: Ve
 				_anim(q, "Walk", float(q["speed"]) / STRIDE)
 		"walk":
 			q["next_pause"] = float(q["next_pause"]) - dt
+			if _avoid and (d >= NEAR or (_frame + i) % 3 == 0) and _make_way(q, i, node):   # (far ones: each time they're moved)
+				return
 			if on_foot and d < 3.0:                     # Karthik in the way: a step to the other side
 				var fwd := Vector3(sin(float(q["yaw"])), 0, cos(float(q["yaw"])))
 				var to_me := me.global_position - node.global_position
@@ -409,8 +423,17 @@ func _move(q: Dictionary, dt: float) -> void:
 	if q["state"] == "cross":                            # straight over the road
 		var cr: Dictionary = q["cross"]
 		var to: Vector3 = cr["to"]
-		node.global_position = node.global_position.move_toward(to, float(q["speed"]) * 1.15 * dt)
-		var y: float = city.streamer.height_at(node.global_position.x, node.global_position.z)
+		var way := Vector3(to.x - node.global_position.x, 0.0, to.z - node.global_position.z)
+		if way.length() > 0.5:                           # (round a vehicle parked at the kerb, never through it)
+			var go := PedSteer.steer(get_world_3d().direct_space_state, node.global_position, way.normalized(),
+				city.streamer.parked_body, minf(PedSteer.LOOK, way.length()))
+			if go == Vector3.ZERO:
+				return                                   # (in the way, for now: wait)
+			node.global_position += go * minf(float(q["speed"]) * 1.15 * dt, way.length())
+			q["want"] = atan2(go.x, go.z)
+		else:
+			node.global_position = node.global_position.move_toward(to, float(q["speed"]) * 1.15 * dt)
+		var y: float = city.streamer.ground_near(node.global_position.x, node.global_position.y, node.global_position.z, 1.0, 1.2)
 		if not is_nan(y):
 			node.global_position.y = y
 		q["yaw"] = rotate_toward(float(q["yaw"]), float(q["want"]), dt * 3.2)
@@ -428,11 +451,94 @@ func _move(q: Dictionary, dt: float) -> void:
 		q["want"] = _heading(st, float(q["s"]), float(q["dir"]))
 	var target: Vector3 = _at(st, clampf(float(q["s"]), 0.0, st["c"][st["c"].size() - 1])) \
 		+ _left(st, float(q["s"]), 1.0) * float(q["side"])
+	var g: float = city.streamer.ground_near(target.x, target.y, target.z, 1.0, 1.2) if _avoid else NAN
+	if not is_nan(g):                                    # (on the street as the game built it: the map's footpath
+		target.y = g                                     #  line can lie a little under it or over it)
 	if moving:
 		var cur := node.global_position
 		node.global_position = cur.move_toward(target, maxf(float(q["speed"]) * 3.0, 3.0) * dt)   # (the side step eased)
+	elif absf(node.global_position.y - target.y) > 0.02:
+		node.global_position.y = target.y
 	q["yaw"] = rotate_toward(float(q["yaw"]), float(q["want"]), dt * 3.2)   # (turning, never a snap)
 	node.rotation.y = q["yaw"]
+
+
+## What's in the way along the footpath (ped_steer.gd): a parked vehicle (or a car up on the footpath) ahead, a
+## step round it on its clear side, back on the paving after; no room round it, they turn back. Someone coming
+## the other way close ahead: passed on the left (they keep left here); someone stood in the way, a moment's wait.
+## True if they stopped.
+func _make_way(q: Dictionary, i: int, node: Node3D) -> bool:
+	var st: Dictionary = _strips[q["strip"]]
+	var hw: float = st["hw"]
+	var fwd := Vector3(sin(float(q["yaw"])), 0.0, cos(float(q["yaw"])))
+	var space := get_world_3d().direct_space_state
+	var pb = city.streamer.parked_body
+	var at := node.global_position
+	var lft := _left(st, float(q["s"]), 1.0)              # (the strip's left: what "side" is measured along)
+	q["in_t"] = float(q.get("in_t", randf() * 0.5)) - 0.1
+	if q["in_t"] <= 0.0 and city.streamer.vehicle_at(at):   # (in one: a car parked onto them) out to the side that's clear
+		for side in [float(q["side"]) + 1.3, float(q["side"]) - 1.3, float(q["side"]) + 2.4, float(q["side"]) - 2.4]:
+			if absf(side) <= hw + 1.0 and not city.streamer.vehicle_at(at + lft * (side - float(q["side"]))):
+				q["side"] = side
+				q["round_t"] = 4.0
+				return false
+	if q["in_t"] <= 0.0:
+		q["in_t"] = 0.5
+	var hit := PedSteer.blocked(space, at, fwd, PedSteer.LOOK, pb)
+	if hit != Vector3.INF:
+		var lat := (hit - at).dot(lft)
+		var away := -signf(lat) if absf(lat) > 0.05 else float(q["dir"])   # (dead ahead: to their left)
+		for side in [float(q["side"]) + away * 1.2, float(q["side"]) - away * 1.2]:
+			if absf(side) > hw + 0.7:
+				continue
+			var p2: Vector3 = at + lft * (float(side) - float(q["side"]))
+			if PedSteer.blocked(space, p2, fwd, PedSteer.LOOK, pb) == Vector3.INF \
+					and PedSteer.blocked(space, at, (p2 - at).normalized(), (p2 - at).length() + 0.3, pb, true) == Vector3.INF:
+				q["side"] = side
+				q["round_t"] = 4.0                     # (back on the paving once they're by it)
+				return false
+		q["dir"] = -float(q["dir"])                     # (no way round: back the way they came)
+		q["want"] = _heading(st, float(q["s"]), float(q["dir"]))
+		return false
+	if city.traffic and q.get("round_t", 0.0) <= 0.0:      # the traffic close by the kerb, coming: a step back off it
+		for v in city.traffic.vehicles:
+			var vp: Vector3 = v["pos"]
+			var tv := Vector3(at.x - vp.x, 0.0, at.z - vp.z)
+			if tv.length() > 7.0 or float(v["speed"]) < 2.0:
+				continue
+			var vf: Vector3 = v["fwd"]                    # (the way it's going: _place's flat heading)
+			if tv.dot(vf) > 0.0 and absf(tv.dot(Vector3(vf.z, 0.0, -vf.x))) < 2.6:
+				var rs := _road_side(st)
+				q["side"] = clampf(-signf(rs) * 0.4, -hw, hw)   # (to the building side of the footpath)
+				q["round_t"] = 2.5
+				break
+	if q.get("round_t", 0.0) > 0.0:
+		q["round_t"] = float(q["round_t"]) - 0.1
+		if float(q["round_t"]) <= 0.0:
+			q["side"] = _road_side(st)
+	for j in people.size():                                # people: round them, on the left; stood in the way, wait
+		if j == i:
+			continue
+		var o: Dictionary = people[j]
+		if o["state"] == "off" or not (o["node"] as Node3D).visible:
+			continue
+		var to: Vector3 = (o["node"] as Node3D).global_position - at
+		to.y = 0.0
+		var dd := to.length()
+		if dd > 2.2 or dd < 0.01 or to.dot(fwd) <= 0.0:
+			continue
+		var lat2 := to.dot(Vector3(fwd.z, 0.0, -fwd.x))
+		if absf(lat2) > 0.55:
+			continue
+		if o["state"] == "walk" and o["dir"] != q["dir"] and o["strip"] == q["strip"]:
+			q["side"] = clampf(float(q["side"]) + float(q["dir"]) * 0.55, -hw - 0.3, hw + 0.3)   # (keep left)
+			q["round_t"] = 3.0
+		elif dd < 1.0:
+			q["state"] = "pause"                            # (stood in the way: a moment, then on)
+			q["timer"] = _rng.randf_range(0.8, 1.8)
+			_anim(q, "Idle", 1.0)
+			return true
+	return false
 
 
 ## At a footpath's end: on along one that starts (or ends) within 3 m of here, or back the way they came.

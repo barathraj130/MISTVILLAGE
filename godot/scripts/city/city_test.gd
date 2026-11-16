@@ -869,6 +869,119 @@ func toggle_on_foot() -> bool:
 	return true
 
 
+## (testing) --pedcheck (with --citizentest=HH:MM, on foot at Gandhipuram): every second for 100 s, every person
+## walking or standing about (city_walkers.gd, citizens.gd, city_activity.gd) checked: on a vehicle (a parked one's
+## or a moving one's body under the feet), inside one (in its box at the knees), above the ground (more than 0.3 m
+## over the ground under them, the vehicles not counted) or below it; the counts printed, and pictures of the first
+## few found (user://ped_<n>.jpg) from 6 m off.
+func _ped_check() -> void:
+	await get_tree().create_timer(16.0).timeout
+	var space := get_world_3d().direct_space_state
+	var counts := {"checked": 0, "on_vehicle": 0, "in_vehicle": 0, "above": 0, "below": 0}
+	var shots := 0
+	var seen_bad := {}
+	for t in 100:
+		await get_tree().create_timer(1.0).timeout
+		var nodes: Array = []
+		for holder in [get_node_or_null("Walkers"), get_node_or_null("Activity"), citizens]:
+			if holder == null or not "people" in holder:
+				continue
+			for q in holder.people:
+				var n = q.get("node") if q is Dictionary else null
+				if n is Node3D and is_instance_valid(n) and (n as Node3D).is_visible_in_tree():
+					nodes.append([n, "%s %s" % [holder.name, str(q.get("state", q.get("act", "")))]])
+		for e in nodes:
+			var n: Node3D = e[0]
+			var p := n.global_position
+			counts["checked"] += 1
+			var bad := ""
+			var hq := PhysicsRayQueryParameters3D.create(p + Vector3.UP * 0.3, p + Vector3.DOWN * 1.2)
+			var hit := space.intersect_ray(hq)
+			if not hit.is_empty() and _is_vehicle(hit["collider"]):
+				bad = "on_vehicle"
+			if bad == "":
+				var pq := PhysicsPointQueryParameters3D.new()
+				pq.position = p + Vector3.UP * 0.6
+				for r in space.intersect_point(pq, 4):
+					if _is_vehicle(r["collider"]):
+						bad = "in_vehicle"
+						hit = {"collider": r["collider"]}
+			if bad == "":
+				# (the surface under the feet, from a metre above them: an awning or a stall's roof overhead isn't ground)
+				var gq := PhysicsRayQueryParameters3D.create(p + Vector3.UP * 1.0, p + Vector3.DOWN * 3.0)
+				var gx: Array[RID] = []
+				var g := NAN
+				for k in 4:
+					var gh := space.intersect_ray(gq)
+					if gh.is_empty():
+						break
+					if _is_vehicle(gh["collider"]) or gh["collider"] is CharacterBody3D:
+						gx.append(gh["rid"])
+						gq.exclude = gx
+						continue
+					g = gh["position"].y
+					break
+				if not is_nan(g) and p.y - g > 0.3:
+					bad = "above"
+				elif not is_nan(g) and g - p.y > 0.3:
+					bad = "below"
+			if bad == "":
+				continue
+			counts[bad] += 1
+			var id := n.get_instance_id()
+			if seen_bad.has(id):
+				continue
+			seen_bad[id] = true
+			if bad == "in_vehicle" and citizens and String(e[1]).begins_with("Citizens"):
+				for cq in citizens.people:
+					if cq["node"] == n:
+						print("PEDCHECK   covered %s, path %d/%d, cover_t %s" % [str(citizens._covered(p)), int(cq["pi"]), (cq["path"] as Array).size(), str(cq.get("cover_t", "-"))])
+			var g2: float = streamer.height_at(p.x, p.z)
+			print("PEDCHECK %s: %s (%s) at %s, gap %+.2f, %s" % [bad, n.name, e[1], str(p), p.y - g2, str(hit.get("collider")) if not hit.is_empty() else "-"])
+			if shots < 4:
+				shots += 1
+				var c := Camera3D.new()
+				add_child(c)
+				var off := Vector3(5.0, 2.5, 3.0)
+				c.global_position = p + off
+				c.look_at(p + Vector3.UP * 0.9, Vector3.UP)
+				c.make_current()
+				for f in 3:
+					await RenderingServer.frame_post_draw
+				get_viewport().get_texture().get_image().save_jpg(ProjectSettings.globalize_path("user://ped_%d.jpg" % shots), 0.85)
+				c.queue_free()
+				if walker:
+					walker.activate()
+	print("PEDCHECK done: %s" % str(counts))
+	# (the places the first pictures had people on cars, in them, in the ground: the same views now)
+	var views := [Vector3(-258.79, 430.63, 76.13), Vector3(-214.66, 431.23, 151.01), Vector3(-268.02, 431.89, 74.59),
+		Vector3(-219.18, 430.34, 39.40)]
+	for vi in views.size():
+		var c2 := Camera3D.new()
+		add_child(c2)
+		var look_at_p: Vector3 = views[vi] + Vector3.UP * 0.9
+		var from: Vector3 = views[vi] + Vector3(5.0, 2.5, 3.0)
+		for k in 12:                                      # (from where nothing's in the way: not inside a wall)
+			var a := TAU * float(k) / 12.0
+			var cand := look_at_p + Vector3(cos(a) * 5.5, 1.8, sin(a) * 5.5)
+			if get_world_3d().direct_space_state.intersect_ray(PhysicsRayQueryParameters3D.create(look_at_p, cand)).is_empty():
+				from = cand
+				break
+		c2.global_position = from
+		c2.look_at(look_at_p, Vector3.UP)
+		c2.make_current()
+		await get_tree().create_timer(0.5).timeout
+		for f in 3:
+			await RenderingServer.frame_post_draw
+		get_viewport().get_texture().get_image().save_jpg(ProjectSettings.globalize_path("user://ped_after_%d.jpg" % (vi + 1)), 0.85)
+		c2.queue_free()
+	get_tree().quit()
+
+
+func _is_vehicle(o) -> bool:
+	return o is VehicleBody3D or o is RigidBody3D or o is AnimatableBody3D or (streamer and o == streamer.parked_body)
+
+
 ## (testing) --taketest: out of the car, beside the nearest parked vehicle you can take, F: into it; a picture beside
 ## it, one from his seat, one driving away (user://take_*.jpg); then back on foot, to his own car left behind, F.
 func _take_test() -> void:
@@ -1819,6 +1932,9 @@ func _process(dt: float) -> void:
 		car._rider.visible = walker == null and not car.cockpit   # (on foot, he isn't also sitting on the scooter)
 	if not _sfv_started and car:
 		for a in OS.get_cmdline_user_args():
+			if a == "--pedcheck" and not _sfv_started:
+				_sfv_started = true
+				_ped_check.call_deferred()
 			if a == "--taketest" and not _sfv_started:
 				_sfv_started = true
 				_take_test.call_deferred()
