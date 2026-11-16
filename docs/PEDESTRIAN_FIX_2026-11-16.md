@@ -40,13 +40,25 @@ No regression: the walkers still cross the road (`--walkertest --crosstest`: 9 c
 none stuck); driving and taking a parked car (`--taketest`) as before. Cost: the walkers' update 0.4–0.7 ms a
 frame before, 0.6–1.0 ms after (`--noavoid` gives the old behaviour, for comparing).
 
+## Second round: signals, starting and stopping
+
+- **Crossing at a signal** (`city_walkers.gd _signal_for`): at a junction with a signal head facing along the road
+  they're crossing, they wait at the kerb (up to a whole 90 s cycle), watching it, and go only on its red for
+  that road, and only once nothing's moving within 9 m (someone jumping the light); in a group, as people do.
+  Without a signal, as before: a look each way and a gap in the traffic. (The zebras are painted at the junctions,
+  where the footpaths end, which is where they cross.) Tested beside the signal at (73, 128): 8 waited for it, 7
+  crossed on its red; elsewhere by the gaps; none gave up.
+- **Starting and stopping** (`_pace`): each one's speed eased (away over about a second, to a stop over a step or
+  two, quicker running off the footpath), the walk clip played at the speed they're actually going (a step covers
+  its ground: no sliding as they start or stop), the standing clip coming in once they've stopped, not before.
+- `--walkertest`'s "off the ground" now measures against the street as built: 0.
+
 ## Not done yet (the rest of the brief)
 
-- Walking itself: start/stop easing, foot locking against skating, arm swing and weight shift per person,
-  male/female walking styles, idle → walk → jog → run transitions.
-- Crossing at zebra crossings and signals where there are any (now: where footpaths face each other across
-  the road, after looking both ways and waiting for the traffic).
+- Men's and women's walks of their own: every crowd person's walk is the same clinical gait (story_cast.py
+  walk_phase: heel strike, roll, push-off, arms against the legs), only shorter steps in a saree or a veshti. A
+  woman's walk of its own (narrower steps, more hip, less arm) means remaking the twelve crowd models
+  (tools/humans/crowd_cast.py); another session has uncommitted changes to some of them (crowd_w3, crowd_w6), so
+  not yet.
 - More of a day for the footpath walkers (now: walk, pause, talk, cross; the citizens have destinations and
   schedules): shopping bags already, benches, buses, entering buildings, walking with friends.
-- `--walkertest`'s "off the path's height" counts people on the street as built rather than the map's line:
-  it should measure against the ground now.

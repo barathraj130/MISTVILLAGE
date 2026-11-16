@@ -40,6 +40,8 @@ var _strips_t := 0.0
 var _frame := 0
 var crossed := 0                               # (testing: crossings made, start to the far kerb)
 var gave_up := 0
+var sig_waits := 0                             # (testing: crossings at a signal, waited for; made on its red)
+var sig_cross := 0
 var _avoid := not "--noavoid" in OS.get_cmdline_user_args()   # (testing: the old way, to compare what it costs)
 
 
@@ -95,6 +97,15 @@ func _test(dt: float, me: Node3D) -> void:
 	_log_t += dt
 	if _log_t >= 5.0:
 		_log_t = 0.0
+		if city.get("traffic") and city.traffic:
+			var sd := 1e9
+			for sg in city.traffic.signals:
+				sd = minf(sd, (sg[0] as Vector3).distance_to(me.global_position))
+			var near_sg: Vector3 = Vector3.INF
+			for sg in city.traffic.signals:
+				if (sg[0] as Vector3).distance_to(me.global_position) <= sd + 0.1:
+					near_sg = sg[0]
+			print("WALKERS signals %d, nearest %.0f m at %s" % [city.traffic.signals.size(), sd, str(near_sg)])
 		var states := {}
 		var stuck := 0
 		var off_ground := 0
@@ -111,11 +122,12 @@ func _test(dt: float, me: Node3D) -> void:
 				stuck += 1
 			_last_pos[i] = node.global_position
 			if q["strip"] >= 0 and q["strip"] < _strips.size():
-				var want_y: float = _at(_strips[q["strip"]], float(q["s"])).y
-				if absf(node.global_position.y - want_y) > 0.25:
+				var np := node.global_position                # (the street under their feet, as built: not the map's line)
+				var want_y: float = city.streamer.ground_near(np.x, np.y, np.z, 1.0, 1.2)
+				if not is_nan(want_y) and absf(np.y - want_y) > 0.25 and q["state"] != "cross":
 					off_ground += 1
-		print("WALKERS t=%.0f out of %d: %s, within 40 m %d, stuck %d, off the path's height %d, footpaths %d, busy %.2f, crossed %d, gave up %d" % [_test_t,
-			people.size(), str(states), near, stuck, off_ground, _strips.size(), _busy(), crossed, gave_up])
+		print("WALKERS t=%.0f out of %d: %s, within 40 m %d, stuck %d, off the ground %d, footpaths %d, busy %.2f, crossed %d (at signals %d of %d), gave up %d" % [_test_t,
+			people.size(), str(states), near, stuck, off_ground, _strips.size(), _busy(), crossed, sig_cross, sig_waits, gave_up])
 	var crossing := people.any(func(q): return q["state"] in ["kerb", "cross"])
 	if (_test_t > (90.0 if "--crosstest" in OS.get_cmdline_user_args() else 30.0) or (crossing and "--crosstest" in OS.get_cmdline_user_args() and _test_t > 60.0)) and not has_meta("shot"):
 		var best: Dictionary = {}
@@ -297,6 +309,7 @@ func _spawn(q: Dictionary, at: Vector3) -> void:
 		q["dir"] = 1.0 if _rng.randf() < 0.5 else -1.0
 		q["side"] = side0                                # (on the paving by the road, not the verge behind it)
 		q["state"] = "walk"
+		q["v"] = float(q["speed"])                       # (set down out of sight already walking)
 		q["timer"] = 0.0
 		q["with"] = -1
 		var node: Node3D = q["node"]
@@ -369,7 +382,22 @@ func _think(q: Dictionary, i: int, dt: float, me: Node3D, on_foot: bool, vel: Ve
 			var over: Vector3 = cr["to"] - cr["from"]
 			var face := atan2(over.x, over.z)
 			q["want"] = face + sin(float(cr["looks"]) * 1.6) * 0.9   # (left, right, left)
-			if float(cr["looks"]) > 1.8 and _clear_to_cross(cr["from"], cr["to"], me, on_foot):
+			if not cr.has("sig"):                         # a signal at this junction: the green man (their road red)
+				cr["sig"] = _signal_for(cr["from"], cr["to"])
+				if not (cr["sig"] as Array).is_empty():
+					q["timer"] = maxf(float(q["timer"]), 95.0)   # (a whole cycle, if need be: people wait for it)
+					sig_waits += 1
+			var go_ok := false
+			if (cr["sig"] as Array).is_empty():
+				go_ok = _clear_to_cross(cr["from"], cr["to"], me, on_foot)
+			else:
+				var red: bool = city.streamer.signal_state(float(cr["sig"][2])) == 2
+				go_ok = red and _clear_to_cross((cr["from"] + cr["to"]) * 0.5, (cr["from"] + cr["to"]) * 0.5, me, on_foot, 9.0)
+				if not red:
+					q["want"] = face + sin(float(cr["looks"]) * 0.5) * 0.35   # (watching the signal, the road)
+			if float(cr["looks"]) > 1.8 and go_ok:
+				if not (cr["sig"] as Array).is_empty():
+					sig_cross += 1
 				q["state"] = "cross"
 				q["want"] = face
 				_anim(q, "Walk", float(q["speed"]) * 1.15 / STRIDE)
@@ -416,6 +444,29 @@ func _think(q: Dictionary, i: int, dt: float, me: Node3D, on_foot: bool, vel: Ve
 				_anim(q, "Walk", float(q["speed"]) / STRIDE)
 
 
+## How fast they're going now (m/s), eased toward what they mean to do: picking up to their pace over a second or
+## so, slowing to a stop over a step or two (a sudden run off the footpath quicker); the walk's clip played at
+## the pace they're actually going, so a step covers the ground it should, starting and stopping too.
+func _pace(q: Dictionary, dt: float, want: float) -> float:
+	var v := float(q.get("v", 0.0))
+	var rate := 1.3 if want > v else 2.0                 # (m/s²: away gently, a stop over ~0.6 s)
+	if q["state"] == "clear":
+		rate = 5.0
+	v = move_toward(v, want, rate * dt)
+	q["v"] = v
+	var g := str(q.get("gait", ""))
+	if g == "Walk":
+		(q["ap"] as AnimationPlayer).speed_scale = maxf(v, 0.2) / STRIDE
+	elif g == "Run":
+		(q["ap"] as AnimationPlayer).speed_scale = 1.2 * maxf(v, 0.5) / maxf(float(q["speed"]) * 2.6, 0.5)
+	if q.has("pending") and v <= 0.25:                   # (stopped: now the standing clip)
+		var pd: Array = q["pending"]
+		q.erase("pending")
+		q["gait"] = ""
+		_play(q, str(pd[0]), float(pd[1]))
+	return v
+
+
 func _move(q: Dictionary, dt: float) -> void:
 	var node: Node3D = q["node"]
 	if q["strip"] < 0 or q["strip"] >= _strips.size():
@@ -428,11 +479,13 @@ func _move(q: Dictionary, dt: float) -> void:
 			var go := PedSteer.steer(get_world_3d().direct_space_state, node.global_position, way.normalized(),
 				city.streamer.parked_body, minf(PedSteer.LOOK, way.length()))
 			if go == Vector3.ZERO:
+				_pace(q, dt, 0.0)
 				return                                   # (in the way, for now: wait)
-			node.global_position += go * minf(float(q["speed"]) * 1.15 * dt, way.length())
+			var v := _pace(q, dt, float(q["speed"]) * 1.15)
+			node.global_position += go * minf(v * dt, way.length())
 			q["want"] = atan2(go.x, go.z)
 		else:
-			node.global_position = node.global_position.move_toward(to, float(q["speed"]) * 1.15 * dt)
+			node.global_position = node.global_position.move_toward(to, _pace(q, dt, float(q["speed"]) * 1.15) * dt)
 		var y: float = city.streamer.ground_near(node.global_position.x, node.global_position.y, node.global_position.z, 1.0, 1.2)
 		if not is_nan(y):
 			node.global_position.y = y
@@ -441,14 +494,18 @@ func _move(q: Dictionary, dt: float) -> void:
 		return
 	var st: Dictionary = _strips[q["strip"]]
 	var total: float = st["c"][st["c"].size() - 1]
-	var moving: bool = q["state"] == "walk" or q["state"] == "clear"
+	var going: bool = q["state"] == "walk" or q["state"] == "clear"
+	var spd: float = _pace(q, dt, float(q["speed"]) * (2.6 if q["state"] == "clear" else 1.0) if going else 0.0)
+	var moving: bool = spd > 0.01
 	if moving:
-		var spd: float = float(q["speed"]) * (2.6 if q["state"] == "clear" else 1.0)
 		q["s"] = float(q["s"]) + spd * dt * float(q["dir"])
-		if float(q["s"]) < 0.0 or float(q["s"]) > total:
+		if not going:                                   # (slowing to a stop: at the path's end, they stop there)
+			q["s"] = clampf(float(q["s"]), 0.0, total)
+		elif float(q["s"]) < 0.0 or float(q["s"]) > total:
 			_on_end(q, st, total)
 			st = _strips[q["strip"]]
-		q["want"] = _heading(st, float(q["s"]), float(q["dir"]))
+		if going:
+			q["want"] = _heading(st, float(q["s"]), float(q["dir"]))
 	var target: Vector3 = _at(st, clampf(float(q["s"]), 0.0, st["c"][st["c"].size() - 1])) \
 		+ _left(st, float(q["s"]), 1.0) * float(q["side"])
 	var g: float = city.streamer.ground_near(target.x, target.y, target.z, 1.0, 1.2) if _avoid else NAN
@@ -588,19 +645,52 @@ func _on_end(q: Dictionary, st: Dictionary, total: float) -> void:
 
 ## Nothing coming: no vehicle within 28 m of the crossing that's moving (city_traffic.gd's, and his car when he
 ## drives it); a car standing still lets them by.
-func _clear_to_cross(a: Vector3, b: Vector3, me: Node3D, on_foot: bool) -> bool:
+func _clear_to_cross(a: Vector3, b: Vector3, me: Node3D, on_foot: bool, r := 28.0) -> bool:
 	var mid := (a + b) * 0.5
 	if city.get("traffic") and city.traffic:
 		for v in city.traffic.vehicles:
 			var p: Vector3 = v["pos"]
-			if p.distance_to(mid) < 28.0 and float(v.get("speed", 0.0)) > 1.0:
+			if p.distance_to(mid) < r and float(v.get("speed", 0.0)) > 1.0:
 				return false
-	if not on_foot and city.car and city.car.global_position.distance_to(mid) < 28.0 and absf(city.car.speed) > 1.0:
+	if not on_foot and city.car and city.car.global_position.distance_to(mid) < r and absf(city.car.speed) > 1.0:
 		return false
 	return true
 
 
+## The signal that holds the traffic on the road they're crossing (a head within 30 m of the crossing, facing along
+## that road: across their way), or [] (no signal here: they go by the gaps in the traffic). [position, yaw, phase]
+func _signal_for(a: Vector3, b: Vector3) -> Array:
+	if not (city.get("traffic") and city.traffic):
+		return []
+	var mid := (a + b) * 0.5
+	var over := Vector3(b.x - a.x, 0.0, b.z - a.z).normalized()
+	var best: Array = []
+	var bd := 30.0
+	for sg in city.traffic.signals:
+		var sp: Vector3 = sg[0]
+		var dd := Vector2(sp.x - mid.x, sp.z - mid.z).length()
+		if dd >= bd:
+			continue
+		var f := Vector3(sin(float(sg[1])), 0.0, cos(float(sg[1])))
+		if absf(f.dot(over)) < 0.5:                      # (facing along the road they cross)
+			bd = dd
+			best = sg
+	return best
+
+
 func _anim(q: Dictionary, name: String, speed: float) -> void:
+	if name == "Walk" or name == "Run":
+		q["gait"] = name
+		q.erase("pending")
+	elif float(q.get("v", 0.0)) > 0.25:                  # (still slowing: the walk on until they've stopped, then this)
+		q["pending"] = [name, speed]
+		return
+	else:
+		q["gait"] = ""
+	_play(q, name, speed)
+
+
+func _play(q: Dictionary, name: String, speed: float) -> void:
 	var ap: AnimationPlayer = q["ap"]
 	var habit: String = (q["node"] as Node).get_meta("habit", "")   # (on the phone, or with a bag: their own clips)
 	if habit == "phone" and name in ["Walk", "Idle"]:
