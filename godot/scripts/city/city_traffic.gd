@@ -39,8 +39,10 @@ const BY_HOUR := [0.22, 0.15, 0.12, 0.12, 0.18, 0.35, 0.6, 0.9, 1.1, 1.05, 0.85,
 ## The Sketchfab traffic pack (CC-BY, tools/sketchfab_traffic_pack.py) on the move too: most of each kind one of
 ## these (the taxis stay the plain fleet's, in their yellow), each with its own indicators, brake and tail lamps.
 const SF_FLEET := "res://assets/vehicles/sf_fleet.json"
-const SF_FOR := {"hatchback": ["hatchback", "ev"], "sedan": ["luxury", "suv"], "auto": ["rickshaw"], "bus": ["bus"],
+const SF_FOR := {"hatchback": ["hatchback", "ev"], "sedan": ["luxury", "suv"], "auto": ["rickshaw"], "bus": ["bus", "tnstc"],
 	"lorry": ["truck"]}
+## (most of Coimbatore's town buses are the state's own: TNSTC, tools/sketchfab_tnstc.py)
+const SF_PREFER := {"bus": ["sf_tnstc_bus", 0.6]}
 const SF_SHARE := 0.75
 var _sf: Dictionary = {}                   # kind → [[key, entry from sf_fleet.json], ...]
 var _sf_scenes := {}
@@ -246,6 +248,10 @@ func _spawn(me: Vector3) -> void:
 	var sf: Array = []
 	if _sf.has(kind) and _rng.randf() < SF_SHARE:
 		sf = _sf[kind][_rng.randi() % _sf[kind].size()]
+		if SF_PREFER.has(kind) and _rng.randf() < float(SF_PREFER[kind][1]):
+			for se in _sf[kind]:
+				if se[0] == SF_PREFER[kind][0]:
+					sf = se
 		dims = Vector3(float(sf[1]["w"]), float(sf[1]["h"]), float(sf[1]["len"]))
 	var cs := CollisionShape3D.new()
 	var bx := BoxShape3D.new()

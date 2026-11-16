@@ -2602,5 +2602,48 @@
    ]
   },
   "source": "IN_Motorbike_03"
+ },
+ "sf_tnstc_bus": {
+  "kind": "bus",
+  "glb": "res://assets/vehicles/sf_tnstc_bus.glb",
+  "len": 11.0,
+  "w": 2.388,
+  "h": 2.782,
+  "wheels": [
+   {
+    "name": "Wheel_FL",
+    "at": [
+     3.522,
+     1.0,
+     0.478
+    ]
+   },
+   {
+    "name": "Wheel_FR",
+    "at": [
+     3.479,
+     -0.976,
+     0.478
+    ]
+   },
+   {
+    "name": "Wheel_RL",
+    "at": [
+     -2.148,
+     0.979,
+     0.486
+    ]
+   },
+   {
+    "name": "Wheel_RR",
+    "at": [
+     -2.078,
+     -1.026,
+     0.486
+    ]
+   }
+  ],
+  "lamps": {},
+  "source": "Tamilnadu TNSTC Bus 2009-2014"
  }
 }

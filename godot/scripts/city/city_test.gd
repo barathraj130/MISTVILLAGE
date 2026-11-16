@@ -1379,6 +1379,11 @@ func _sfv_test(keys: PackedStringArray) -> void:
 		for f in 3:
 			await RenderingServer.frame_post_draw
 		get_viewport().get_texture().get_image().save_jpg(ProjectSettings.globalize_path("user://sfv_%s_out.jpg" % key), 0.85)
+		c.global_position = car.global_position - car.global_basis.x * (L * 0.45 + 1.2) - car.global_basis.z * (L * 0.5) + Vector3.UP * (1.6 + L * 0.35)
+		c.look_at(car.global_position + Vector3.UP * 0.8, Vector3.UP)
+		for f in 3:
+			await RenderingServer.frame_post_draw
+		get_viewport().get_texture().get_image().save_jpg(ProjectSettings.globalize_path("user://sfv_%s_out2.jpg" % key), 0.85)
 		c.queue_free()
 		cam.make_current()
 		cam_mode = 1
