@@ -25,6 +25,17 @@ static func _source(sex: String) -> Array:
 	return out
 
 
+## The clip as this person's: its bones' turns only (and the hips' place), not every bone's position as the source
+## man had it. Positions keyed from one man's rest pose pulled another's face bones away (the eyebrows and lashes
+## stretched into long spikes across the fight); turns fit any body of the same rig, each keeping its own proportions.
+static func _turns_only(a: Animation) -> void:
+	for t in range(a.get_track_count() - 1, -1, -1):
+		var ty := a.track_get_type(t)
+		var bone := String(a.track_get_path(t)).get_slice(":", 1)
+		if ty == Animation.TYPE_SCALE_3D or (ty == Animation.TYPE_POSITION_3D and not bone in ["pelvis", "root", "Root"]):
+			a.remove_track(t)
+
+
 static func add(person: Node, sex: String, same_rig := false) -> bool:
 	var aps := person.find_children("*", "AnimationPlayer", true, false)
 	var sks := person.find_children("*", "Skeleton3D", true, false)
@@ -43,6 +54,7 @@ static func add(person: Node, sex: String, same_rig := false) -> bool:
 			var c := (pair[1] as Animation).duplicate(true) as Animation
 			for t in c.get_track_count():
 				c.track_set_path(t, NodePath(skp + ":" + String(c.track_get_path(t)).get_slice(":", 1)))
+			_turns_only(c)
 			have.add_animation(pair[0], c)
 		return true
 	if ap.has_animation_library("crowd"):
@@ -61,6 +73,7 @@ static func add(person: Node, sex: String, same_rig := false) -> bool:
 		for t in a.get_track_count():                   # (its rig's node name → this person's)
 			var p := String(a.track_get_path(t))
 			a.track_set_path(t, NodePath(skel_path + ":" + p.get_slice(":", 1)))
+		_turns_only(a)
 		a.loop_mode = Animation.LOOP_LINEAR
 		lib.add_animation(pair[0], a)
 	if lib.get_animation_list().is_empty():

@@ -599,7 +599,7 @@ logo out (the game has no real brands). Returns None (and the caller builds its 
 
 
 # ---- furniture pieces ----
-def shell(w, d, h, floor, wall, ceiling, dado=None, dado_h=1.0, door_w=1.0, door_x=0.0, windows=()):
+def shell(w, d, h, floor, wall, ceiling, dado=None, dado_h=1.0, door_w=1.0, door_x=0.0, windows=(), night=False):
     """Floor, ceiling, four walls (a doorway in the front one at door_x), a painted dado band, skirting, and
     window openings: windows = [(wall 'L'|'R'|'B', centre along it, width, sill, height)] with bars and a
     bright sky beyond; a sill of 0 makes it a doorway into a room beyond (no bars, no sky: a door frame)."""
@@ -645,8 +645,9 @@ def shell(w, d, h, floor, wall, ceiling, dado=None, dado_h=1.0, door_w=1.0, door
     box((door_x, -d / 2 - 0.03, 2.24), (door_w + 0.14, 0.18, 0.08), wood, 0.005)
     for s in (-1, 1):
         box((door_x + s * (door_w / 2 + 0.035), -d / 2 - 0.03, 1.1), (0.07, 0.18, 2.2), wood, 0.005)
-    sky = mat("daylight", (1, 1, 1), 0.5, emit=(1.0, 0.98, 0.92), strength=2.2)
-    box((door_x, -d / 2 - 0.6, 1.1), (door_w, 0.02, 2.2), sky)
+    if not night:                                       # (daylight beyond the door; at night the room's own dark outside)
+        sky = mat("daylight", (1, 1, 1), 0.5, emit=(1.0, 0.98, 0.92), strength=2.2)
+        box((door_x, -d / 2 - 0.6, 1.1), (door_w, 0.02, 2.2), sky)
     # the dado band and skirting inside
     if dado:
         for side, (pos, sz, along) in walls.items():
@@ -2285,7 +2286,7 @@ def godown(T):
     floor = mat("cement_floor", (0.55, 0.53, 0.5), 0.9)
     wall = mat("wall_lime_godown", (0.76, 0.74, 0.66), 0.95, normal=os.path.join(DTEX, "plaster_normal.jpg"), scale=2.5)
     roof = mat("tin_roof", (0.36, 0.37, 0.38), 0.45, 0.6)
-    shell(W, D, h, floor, wall, roof, mat("dado_godown", (0.42, 0.36, 0.3), 0.8), 1.0, door_w=3.2, door_x=0.0)
+    shell(W, D, h, floor, wall, roof, mat("dado_godown", (0.42, 0.36, 0.3), 0.8), 1.0, door_w=3.2, door_x=0.0, night=True)
     for k in range(9):                                   # the roof's trusses
         box((-W / 2 + 1.0 + k * 1.75, 0.0, h - 0.25), (0.08, D, 0.18), mat("truss", (0.25, 0.2, 0.16), 0.7))
     shutter = mat("shutter", (0.45, 0.46, 0.48), 0.4, 0.6)

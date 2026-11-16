@@ -149,7 +149,7 @@ func _shots(dir: String) -> void:
 			var other: Vector3 = pc.target.body.global_position if pc.target else him + Vector3(0, 0, 1)
 			var mid := (him + other) * 0.5
 			var base_ang := float((n / 2) % 4) * PI * 0.5 + atan2(other.x - him.x, other.z - him.z) + PI * 0.5
-			var space := city.walker.get_world_3d().direct_space_state
+			var space: PhysicsDirectSpaceState3D = city.walker.get_world_3d().direct_space_state
 			var ex: Array[RID] = [city.walker.get_rid()]
 			if pc.target:
 				ex.append(pc.target.body.get_rid())
