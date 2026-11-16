@@ -1011,7 +1011,35 @@ func _traffic_test() -> void:
 	var inside := 0
 	var t := 0.0
 	var seen_drivers := {}
+	var lamp_counts := {"sf": 0, "indicating": 0, "braking": 0, "samples": 0}
+	var ind_shot := false
 	while t < 60.0:
+		if int(t * 60.0) % 30 == 0:                         # (twice a second: who's a pack model, indicating, braking)
+			for v in traffic.vehicles:
+				if (v.get("lamps", {}) as Dictionary).is_empty() or (v["pos"] as Vector3).distance_to(car.global_position) > 200.0:
+					continue
+				lamp_counts["sf"] += 1
+				if absf(float(v.get("turn", 0.0))) > 0.3:
+					lamp_counts["indicating"] += 1
+					if not ind_shot and float(v["speed"]) > 1.0:
+						ind_shot = true
+						var c3 := Camera3D.new()
+						add_child(c3)
+						var fw3: Vector3 = v["fwd"]
+						c3.global_position = (v["pos"] as Vector3) - fw3 * (float(v["half"]) + 5.0) + Vector3.UP * 2.2
+						c3.look_at(v["pos"] + Vector3.UP * 0.9, Vector3.UP)
+						c3.make_current()
+						for f in 3:
+							await RenderingServer.frame_post_draw
+						get_viewport().get_texture().get_image().save_jpg(ProjectSettings.globalize_path("user://traffic_indicator.jpg"), 0.85)
+						await get_tree().create_timer(0.4).timeout
+						await RenderingServer.frame_post_draw
+						get_viewport().get_texture().get_image().save_jpg(ProjectSettings.globalize_path("user://traffic_indicator2.jpg"), 0.85)
+						c3.queue_free()
+						cam.make_current()
+				if bool(v.get("braking", false)):
+					lamp_counts["braking"] += 1
+				lamp_counts["samples"] += 1
 		await get_tree().physics_frame
 		t += get_physics_process_delta_time()
 		for v in traffic.vehicles:
@@ -1048,6 +1076,7 @@ func _traffic_test() -> void:
 	for k in seen_drivers:
 		if not str(k).begins_with("ov"):
 			share[k] = snappedf(float(seen_drivers[k]) / maxf(tot, 1), 0.01)
+	print("TRAFFICTEST lamps: %s" % str(lamp_counts))
 	print("TRAFFICTEST a minute: %d vehicles now, drivers %s, nearest following %.2f s, through a red %d, in each other %d (physics steps), crashes %d" % [
 		traffic.vehicles.size(), str(share), worst_head, red_runs, inside, traffic.crashes.size()])
 	var shot := 0
@@ -1088,6 +1117,81 @@ func _traffic_test() -> void:
 		print("TRAFFICTEST after 3 s: crashes %d (one counted for that pair: %s)" % [traffic.crashes.size(), str(traffic.crashes.size() == before + 1)])
 		cam2.queue_free()
 		cam.make_current()
+	get_tree().quit()
+
+
+## (testing) --lamptest: the camera behind one of the pack's vehicles in the traffic for 40 s: how long it indicated
+## (and which way, and whether it then turned that way), braked; a picture the first time each (user://lamp_*.jpg).
+func _lamp_test() -> void:
+	await get_tree().create_timer(14.0).timeout
+	car.freeze = true
+	var c := Camera3D.new()
+	add_child(c)
+	c.make_current()
+	traffic.player = c                                   # (the traffic round the camera: its lamps lit there)
+	var v: Dictionary = {}
+	var head0 := Vector3.ZERO
+	var t := 0.0
+	var stats := {"indicating_s": 0.0, "braking_s": 0.0, "turns": 0, "turns_signalled": 0}
+	var shots := {}
+	var last_road = null
+	var was_turn := 0.0
+	while t < 40.0:
+		var want := "turn" if t < 20.0 else "slow"         # (first one about to turn, then one slowing down)
+		var fits := not v.is_empty() and (absf(float(v.get("turn", 0.0))) > 0.3 or float(v.get("turn_after", 0.0)) > 0.0 if want == "turn" \
+			else bool(v.get("braking", false)) or float(v.get("brake_hold", 0.0)) > 0.0)
+		if v.is_empty() or not traffic.vehicles.has(v) or str(v.get("_lt", "")) != want or (not fits and int(t) != int(t - get_process_delta_time())):
+			var bd := 1e9
+			var found: Dictionary = {}
+			for o in traffic.vehicles:
+				if (o.get("lamps", {}) as Dictionary).is_empty():
+					continue
+				var ok: bool = absf(float(o.get("turn", 0.0))) > 0.3 if want == "turn" else bool(o.get("braking", false))
+				var dd := (o["pos"] as Vector3).distance_to(car.global_position) + (0.0 if ok else 1e6)
+				if dd < bd:
+					bd = dd
+					found = o
+			if not found.is_empty() and (v.is_empty() or found != v):
+				v = found
+				v["_lt"] = want
+				head0 = Vector3.ZERO
+				last_road = v["road"]
+			elif not found.is_empty():
+				v["_lt"] = want
+			if v.is_empty():
+				break
+		await get_tree().process_frame
+		var dt := get_process_delta_time()
+		t += dt
+		var fw: Vector3 = v["fwd"]
+		c.global_position = (v["pos"] as Vector3) - fw * (float(v["half"]) + 4.5) + Vector3.UP * 2.0
+		c.look_at((v["pos"] as Vector3) + Vector3.UP * 0.8, Vector3.UP)
+		var turn := float(v.get("turn", 0.0))
+		if int(t / 5.0) != int((t - dt) / 5.0):
+			print("LAMPTEST t %.0f: speed %.1f target %.1f braking %s turn %s stunned %.1f lamps %s dist %.0f" % [t, float(v["speed"]), float(v.get("target", -1)),
+				str(v.get("braking", "-")), str(v.get("turn", "-")), float(v["stunned"]), str((v["lamps"] as Dictionary).keys()), (v["pos"] as Vector3).distance_to(c.global_position)])
+		if absf(turn) > 0.3:
+			stats["indicating_s"] += dt
+			was_turn = turn
+		if bool(v.get("braking", false)):
+			stats["braking_s"] += dt
+		if v["road"] != last_road:                       # (onto another road: did it turn (>30°), had it said so?)
+			last_road = v["road"]
+			if head0 != Vector3.ZERO and head0.dot(fw) < 0.87:
+				stats["turns"] += 1
+				if absf(was_turn) > 0.3:
+					stats["turns_signalled"] += 1
+			was_turn = 0.0
+		if absf(turn) < 0.3:
+			head0 = fw
+		for what in ["indicating", "braking"]:
+			var now: bool = absf(turn) > 0.3 if what == "indicating" else bool(v.get("braking", false))
+			if now and not shots.has(what) and float(v.get("blink", 0.0)) < 0.3:
+				shots[what] = true
+				await RenderingServer.frame_post_draw
+				get_viewport().get_texture().get_image().save_jpg(ProjectSettings.globalize_path("user://lamp_%s.jpg" % what), 0.85)
+	print("LAMPTEST %s: %s, pictures %s" % [str(v.get("kind", "-")), str(stats), str(shots.keys())])
+	traffic.player = car
 	get_tree().quit()
 
 
@@ -2066,6 +2170,9 @@ func _process(dt: float) -> void:
 			if a == "--pedcheck" and not _sfv_started:
 				_sfv_started = true
 				_ped_check.call_deferred()
+			if a == "--lamptest" and not _sfv_started:
+				_sfv_started = true
+				_lamp_test.call_deferred()
 			if a == "--traffictest" and not _sfv_started:
 				_sfv_started = true
 				_traffic_test.call_deferred()

@@ -36,6 +36,16 @@ const DYN := {"hatchback": [2.2, 5.5, 1.0], "sedan": [2.3, 5.8, 1.0], "taxi": [2
 ## the evening's rush the busiest, few at night.
 const BY_HOUR := [0.22, 0.15, 0.12, 0.12, 0.18, 0.35, 0.6, 0.9, 1.1, 1.05, 0.85, 0.75, 0.75, 0.8, 0.75, 0.8, 0.95,
 	1.1, 1.15, 1.05, 0.8, 0.6, 0.45, 0.3]
+## The Sketchfab traffic pack (CC-BY, tools/sketchfab_traffic_pack.py) on the move too: most of each kind one of
+## these (the taxis stay the plain fleet's, in their yellow), each with its own indicators, brake and tail lamps.
+const SF_FLEET := "res://assets/vehicles/sf_fleet.json"
+const SF_FOR := {"hatchback": ["hatchback", "ev"], "sedan": ["luxury", "suv"], "auto": ["rickshaw"], "bus": ["bus"],
+	"lorry": ["truck"]}
+const SF_SHARE := 0.75
+var _sf: Dictionary = {}                   # kind → [[key, entry from sf_fleet.json], ...]
+var _sf_scenes := {}
+var _lamp_on: StandardMaterial3D           # an indicator lit (amber), a brake lamp lit (red)
+var _brake_on: StandardMaterial3D
 var crashes: Array = []                    # (testing) [time, kinds, severity, closing m/s]
 var _touching := {}                        # "a,b" (instance ids) → the time they last touched: a crash counted once
 var _ped_t := 0.0
@@ -64,6 +74,25 @@ var _rng := RandomNumberGenerator.new()
 
 func _ready() -> void:
 	_rng.seed = 2026
+	if FileAccess.file_exists(SF_FLEET) and not "--nosftraffic" in OS.get_cmdline_user_args():
+		var fl: Dictionary = JSON.parse_string(FileAccess.get_file_as_string(SF_FLEET))
+		for key in fl:
+			for kind in SF_FOR:
+				for pre in SF_FOR[kind]:
+					if str(key).begins_with("sf_" + pre + "_") and ResourceLoader.exists(fl[key]["glb"]):
+						if not _sf.has(kind):
+							_sf[kind] = []
+						_sf[kind].append([key, fl[key]])
+	_lamp_on = StandardMaterial3D.new()
+	_lamp_on.albedo_color = Color(1.0, 0.55, 0.05)
+	_lamp_on.emission_enabled = true
+	_lamp_on.emission = Color(1.0, 0.5, 0.02)
+	_lamp_on.emission_energy_multiplier = 4.0
+	_brake_on = StandardMaterial3D.new()
+	_brake_on.albedo_color = Color(0.9, 0.05, 0.03)
+	_brake_on.emission_enabled = true
+	_brake_on.emission = Color(1.0, 0.04, 0.02)
+	_brake_on.emission_energy_multiplier = 3.0
 
 
 func _physics_process(delta: float) -> void:
@@ -105,6 +134,9 @@ func _physics_process_timed(delta: float) -> void:
 	for i in vehicles.size():
 		_drive(vehicles[i], delta, me, (i + _tick) % THINK_EVERY == 0 or not vehicles[i].has("target"))
 	_collide(delta)
+	for v in vehicles:
+		if (v["pos"] as Vector3).distance_to(me) < 200.0:   # (lamps only where they can be seen)
+			_lamps(v, delta)
 
 
 ## The hour's share of the busy count (BY_HOUR), from the city's clock; 1 without one.
@@ -211,21 +243,81 @@ func _spawn(me: Vector3) -> void:
 	var body := AnimatableBody3D.new()
 	body.sync_to_physics = false
 	var dims: Vector3 = DIMS[kind]
+	var sf: Array = []
+	if _sf.has(kind) and _rng.randf() < SF_SHARE:
+		sf = _sf[kind][_rng.randi() % _sf[kind].size()]
+		dims = Vector3(float(sf[1]["w"]), float(sf[1]["h"]), float(sf[1]["len"]))
 	var cs := CollisionShape3D.new()
 	var bx := BoxShape3D.new()
 	bx.size = dims
 	cs.shape = bx
 	cs.position = Vector3(0, dims.y * 0.5 + 0.25, 0)
 	body.add_child(cs)
-	body.add_child(Fleet.model(kind, Fleet.paint_for(kind, _rng)))
+	var lamps := {}
+	if sf.is_empty():
+		body.add_child(Fleet.model(kind, Fleet.paint_for(kind, _rng)))
+	else:
+		body.add_child(_sf_model(str(sf[1]["glb"]), lamps))
 	add_child(body)
 	var driver := "commercial" if kind in ["bus", "lorry", "taxi"] or (kind == "auto" and _rng.randf() < 0.6) else _pick_driver()
 	var v := {"body": body, "kind": kind, "road": r, "road_node": r["node"], "dir": dir, "i": i0, "t": 0.0,
 		"speed": float(CRUISE.get(r["c"], 8.0)) * 0.6, "half": dims.z * 0.5, "w": dims.x * 0.5, "pos": at, "fwd": Vector3.FORWARD,
 		"wait": 0.0, "off": Vector3.ZERO, "yaw": 0.0, "push": Vector3.ZERO, "spin": 0.0, "stunned": 0.0, "dents": {},
-		"driver": driver, "d": DRIVERS[driver], "pass": 0.0, "held": 0.0}
+		"driver": driver, "d": DRIVERS[driver], "pass": 0.0, "held": 0.0, "lamps": lamps, "blink": 0.0}
 	vehicles.append(v)
 	_place(v)
+
+
+## A pack vehicle as it is (+Z its nose, on y 0), and its lamps found: indicators left and right, brake lamps.
+func _sf_model(path: String, lamps: Dictionary) -> Node3D:
+	if not _sf_scenes.has(path):
+		_sf_scenes[path] = load(path)
+	var root := Node3D.new()
+	var m := (_sf_scenes[path] as PackedScene).instantiate() as Node3D
+	m.rotation.y = -PI * 0.5                    # (the pack's nose +X → +Z)
+	root.add_child(m)
+	lamps["l"] = []
+	lamps["r"] = []
+	lamps["brake"] = []
+	for mi in m.find_children("*", "MeshInstance3D", true, false):
+		var gi := mi as MeshInstance3D
+		gi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF if gi.get_aabb().size.length() < 1.0 else gi.cast_shadow
+		var nm := String(gi.name).to_lower() + "|" + String(gi.get_parent().name).to_lower()
+		if nm.contains("turn_l"):
+			lamps["l"].append(gi)
+		elif nm.contains("turn_r"):
+			lamps["r"].append(gi)
+		elif nm.contains("light_break") or nm.contains("light_brake"):
+			lamps["brake"].append(gi)
+	return root
+
+
+## Its lamps: the indicator on the way it's about to turn (or pulling out round a stopped one), blinking; the brake
+## lamps lit while it slows or stands.
+func _lamps(v: Dictionary, delta: float) -> void:
+	var lm: Dictionary = v.get("lamps", {})
+	if lm.is_empty():
+		return
+	var turn := float(v.get("turn", 0.0))
+	if float(v.get("pass", 0.0)) > 0.2 and float(v.get("pass", 0.0)) < 2.8:
+		turn = -1.0                                           # (out to the right, round it)
+	v["blink"] = fposmod(float(v["blink"]) + delta, 0.7)
+	var on := float(v["blink"]) < 0.35
+	for side in ["l", "r"]:
+		var lit: bool = on and ((side == "l" and turn > 0.3) or (side == "r" and turn < -0.3))
+		for gi in lm[side]:
+			if is_instance_valid(gi):
+				(gi as MeshInstance3D).material_override = _lamp_on if lit else null
+	var sp := float(v["speed"])                               # (slowing, more than 0.8 m/s², or standing: lit,
+	var slowing := (float(v.get("prev_speed", sp)) - sp) / maxf(delta, 0.001) > 0.8   #  and held a moment after)
+	v["prev_speed"] = sp
+	v["brake_hold"] = 0.5 if slowing else maxf(float(v.get("brake_hold", 0.0)) - delta, 0.0)
+	var braking: bool = float(v["brake_hold"]) > 0.0 or sp < 0.3
+	if braking != bool(v.get("braking", false)):
+		v["braking"] = braking
+		for gi in lm["brake"]:
+			if is_instance_valid(gi):
+				(gi as MeshInstance3D).material_override = _brake_on if braking else null
 
 
 func _pick_driver() -> String:
@@ -294,9 +386,37 @@ func _next(v: Dictionary) -> bool:
 	var r: Dictionary = v["road"]
 	var p: PackedFloat32Array = r["p"]
 	var n := p.size() / 3
+	var idx := n - 1 if int(v["dir"]) > 0 else 0
+	var o: Array = v["pick"] if v.get("pick_road") == r else _choose(v)
+	v.erase("pick_road")
+	if o.is_empty():
+		if int(r["o"]) == 1:
+			return false
+		v["dir"] = -int(v["dir"])                                # dead end: turn round
+		v["i"] = idx
+		v["t"] = 0.0
+		return true
+	v["road"] = o[1]
+	v["road_node"] = o[1]["node"]
+	v["dir"] = o[2]
+	v["i"] = o[3]
+	v["t"] = 0.0
+	v["turn_after"] = 2.0                                     # (the indicator a moment more, through the turn)
+	return true
+
+
+## Where to go at this piece's end (a road meeting there, not straight back; mostly the straightest, the big roads
+## preferred): [weight, road, dir, start index], or [] at a dead end. Chosen ~30 m before (so it can indicate):
+## v["pick"], and which way it turns, v["turn"] (+ left, - right).
+func _choose(v: Dictionary) -> Array:
+	var r: Dictionary = v["road"]
+	var p: PackedFloat32Array = r["p"]
+	var n := p.size() / 3
 	var at_end: bool = int(v["dir"]) > 0
 	var idx := n - 1 if at_end else 0
 	var here := _pt(p, idx)
+	var last_dir := here - _pt(p, idx - int(v["dir"]))
+	last_dir = Vector3(last_dir.x, 0, last_dir.z).normalized()
 	var key := Vector2i(roundi(here.x), roundi(here.z))
 	var opts: Array = []
 	for dk in [Vector2i(0, 0), Vector2i(1, 0), Vector2i(-1, 0), Vector2i(0, 1), Vector2i(0, -1)]:
@@ -310,32 +430,28 @@ func _next(v: Dictionary) -> bool:
 			var p2: PackedFloat32Array = r2["p"]
 			var i2: int = 0 if dir2 > 0 else p2.size() / 3 - 1
 			var out := _pt(p2, i2 + dir2) - _pt(p2, i2)
-			var straight: float = Vector3(out.x, 0, out.z).normalized().dot(v["fwd"])
+			out = Vector3(out.x, 0, out.z).normalized()
+			var straight: float = out.dot(last_dir)
 			if straight < -0.6:
 				continue
 			var w := (1.0 + 3.0 * maxf(straight, 0.0)) * float(BIG.get(r2["c"], 1.0))
-			opts.append([w, r2, dir2, i2])
-	if opts.is_empty():
-		if int(r["o"]) == 1:
-			return false
-		v["dir"] = -int(v["dir"])                                # dead end: turn round
-		v["i"] = idx
-		v["t"] = 0.0
-		return true
-	var total := 0.0
-	for o in opts:
-		total += o[0]
-	var roll := _rng.randf() * total
-	for o in opts:
-		roll -= o[0]
-		if roll <= 0.0:
-			v["road"] = o[1]
-			v["road_node"] = o[1]["node"]
-			v["dir"] = o[2]
-			v["i"] = o[3]
-			v["t"] = 0.0
-			return true
-	return false
+			opts.append([w, r2, dir2, i2, last_dir.cross(out).y])
+	var pick: Array = []
+	if not opts.is_empty():
+		var total := 0.0
+		for o in opts:
+			total += o[0]
+		var roll := _rng.randf() * total
+		pick = opts[opts.size() - 1]
+		for o in opts:
+			roll -= o[0]
+			if roll <= 0.0:
+				pick = o
+				break
+	v["pick"] = pick
+	v["pick_road"] = r
+	v["turn"] = (-1.0 if float(pick[4]) < 0.0 else 1.0) if not pick.is_empty() and absf(float(pick[4])) > 0.35 else 0.0
+	return pick
 
 
 ## You hit one: it is shoved the way you pushed it, as much as the two masses share it (a bus barely moves, an
@@ -447,6 +563,11 @@ func _drive(v: Dictionary, delta: float, me: Vector3, think := true) -> void:
 	while k != last and to_end < 40.0:
 		to_end += _pt(p, k).distance_to(_pt(p, k + int(v["dir"])))
 		k += int(v["dir"])
+	if to_end < 30.0 and v.get("pick_road") != r:          # (the way it'll go, chosen now: the indicator on)
+		_choose(v)
+	if v.get("pick_road") != r and float(v.get("turn_after", 0.0)) <= 0.0:
+		v["turn"] = 0.0
+	v["turn_after"] = maxf(float(v.get("turn_after", 0.0)) - delta * (THINK_EVERY if think else 1.0), 0.0)
 	if to_end < 18.0:                                     # (a bus or lorry slower into the turn: its size)
 		target = minf(target, (6.0 + to_end * 0.35) * float(DYN.get(v["kind"], [0, 0, 1.0])[2]))
 	# vehicles and you ahead in my lane
