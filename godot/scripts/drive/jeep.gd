@@ -285,6 +285,17 @@ var wheel_r := WHEEL_R
 var _steer_base := Basis(Vector3.RIGHT, deg_to_rad(-65.0))
 var _cab_parts: Array = []         # procedural dash/wheel/labels/mirror
 var _rider: Node3D                 # you, astride a two-wheeler
+const RiderIK := preload("res://scripts/drive/rider_ik.gd")
+## A two-wheeler's handlebar that turns (the bar, grips, levers, mirrors, switches, its cowl, the fork: jeep.gd
+## _make_bars), the rider's hands and feet on it (rider_ik.gd), and his left foot down when he stops.
+const BAR_PARTS := ["Bar", "BarEnd", "Grip", "Lever", "Mirror", "MirrorStem", "MirrorGlass", "Switches", "Cowl", "Speedo",
+	"Stanchion", "ForkSlider", "FrontGuard"]
+var _bars: Node3D
+var _bar_axis := Vector3.UP
+var _grips: Array = []             # [left, right] markers on the bar
+var _pegs: Array = []              # [left, right] where his feet rest (the floorboard)
+var _rik                           # rider_ik.gd on his skeleton
+var _foot_down := 0.0
 var _paint := Color(0, 0, 0, 0)    # body colour of the car you took (alpha 0: the model's own)
 var kit: CockpitKit                # analog cluster, live door mirrors, wipers
 var night := 0.0                   # set by the game: dial backlighting
@@ -587,6 +598,107 @@ func _build_glb(sp: Dictionary) -> void:
 		_coupe_wheels.append([w, xf, wn.substr(6, 1) == "F"])
 	_corner_lamps(sp["ind"][0], sp["ind"][1], sp["ind"][2])
 	_add_driver(sp["seat"])
+	if sp.get("two_wheeler", false):
+		_make_bars(model)
+
+
+## The handlebar turns with the steering, about the steering head (from the front axle up through the bar's middle,
+## raked back ~17°: the model's own geometry, karthik_scooter.glb), carrying the grips, levers, switches, mirrors,
+## its cowl and the fork; markers on the grips for his hands, on the floorboard for his feet.
+func _make_bars(model: Node3D) -> void:
+	var grip := model.find_child("Grip", true, false) as Node3D
+	if grip == null:
+		return
+	var root := grip.get_parent() as Node3D
+	var bar_mid := Vector3(0.35, 1.05, 0.0)               # (in the model's frame: x ahead, y up, z to his right)
+	var axle := Vector3(0.6, 0.24, 0.0)
+	_bar_axis = (bar_mid - axle).normalized()
+	_bars = Node3D.new()
+	_bars.name = "Bars"
+	root.add_child(_bars)
+	_bars.position = bar_mid
+	for c in root.get_children():
+		var nm := String(c.name).get_slice(".", 0)
+		if c != _bars and nm in BAR_PARTS:
+			(c as Node3D).reparent(_bars, true)
+	_grips = []
+	for z in [-0.345, 0.345]:                             # (left, right: his right is the model's +z)
+		var g := Node3D.new()
+		_bars.add_child(g)
+		g.position = Vector3(-0.01, 0.0, z)
+		_grips.append(g)
+	_pegs = []
+	for z in [-0.11, 0.11]:
+		var f := Node3D.new()
+		root.add_child(f)
+		f.position = Vector3(0.12, 0.41, z)              # (ankles 8 cm over the floorboard's top, 0.33)
+		_pegs.append(f)
+
+
+## His hands to the grips, his feet to the floorboard (rider_ik.gd), once he's settled on the seat.
+func _rider_hands(rider: Node3D) -> void:
+	if _grips.is_empty() or not is_instance_valid(rider):
+		return
+	var sks := rider.find_children("*", "Skeleton3D", true, false)
+	if sks.is_empty():
+		return
+	_rik = RiderIK.new()
+	_rik.name = "RiderIK"
+	_rik.grip_l = _grips[0]
+	_rik.grip_r = _grips[1]
+	_rik.foot_l = _pegs[0]
+	_rik.foot_r = _pegs[1]
+	(sks[0] as Skeleton3D).add_child(_rik)
+	if "--ridetest" in OS.get_cmdline_user_args():
+		_ride_test.call_deferred()
+
+
+## (testing) --ridetest: standing (his foot down), pulling away, a left turn at speed, a right one, braking to a
+## stop; a picture from beside him at each (user://ride_<n>.jpg), the hands and feet printed.
+func _ride_test() -> void:
+	await get_tree().create_timer(3.0).timeout
+	autopilot = true
+	var cam := Camera3D.new()
+	cam.fov = 45.0
+	get_tree().root.add_child(cam)
+	var stages := [["stand", 0.0, 0.0, 0.0, 2.5], ["away", 0.6, 0.0, 0.0, 3.0], ["left", 0.5, 0.0, 0.35, 2.5],
+		["right", 0.5, 0.0, -0.35, 2.5], ["brake", 0.0, 0.8, 0.0, 2.5], ["stopped", 0.0, 0.0, 0.0, 2.0]]
+	for i in stages.size():
+		var st: Array = stages[i]
+		in_throttle = float(st[1])
+		in_brake = float(st[2])
+		in_steer = float(st[3])
+		await get_tree().create_timer(float(st[4])).timeout
+		var side := global_basis.x.normalized()
+		cam.global_position = global_position + side * 2.4 + global_basis.z * 0.4 + Vector3.UP * 1.1
+		cam.look_at(global_position + Vector3.UP * 0.8, Vector3.UP)
+		cam.make_current()
+		for f in 3:
+			await RenderingServer.frame_post_draw
+		get_viewport().get_texture().get_image().save_jpg(ProjectSettings.globalize_path("user://ride_%d_%s.jpg" % [i, st[0]]), 0.85)
+		print("RIDE %s: %.1f m/s, lean %.1f deg, steering %.2f, foot down %.2f" % [st[0], speed, rad_to_deg(_rik.lean), steering, _foot_down])
+	get_tree().quit()
+
+
+## The rider each frame: the bike's lean and the way it's going for his body and head; his left foot down on the road
+## when he's all but stopped (no throttle, under ~1.2 m/s), back up on the floorboard as he pulls away (~0.4 s).
+func _ride_pose(delta: float) -> void:
+	var fwd := global_basis.z.normalized()
+	_rik.forward = Vector3(fwd.x, 0.0, fwd.z).normalized()
+	_rik.up = Vector3.UP
+	_rik.lean = asin(clampf(global_basis.x.y, -1.0, 1.0))
+	_rik.look = clampf(steering * 1.5, -0.5, 0.5)
+	var stopping := absf(speed) < 1.2 and in_throttle < 0.1
+	_foot_down = move_toward(_foot_down, 1.0 if stopping else 0.0, delta * 2.5)
+	_rik.foot_down = _foot_down * _foot_down * (3.0 - 2.0 * _foot_down)
+	if _foot_down > 0.0:                                 # (the road beside his left foot: a ray finds it)
+		var side := global_basis.x.normalized()          # (the car's +x is its left)
+		var p := global_position + side * 0.36 + fwd * 0.05
+		var q := PhysicsRayQueryParameters3D.create(p + Vector3.UP * 1.0, p + Vector3.DOWN * 1.5)
+		q.exclude = [get_rid()]
+		var hit := get_world_3d().direct_space_state.intersect_ray(q)
+		if not hit.is_empty():
+			_rik.ground_l = (hit["position"] as Vector3) + Vector3.UP * 0.08
 
 
 static func _starts(nm: String, prefixes: Array) -> bool:
@@ -655,6 +767,7 @@ func _settle_rider(rider: Node3D, hip: Vector3, helmet: String) -> void:
 		rider.force_update_transform()
 	if helmet != "" and ResourceLoader.exists(helmet):
 		_put_on_helmet(rider, helmet)
+	_rider_hands(rider)
 
 
 func _put_on_helmet(rider: Node3D, path: String) -> void:
@@ -1800,6 +1913,10 @@ func _process_body(delta: float) -> void:
 			gear -= 1
 			_shift_timer = 0.3
 	_steering_wheel.basis = _steer_base * Basis(Vector3.UP, -steering * 7.5)
+	if _bars:                                            # the handlebar turns as the front wheel does
+		_bars.basis = Basis(_bar_axis, steering)
+	if _rik and is_instance_valid(_rik):
+		_ride_pose(delta)
 	_screen_speed.text = "%d" % roundi(absf(speed) * 3.6)
 	_screen_info.text = "km/h\n%s   %s rpm" % [("M" + gear_name()) if manual else ("D" + gear_name() if gear > 0 else "R"),
 		str(roundi(rpm / 50.0) * 50)]
