@@ -40,12 +40,10 @@ corner) and vehicles inside each other (up to 1 307 physics steps a minute); aft
 other, 0 through a red** in three runs; the nearest any followed 0.5–1.3 s. Staged: at 9 km/h a low knock (no
 dents, a moment's stop), at 50 km/h high (5 dents each, both drivers out, ~15 s stopped), each counted once.
 
-**The pack's vehicles in the traffic, with their lamps** (second round): three in four of each kind on the move is
-now one of the Sketchfab traffic pack's (hatchbacks, EVs, saloons, SUVs, autos, buses, lorries: their own sizes for
-collision; the taxis stay the plain fleet's, in their yellow). Each picks the way it'll go ~30 m before the road's
-end and **indicates** that way (amber, blinking, and a moment more through the turn; right when it pulls out round
-a stopped one); its **brake lamps** light while it slows (over 0.8 m/s²) or stands. Tested (`--lamptest`: the
-camera behind one): indicating 3.2 s of 40, braking 14.9 s; pictures `docs/shots/traffic/lamp_*.jpg`.
+**Indicators and brake lamps** (`_lamps`): each vehicle picks the way it'll go ~30 m before the road's end and
+indicates that way, and lights its brake lamps while it slows or stands, on any model with lamp parts named for it
+(`indicator_l/r`, `brake`). (The downloaded traffic pack that had them was taken out again on 16 Nov at the user's
+word: the game's own fleet models get their own lamps when they're remade.)
 
 Not done: horns, motorcycles in the traffic (the pack's bikes have no riders: parked only), lights and glass
 breaking in a crash, police coming to a crash.

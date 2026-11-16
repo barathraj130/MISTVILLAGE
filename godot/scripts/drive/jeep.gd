@@ -276,60 +276,8 @@ const BASE_SPECS := {
 		"hip": Vector3(0, 0.945, -0.17)},
 	"scooter": {"name": "Scooter", "built": "scooter", "len": 1.8, "w": 0.75, "h": 1.4, "mass": 190.0, "radius": 0.25, "torque": 0.11, "top": 21.0, "rider": true},
 }
-## Every vehicle: the ones above, and the Sketchfab pack's (tools/sketchfab_traffic_pack.py → assets/vehicles/sf_*.glb
-## and sf_fleet.json: CC-BY, docs/DATA_SOURCES.md), each made a vehicle from its own size and wheels on its kind's
-## physics, with its kind's cabin fitted to its body (_fit_cabin: the cab widened to it, the driver's eyes where its
-## driver sits, on the right).
-static var SPECS: Dictionary = _with_sf()
-const SF_FLEET := "res://assets/vehicles/sf_fleet.json"
-## kind → [physics from, cabin, cabin width it was made for, the driver's place: x (of the width, right is -), eye
-##          height (of the height), z (of the length, ahead +)]
-const SF_KIND := {
-	"hatchback": ["hatchback", "hatchback", 1.7, -0.21, 0.8, -0.01],
-	"sedan": ["sedan", "sedan", 1.74, -0.2, 0.84, 0.0],
-	"suv": ["xuv", "sedan", 1.74, -0.19, 0.74, 0.0],
-	"van": ["van", "sedan", 1.74, -0.2, 0.68, 0.12],
-	"bus": ["bus", "bus", 2.5, -0.27, 0.66, 0.36],
-	"lorry": ["lorry", "lorry", 2.5, -0.24, 0.66, 0.38],
-	"auto": ["auto", "auto", 1.3, 0.0, 0.66, 0.1],
-}
-
-
-static func _with_sf() -> Dictionary:
-	var all := BASE_SPECS.duplicate(true)
-	if not FileAccess.file_exists(SF_FLEET):
-		return all
-	var fleet = JSON.parse_string(FileAccess.get_file_as_string(SF_FLEET))
-	if not fleet is Dictionary:
-		return all
-	for key in fleet:
-		var f: Dictionary = fleet[key]
-		var kind := str(f["kind"])
-		if not SF_KIND.has(kind):                       # (the bikes: traffic only for now)
-			continue
-		var k: Array = SF_KIND[kind]
-		var base: Dictionary = all.get(str(k[0]), all["hatchback"])
-		var L := float(f["len"])
-		var W := float(f["w"])
-		var H := float(f["h"])
-		var r := 0.3
-		for wh in f["wheels"]:
-			r = float(wh["at"][2])                     # (a wheel's centre height: its radius, standing)
-		var sp := {"name": str(f.get("source", key)).replace("IN_", "").replace("_", " "), "glb": f["glb"], "sf": true,
-			"mass": float(base.get("mass", 1200.0)), "torque": float(base.get("torque", 0.6)), "top": float(base.get("top", 40.0)),
-			"radius": r, "rest": float(base.get("rest", 0.16)), "travel": float(base.get("travel", 0.16)),
-			"stiff": float(base.get("stiff", 40.0)), "len": L, "w": W, "h": H,
-			"com": Vector3(0, H * 0.3, 0.05), "glass": "NoGlass", "head": [], "tail": [],
-			"lamp": Vector3(W * 0.34, H * 0.42, L * 0.49),
-			"ind": [Vector3(W * 0.42, H * 0.42, L * 0.49), Vector3(W * 0.4, H * 0.45, -L * 0.49), Vector3(W * 0.3, H * 0.3, -L * 0.495)],
-			"cab_kind": str(k[1]), "cab_w": float(k[2]),
-			"seat": Vector3(W * float(k[3]), H * float(k[4]), L * float(k[5]))}
-		if kind in ["bus", "lorry", "auto"] or H > 2.4:      # (one box: a bus, a lorry's cab and body, an auto)
-			sp["boxes"] = [[Vector3(W, H - 0.3, L), Vector3(0, (H + 0.3) * 0.5, 0)]]
-		else:                                              # (a car: the body, the cabin on it)
-			sp["boxes"] = [[Vector3(W, H * 0.5, L), Vector3(0, r + H * 0.2, 0)], [Vector3(W * 0.86, H * 0.42, L * 0.55), Vector3(0, H * 0.7, -L * 0.05)]]
-		all[key] = sp
-	return all
+## Every vehicle (the ones above).
+static var SPECS: Dictionary = BASE_SPECS
 
 
 const START_VEHICLE := "luxury_suv"
@@ -622,14 +570,6 @@ func _build_glb(sp: Dictionary) -> void:
 		while top.get_parent() != model:
 			top = top.get_parent()
 		var nm := String(top.name)
-		if sp.get("sf", false):                          # (the pack's lamps by their own nodes' names)
-			var pn := String(m.get_parent().name) if m.get_parent() else ""
-			if pn.ends_with("_Light") or pn.ends_with("_light"):
-				m.material_override = _lamp_mat
-				continue
-			if pn.to_lower().ends_with("_light_rear") or pn.to_lower().ends_with("_light_break"):
-				m.material_override = _tail_mat
-				continue
 		if nm.begins_with(sp["glass"]):
 			m.material_override = glass
 			_glass = m
@@ -647,8 +587,7 @@ func _build_glb(sp: Dictionary) -> void:
 			var bm := gi.get_surface_override_material(si) as BaseMaterial3D
 			if bm == null:
 				bm = gi.mesh.surface_get_material(si) as BaseMaterial3D
-			if bm and bm.cull_mode != BaseMaterial3D.CULL_BACK and not String(sp["glb"]).contains("luxury_suv") \
-					and not String(sp["glb"]).contains("red_hatch"):   # (a scanned body: its faces not all outward)
+			if bm and bm.cull_mode != BaseMaterial3D.CULL_BACK and not String(sp["glb"]).contains("luxury_suv"):
 				var one := bm.duplicate() as BaseMaterial3D
 				one.cull_mode = BaseMaterial3D.CULL_BACK
 				gi.set_surface_override_material(si, one)
@@ -1550,12 +1489,6 @@ func set_cockpit(on: bool) -> void:
 		_engine.volume_db = -7.0 if on else 0.0        # muffled inside the cabin
 	if _glass:
 		_glass.visible = not on          # from inside, the tinted glass would veil the view
-	if SPECS.get(vehicle, {}).get("sf", false):
-		var cab := find_child("Cabin", false, false) as Node3D
-		if cab:
-			cab.visible = on             # (a bought model's own shell from outside; the fitted cabin only from his seat)
-		if String(SPECS[vehicle]["glb"]).contains("red_hatch") and has_node("Model"):
-			(get_node("Model") as Node3D).visible = not on   # (a scanned shell, its glass painted on: from his seat, the cabin)
 	_mirror_vp.render_target_update_mode = SubViewport.UPDATE_ALWAYS if on else SubViewport.UPDATE_DISABLED
 
 

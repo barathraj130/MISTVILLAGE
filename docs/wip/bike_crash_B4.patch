@@ -1,0 +1,92 @@
+diff --git a/godot/scripts/drive/jeep.gd b/godot/scripts/drive/jeep.gd
+index 84e2a07..49bd352 100644
+--- a/godot/scripts/drive/jeep.gd
++++ b/godot/scripts/drive/jeep.gd
+@@ -354,6 +354,10 @@ var _rik                           # rider_ik.gd on his skeleton
+ var _foot_down := 0.0
+ var _rider_seat := Vector3.ZERO     # where his model sits on the seat (in the vehicle's frame)
+ var mounting := false              # getting on or off: the rider's pose is the sequence's, not the ride's
++## A two-wheeler down (docs/PHYSICS_AND_BIKE_PLAN_2026-11-16.md B4): its balance off, it lies on its side and slides
++## to rest; nobody's riding it (city_test.gd threw him off). Up again when he lifts it (lift_up).
++var fallen := false
++signal fell_over(push: Vector3)      # the rider comes off: which way and how hard he's thrown
+ var _paint := Color(0, 0, 0, 0)    # body colour of the car you took (alpha 0: the model's own)
+ var kit: CockpitKit                # analog cluster, live door mirrors, wipers
+ var night := 0.0                   # set by the game: dial backlighting
+@@ -1896,7 +1900,12 @@ func _physics_process_body(delta: float) -> void:
+ 		_hb_on = false
+ 		_apply_grip()
+ 	if two_wheeler:
+-		_balance(delta, on_ground)
++		if fallen:
++			pass                                         # (on its side: nothing holds it up)
++		else:
++			_balance(delta, on_ground)
++			if absf(lean) > 0.95 and on_ground and not mounting:   # (leant past ~55°: over it goes)
++				fall_over(linear_velocity * 0.6 + global_basis.x * signf(-lean) * 1.5)
+ 	elif on_ground:
+ 		# anti-roll bars: the body leans into a corner but settles, it doesn't wallow
+ 		var fwd_axis := forward()
+@@ -1976,6 +1985,50 @@ func _integrate_forces(state: PhysicsDirectBodyState3D) -> void:
+ 	_hit(zone, severity, state.get_contact_collider_object(best))
+ 
+ 
++## Over it goes: the balance let go, the engine and brakes released, a little roll to start it toward the side it
++## leans (or the side the hit came from); the rider thrown (`fell_over`, city_test.gd).
++func fall_over(push: Vector3) -> void:
++	if fallen or not two_wheeler:
++		return
++	fallen = true
++	autopilot = true                                     # (nobody's riding it: no keys move it)
++	in_throttle = 0.0
++	in_brake = 0.0
++	in_steer = 0.0
++	_thr = 0.0
++	engine_force = 0.0
++	brake = 0.0
++	var side := signf(-lean) if absf(lean) > 0.05 else (1.0 if randf() < 0.5 else -1.0)
++	apply_torque_impulse(forward() * side * -mass * 0.6)
++	print("BIKE down: lean %.0f°, %.1f m/s" % [rad_to_deg(lean), linear_velocity.length()])
++	fell_over.emit(push)
++
++
++## Lifted upright again (city_test.gd: he's beside it, F): its own heading kept, back on its wheels.
++func lift_up() -> void:
++	if not fallen:
++		return
++	var fw := forward()
++	fw.y = 0.0
++	fw = fw.normalized() if fw.length() > 0.1 else Vector3.FORWARD
++	var at := global_position
++	var from_basis := global_basis
++	var to_basis := Basis.looking_at(-fw * FWD, Vector3.UP)
++	freeze = true
++	var t := 0.0
++	while t < 1.2:                                       # (raised over a second and more, as a man lifts it)
++		t += get_physics_process_delta_time()
++		var k := smoothstep(0.0, 1.0, t / 1.2)
++		global_transform = Transform3D(from_basis.slerp(to_basis, k), at + Vector3.UP * 0.15 * sin(k * PI))
++		await get_tree().physics_frame
++	linear_velocity = Vector3.ZERO
++	angular_velocity = Vector3.ZERO
++	lean_target = 0.0
++	fallen = false
++	autopilot = false
++	freeze = false
++
++
+ func _hit(zone: String, severity: float, other: Object) -> void:
+ 	damage[zone] = minf(1.0, float(damage[zone]) + severity * 0.6)
+ 	_crash = maxf(_crash, 0.4 + severity * 0.6)
+@@ -1996,6 +2049,11 @@ func _hit(zone: String, severity: float, other: Object) -> void:
+ 		var n := Dents.dent(self, to_global(lp), hit_normal, 0.45 + severity * 0.75, 0.04 + severity * 0.26, _dents, skip)
+ 		print("DENT %d vertices, %d meshes, at %s local" % [n, _dents.size(), str(lp.snapped(Vector3.ONE * 0.01))])
+ 	impacted.emit(zone, severity, other)
++	if two_wheeler and severity >= 0.12 and not fallen:  # (a two-wheeler: a real knock and he's off)
++		var push := hit_velocity * (0.7 if zone == "front" else 0.4) + Vector3.UP * 0.0
++		if zone == "left" or zone == "right":
++			push += -hit_normal * 2.0
++		fall_over(push)
+ 
+ 
+ ## What the damage shows and does: broken headlights, a cracked windscreen, a pull, a limping engine.

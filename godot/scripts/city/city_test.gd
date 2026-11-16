@@ -1300,7 +1300,7 @@ func shake(amount: float) -> void:
 var _left_behind: Array = []        # your own vehicles left parked when you took another: [Node3D, its kind]
 
 
-## On foot, F beside a parked car, auto or lorry (the street's Sketchfab ones: city_streamer.gd take_parked): you
+## On foot, F beside a parked car, auto or lorry (the street's own: city_streamer.gd take_parked): you
 ## get into it. The vehicle you had stays parked where you left it (solid, as it was), and is yours again if you
 ## come back to it: F beside it.
 func _take_parked() -> bool:

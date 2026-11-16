@@ -36,16 +36,6 @@ const DYN := {"hatchback": [2.2, 5.5, 1.0], "sedan": [2.3, 5.8, 1.0], "taxi": [2
 ## the evening's rush the busiest, few at night.
 const BY_HOUR := [0.22, 0.15, 0.12, 0.12, 0.18, 0.35, 0.6, 0.9, 1.1, 1.05, 0.85, 0.75, 0.75, 0.8, 0.75, 0.8, 0.95,
 	1.1, 1.15, 1.05, 0.8, 0.6, 0.45, 0.3]
-## The Sketchfab traffic pack (CC-BY, tools/sketchfab_traffic_pack.py) on the move too: most of each kind one of
-## these (the taxis stay the plain fleet's, in their yellow), each with its own indicators, brake and tail lamps.
-const SF_FLEET := "res://assets/vehicles/sf_fleet.json"
-const SF_FOR := {"hatchback": ["hatchback", "ev", "red"], "sedan": ["luxury", "suv"], "auto": ["rickshaw"], "bus": ["bus", "tnstc"],
-	"lorry": ["truck"]}
-## (most of Coimbatore's town buses are the state's own: TNSTC, tools/sketchfab_tnstc.py)
-const SF_PREFER := {"bus": ["sf_tnstc_bus", 0.6]}
-const SF_SHARE := 0.75
-var _sf: Dictionary = {}                   # kind → [[key, entry from sf_fleet.json], ...]
-var _sf_scenes := {}
 var _lamp_on: StandardMaterial3D           # an indicator lit (amber), a brake lamp lit (red)
 var _brake_on: StandardMaterial3D
 var crashes: Array = []                    # (testing) [time, kinds, severity, closing m/s]
@@ -76,15 +66,6 @@ var _rng := RandomNumberGenerator.new()
 
 func _ready() -> void:
 	_rng.seed = 2026
-	if FileAccess.file_exists(SF_FLEET) and not "--nosftraffic" in OS.get_cmdline_user_args():
-		var fl: Dictionary = JSON.parse_string(FileAccess.get_file_as_string(SF_FLEET))
-		for key in fl:
-			for kind in SF_FOR:
-				for pre in SF_FOR[kind]:
-					if str(key).begins_with("sf_" + pre + "_") and ResourceLoader.exists(fl[key]["glb"]):
-						if not _sf.has(kind):
-							_sf[kind] = []
-						_sf[kind].append([key, fl[key]])
 	_lamp_on = StandardMaterial3D.new()
 	_lamp_on.albedo_color = Color(1.0, 0.55, 0.05)
 	_lamp_on.emission_enabled = true
@@ -245,14 +226,6 @@ func _spawn(me: Vector3) -> void:
 	var body := AnimatableBody3D.new()
 	body.sync_to_physics = false
 	var dims: Vector3 = DIMS[kind]
-	var sf: Array = []
-	if _sf.has(kind) and _rng.randf() < SF_SHARE:
-		sf = _sf[kind][_rng.randi() % _sf[kind].size()]
-		if SF_PREFER.has(kind) and _rng.randf() < float(SF_PREFER[kind][1]):
-			for se in _sf[kind]:
-				if se[0] == SF_PREFER[kind][0]:
-					sf = se
-		dims = Vector3(float(sf[1]["w"]), float(sf[1]["h"]), float(sf[1]["len"]))
 	var cs := CollisionShape3D.new()
 	var bx := BoxShape3D.new()
 	bx.size = dims
@@ -260,10 +233,8 @@ func _spawn(me: Vector3) -> void:
 	cs.position = Vector3(0, dims.y * 0.5 + 0.25, 0)
 	body.add_child(cs)
 	var lamps := {}
-	if sf.is_empty():
-		body.add_child(Fleet.model(kind, Fleet.paint_for(kind, _rng)))
-	else:
-		body.add_child(_sf_model(str(sf[1]["glb"]), lamps))
+	body.add_child(Fleet.model(kind, Fleet.paint_for(kind, _rng)))
+	_find_lamps(body, lamps)
 	add_child(body)
 	var driver := "commercial" if kind in ["bus", "lorry", "taxi"] or (kind == "auto" and _rng.randf() < 0.6) else _pick_driver()
 	var v := {"body": body, "kind": kind, "road": r, "road_node": r["node"], "dir": dir, "i": i0, "t": 0.0,
@@ -274,28 +245,23 @@ func _spawn(me: Vector3) -> void:
 	_place(v)
 
 
-## A pack vehicle as it is (+Z its nose, on y 0), and its lamps found: indicators left and right, brake lamps.
-func _sf_model(path: String, lamps: Dictionary) -> Node3D:
-	if not _sf_scenes.has(path):
-		_sf_scenes[path] = load(path)
-	var root := Node3D.new()
-	var m := (_sf_scenes[path] as PackedScene).instantiate() as Node3D
-	m.rotation.y = -PI * 0.5                    # (the pack's nose +X → +Z)
-	root.add_child(m)
+## A vehicle's lamps, by its parts' names: indicators left and right ("turn_l", "indicator_l"...), brake lamps.
+## (The plain fleet's models have none yet: their lamps light when they do.)
+func _find_lamps(root: Node, lamps: Dictionary) -> void:
 	lamps["l"] = []
 	lamps["r"] = []
 	lamps["brake"] = []
-	for mi in m.find_children("*", "MeshInstance3D", true, false):
+	for mi in root.find_children("*", "MeshInstance3D", true, false):
 		var gi := mi as MeshInstance3D
-		gi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF if gi.get_aabb().size.length() < 1.0 else gi.cast_shadow
 		var nm := String(gi.name).to_lower() + "|" + String(gi.get_parent().name).to_lower()
-		if nm.contains("turn_l"):
+		if nm.contains("turn_l") or nm.contains("indicator_l"):
 			lamps["l"].append(gi)
-		elif nm.contains("turn_r"):
+		elif nm.contains("turn_r") or nm.contains("indicator_r"):
 			lamps["r"].append(gi)
-		elif nm.contains("light_break") or nm.contains("light_brake"):
+		elif nm.contains("light_break") or nm.contains("brake"):
 			lamps["brake"].append(gi)
-	return root
+	if (lamps["l"] as Array).is_empty() and (lamps["r"] as Array).is_empty() and (lamps["brake"] as Array).is_empty():
+		lamps.clear()
 
 
 ## Its lamps: the indicator on the way it's about to turn (or pulling out round a stopped one), blinking; the brake

@@ -100,13 +100,9 @@ const SF_PEOPLE := {"men": ["sf_man_kurta_blue", "sf_man_kurta_red", "sf_man_sui
 const SF_STANDS_FOR := {"street_man_shirt_stand": "men", "street_man_veshti": "men", "street_man_lungi": "men",
 	"street_woman_saree_red": "women", "street_woman_saree_green": "women", "street_woman_saree_blue": "women"}
 var sf_kinds := {}                         # "men" / "women" → their life kind indices
-## The street's parked cars, autos and lorries: the Sketchfab vehicles (tools/sketchfab_traffic_pack.py, CC-BY) in their
-## place, each one you can get into (take_parked: F beside it on foot); the plain fleet models where none fits.
-const SF_FLEET_FOR := {"fleet_hatchback": ["hatchback_01", "hatchback_02", "hatchback_03", "hatchback_04", "ev_01", "ev_02",
-		"red_hatch"],
-	"fleet_sedan": ["luxury_01", "luxury_02", "luxury_03", "luxury_04", "suv_01", "suv_04"],
-	"fleet_lorry": ["truck_01", "truck_02", "truck_03"], "fleet_auto": ["rickshaw_01", "rickshaw_02", "rickshaw_03", "rickshaw_04"]}
-var sf_fleet_kinds := {}                   # fleet_* → the life kind indices of its Sketchfab stand-ins
+## The street's parked cars, autos and lorries: each one you can get into (take_parked: F beside it on foot), as the
+## vehicle it is (jeep.gd's own kinds).
+const TAKE_AS := {"fleet_hatchback": "hatchback", "fleet_sedan": "sedan", "fleet_auto": "auto", "fleet_lorry": "lorry"}
 var takeable: Array = []                   # parked vehicles you can take: {xf, key, mm, idx, prid, shape, node}
 var taken := {}                            # Vector3i (its place, to 0.5 m) → true: taken, so not parked there again
 var wire_mat: StandardMaterial3D
@@ -201,15 +197,6 @@ func _ready() -> void:
 				life_meshes.append(_with_lods(pm))
 				life_far.append(null)
 				life_names.append(nm)
-	for fleet in ([] if "--nosffleet" in OS.get_cmdline_user_args() else SF_FLEET_FOR.keys()):
-		sf_fleet_kinds[fleet] = []
-		for key in SF_FLEET_FOR[fleet]:
-			var vp := "res://assets/vehicles/sf_%s.glb" % key
-			if ResourceLoader.exists(vp):
-				sf_fleet_kinds[fleet].append(life_meshes.size())
-				life_meshes.append(_with_lods(_scene_mesh(vp)))
-				life_far.append(null)
-				life_names.append("fleetsf_" + key)    # (fleet*: the parked vehicles' draw distance and detail)
 	for m in life_meshes:
 		life_boxes.append((m as Mesh).get_aabb() if m else AABB())
 	shrub_mesh = _gltf_mesh("res://assets/models/veg_hedgerow_bush_0_lod.gltf")
@@ -1766,9 +1753,6 @@ func _life(life: Array, out: Dictionary, roads: Array = []) -> void:
 				kind = grp[posmod(hsh / 3, grp.size())]
 				if OS.is_debug_build() and "--where=people" in OS.get_cmdline_user_args():
 					print("PERSON %s at %.1f,%.1f,%.1f yaw %.2f" % [life_names[kind], v[0], v[1], v[2], v[3]])
-		elif sf_fleet_kinds.has(nm0) and not sf_fleet_kinds[nm0].is_empty():
-			var fg: Array = sf_fleet_kinds[nm0]
-			kind = fg[posmod(floori(v[0] * 7.0 + v[2] * 13.0), fg.size())]
 		if nm0.begins_with("fleet_") or nm0.begins_with("bike_") or nm0 == "cart":
 			v = _park_on_road(v, segs, 1.3 if nm0 == "fleet_lorry" else (0.95 if nm0.begins_with("fleet_") else 0.45))
 		var a := v[3]
@@ -1780,10 +1764,10 @@ func _life(life: Array, out: Dictionary, roads: Array = []) -> void:
 				var pxf := Transform3D(bs, Vector3(v[0], v[1], v[2]))
 				var lk := Vector3i(kind, floori(v[0] / LIFE_CELL), floori(v[2] / LIFE_CELL))
 				var lname: String = life_names[kind] if kind < life_names.size() else ""
-				if lname.begins_with("fleetsf_"):            # (one you can take: its kind, its MultiMesh and place there)
+				if TAKE_AS.has(lname):                       # (one you can take: its kind, its MultiMesh and place there)
 					if taken.has(Vector3i(roundi(v[0] * 2.0), 0, roundi(v[2] * 2.0))):
 						continue                             # (taken: it isn't parked here any more)
-					parked.append([pxf, bb, "sf_" + lname.substr(8), lk, by.get(lk, []).size()])
+					parked.append([pxf, bb, TAKE_AS[lname], lk, by.get(lk, []).size()])
 				else:
 					parked.append([pxf, bb])
 		# visibility ranges are measured from each MultiMesh's centre, so the things are grouped in 64 m cells
@@ -2380,7 +2364,7 @@ class _MM:
 		custom[i] = c
 
 
-## The tile's parked vehicles you can take (the Sketchfab ones), each with its MultiMesh instance and its collision
+## The tile's parked vehicles you can take, each with its MultiMesh instance and its collision
 ## shape (the same order as parked_list), forgotten when the tile goes.
 func _note_takeable(node: Node3D, parked_list: Array) -> void:
 	if not node.has_meta("parked_rid"):
