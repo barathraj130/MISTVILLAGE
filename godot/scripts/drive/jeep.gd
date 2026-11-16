@@ -661,8 +661,8 @@ func _ride_test() -> void:
 	var cam := Camera3D.new()
 	cam.fov = 45.0
 	get_tree().root.add_child(cam)
-	var stages := [["stand", 0.0, 0.0, 0.0, 2.5], ["away", 0.6, 0.0, 0.0, 3.0], ["left", 0.5, 0.0, 0.35, 2.5],
-		["right", 0.5, 0.0, -0.35, 2.5], ["brake", 0.0, 0.8, 0.0, 2.5], ["stopped", 0.0, 0.0, 0.0, 2.0]]
+	var stages := [["stand", 0.0, 0.0, 0.0, 2.5], ["away", 0.6, 0.0, 0.0, 2.0], ["left", 0.4, 0.0, 0.18, 1.0],
+		["right", 0.4, 0.0, -0.18, 1.2], ["brake", 0.0, 0.8, 0.0, 2.0], ["stopped", 0.0, 0.0, 0.0, 1.5]]
 	for i in stages.size():
 		var st: Array = stages[i]
 		in_throttle = float(st[1])
@@ -671,6 +671,8 @@ func _ride_test() -> void:
 		await get_tree().create_timer(float(st[4])).timeout
 		var side := global_basis.x.normalized()
 		cam.global_position = global_position + side * 2.4 + global_basis.z * 0.4 + Vector3.UP * 1.1
+		if str(st[0]) in ["left", "right"]:              # (a turn: from behind him, where the lean shows)
+			cam.global_position = global_position - global_basis.z.normalized() * 3.2 + Vector3.UP * 1.3
 		cam.look_at(global_position + Vector3.UP * 0.8, Vector3.UP)
 		cam.make_current()
 		for f in 3:
