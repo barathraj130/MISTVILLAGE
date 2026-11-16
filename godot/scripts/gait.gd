@@ -34,8 +34,11 @@ const FAST := 1.9
 const JOG := 3.6
 const SPRINT := 5.6
 ## The clips and where they sit on his speed (m/s), and the ground a 1 s cycle covers at time scale 1 (m).
-const POINTS := [["LocoSlow", SLOW, 1.03], ["LocoWalk", WALK, 1.41], ["LocoFast", FAST, 1.66], ["LocoJog", JOG, 2.2],
-	["LocoSprint", SPRINT, 2.9]]
+## (2026-11-16: as the clips measure (tools/humans/story_cast.py walk_strip), so a cycle covers the ground it's played
+##  over: the walk 1.27 m, the run 2.86 m, the paces between by their stride (story_cast.py LOCO); the planted foot held where it
+##  landed besides: foot_ik.gd)
+const POINTS := [["LocoSlow", SLOW, 0.86], ["LocoWalk", WALK, 1.27], ["LocoFast", FAST, 1.61], ["LocoJog", JOG, 2.86],
+	["LocoSprint", SPRINT, 3.58]]
 const CLIPS := ["LocoSlow", "LocoWalk", "LocoFast", "LocoJog", "LocoSprint", "Idle", "Tired", "StepTurn", "HandOpen", "HandPoint",
 	"HandPhone", "HandPapers", "HandFist", "HandGrip", "Crouch", "CrouchWalk"]
 const CROUCH := 0.6                   # m/s, crouched (CrouchWalk: ~0.34 m a cycle)

@@ -583,8 +583,8 @@ func _measure_slide(delta: float) -> void:
 	var lo := ""
 	var ly := INF
 	var pos := {}
-	for s in ["l", "r"]:
-		var w: Vector3 = sk.global_transform * sk.get_bone_global_pose(sk.find_bone("foot_" + s)).origin
+	for s in ["l", "r"]:                                 # (the ankle of the lower foot: the clip's stride is measured
+		var w: Vector3 = sk.global_transform * sk.get_bone_global_pose(sk.find_bone("foot_" + s)).origin   # by it)
 		pos[s] = w
 		if w.y < ly:
 			ly = w.y
@@ -610,14 +610,38 @@ func _gait_phase(name: String, input: Vector2, pace: String, secs: float, side: 
 	var top := 0.0
 	var snapped := false
 	while t < secs:
-		await tree.physics_frame
-		var dt := get_physics_process_delta_time()
+		await tree.process_frame                         # (each drawn frame: the pose and the body both where they are
+		var dt := get_process_delta_time()               #  then; per physics step the pose lags, the feet seem to skate)
 		t += dt
 		if turn_input != 0.0:                            # (a circle: the keys' way turning steadily)
 			auto_input = Vector2(sin(t * turn_input), -cos(t * turn_input))
 		if t > secs * 0.4:
 			_measure_slide(dt)
 		top = maxf(top, Vector2(velocity.x, velocity.z).length())
+		if not snapped and t > secs * 0.55 and name in ["walk", "jog", "sprint", "slow"] and "--gaitstrip" in OS.get_cmdline_user_args():
+			snapped = true                               # (a filmstrip: 8 frames over a stride, from the side and the front)
+			for view in ["side", "front", "rear"]:
+				for k in 8:
+					var at2 := global_position + Vector3.UP * 0.9
+					var fwd2 := Vector3(sin(_model_yaw), 0.0, cos(_model_yaw))
+					if view == "side":
+						side.global_position = at2 + fwd2.cross(Vector3.UP) * 3.4 + Vector3.UP * 0.1
+					elif view == "front":
+						side.global_position = at2 + fwd2 * 4.2 + Vector3.UP * 0.25
+					else:
+						side.global_position = at2 - fwd2 * 4.2 + Vector3.UP * 0.25
+					side.look_at(at2, Vector3.UP)
+					side.make_current()
+					await RenderingServer.frame_post_draw
+					var img := get_viewport().get_texture().get_image()
+					img.resize(img.get_width() / 2, img.get_height() / 2)
+					img.save_jpg(ProjectSettings.globalize_path("user://strip_%s_%s_%d.jpg" % [name, view, k]), 0.85)
+					var wait := 0.0
+					while wait < 0.125 / maxf(gait.debug_data().get("cadence", 1.0) if gait else 1.0, 0.3):
+						await tree.process_frame
+						wait += get_process_delta_time()
+						t += get_process_delta_time()
+			camera.make_current()
 		if not snapped and t > secs * 0.7:
 			snapped = true
 			var at := global_position + Vector3.UP * 0.9

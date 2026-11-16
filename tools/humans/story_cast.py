@@ -669,9 +669,14 @@ def talk(a, k):                     # the right hand comes up and moves with the
 # and extends only ~10° behind; the knee gives ~15° as the weight lands, straightens through mid-stance, then folds
 # to ~60° just after toe-off and swings straight again for the next heel strike; the ankle drops the forefoot after
 # heel strike, rolls over the foot, pushes off ~15° pointed, and lifts the toes clear through the swing.
-GAIT_HIP = [(0.0, 27.0), (0.1, 23.0), (0.3, 4.0), (0.5, -18.0), (0.6, -12.0), (0.75, 12.0), (0.87, 28.0)]
-GAIT_KNEE = [(0.0, 4.0), (0.12, 16.0), (0.25, 10.0), (0.4, 4.0), (0.55, 28.0), (0.7, 58.0), (0.8, 42.0), (0.9, 14.0),
-             (0.97, 4.0)]
+# (2026-11-16: a longer stride, ~1.4 m a cycle at 1.4 m/s, as a man walks, not 1.18 m in quick short steps; the
+#  knee folding further through the swing, ~64°, so the foot clears the ground instead of skimming it)
+GAIT_HIP = [(0.0, 31.0), (0.1, 26.0), (0.3, 5.0), (0.5, -21.0), (0.6, -14.0), (0.75, 15.0), (0.87, 32.0)]
+GAIT_KNEE = [(0.0, 4.0), (0.12, 18.0), (0.25, 10.0), (0.4, 5.0), (0.55, 33.0), (0.67, 60.0), (0.74, 64.0), (0.82, 46.0),
+             (0.9, 18.0), (0.97, 4.0)]
+# The toes (the ball joint): flat through the stance, bending up as the heel rises and he rolls off them (~30° at
+# toe-off), straight again through the swing.
+GAIT_TOE = [(0.0, 0.0), (0.38, 0.0), (0.48, 12.0), (0.57, 28.0), (0.63, 12.0), (0.7, 0.0), (0.85, 0.0)]
 GAIT_ANKLE = [(0.0, 0.0), (0.07, -6.0), (0.3, 5.0), (0.45, 9.0), (0.55, 0.0), (0.62, -15.0), (0.72, -4.0),
               (0.85, 2.0)]
 
@@ -693,6 +698,17 @@ stride = 1.0                                           # (this character's: set 
 # The gait's size, for the speeds between (the Loco clips): legs (the hip's swing; the knee follows at the root),
 # arms (the swing) and lean (degrees more from the waist). 1, 1, 0: the Walk and the Run as they are.
 AMP_LEG, AMP_ARM, LEAN = 1.0, 1.0, 0.0
+# The game rig stands with its legs splayed (the rest pose: hips 23 cm apart, ankles 42 cm). Walking or running from
+# it, the feet went 41–52 cm apart: a wide-legged gait. Each thigh is first brought in under the hip (about the axis
+# he faces along) so the ankles land ~17 cm apart, on two nearly parallel tracks, the foot turned back flat; the
+# swing then goes forward and back, along his way. (Idle places its feet its own way: 26 cm apart, standing.)
+ADDUCT = 8.0
+
+
+def legs_under(a):
+    for side, sg in (("l", 1.0), ("r", -1.0)):
+        turn(a, "thigh_" + side, 'Y', sg * ADDUCT)
+        turn(a, "foot_" + side, 'Y', -sg * ADDUCT)
 
 
 def walk_phase(a, t):
@@ -701,12 +717,17 @@ def walk_phase(a, t):
     standing leg, shifts a little over it, turns with the leg that swings forward and dips on the swinging side; the
     chest turns against the pelvis, the body leans a touch forward; the arms swing against the legs (a little behind
     them, ~16° forward and ~12° back from the shoulder, the forearm trailing a moment behind and bending to ~30° as
-    the arm comes forward, the wrist loose; not held stiff at the sides); the head stays level and steady."""
+    the arm comes forward, the wrist loose; not held stiff at the sides); the head stays level and steady. The foot he stands on stays
+    on the ground (_plant): the hips rise over it and fall as the weight passes to the other."""
     w = 2.0 * math.pi * t
+    rest_feet = _feet_now(a)                               # (standing: where his heels and toes meet the ground)
+    legs_under(a)                                          # (the legs under him, not splayed)
     for side, g in (("l", t - 0.25), ("r", t - 0.75)):
         turn(a, "thigh_" + side, 'X', -gait(GAIT_HIP, g) * stride * AMP_LEG)
         turn(a, "calf_" + side, 'X', gait(GAIT_KNEE, g) * (0.4 + 0.6 * stride) * math.sqrt(AMP_LEG))
         turn(a, "foot_" + side, 'X', gait(GAIT_ANKLE, g) * math.sqrt(AMP_LEG))
+        if "ball_" + side in a.pose.bones:
+            turn(a, "ball_" + side, 'X', gait(GAIT_TOE, g) * math.sqrt(AMP_LEG))
     pb = a.pose.bones.get("pelvis")
     if pb is not None:                                     # over the standing foot: left (+X) at t = 0.5
         m = a.matrix_world @ pb.matrix
@@ -714,8 +735,12 @@ def walk_phase(a, t):
         pb.matrix = a.matrix_world.inverted() @ m
         bpy.context.view_layer.update()
     lower(a, "pelvis", -0.02 * AMP_LEG * (0.5 + 0.5 * math.cos(4.0 * math.pi * (t - 0.25))))   # down as each heel lands
-    turn(a, "pelvis", 'Z', 6.0 * AMP_LEG * math.sin(w))                  # the hips turning with the swinging leg
+    turn(a, "pelvis", 'Z', 4.0 * AMP_LEG * math.sin(w))                  # the hips turning with the swinging leg
+    for side in ("l", "r"):                                # (the legs pointing on along his way, not turned out with
+        turn(a, "thigh_" + side, 'Z', -3.2 * AMP_LEG * math.sin(w))    #  the hips: the feet on their own tracks)
     turn(a, "pelvis", 'Y', 3.5 * math.sin(2.0 * math.pi * (t - 0.25)))   # and dipping on the swinging side
+    for side in ("l", "r"):                                # (the legs not tipped with it: each hip takes up the dip,
+        turn(a, "thigh_" + side, 'Y', -3.5 * math.sin(2.0 * math.pi * (t - 0.25)))   # the feet on their own tracks)
     turn(a, "spine_01", 'X', 4.0 + LEAN)                                  # a little forward, walking somewhere
     turn(a, "spine_03", 'Z', -7.5 * AMP_ARM * math.sin(w))               # the chest turning against the hips
     turn(a, "spine_03", 'Y', -1.2 * math.sin(2.0 * math.pi * (t - 0.25)))   # (and balancing the dip)
@@ -724,13 +749,43 @@ def walk_phase(a, t):
         sl = sg * math.sin(2.0 * math.pi * (t - 0.13))    # (the forearm a moment behind: it follows the upper arm)
         # from the shoulder, loose: ~20° forward, ~16° back; the elbow only soft, a little more as it comes forward;
         # the hand passing the hip, not crossing in front of him
-        turn(a, "upperarm_" + side, 'X', (16.0 * max(0.0, s) - 20.0 * max(0.0, -s)) * AMP_ARM)
+        turn(a, "upperarm_" + side, 'X', (19.0 * max(0.0, s) - 23.0 * max(0.0, -s)) * AMP_ARM)
         turn(a, "upperarm_" + side, 'Y', sg * 3.0)                            # (held a little off the body)
-        turn(a, "lowerarm_" + side, 'X', -(6.0 + 12.0 * AMP_ARM * max(0.0, -sl)))
+        turn(a, "lowerarm_" + side, 'X', -(9.0 + 17.0 * AMP_ARM * max(0.0, -sl)))
         turn(a, "hand_" + side, 'X', 6.0 * sl)                                # the wrist loose, trailing the swing
         turn(a, "clavicle_" + side, 'X', 3.0 * s)                             # the shoulder rolling with the arm
     turn(a, "neck_01", 'Z', 3.0 * math.sin(w))                               # the head keeps looking where he goes
     turn(a, "neck_01", 'X', -3.5 - 0.5 * LEAN)
+    _plant(a, rest_feet)                                   # the foot he stands on on the ground: the hips rise and fall
+
+
+def _feet_now(a):
+    """Heights of his heels (the ankle), the balls of his feet and his toe tips, now."""
+    bpy.context.view_layer.update()
+    out = {}
+    for s in ("l", "r"):
+        out["heel_" + s] = head_of(a, "foot_" + s).z
+        if "ball_" + s in a.pose.bones:
+            b = a.pose.bones["ball_" + s]
+            out["ball_" + s] = (a.matrix_world @ b.head).z
+            out["toe_" + s] = (a.matrix_world @ b.tail).z
+    return out
+
+
+def _plant(a, rest_feet, only=None, lift_only=False):
+    """The hips up or down so that the lowest of his heels, the balls of his feet and his toes is where it is when
+    he stands (on the ground: not floating over it as the leg swings round the hip, not into it as he rolls onto his
+    toes). The rise and fall of the hips through a step comes out of this, as in a real walk (the body vaulting
+    over the standing leg). only: the side whose foot is down (a run: the other may be in the air); lift_only: just
+    out of the ground (in a run's flight both feet are off it)."""
+    now = _feet_now(a)
+    gaps = [now[k] - rest_feet[k] for k in now if k in rest_feet and (only is None or k.endswith("_" + only))]
+    if not gaps:
+        return
+    lo = min(gaps)
+    if lift_only and lo > 0.0:
+        return
+    lower(a, "pelvis", -lo)
 
 
 # A run (a jog, ~3.9 m/s) on the clinical running curves (Novacheck, The biomechanics of running), at % of the
@@ -751,6 +806,8 @@ def run_phase(a, t):
     come forward only to the ribs, the forward one bent more), hands loosely closed;
     the head stays steady, looking ahead."""
     w = 2.0 * math.pi * t
+    rest_feet = _feet_now(a)
+    legs_under(a)
     for side, g in (("l", t - 0.25), ("r", t - 0.75)):
         turn(a, "thigh_" + side, 'X', -gait(RUN_HIP, g) * stride * AMP_LEG)
         turn(a, "calf_" + side, 'X', gait(RUN_KNEE, g) * min(AMP_LEG, 1.2))
@@ -759,6 +816,8 @@ def run_phase(a, t):
     turn(a, "spine_01", 'X', 10.0 + LEAN)                                 # leaning into the run
     turn(a, "neck_01", 'X', -6.0)
     turn(a, "pelvis", 'Z', 6.0 * math.sin(w))
+    for side in ("l", "r"):                                # (the legs on along his way, not turned out with the hips)
+        turn(a, "thigh_" + side, 'Z', -4.5 * math.sin(w))
     turn(a, "spine_03", 'Z', -9.0 * math.sin(w))
     for side, sg in (("l", 1.0), ("r", -1.0)):
         s = sg * math.sin(2.0 * math.pi * (t - 0.04))     # +1: this arm furthest back
@@ -767,6 +826,11 @@ def run_phase(a, t):
         turn(a, "lowerarm_" + side, 'X', -(72.0 - 12.0 * s))           # bent ~75°: the hands come to the waist, not the chest
         hand_pose(a, side, "run")                                 # hands loosely closed (over the relaxed hand)
     turn(a, "neck_01", 'Z', 2.5 * math.sin(w))
+    down = [s for s, g in (("l", t - 0.25), ("r", t - 0.75)) if 0.02 < (g % 1.0) < 0.34]
+    if down:                                               # a foot down: on the ground (it takes his weight)
+        _plant(a, rest_feet, down[0])
+    else:                                                  # in the air between steps: only never into the ground
+        _plant(a, rest_feet, lift_only=True)
 
 
 def _ankles(a):
@@ -1417,7 +1481,49 @@ def walk_strip(arm, objs, out_dir):
         speed = sorted(vs)[len(vs) // 2]
         print("STRIDE %s: foot down %.0f%% of the cycle, moving back under him at %.2f m/s at speed 1 (%.2f m a cycle)"
               % (name, 100.0 * len(planted) / 48.0, speed, speed * secs), flush=True)
+    loco_measure(arm)
     print("WALKSTRIP", out_dir, flush=True)
+
+
+def loco_measure(arm):
+    """The ground each Loco clip covers in a 1 s cycle (what scripts/gait.gd POINTS must say, or his planted foot
+    slides): each moment, each foot's lowest point (the heel under the ankle, the ball, the toe tip); while it's on
+    the ground, how fast that same point moves back under him; the median. Prints LOCOMEASURE <clip> <m a cycle>
+    <% of the cycle each foot is down>."""
+    global AMP_LEG, AMP_ARM, LEAN
+    n = 96
+    for name, kind, leg, arm_amp, lean in LOCO:
+        AMP_LEG, AMP_ARM, LEAN = leg, arm_amp, lean
+        fn = walk_phase if kind == "walk" else run_phase
+        frames = []
+        for k in range(n):
+            rest(arm)
+            arms_down(arm)
+            fn(arm, k / float(n))
+            bpy.context.view_layer.update()
+            pts = {}
+            for sd in ("l", "r"):
+                pts["heel_" + sd] = head_of(arm, "foot_" + sd) - Vector((0.0, 0.0, 0.06))
+                if "ball_" + sd in arm.pose.bones:
+                    b = arm.pose.bones["ball_" + sd]
+                    pts["ball_" + sd] = arm.matrix_world @ b.head
+                    pts["toe_" + sd] = arm.matrix_world @ b.tail
+            frames.append(pts)
+        zmin = min(p.z for f in frames for p in f.values())
+        vs = []
+        down = 0
+        for sd in ("l", "r"):
+            for k in range(n):
+                key = min((kk for kk in frames[k] if kk.endswith("_" + sd)), key=lambda kk: frames[k][kk].z)
+                if frames[k][key].z > zmin + 0.012:
+                    continue
+                down += 1
+                a0, a1 = frames[k - 1].get(key), frames[(k + 1) % n].get(key)
+                vs.append((a1.y - a0.y) / (2.0 / n))          # (+Y: back, behind him)
+        vs.sort()
+        mid = vs[len(vs) // 4: max(len(vs) * 3 // 4, len(vs) // 4 + 1)] if vs else [0.0]
+        print("LOCOMEASURE %s %.3f %.0f" % (name, sum(mid) / len(mid), 50.0 * down / n), flush=True)
+    AMP_LEG, AMP_ARM, LEAN = 1.0, 1.0, 0.0
 
 
 def main():
