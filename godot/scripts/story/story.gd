@@ -1166,24 +1166,18 @@ func _hide_done(caught: bool) -> void:
 ## The room's movable things (tools/story_rooms.py Move_<kind>_<n>: chairs): each a RigidBody3D with its own mass,
 ## a convex shape from its mesh, friction and damping, so walking into one pushes it (player.gd) and it settles
 ## where it stops; the room's floor and walls stop it. Sleeping until touched (no cost standing still).
-const MOVE_MASS := {"chair": 7.0, "bin": 2.0, "box": 4.0}
+const Profiles := preload("res://scripts/world/physics_profiles.gd")
+var moved := {}                      # room → {body name: its place in the room (12 floats)}: moved things stay moved
 
 
 func _movables(r: Node3D) -> void:
-	var mat := PhysicsMaterial.new()
-	mat.friction = 0.3                                   # (an office chair on castors rolls; a plastic one skids on tiles)
-	mat.bounce = 0.0
+	var saved: Dictionary = moved.get(str(r.get_meta("room", "")), {})
 	for mi in r.find_children("Move_*", "MeshInstance3D", true, false):
 		var m := mi as MeshInstance3D
 		var xf := m.global_transform
 		var rb := RigidBody3D.new()
 		rb.name = "Body_" + str(m.name)
-		rb.mass = float(MOVE_MASS.get(str(m.name).get_slice("_", 1), 5.0))
-		rb.physics_material_override = mat
-		rb.linear_damp = 1.2                            # (feet, castors, a tiled floor: it slides a little, then stops)
-		rb.angular_damp = 4.0
-		rb.can_sleep = true
-		rb.set_meta("movable", true)
+		Profiles.apply(rb, str(m.name).get_slice("_", 1))   # (scripts/world/physics_profiles.gd: its kind's mass, friction, damping)
 		var cs := CollisionShape3D.new()
 		cs.shape = m.mesh.create_convex_shape(true, true)
 		rb.add_child(cs)
@@ -1192,7 +1186,28 @@ func _movables(r: Node3D) -> void:
 		m.get_parent().remove_child(m)
 		rb.add_child(m)
 		m.transform = Transform3D.IDENTITY
+		rb.set_meta("home", r.global_transform.affine_inverse() * xf)
+		if saved.has(str(rb.name)):                     # (where he left it, last time)
+			var a: Array = saved[str(rb.name)]
+			rb.global_transform = r.global_transform * Transform3D(Basis(Vector3(a[0], a[1], a[2]), Vector3(a[3], a[4], a[5]),
+				Vector3(a[6], a[7], a[8])), Vector3(a[9], a[10], a[11]))
 		rb.sleeping = true
+
+
+## The room's movable things that aren't where they were built: their places kept (for the next visit, and the save).
+func _remember_moved(r: Node3D) -> void:
+	var key := str(r.get_meta("room", ""))
+	var here := {}
+	for rb in r.find_children("Body_Move_*", "RigidBody3D", true, false):
+		var rel: Transform3D = r.global_transform.affine_inverse() * (rb as Node3D).global_transform
+		var home: Transform3D = rb.get_meta("home", rel)
+		if rel.origin.distance_to(home.origin) > 0.05 or rel.basis.y.angle_to(home.basis.y) > 0.08 or rel.basis.z.angle_to(home.basis.z) > 0.08:
+			var b := rel.basis
+			here[str(rb.name)] = [b.x.x, b.x.y, b.x.z, b.y.x, b.y.y, b.y.z, b.z.x, b.z.y, b.z.z, rel.origin.x, rel.origin.y, rel.origin.z]
+	if here.is_empty():
+		moved.erase(key)
+	else:
+		moved[key] = here
 
 
 ## Taken off him (the fight lost, found in the night): "takes" = [{"tag": evidence, "item": in his pocket,
@@ -1213,6 +1228,7 @@ func _taken(list: Array) -> void:
 func _unload_room() -> void:
 	if room == null:
 		return
+	_remember_moved(room)
 	room.queue_free()
 	room = null
 	city.indoors = false
@@ -3298,7 +3314,7 @@ func _story_save() -> void:
 		"goods": city.fines._save_data.get("goods", {}), "hurt": city.life.hurt if city.life else 0.0,
 		"contacts": city.phone.contacts, "pins": city.phone.pins, "notes": city.phone.notes,
 		"items": strip.call(city.hands.items), "wall": strip.call(wall.pool), "wall_pins": pins, "threads": wall.state["threads"],
-		"standing": standing.save(), "version": 2}
+		"standing": standing.save(), "moved": moved, "version": 2}
 	var f := FileAccess.open(SAVE, FileAccess.WRITE)
 	if f:
 		f.store_string(JSON.stringify(d))
@@ -3337,6 +3353,7 @@ func _story_load() -> void:
 	lang = str(d.get("lang", lang))
 	flags = d.get("flags", {})
 	evidence = d.get("evidence", {})
+	moved = d.get("moved", {})
 	if city.money:
 		city.money.load_state(d.get("accounts", {}))
 	if city.bail:

@@ -2354,6 +2354,7 @@ def reset():
     bpy.ops.wm.read_factory_settings(use_empty=True)
     M.clear()
     SF.clear()
+    _MOVE[0] = 0                                         # (each room counts its own movables: stable names for the save)
 
 
 def export(name):

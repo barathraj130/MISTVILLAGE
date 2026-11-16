@@ -693,6 +693,10 @@ func _physics_tests(w: Node3D) -> void:
 	await get_tree().create_timer(1.0).timeout
 	print("INTERACT chair pushed: moved %.2f m (from %s to %s), upright %.2f" % [(ch.global_position - c0).length(), str(c0), str(ch.global_position), ch.global_basis.y.dot(Vector3.UP)])
 	await _snap("interact_chair_pushed")
+	if story and story.has_method("_remember_moved"):   # (kept for the next visit and the save)
+		story._remember_moved(_room)
+		var kept: Dictionary = story.moved.get(str(_room.get_meta("room", "")), {})
+		print("INTERACT chair kept: %s (%s)" % [str(kept.has(str(ch.name))), ", ".join(kept.keys())])
 	for it in items:                                     # a chair against the drawer: it mustn't open
 		if str(it["kind"]) != "drawer":
 			continue
