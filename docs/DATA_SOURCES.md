@@ -57,3 +57,4 @@ models may be used inside the game but not redistributed as standalone files.
 | Low Poly Autorickshaw aka TukTuk | Nirmal.Justin | CC-BY 4.0 | https://sketchfab.com/3d-models/low-poly-autorickshaw-aka-tuktuk-c7c87455ad014b3f9fc8c9fb2d164a61 |
 | Bhelpuri Shop By Ajay | AJ_AY (AJAY.K) | CC-BY 4.0 | https://sketchfab.com/3d-models/bhelpuri-shop-by-ajay-indian-local-shop-b8449c559da9434fbcdfcfcc92a5a082 |
 | Ceiling_Fan_LP | Vitor.GomesPT | CC-BY 4.0 | https://sketchfab.com/3d-models/ceiling-fan-lp-20026b96c5144e5b923f1c8c4f8d41e7 |
+| Bus Simulator India - Traffic Cars (the street's parked cars, autos, lorries: `godot/assets/vehicles/sf_*.glb`, tools/sketchfab_traffic_pack.py) | Villanueva-Jonatan-32621 | CC-BY 4.0 | https://sketchfab.com/3d-models/bus-simulator-india-traffic-cars-a0c72a6277bf4301bb3e5db4ccb194b6 |

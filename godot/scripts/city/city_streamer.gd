@@ -89,6 +89,14 @@ const SF_PEOPLE := {"men": ["sf_man_kurta_blue", "sf_man_kurta_red", "sf_man_sui
 const SF_STANDS_FOR := {"street_man_shirt_stand": "men", "street_man_veshti": "men", "street_man_lungi": "men",
 	"street_woman_saree_red": "women", "street_woman_saree_green": "women", "street_woman_saree_blue": "women"}
 var sf_kinds := {}                         # "men" / "women" → their life kind indices
+## The street's parked cars, autos and lorries: the Sketchfab vehicles (tools/sketchfab_traffic_pack.py, CC-BY) in their
+## place, each one you can get into (take_parked: F beside it on foot); the plain fleet models where none fits.
+const SF_FLEET_FOR := {"fleet_hatchback": ["hatchback_01", "hatchback_02", "hatchback_03", "hatchback_04", "ev_01", "ev_02"],
+	"fleet_sedan": ["luxury_01", "luxury_02", "luxury_03", "luxury_04", "suv_01", "suv_04"],
+	"fleet_lorry": ["truck_01", "truck_02", "truck_03"], "fleet_auto": ["rickshaw_01", "rickshaw_02", "rickshaw_03", "rickshaw_04"]}
+var sf_fleet_kinds := {}                   # fleet_* → the life kind indices of its Sketchfab stand-ins
+var takeable: Array = []                   # parked vehicles you can take: {xf, key, mm, idx, prid, shape, node}
+var taken := {}                            # Vector3i (its place, to 0.5 m) → true: taken, so not parked there again
 var wire_mat: StandardMaterial3D
 var shrub_mesh: Mesh                       # planting on the medians
 var pier_mesh: Mesh                        # flyover pier and lamp (tools/flyover.py)
@@ -176,6 +184,15 @@ func _ready() -> void:
 				life_meshes.append(_with_lods(pm))
 				life_far.append(null)
 				life_names.append(nm)
+	for fleet in ([] if "--nosffleet" in OS.get_cmdline_user_args() else SF_FLEET_FOR.keys()):
+		sf_fleet_kinds[fleet] = []
+		for key in SF_FLEET_FOR[fleet]:
+			var vp := "res://assets/vehicles/sf_%s.glb" % key
+			if ResourceLoader.exists(vp):
+				sf_fleet_kinds[fleet].append(life_meshes.size())
+				life_meshes.append(_with_lods(_scene_mesh(vp)))
+				life_far.append(null)
+				life_names.append("fleetsf_" + key)    # (fleet*: the parked vehicles' draw distance and detail)
 	for m in life_meshes:
 		life_boxes.append((m as Mesh).get_aabb() if m else AABB())
 	shrub_mesh = _gltf_mesh("res://assets/models/veg_hedgerow_bush_0_lod.gltf")
@@ -1648,6 +1665,8 @@ static func _scene_mesh(path: String) -> Mesh:
 					ns[i] = (xf.basis * ns[i]).normalized()
 				arr[Mesh.ARRAY_NORMAL] = ns
 			arr[Mesh.ARRAY_TANGENT] = null
+			for ci in [Mesh.ARRAY_CUSTOM0, Mesh.ARRAY_CUSTOM1, Mesh.ARRAY_CUSTOM2, Mesh.ARRAY_CUSTOM3]:
+				arr[ci] = null                       # (some bought models carry extra channels: not needed, not allowed here)
 			am.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arr)
 			var mat := mi.get_active_material(si)
 			am.surface_set_material(am.get_surface_count() - 1, _game_material(mat))
@@ -1729,6 +1748,9 @@ func _life(life: Array, out: Dictionary, roads: Array = []) -> void:
 				kind = grp[posmod(hsh / 3, grp.size())]
 				if OS.is_debug_build() and "--where=people" in OS.get_cmdline_user_args():
 					print("PERSON %s at %.1f,%.1f,%.1f yaw %.2f" % [life_names[kind], v[0], v[1], v[2], v[3]])
+		elif sf_fleet_kinds.has(nm0) and not sf_fleet_kinds[nm0].is_empty():
+			var fg: Array = sf_fleet_kinds[nm0]
+			kind = fg[posmod(floori(v[0] * 7.0 + v[2] * 13.0), fg.size())]
 		if nm0.begins_with("fleet_") or nm0.begins_with("bike_") or nm0 == "cart":
 			v = _park_on_road(v, segs, 1.3 if nm0 == "fleet_lorry" else (0.95 if nm0.begins_with("fleet_") else 0.45))
 		var a := v[3]
@@ -1737,7 +1759,15 @@ func _life(life: Array, out: Dictionary, roads: Array = []) -> void:
 		if (nm0.begins_with("fleet_") or nm0.begins_with("bike_")) and kind < life_boxes.size():
 			var bb: AABB = life_boxes[kind]                 # (its box: the car's own size, where it really stands)
 			if bb.size.length() > 0.1:
-				parked.append([Transform3D(bs, Vector3(v[0], v[1], v[2])), bb])
+				var pxf := Transform3D(bs, Vector3(v[0], v[1], v[2]))
+				var lk := Vector3i(kind, floori(v[0] / LIFE_CELL), floori(v[2] / LIFE_CELL))
+				var lname: String = life_names[kind] if kind < life_names.size() else ""
+				if lname.begins_with("fleetsf_"):            # (one you can take: its kind, its MultiMesh and place there)
+					if taken.has(Vector3i(roundi(v[0] * 2.0), 0, roundi(v[2] * 2.0))):
+						continue                             # (taken: it isn't parked here any more)
+					parked.append([pxf, bb, "sf_" + lname.substr(8), lk, by.get(lk, []).size()])
+				else:
+					parked.append([pxf, bb])
 		# visibility ranges are measured from each MultiMesh's centre, so the things are grouped in 64 m cells
 		if nm0 in ["stall0", "stall1", "cart", "shade0", "shade1", "shade2", "goods", "flowers"]:   # (where people stand and buy)
 			spots.append(["stall" if nm0.begins_with("stall") or nm0 == "cart" else "shade", Vector3(v[0], v[1], v[2]), v[3]])
@@ -1756,6 +1786,7 @@ func _life(life: Array, out: Dictionary, roads: Array = []) -> void:
 		for i in by[key].size():
 			mm.set_instance_transform(i, by[key][i])
 		var nm: String = names[kind]
+		mm.set_meta("life_key", key)
 		if nm.begins_with("street_") or nm.begins_with("sf_"):     # (people: city_bystanders.gd finds them)
 			mm.set_meta("people", "%d,%d,%d" % [key.x, key.y, key.z])
 		if kind < life_far.size() and life_far[kind] != null:
@@ -2322,6 +2353,49 @@ class _MM:
 		custom[i] = c
 
 
+## The tile's parked vehicles you can take (the Sketchfab ones), each with its MultiMesh instance and its collision
+## shape (the same order as parked_list), forgotten when the tile goes.
+func _note_takeable(node: Node3D, parked_list: Array) -> void:
+	if not node.has_meta("parked_rid"):
+		return
+	var by_key := {}
+	for c in node.get_children():
+		if c is MultiMeshInstance3D and c.has_meta("life_key"):
+			by_key[c.get_meta("life_key")] = c
+	var added := false
+	for i in parked_list.size():
+		var pk: Array = parked_list[i]
+		if pk.size() < 5 or not by_key.has(pk[3]):
+			continue
+		takeable.append({"xf": pk[0], "key": pk[2], "mmi": by_key[pk[3]], "idx": pk[4], "prid": node.get_meta("parked_rid"),
+			"shape": i, "node": node})
+		added = true
+	if added:
+		node.tree_exiting.connect(func() -> void: takeable = takeable.filter(func(t: Dictionary) -> bool: return t["node"] != node))
+
+
+## The parked vehicle you can take nearest `at` (within `r` m, flat): gone from the street (its instance and its
+## collision), and what it was and where it stood returned ({} if none): city_test.gd puts your car there as it.
+func take_parked(at: Vector3, r: float) -> Dictionary:
+	var best := {}
+	var bd := r
+	for t in takeable:
+		var o: Vector3 = (t["xf"] as Transform3D).origin
+		var dd := Vector2(o.x - at.x, o.z - at.z).length()
+		if dd < bd and is_instance_valid(t["mmi"]):
+			bd = dd
+			best = t
+	if best.is_empty():
+		return {}
+	takeable.erase(best)
+	var mmi := best["mmi"] as MultiMeshInstance3D
+	mmi.multimesh.set_instance_transform(int(best["idx"]), Transform3D(Basis().scaled(Vector3.ONE * 0.0001), Vector3(0, -500, 0)))
+	PhysicsServer3D.body_set_shape_disabled(best["prid"], int(best["shape"]), true)
+	var o2: Vector3 = (best["xf"] as Transform3D).origin
+	taken[Vector3i(roundi(o2.x * 2.0), 0, roundi(o2.z * 2.0))] = true
+	return {"xf": best["xf"], "key": best["key"]}
+
+
 ## The real MultiMesh for a worker's _MM (made once, on the main thread).
 func _real(x) -> MultiMesh:
 	if x is MultiMesh or x == null:
@@ -2542,6 +2616,7 @@ func _instance(k: Vector2i, d: Dictionary) -> void:
 			PhysicsServer3D.body_add_shape(prid, sh, Transform3D(xf.basis.orthonormalized(), xf * bb.get_center()))
 			shapes.append(sh)
 		parked_rids[prid] = shapes.size()
+		node.set_meta("parked_rid", prid)
 		node.tree_exiting.connect(func() -> void:
 			parked_rids.erase(prid)
 			PhysicsServer3D.free_rid(prid)
@@ -2558,11 +2633,14 @@ func _instance(k: Vector2i, d: Dictionary) -> void:
 		lmi2.lod_bias = lm[0].get_meta("lod_bias", 1.0)
 		if lm[0].has_meta("people"):
 			lmi2.set_meta("people", lm[0].get_meta("people"))
+		if lm[0].has_meta("life_key"):
+			lmi2.set_meta("life_key", lm[0].get_meta("life_key"))
 		if lm.size() > 3:
 			lmi2.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_SHADOWS_ONLY if lm[3] else GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 		elif lm[1] < 150.0 or lm[2] > 0.0:
 			lmi2.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 		node.add_child(lmi2)
+	_note_takeable(node, parked_list)
 	if d.has("wires"):
 		var wmi2 := MeshInstance3D.new()
 		wmi2.mesh = d["wires"]

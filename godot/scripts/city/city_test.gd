@@ -850,7 +850,9 @@ func toggle_on_foot() -> bool:
 			hud.warn("WASD walk · Shift run · F at the car", 4.0)
 		return true
 	if walker.global_position.distance_to(car.global_position) > 4.5:
-		return false
+		if not _take_parked():
+			return false
+		bike = false
 	if bike:                                                    # (onto a two-wheeler: to its side, then on)
 		_get_on_bike()
 		return true
@@ -867,7 +869,184 @@ func toggle_on_foot() -> bool:
 	return true
 
 
+## (testing) --taketest: out of the car, beside the nearest parked vehicle you can take, F: into it; a picture beside
+## it, one from his seat, one driving away (user://take_*.jpg); then back on foot, to his own car left behind, F.
+func _take_test() -> void:
+	await get_tree().create_timer(10.0).timeout
+	toggle_on_foot()
+	await get_tree().create_timer(2.0).timeout
+	var at: Vector3 = walker.global_position
+	var best := {}
+	var bd := 1e9
+	for t in streamer.takeable:
+		var o: Vector3 = (t["xf"] as Transform3D).origin
+		if o.distance_to(at) < bd:
+			bd = o.distance_to(at)
+			best = t
+	print("TAKETEST %d takeable, nearest %s at %.1f m" % [streamer.takeable.size(), best.get("key", "-"), bd])
+	if best.is_empty():
+		get_tree().quit()
+		return
+	var px: Transform3D = best["xf"]
+	var side := px.basis.z.normalized() * 1.6
+	var stand := px.origin + side
+	var top: float = streamer.height_at(stand.x, stand.z)
+	walker.global_position = Vector3(stand.x, (px.origin.y if is_nan(top) else maxf(top, px.origin.y)) + 0.3, stand.z)
+	await get_tree().create_timer(1.5).timeout
+	var c := Camera3D.new()
+	add_child(c)
+	c.global_position = px.origin + side * 3.5 + px.basis.x.normalized() * 4.0 + Vector3.UP * 3.0
+	c.look_at(px.origin + Vector3.UP, Vector3.UP)
+	c.make_current()
+	for f in 3:
+		await RenderingServer.frame_post_draw
+	get_viewport().get_texture().get_image().save_jpg(ProjectSettings.globalize_path("user://take_1_beside.jpg"), 0.85)
+	var ok := toggle_on_foot()
+	print("TAKETEST F: %s, now %s, walker %s" % [str(ok), car.vehicle, str(walker != null)])
+	await get_tree().create_timer(1.5).timeout
+	c.global_position = car.global_position + car.global_basis.x * 4.0 + car.global_basis.z * 3.0 + Vector3.UP * 3.0
+	c.look_at(car.global_position + Vector3.UP, Vector3.UP)
+	for f in 3:
+		await RenderingServer.frame_post_draw
+	get_viewport().get_texture().get_image().save_jpg(ProjectSettings.globalize_path("user://take_2_in.jpg"), 0.85)
+	c.queue_free()
+	cam.make_current()
+	cam_mode = 1
+	car.set_cockpit(true)
+	await get_tree().create_timer(1.0).timeout
+	for f in 3:
+		await RenderingServer.frame_post_draw
+	get_viewport().get_texture().get_image().save_jpg(ProjectSettings.globalize_path("user://take_3_seat.jpg"), 0.85)
+	cam_mode = 0
+	car.set_cockpit(false)
+	car.autopilot = true
+	car.in_throttle = 0.5
+	car.in_steer = 0.0
+	await get_tree().create_timer(3.0).timeout
+	car.in_throttle = 0.0
+	car.in_brake = 1.0
+	await get_tree().create_timer(2.0).timeout
+	car.in_brake = 0.0
+	car.autopilot = false
+	print("TAKETEST drove to %.1f km/h, moved %.1f m" % [absf(car.speed) * 3.6, car.global_position.distance_to(px.origin)])
+	await get_tree().create_timer(0.5).timeout
+	get_viewport().get_texture().get_image().save_jpg(ProjectSettings.globalize_path("user://take_4_away.jpg"), 0.85)
+	# back to his own, left behind
+	for i in 40:
+		if absf(car.speed) < 0.5:
+			break
+		await get_tree().create_timer(0.25).timeout
+	toggle_on_foot()
+	await get_tree().create_timer(1.5).timeout
+	var lb: Node3D = _left_behind[0][0] if not _left_behind.is_empty() else null
+	if lb:
+		walker.global_position = lb.global_position - lb.global_basis.x * 1.8 + Vector3.UP * 0.5
+		await get_tree().create_timer(1.0).timeout
+		toggle_on_foot()
+		print("TAKETEST back in own: now %s, left behind %d" % [car.vehicle, _left_behind.size()])
+		await get_tree().create_timer(1.0).timeout
+		get_viewport().get_texture().get_image().save_jpg(ProjectSettings.globalize_path("user://take_5_own.jpg"), 0.85)
+	get_tree().quit()
+
+
+var _left_behind: Array = []        # your own vehicles left parked when you took another: [Node3D, its kind]
+
+
+## On foot, F beside a parked car, auto or lorry (the street's Sketchfab ones: city_streamer.gd take_parked): you
+## get into it. The vehicle you had stays parked where you left it (solid, as it was), and is yours again if you
+## come back to it: F beside it.
+func _take_parked() -> bool:
+	if walker == null or streamer == null:
+		return false
+	var at: Vector3 = walker.global_position
+	for i in range(_left_behind.size() - 1, -1, -1):          # (one of your own, left here before)
+		var lb: Node3D = _left_behind[i][0]
+		if is_instance_valid(lb) and Vector2(lb.global_position.x - at.x, lb.global_position.z - at.z).length() < 3.5:
+			_swap_into(String(_left_behind[i][1]), lb.global_transform)
+			lb.queue_free()
+			_left_behind.remove_at(i)
+			return true
+	if not streamer.has_method("take_parked"):
+		return false
+	var t: Dictionary = streamer.take_parked(at, 3.2)
+	if t.is_empty() or not car.SPECS.has(t["key"]):
+		return false
+	var px: Transform3D = t["xf"]
+	var nose := Vector3(px.basis.x.x, 0.0, px.basis.x.z).normalized()   # (the model's nose: +X, the car's: +Z)
+	var bz := Basis(Vector3.UP.cross(nose), Vector3.UP, nose)
+	_swap_into(String(t["key"]), Transform3D(bz, px.origin))
+	return true
+
+
+## Your car made `key` and put at `xf` (its floor there); what it was left standing where it stood.
+func _swap_into(key: String, xf: Transform3D) -> void:
+	var was := car.vehicle
+	var stays := car.duplicate(0) as Node3D                    # (no script: what it looks like, solid, standing)
+	for n in stays.find_children("*", "", true, false):
+		if n is Camera3D or n is AudioStreamPlayer3D or n is AudioStreamPlayer or n is SubViewport or n is Light3D \
+				or n is Control or n is CanvasLayer or n.name == "Cabin":
+			n.queue_free()
+	if stays is RigidBody3D:
+		(stays as RigidBody3D).freeze = true
+	add_child(stays)
+	stays.global_transform = car.global_transform
+	_left_behind.append([stays, was])
+	if _left_behind.size() > 3:                                # (the oldest goes: a city doesn't keep them all)
+		var old: Node3D = _left_behind.pop_front()[0]
+		if is_instance_valid(old):
+			old.queue_free()
+	car.configure(key)
+	car.global_transform = Transform3D(xf.basis, xf.origin + Vector3.UP * 0.35)
+	car.linear_velocity = Vector3.ZERO
+	car.angular_velocity = Vector3.ZERO
+	print("TAKE %s → %s at %s" % [was, key, str(xf.origin)])
+
+
 var _mt_started := false
+var _sfv_started := false
+
+
+## (testing) --sfvehicletest=sf_hatchback_01,sf_bus_01,...: each made the car in turn where it stands, a picture from
+## outside and one from the driver's seat (user://sfv_<key>_out.jpg, _in.jpg), its cabin's fit printed.
+func _sfv_test(keys: PackedStringArray) -> void:
+	await get_tree().create_timer(6.0).timeout
+	for key in keys:
+		if not car.SPECS.has(key):
+			print("SFV no such vehicle " + key)
+			continue
+		var at: Vector3 = car.global_position
+		car.configure(key)
+		car.global_position = at + Vector3.UP * 0.5
+		car.linear_velocity = Vector3.ZERO
+		await get_tree().create_timer(2.0).timeout
+		cam_mode = 0
+		car.set_cockpit(false)
+		var c := Camera3D.new()
+		c.fov = 50.0
+		add_child(c)
+		var L := float(car.SPECS[key].get("len", 4.5))
+		c.global_position = car.global_position + car.global_basis.x * (L * 0.45 + 1.2) + car.global_basis.z * (L * 0.5) + Vector3.UP * (1.6 + L * 0.35)
+		c.look_at(car.global_position + Vector3.UP * 0.8, Vector3.UP)
+		c.make_current()
+		for f in 3:
+			await RenderingServer.frame_post_draw
+		get_viewport().get_texture().get_image().save_jpg(ProjectSettings.globalize_path("user://sfv_%s_out.jpg" % key), 0.85)
+		c.queue_free()
+		cam.make_current()
+		cam_mode = 1
+		car.set_cockpit(true)
+		await get_tree().create_timer(1.0).timeout
+		for f in 3:
+			await RenderingServer.frame_post_draw
+		get_viewport().get_texture().get_image().save_jpg(ProjectSettings.globalize_path("user://sfv_%s_in.jpg" % key), 0.85)
+		print("SFV %s: seat %s, cabin %s, wheels %d, mass %.0f" % [key, str(car.seat), str(car.find_child("Cabin", false, false) != null), car._wheels.size(), car.mass])
+		for wv in car._wheels:
+			var vw := wv as VehicleWheel3D
+			var parts := vw.get_child(0) as Node3D if vw.get_child_count() > 0 else null
+			print("SFV   wheel %s at %s r %.2f parts %s scale %s" % [vw.name, str(car.to_local(vw.global_position)), vw.wheel_radius, str(car.to_local(parts.global_position)) if parts else "none", str(parts.global_basis.get_scale()) if parts else ""])
+		cam_mode = 0
+		car.set_cockpit(false)
+	get_tree().quit()
 
 
 ## (testing) --mounttest: off the scooter, a few steps away, back on; pictures from beside it partway through each
@@ -1638,6 +1817,14 @@ func _drive_camera(dt: float) -> void:
 func _process(dt: float) -> void:
 	if car and car.get("_rider") != null and is_instance_valid(car._rider) and not car.mounting:
 		car._rider.visible = walker == null and not car.cockpit   # (on foot, he isn't also sitting on the scooter)
+	if not _sfv_started and car:
+		for a in OS.get_cmdline_user_args():
+			if a == "--taketest" and not _sfv_started:
+				_sfv_started = true
+				_take_test.call_deferred()
+			if a.begins_with("--sfvehicletest="):
+				_sfv_started = true
+				_sfv_test.call_deferred(a.get_slice("=", 1).split(","))
 	if not _mt_started and "--mounttest" in OS.get_cmdline_user_args() and car and car.get("_rik") != null:
 		_mt_started = true
 		_mount_test.call_deferred()
