@@ -39,7 +39,7 @@ const BY_HOUR := [0.22, 0.15, 0.12, 0.12, 0.18, 0.35, 0.6, 0.9, 1.1, 1.05, 0.85,
 ## The Sketchfab traffic pack (CC-BY, tools/sketchfab_traffic_pack.py) on the move too: most of each kind one of
 ## these (the taxis stay the plain fleet's, in their yellow), each with its own indicators, brake and tail lamps.
 const SF_FLEET := "res://assets/vehicles/sf_fleet.json"
-const SF_FOR := {"hatchback": ["hatchback", "ev"], "sedan": ["luxury", "suv"], "auto": ["rickshaw"], "bus": ["bus", "tnstc"],
+const SF_FOR := {"hatchback": ["hatchback", "ev", "red"], "sedan": ["luxury", "suv"], "auto": ["rickshaw"], "bus": ["bus", "tnstc"],
 	"lorry": ["truck"]}
 ## (most of Coimbatore's town buses are the state's own: TNSTC, tools/sketchfab_tnstc.py)
 const SF_PREFER := {"bus": ["sf_tnstc_bus", 0.6]}

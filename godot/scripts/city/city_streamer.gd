@@ -102,7 +102,8 @@ const SF_STANDS_FOR := {"street_man_shirt_stand": "men", "street_man_veshti": "m
 var sf_kinds := {}                         # "men" / "women" → their life kind indices
 ## The street's parked cars, autos and lorries: the Sketchfab vehicles (tools/sketchfab_traffic_pack.py, CC-BY) in their
 ## place, each one you can get into (take_parked: F beside it on foot); the plain fleet models where none fits.
-const SF_FLEET_FOR := {"fleet_hatchback": ["hatchback_01", "hatchback_02", "hatchback_03", "hatchback_04", "ev_01", "ev_02"],
+const SF_FLEET_FOR := {"fleet_hatchback": ["hatchback_01", "hatchback_02", "hatchback_03", "hatchback_04", "ev_01", "ev_02",
+		"red_hatch"],
 	"fleet_sedan": ["luxury_01", "luxury_02", "luxury_03", "luxury_04", "suv_01", "suv_04"],
 	"fleet_lorry": ["truck_01", "truck_02", "truck_03"], "fleet_auto": ["rickshaw_01", "rickshaw_02", "rickshaw_03", "rickshaw_04"]}
 var sf_fleet_kinds := {}                   # fleet_* → the life kind indices of its Sketchfab stand-ins

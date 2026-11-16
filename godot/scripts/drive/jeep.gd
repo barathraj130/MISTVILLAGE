@@ -647,7 +647,8 @@ func _build_glb(sp: Dictionary) -> void:
 			var bm := gi.get_surface_override_material(si) as BaseMaterial3D
 			if bm == null:
 				bm = gi.mesh.surface_get_material(si) as BaseMaterial3D
-			if bm and bm.cull_mode != BaseMaterial3D.CULL_BACK and not String(sp["glb"]).contains("luxury_suv"):
+			if bm and bm.cull_mode != BaseMaterial3D.CULL_BACK and not String(sp["glb"]).contains("luxury_suv") \
+					and not String(sp["glb"]).contains("red_hatch"):   # (a scanned body: its faces not all outward)
 				var one := bm.duplicate() as BaseMaterial3D
 				one.cull_mode = BaseMaterial3D.CULL_BACK
 				gi.set_surface_override_material(si, one)
@@ -1553,6 +1554,8 @@ func set_cockpit(on: bool) -> void:
 		var cab := find_child("Cabin", false, false) as Node3D
 		if cab:
 			cab.visible = on             # (a bought model's own shell from outside; the fitted cabin only from his seat)
+		if String(SPECS[vehicle]["glb"]).contains("red_hatch") and has_node("Model"):
+			(get_node("Model") as Node3D).visible = not on   # (a scanned shell, its glass painted on: from his seat, the cabin)
 	_mirror_vp.render_target_update_mode = SubViewport.UPDATE_ALWAYS if on else SubViewport.UPDATE_DISABLED
 
 

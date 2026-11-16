@@ -2645,5 +2645,52 @@
   ],
   "lamps": {},
   "source": "Tamilnadu TNSTC Bus 2009-2014"
+ },
+ "sf_red_hatch": {
+  "kind": "hatchback",
+  "glb": "res://assets/vehicles/sf_red_hatch.glb",
+  "len": 3.86,
+  "w": 2.029,
+  "h": 1.774,
+  "wheels": [
+   {
+    "name": "Wheel_FL",
+    "at": [
+     1.079,
+     0.905,
+     0.353
+    ],
+    "r": 0.353
+   },
+   {
+    "name": "Wheel_FR",
+    "at": [
+     1.083,
+     -0.905,
+     0.353
+    ],
+    "r": 0.353
+   },
+   {
+    "name": "Wheel_RL",
+    "at": [
+     -1.434,
+     0.905,
+     0.353
+    ],
+    "r": 0.353
+   },
+   {
+    "name": "Wheel_RR",
+    "at": [
+     -1.43,
+     -0.905,
+     0.353
+    ],
+    "r": 0.353
+   }
+  ],
+  "lamps": {},
+  "source": "Swift 2024"
  }
 }
