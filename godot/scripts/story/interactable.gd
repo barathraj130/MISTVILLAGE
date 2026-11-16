@@ -232,20 +232,31 @@ func _slide_sound(at: Vector3, out: bool) -> void:
 	get_tree().create_timer(0.8).timeout.connect(p.queue_free)
 
 
-## Is there something in front of the drawer, within its travel (a chair pushed against the desk, a person)?
+## Is there something in front of the drawer, within its travel (a chair pushed against the desk, a person)? Looked
+## along the way it slides out ("out"), from its front, at three heights of its face.
 func _blocked(dr: Node3D, travel: float) -> bool:
-	var fwd := -dr.global_basis.z.normalized()
-	var s: Array = []
+	var s: Array = [0.42, 0.5, 0.12]
+	var out: Array = [0, 0.3, 0]
 	for it in items:
 		if _drawers.get(it["id"]) == dr:
-			s = it.get("size", [0.42, 0.5, 0.12])
-	var front := dr.global_position + fwd * (float(s[1]) * 0.5 + 0.03 if not s.is_empty() else 0.28)
-	var q := PhysicsRayQueryParameters3D.create(front, front + fwd * (travel + 0.03))
+			s = it.get("size", s)
+			out = it.get("out", out)
+	var fwd := _wd(out).normalized()
+	var front := dr.global_position + fwd * (float(s[1]) * 0.5 + 0.03)
 	var ex: Array[RID] = []
 	if city and city.walker:
 		ex.append((city.walker as CollisionObject3D).get_rid())
-	q.exclude = ex
-	return not dr.get_world_3d().direct_space_state.intersect_ray(q).is_empty()
+	var space := dr.get_world_3d().direct_space_state
+	for dy in [-0.04, 0.0, 0.05]:
+		var a: Vector3 = front + Vector3.UP * float(dy)
+		var q := PhysicsRayQueryParameters3D.create(a, a + fwd * (travel + 0.05))
+		q.exclude = ex
+		var h := space.intersect_ray(q)
+		if _test != -1:
+			print("INTERACT   drawer ray from %s along %s (%.2f m): %s" % [str(a), str(fwd), travel + 0.05, str(h.get("collider")) if not h.is_empty() else "clear"])
+		if not h.is_empty():
+			return true
+	return false
 
 
 func _slab(parent: Node3D, size: Vector3, at: Vector3, m: Material) -> MeshInstance3D:
@@ -593,6 +604,7 @@ func _run_test(dt: float) -> void:
 	if _test >= items.size():
 		print("INTERACT test done: %d things" % items.size())
 		_test = -2
+		await _physics_tests(w)
 		get_tree().create_timer(1.0).timeout.connect(func(): get_tree().quit())
 		return
 	_testing = true
@@ -648,6 +660,60 @@ func _run_test(dt: float) -> void:
 		_back()
 	_test += 1
 	_testing = false
+
+
+## (testing) a chair walked into moves; a chair set before a drawer stops it opening.
+func _physics_tests(w: Node3D) -> void:
+	var chairs := _room.find_children("Body_Move_*", "RigidBody3D", true, false)
+	print("INTERACT chairs: %d movable" % chairs.size())
+	if chairs.is_empty():
+		return
+	var ch := chairs[0] as RigidBody3D
+	var cx := ch.global_position
+	ch.sleeping = false
+	ch.apply_central_impulse(Vector3(1, 0, 0) * ch.mass * 1.5)
+	await get_tree().create_timer(1.0).timeout
+	print("INTERACT chair shoved (1.5 m/s): moved %.2f m; freeze %s, mode %d, in tree %s, process %s, sleeping %s" % [(ch.global_position - cx).length(),
+		ch.freeze, ch.freeze_mode, ch.is_inside_tree(), ch.can_process(), ch.sleeping])
+	var c0 := ch.global_position
+	var dir := Vector3(1, 0, 0)
+	w.spawn_at(c0 - dir * 1.3 + Vector3.UP * 0.2, c0 + Vector3.UP * 1.0)
+	await get_tree().create_timer(0.5).timeout
+	w.rotation.y = atan2(-dir.x, -dir.z)
+	var shp: Shape3D = (ch.get_child(0) as CollisionShape3D).shape if ch.get_child(0) is CollisionShape3D else null
+	var rq := PhysicsRayQueryParameters3D.create(c0 - dir * 1.0 + Vector3.UP * 0.1, c0 + Vector3.UP * 0.1)
+	rq.exclude = [(w as CollisionObject3D).get_rid()]
+	var hit := get_world_3d().direct_space_state.intersect_ray(rq)
+	print("INTERACT chair: layer %d mask %d, shape %s, sleeping %s, a ray at it hits %s; walker at %s active %s" % [ch.collision_layer, ch.collision_mask,
+		shp.get_class() if shp else "none", ch.sleeping, str(hit.get("collider")) if not hit.is_empty() else "nothing", str(w.global_position), str(w.get("active"))])
+	w.auto_input = Vector2(0, -1)
+	await get_tree().create_timer(2.0).timeout
+	print("INTERACT   walker went to %s (from %.2f m short of the chair)" % [str(w.global_position), 1.3])
+	w.auto_input = Vector2.ZERO
+	await get_tree().create_timer(1.0).timeout
+	print("INTERACT chair pushed: moved %.2f m (from %s to %s), upright %.2f" % [(ch.global_position - c0).length(), str(c0), str(ch.global_position), ch.global_basis.y.dot(Vector3.UP)])
+	await _snap("interact_chair_pushed")
+	for it in items:                                     # a chair against the drawer: it mustn't open
+		if str(it["kind"]) != "drawer":
+			continue
+		var dr: Node3D = _drawers[it["id"]]
+		if _open.has(it["id"]):
+			_use(it, w)                                  # (shut it first)
+			await get_tree().create_timer(0.5).timeout
+		var fwd := _wd(it.get("out", [0, 0.3, 0])).normalized()
+		ch.freeze = true
+		ch.global_position = dr.global_position + fwd * 0.5 + Vector3.DOWN * 0.15
+		PhysicsServer3D.body_set_state(ch.get_rid(), PhysicsServer3D.BODY_STATE_TRANSFORM, ch.global_transform)
+		for f in 3:
+			await get_tree().physics_frame
+		var before := dr.position
+		_use(it, w)
+		await get_tree().create_timer(0.6).timeout
+		print("INTERACT drawer with a chair before it: %s (moved %.3f m)" % ["stayed shut" if not _open.has(it["id"]) else "OPENED", (dr.position - before).length()])
+		if busy:
+			_back()
+		ch.freeze = false
+		break
 
 
 func _snap(n: String) -> void:

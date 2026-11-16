@@ -1171,7 +1171,7 @@ const MOVE_MASS := {"chair": 7.0, "bin": 2.0, "box": 4.0}
 
 func _movables(r: Node3D) -> void:
 	var mat := PhysicsMaterial.new()
-	mat.friction = 0.8
+	mat.friction = 0.3                                   # (an office chair on castors rolls; a plastic one skids on tiles)
 	mat.bounce = 0.0
 	for mi in r.find_children("Move_*", "MeshInstance3D", true, false):
 		var m := mi as MeshInstance3D
@@ -1180,7 +1180,7 @@ func _movables(r: Node3D) -> void:
 		rb.name = "Body_" + str(m.name)
 		rb.mass = float(MOVE_MASS.get(str(m.name).get_slice("_", 1), 5.0))
 		rb.physics_material_override = mat
-		rb.linear_damp = 2.5                            # (feet, castors, a tiled floor: it slides a little, then stops)
+		rb.linear_damp = 1.2                            # (feet, castors, a tiled floor: it slides a little, then stops)
 		rb.angular_damp = 4.0
 		rb.can_sleep = true
 		rb.set_meta("movable", true)

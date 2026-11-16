@@ -288,10 +288,13 @@ func _physics_process_timed(delta: float) -> void:
 	for i in get_slide_collision_count():               # (a chair in his way: he pushes it, as a man walking does)
 		var col := get_slide_collision(i)
 		var rb := col.get_collider() as RigidBody3D
-		if rb and pre.length() > 0.2:
+		if rb and (pre.length() > 0.02 or _want_yaw != INF):   # (leaning into it: his walk, not what's left of his speed)
 			var nrm := col.get_normal()
-			var push := -Vector3(nrm.x, 0.0, nrm.z).normalized() * minf(pre.length(), 2.0) * 0.6 * get_physics_process_delta_time() * 60.0
-			rb.apply_impulse(push * minf(rb.mass, 10.0) * 0.12, col.get_position() - rb.global_position)
+			# (about 70 N while he leans into it, a person's push; more for a run; at the contact, low on it)
+			var force := 70.0 * clampf(maxf(pre.length(), 1.0), 1.0, 2.0)
+			var push := -Vector3(nrm.x, 0.0, nrm.z).normalized() * force * get_physics_process_delta_time()
+			rb.sleeping = false                          # (asleep at rest: wake it, or the push is lost)
+			rb.apply_impulse(push, col.get_position() - rb.global_position)
 	if gait and _down == 0.0 and pre.length() > 1.0:     # into a wall or a post: a flinch; at a run, a stumble back
 		for i in get_slide_collision_count():
 			var c := get_slide_collision(i)
