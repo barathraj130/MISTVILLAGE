@@ -2,93 +2,766 @@
  "note": "The prologue (docs/PROLOGUE_PLAN_2026-11-17.md): three ordinary days before story/slice.json's first day. No day numbers on screen. Built in stages; this is the dealership (the second day, the afternoon).",
  "spawn": "dealer",
  "places": {
-  "home": {"x": 686.4, "z": -1984.9, "en": "Home, Ganapathy", "ta": "வீடு, கணபதி"},
-  "raghavan_house": {"x": 931.2, "z": 1985.3, "en": "Raghavan sir's house, Race Course", "ta": "ராகவன் சார் வீடு, ரேஸ் கோர்ஸ்"},
-  "dealer": {"x": 3790.0, "z": -512.0, "en": "Vela Two-Wheelers, Avinashi Road", "ta": "வேலா டூ-வீலர்ஸ், அவிநாசி ரோடு"}
+  "home": {
+   "x": 686.4,
+   "z": -1984.9,
+   "en": "Home, Ganapathy",
+   "ta": "வீடு, கணபதி"
+  },
+  "raghavan_house": {
+   "x": 931.2,
+   "z": 1985.3,
+   "en": "Raghavan sir's house, Race Course",
+   "ta": "ராகவன் சார் வீடு, ரேஸ் கோர்ஸ்"
+  },
+  "dealer": {
+   "x": 3790.0,
+   "z": -512.0,
+   "en": "Vela Two-Wheelers, Avinashi Road",
+   "ta": "வேலா டூ-வீலர்ஸ், அவிநாசி ரோடு"
+  }
  },
  "people": {
-  "karthik": {"en": "Karthik", "ta": "கார்த்திக்", "colour": "#7fc8ff", "model": "story_karthik", "hair": "#0f0c0a"},
-  "salesman": {"en": "Prakash, sales", "ta": "பிரகாஷ், விற்பனை", "colour": "#ff9f9f", "model": "crowd_m1", "hair": "#0f0c0a", "top": "#b8121a", "pants": "#22252a"},
-  "finance": {"en": "Mrs Revathi, finance", "ta": "திருமதி ரேவதி, நிதி", "colour": "#c8e0ff", "model": "story_selvi", "hair": "#0e0b09"}
+  "karthik": {
+   "en": "Karthik",
+   "ta": "கார்த்திக்",
+   "colour": "#7fc8ff",
+   "model": "story_karthik",
+   "hair": "#0f0c0a"
+  },
+  "salesman": {
+   "en": "Prakash, sales",
+   "ta": "பிரகாஷ், விற்பனை",
+   "colour": "#ff9f9f",
+   "model": "crowd_m1",
+   "hair": "#0f0c0a",
+   "top": "#b8121a",
+   "pants": "#22252a"
+  },
+  "finance": {
+   "en": "Mrs Revathi, finance",
+   "ta": "திருமதி ரேவதி, நிதி",
+   "colour": "#c8e0ff",
+   "model": "story_selvi",
+   "hair": "#0e0b09"
+  }
  },
  "steps": [
-  {"do": "dealer", "room": "showroom", "at": "dealer", "start": "door", "clock": "13:10",
-   "cast": {"salesman": {"mark": "sales", "anim": "Idle"}, "finance": {"mark": "finance", "anim": "Sit"}},
-   "need": ["bike", "scooter"], "desk": "karthik_sales",
-   "goal": {"en": "Look round the motorcycles and the scooters. Choose one of each.", "ta": "மோட்டார் சைக்கிள்களையும் ஸ்கூட்டர்களையும் பாருங்க. ஒவ்வொண்ணுலயும் ஒண்ணு தேர்வு செய்யுங்க."},
-   "goal_done": {"en": "Talk to Prakash at the sales desk.", "ta": "விற்பனை மேசையில பிரகாஷ்கிட்ட பேசுங்க."},
+  {
+   "do": "dealer",
+   "room": "showroom",
+   "at": "dealer",
+   "start": "door",
+   "clock": "13:10",
+   "cast": {
+    "salesman": {
+     "mark": "sales",
+     "anim": "Idle"
+    },
+    "finance": {
+     "mark": "finance",
+     "anim": "Sit"
+    }
+   },
+   "need": [
+    "bike",
+    "scooter"
+   ],
+   "desk": "karthik_sales",
+   "goal": {
+    "en": "Look round the motorcycles and the scooters. Choose one of each.",
+    "ta": "மோட்டார் சைக்கிள்களையும் ஸ்கூட்டர்களையும் பாருங்க. ஒவ்வொண்ணுலயும் ஒண்ணு தேர்வு செய்யுங்க."
+   },
+   "goal_done": {
+    "en": "Talk to Prakash at the sales desk.",
+    "ta": "விற்பனை மேசையில பிரகாஷ்கிட்ட பேசுங்க."
+   },
    "models": [
-    {"id": "kodai_red", "group": "bike", "kind": "bike", "at": "show_1", "glb": "res://assets/vehicles/moto_commuter.glb", "paint": "#5a0a0e",
-     "name": {"en": "Vela Kodai 125, candy red", "ta": "வேலா கொடை 125, சிவப்பு"},
-     "kind_label": {"en": "Commuter motorcycle · disc brake · self start", "ta": "கம்யூட்டர் மோட்டார் சைக்கிள் · டிஸ்க் பிரேக் · செல்ஃப் ஸ்டார்ட்"},
-     "specs": [[{"en": "Engine", "ta": "என்ஜின்"}, "124.7 cc, single cylinder, air-cooled"], [{"en": "Power", "ta": "சக்தி"}, "10.7 bhp @ 7,500 rpm"],
-      [{"en": "Torque", "ta": "முறுக்கு"}, "10.6 Nm @ 6,000 rpm"], [{"en": "Gears", "ta": "கியர்"}, "5-speed"],
-      [{"en": "Mileage (claimed)", "ta": "மைலேஜ்"}, "62 km/l"], [{"en": "Fuel tank", "ta": "எரிபொருள் தொட்டி"}, "11 L"],
-      [{"en": "Kerb weight", "ta": "எடை"}, "122 kg"], [{"en": "Seat height", "ta": "இருக்கை உயரம்"}, "790 mm"],
-      [{"en": "Brakes", "ta": "பிரேக்"}, "240 mm disc / 130 mm drum"], [{"en": "Tyres", "ta": "டயர்"}, "2.75-18 / 3.00-18"]],
-     "ex_showroom": 84900, "rto": 7640, "insurance": 5860, "accessories": 1500},
-    {"id": "kodai_grey", "group": "bike", "kind": "bike", "at": "show_2", "glb": "res://assets/vehicles/moto_commuter.glb", "paint": "#2b2e33",
-     "name": {"en": "Vela Kodai 125, gunmetal grey", "ta": "வேலா கொடை 125, சாம்பல்"},
-     "kind_label": {"en": "Commuter motorcycle · disc brake · self start", "ta": "கம்யூட்டர் மோட்டார் சைக்கிள் · டிஸ்க் பிரேக் · செல்ஃப் ஸ்டார்ட்"},
-     "specs": [[{"en": "Engine", "ta": "என்ஜின்"}, "124.7 cc, single cylinder, air-cooled"], [{"en": "Power", "ta": "சக்தி"}, "10.7 bhp @ 7,500 rpm"],
-      [{"en": "Mileage (claimed)", "ta": "மைலேஜ்"}, "62 km/l"], [{"en": "Fuel tank", "ta": "எரிபொருள் தொட்டி"}, "11 L"],
-      [{"en": "Seat height", "ta": "இருக்கை உயரம்"}, "790 mm"], [{"en": "Brakes", "ta": "பிரேக்"}, "240 mm disc / 130 mm drum"],
-      [{"en": "This colour", "ta": "இந்த நிறம்"}, "₹1,000 less: last year's stock"]],
-     "ex_showroom": 83900, "rto": 7550, "insurance": 5860, "accessories": 1500},
-    {"id": "thendral_blue", "group": "scooter", "kind": "scooter", "at": "show_3", "glb": "res://assets/vehicles/scooter_commuter.glb", "paint": "#0b2a55",
-     "name": {"en": "Vela Thendral 110, metallic blue", "ta": "வேலா தென்றல் 110, நீலம்"},
-     "kind_label": {"en": "Step-through scooter · automatic (CVT) · front disc", "ta": "ஸ்டெப்-த்ரூ ஸ்கூட்டர் · ஆட்டோமேட்டிக் · முன் டிஸ்க்"},
-     "specs": [[{"en": "Engine", "ta": "என்ஜின்"}, "109.7 cc, single cylinder, fan-cooled"], [{"en": "Power", "ta": "சக்தி"}, "7.8 bhp @ 7,500 rpm"],
-      [{"en": "Transmission", "ta": "டிரான்ஸ்மிஷன்"}, "CVT, no gears to change"], [{"en": "Mileage (claimed)", "ta": "மைலேஜ்"}, "50 km/l"],
-      [{"en": "Fuel tank", "ta": "எரிபொருள் தொட்டி"}, "5.3 L"], [{"en": "Kerb weight", "ta": "எடை"}, "106 kg"],
-      [{"en": "Seat height", "ta": "இருக்கை உயரம்"}, "770 mm (low: easy to put a foot down)"], [{"en": "Under-seat storage", "ta": "இருக்கைக்கு அடியில்"}, "21 L"],
-      [{"en": "Brakes", "ta": "பிரேக்"}, "190 mm disc / 130 mm drum"], [{"en": "Tyres", "ta": "டயர்"}, "90/90-12 / 90/100-10"]],
-     "ex_showroom": 76200, "rto": 6860, "insurance": 5240, "accessories": 1200},
-    {"id": "thendral_white", "group": "scooter", "kind": "scooter", "at": "show_4", "glb": "res://assets/vehicles/scooter_commuter.glb", "paint": "#d9d8d2",
-     "name": {"en": "Vela Thendral 110 Deluxe, pearl white", "ta": "வேலா தென்றல் 110 டீலக்ஸ், வெள்ளை"},
-     "kind_label": {"en": "Step-through scooter · automatic (CVT) · front disc · USB charger", "ta": "ஸ்டெப்-த்ரூ ஸ்கூட்டர் · ஆட்டோமேட்டிக் · முன் டிஸ்க் · USB சார்ஜர்"},
-     "specs": [[{"en": "Engine", "ta": "என்ஜின்"}, "109.7 cc, single cylinder, fan-cooled"], [{"en": "Mileage (claimed)", "ta": "மைலேஜ்"}, "50 km/l"],
-      [{"en": "Fuel tank", "ta": "எரிபொருள் தொட்டி"}, "5.3 L"], [{"en": "Seat height", "ta": "இருக்கை உயரம்"}, "770 mm"],
-      [{"en": "Extras", "ta": "கூடுதல்"}, "USB charger, LED head lamp, side-stand cut-off"]],
-     "ex_showroom": 80900, "rto": 7280, "insurance": 5240, "accessories": 1200}
-   ]},
-  {"do": "talk", "lines": [
-   {"who": "salesman", "to": "karthik", "en": "Good choices. Cash or finance, sir?", "ta": "நல்ல தேர்வு. கேஷா, ஃபைனான்ஸா சார்?"},
-   {"who": "karthik", "to": "salesman", "en": "Finance. And the old scooter outside. It died on me yesterday at Gandhipuram.", "ta": "ஃபைனான்ஸ். வெளியே பழைய ஸ்கூட்டர் இருக்கு. நேத்து காந்திபுரத்துல நின்னுடுச்சு."},
-   {"who": "salesman", "to": "karthik", "en": "I saw it. With that engine we can give six thousand in exchange. Or keep it, get it overhauled, and the new one's for your sister. Your call, sir.", "ta": "பாத்தேன். அந்த என்ஜினுக்கு ஆறாயிரம் தர முடியும். இல்லன்னா வெச்சுக்கோங்க, ஓவர்ஹால் பண்ணிக்கோங்க, புதுசு உங்க தங்கச்சிக்கு. உங்க முடிவு சார்."}
-  ]},
-  {"do": "choose", "prompt": {"en": "The old scooter", "ta": "பழைய ஸ்கூட்டர்"}, "options": [
-   {"text": {"en": "Keep it and overhaul it (₹7,500). The new one is Divya's.", "ta": "வெச்சுக்கலாம்: ஓவர்ஹால் (₹7,500, பிறகு), புது ஸ்கூட்டர் திவ்யா காலேஜுக்கு"}, "set": "keep_old"},
-   {"text": {"en": "Trade it in (₹6,000 off). The new one is mine.", "ta": "மாற்று: புது ஸ்கூட்டர்ல ₹6,000 குறையும், அதை நானே ஓட்டுவேன்"}, "set": "trade_in"}
-  ]},
-  {"do": "talk", "lines": [
-   {"who": "salesman", "to": "karthik", "en": "Then Revathi madam will do the papers. The cabin there.", "ta": "அப்ப ரேவதி மேடம் பேப்பர்ஸ் பண்ணுவாங்க. அந்த கேபின்."},
-   {"who": "finance", "to": "karthik", "en": "Sit, sit. Salary slip and Aadhaar? Good. Let's see what EMI suits you.", "ta": "உக்காருங்க. சம்பள சீட்டு, ஆதார்? சரி. உங்களுக்கு எந்த EMI சரிவரும்னு பாக்கலாம்."}
-  ]},
-  {"do": "finance_desk", "trade_in": 6000,
-   "plates": {"bike": "TN 38 CK 1123", "scooter": "TN 38 CK 1124"},
-   "finance": {"lender": "Kongu Two-Wheeler Finance", "rate_pa": 0.115, "tenures": [12, 18, 24, 36], "min_down_pct": 10, "default_months": 24}},
-  {"do": "task", "task": "sign", "when": "bought_bike",
-   "header": {"en": "Kongu Two-Wheeler Finance", "ta": "கொங்கு டூ-வீலர் ஃபைனான்ஸ்"},
-   "form": {"en": "LOAN AGREEMENT: MOTORCYCLE", "ta": "கடன் ஒப்பந்தம்: மோட்டார் சைக்கிள்"},
-   "fields": [[{"en": "Borrower", "ta": "கடனாளி"}, {"en": "Karthik M", "ta": "கார்த்திக் ம"}], [{"en": "Vehicle", "ta": "வாகனம்"}, {"en": "Vela Kodai 125", "ta": "வேலா கொடை 125"}],
-    [{"en": "Hypothecation", "ta": "அடமானம்"}, {"en": "In favour of the lender till the last EMI", "ta": "கடைசி EMI வரை கடன் கொடுத்தவருக்கு"}],
-    [{"en": "Late payment", "ta": "தாமதம்"}, {"en": "₹590 bounce charge + 2% a month penal interest", "ta": "₹590 + மாதம் 2% அபராத வட்டி"}]],
-   "sign_label": {"en": "Signature of the borrower", "ta": "கடனாளி கையொப்பம்"}},
-  {"do": "task", "task": "sign", "when": "bought_scooter",
-   "header": {"en": "Kongu Two-Wheeler Finance", "ta": "கொங்கு டூ-வீலர் ஃபைனான்ஸ்"},
-   "form": {"en": "LOAN AGREEMENT: SCOOTER", "ta": "கடன் ஒப்பந்தம்: ஸ்கூட்டர்"},
-   "fields": [[{"en": "Borrower", "ta": "கடனாளி"}, {"en": "Karthik M", "ta": "கார்த்திக் ம"}], [{"en": "Vehicle", "ta": "வாகனம்"}, {"en": "Vela Thendral 110", "ta": "வேலா தென்றல் 110"}],
-    [{"en": "Hypothecation", "ta": "அடமானம்"}, {"en": "In favour of the lender till the last EMI", "ta": "கடைசி EMI வரை கடன் கொடுத்தவருக்கு"}],
-    [{"en": "Late payment", "ta": "தாமதம்"}, {"en": "₹590 bounce charge + 2% a month penal interest", "ta": "₹590 + மாதம் 2% அபராத வட்டி"}]],
-   "sign_label": {"en": "Signature of the borrower", "ta": "கடனாளி கையொப்பம்"}},
-  {"do": "talk", "when": "finance_declined", "lines": [
-   {"who": "finance", "to": "karthik", "en": "Take a day. Sleep on it. The offer holds till Saturday.", "ta": "ஒரு நாள் யோசிங்க. சனிக்கிழமை வரை இந்த ஆஃபர் இருக்கும்."}
-  ]},
-  {"do": "talk", "unless": "finance_declined", "lines": [
-   {"who": "finance", "to": "karthik", "en": "First EMI on the fifth. It'll come as a message a few days before. Don't miss it: the charges add up.", "ta": "முதல் EMI அஞ்சாம் தேதி. சில நாள் முன்னாடி மெசேஜ் வரும். தவறவிடாதீங்க: அபராதம் ஏறிக்கிட்டே போகும்."},
-   {"who": "salesman", "to": "karthik", "en": "Keys, sir. Come, I'll show you the bike in the yard.", "ta": "சாவி சார். வாங்க, யார்டுல பைக்க காட்டறேன்."}
-  ]},
-  {"do": "free", "goal": {"en": "(the riding lesson in the yard comes next)", "ta": "(அடுத்து யார்டுல பயிற்சி)"}}
+    {
+     "id": "kodai_red",
+     "group": "bike",
+     "kind": "bike",
+     "at": "show_1",
+     "glb": "res://assets/vehicles/moto_commuter.glb",
+     "paint": "#5a0a0e",
+     "name": {
+      "en": "Vela Kodai 125, candy red",
+      "ta": "வேலா கொடை 125, சிவப்பு"
+     },
+     "kind_label": {
+      "en": "Commuter motorcycle · disc brake · self start",
+      "ta": "கம்யூட்டர் மோட்டார் சைக்கிள் · டிஸ்க் பிரேக் · செல்ஃப் ஸ்டார்ட்"
+     },
+     "specs": [
+      [
+       {
+        "en": "Engine",
+        "ta": "என்ஜின்"
+       },
+       "124.7 cc, single cylinder, air-cooled"
+      ],
+      [
+       {
+        "en": "Power",
+        "ta": "சக்தி"
+       },
+       "10.7 bhp @ 7,500 rpm"
+      ],
+      [
+       {
+        "en": "Torque",
+        "ta": "முறுக்கு"
+       },
+       "10.6 Nm @ 6,000 rpm"
+      ],
+      [
+       {
+        "en": "Gears",
+        "ta": "கியர்"
+       },
+       "5-speed"
+      ],
+      [
+       {
+        "en": "Mileage (claimed)",
+        "ta": "மைலேஜ்"
+       },
+       "62 km/l"
+      ],
+      [
+       {
+        "en": "Fuel tank",
+        "ta": "எரிபொருள் தொட்டி"
+       },
+       "11 L"
+      ],
+      [
+       {
+        "en": "Kerb weight",
+        "ta": "எடை"
+       },
+       "122 kg"
+      ],
+      [
+       {
+        "en": "Seat height",
+        "ta": "இருக்கை உயரம்"
+       },
+       "790 mm"
+      ],
+      [
+       {
+        "en": "Brakes",
+        "ta": "பிரேக்"
+       },
+       "240 mm disc / 130 mm drum"
+      ],
+      [
+       {
+        "en": "Tyres",
+        "ta": "டயர்"
+       },
+       "2.75-18 / 3.00-18"
+      ]
+     ],
+     "ex_showroom": 84900,
+     "rto": 7640,
+     "insurance": 5860,
+     "accessories": 1500
+    },
+    {
+     "id": "kodai_grey",
+     "group": "bike",
+     "kind": "bike",
+     "at": "show_2",
+     "glb": "res://assets/vehicles/moto_commuter.glb",
+     "paint": "#2b2e33",
+     "name": {
+      "en": "Vela Kodai 125, gunmetal grey",
+      "ta": "வேலா கொடை 125, சாம்பல்"
+     },
+     "kind_label": {
+      "en": "Commuter motorcycle · disc brake · self start",
+      "ta": "கம்யூட்டர் மோட்டார் சைக்கிள் · டிஸ்க் பிரேக் · செல்ஃப் ஸ்டார்ட்"
+     },
+     "specs": [
+      [
+       {
+        "en": "Engine",
+        "ta": "என்ஜின்"
+       },
+       "124.7 cc, single cylinder, air-cooled"
+      ],
+      [
+       {
+        "en": "Power",
+        "ta": "சக்தி"
+       },
+       "10.7 bhp @ 7,500 rpm"
+      ],
+      [
+       {
+        "en": "Mileage (claimed)",
+        "ta": "மைலேஜ்"
+       },
+       "62 km/l"
+      ],
+      [
+       {
+        "en": "Fuel tank",
+        "ta": "எரிபொருள் தொட்டி"
+       },
+       "11 L"
+      ],
+      [
+       {
+        "en": "Seat height",
+        "ta": "இருக்கை உயரம்"
+       },
+       "790 mm"
+      ],
+      [
+       {
+        "en": "Brakes",
+        "ta": "பிரேக்"
+       },
+       "240 mm disc / 130 mm drum"
+      ],
+      [
+       {
+        "en": "This colour",
+        "ta": "இந்த நிறம்"
+       },
+       "₹1,000 less: last year's stock"
+      ]
+     ],
+     "ex_showroom": 83900,
+     "rto": 7550,
+     "insurance": 5860,
+     "accessories": 1500
+    },
+    {
+     "id": "thendral_blue",
+     "group": "scooter",
+     "kind": "scooter",
+     "at": "show_3",
+     "glb": "res://assets/vehicles/scooter_commuter.glb",
+     "paint": "#0b2a55",
+     "name": {
+      "en": "Vela Thendral 110, metallic blue",
+      "ta": "வேலா தென்றல் 110, நீலம்"
+     },
+     "kind_label": {
+      "en": "Step-through scooter · automatic (CVT) · front disc",
+      "ta": "ஸ்டெப்-த்ரூ ஸ்கூட்டர் · ஆட்டோமேட்டிக் · முன் டிஸ்க்"
+     },
+     "specs": [
+      [
+       {
+        "en": "Engine",
+        "ta": "என்ஜின்"
+       },
+       "109.7 cc, single cylinder, fan-cooled"
+      ],
+      [
+       {
+        "en": "Power",
+        "ta": "சக்தி"
+       },
+       "7.8 bhp @ 7,500 rpm"
+      ],
+      [
+       {
+        "en": "Transmission",
+        "ta": "டிரான்ஸ்மிஷன்"
+       },
+       "CVT, no gears to change"
+      ],
+      [
+       {
+        "en": "Mileage (claimed)",
+        "ta": "மைலேஜ்"
+       },
+       "50 km/l"
+      ],
+      [
+       {
+        "en": "Fuel tank",
+        "ta": "எரிபொருள் தொட்டி"
+       },
+       "5.3 L"
+      ],
+      [
+       {
+        "en": "Kerb weight",
+        "ta": "எடை"
+       },
+       "106 kg"
+      ],
+      [
+       {
+        "en": "Seat height",
+        "ta": "இருக்கை உயரம்"
+       },
+       "770 mm (low: easy to put a foot down)"
+      ],
+      [
+       {
+        "en": "Under-seat storage",
+        "ta": "இருக்கைக்கு அடியில்"
+       },
+       "21 L"
+      ],
+      [
+       {
+        "en": "Brakes",
+        "ta": "பிரேக்"
+       },
+       "190 mm disc / 130 mm drum"
+      ],
+      [
+       {
+        "en": "Tyres",
+        "ta": "டயர்"
+       },
+       "90/90-12 / 90/100-10"
+      ]
+     ],
+     "ex_showroom": 76200,
+     "rto": 6860,
+     "insurance": 5240,
+     "accessories": 1200
+    },
+    {
+     "id": "thendral_white",
+     "group": "scooter",
+     "kind": "scooter",
+     "at": "show_4",
+     "glb": "res://assets/vehicles/scooter_commuter.glb",
+     "paint": "#d9d8d2",
+     "name": {
+      "en": "Vela Thendral 110 Deluxe, pearl white",
+      "ta": "வேலா தென்றல் 110 டீலக்ஸ், வெள்ளை"
+     },
+     "kind_label": {
+      "en": "Step-through scooter · automatic (CVT) · front disc · USB charger",
+      "ta": "ஸ்டெப்-த்ரூ ஸ்கூட்டர் · ஆட்டோமேட்டிக் · முன் டிஸ்க் · USB சார்ஜர்"
+     },
+     "specs": [
+      [
+       {
+        "en": "Engine",
+        "ta": "என்ஜின்"
+       },
+       "109.7 cc, single cylinder, fan-cooled"
+      ],
+      [
+       {
+        "en": "Mileage (claimed)",
+        "ta": "மைலேஜ்"
+       },
+       "50 km/l"
+      ],
+      [
+       {
+        "en": "Fuel tank",
+        "ta": "எரிபொருள் தொட்டி"
+       },
+       "5.3 L"
+      ],
+      [
+       {
+        "en": "Seat height",
+        "ta": "இருக்கை உயரம்"
+       },
+       "770 mm"
+      ],
+      [
+       {
+        "en": "Extras",
+        "ta": "கூடுதல்"
+       },
+       "USB charger, LED head lamp, side-stand cut-off"
+      ]
+     ],
+     "ex_showroom": 80900,
+     "rto": 7280,
+     "insurance": 5240,
+     "accessories": 1200
+    }
+   ]
+  },
+  {
+   "do": "talk",
+   "lines": [
+    {
+     "who": "salesman",
+     "to": "karthik",
+     "en": "Good choices. Cash or finance, sir?",
+     "ta": "நல்ல தேர்வு. கேஷா, ஃபைனான்ஸா சார்?"
+    },
+    {
+     "who": "karthik",
+     "to": "salesman",
+     "en": "Finance. And the old scooter outside. It died on me yesterday at Gandhipuram.",
+     "ta": "ஃபைனான்ஸ். வெளியே பழைய ஸ்கூட்டர் இருக்கு. நேத்து காந்திபுரத்துல நின்னுடுச்சு."
+    },
+    {
+     "who": "salesman",
+     "to": "karthik",
+     "en": "I saw it. With that engine we can give six thousand in exchange. Or keep it, get it overhauled, and the new one's for your sister. Your call, sir.",
+     "ta": "பாத்தேன். அந்த என்ஜினுக்கு ஆறாயிரம் தர முடியும். இல்லன்னா வெச்சுக்கோங்க, ஓவர்ஹால் பண்ணிக்கோங்க, புதுசு உங்க தங்கச்சிக்கு. உங்க முடிவு சார்."
+    }
+   ]
+  },
+  {
+   "do": "choose",
+   "prompt": {
+    "en": "The old scooter",
+    "ta": "பழைய ஸ்கூட்டர்"
+   },
+   "options": [
+    {
+     "text": {
+      "en": "Keep it and overhaul it (₹7,500). The new one is Divya's.",
+      "ta": "வெச்சுக்கலாம்: ஓவர்ஹால் (₹7,500, பிறகு), புது ஸ்கூட்டர் திவ்யா காலேஜுக்கு"
+     },
+     "set": "keep_old"
+    },
+    {
+     "text": {
+      "en": "Trade it in (₹6,000 off). The new one is mine.",
+      "ta": "மாற்று: புது ஸ்கூட்டர்ல ₹6,000 குறையும், அதை நானே ஓட்டுவேன்"
+     },
+     "set": "trade_in"
+    }
+   ]
+  },
+  {
+   "do": "talk",
+   "lines": [
+    {
+     "who": "salesman",
+     "to": "karthik",
+     "en": "Then Revathi madam will do the papers. The cabin there.",
+     "ta": "அப்ப ரேவதி மேடம் பேப்பர்ஸ் பண்ணுவாங்க. அந்த கேபின்."
+    },
+    {
+     "who": "finance",
+     "to": "karthik",
+     "en": "Sit, sit. Salary slip and Aadhaar? Good. Let's see what EMI suits you.",
+     "ta": "உக்காருங்க. சம்பள சீட்டு, ஆதார்? சரி. உங்களுக்கு எந்த EMI சரிவரும்னு பாக்கலாம்."
+    }
+   ]
+  },
+  {
+   "do": "finance_desk",
+   "trade_in": 6000,
+   "plates": {
+    "bike": "TN 38 CK 1123",
+    "scooter": "TN 38 CK 1124"
+   },
+   "finance": {
+    "lender": "Kongu Two-Wheeler Finance",
+    "rate_pa": 0.115,
+    "tenures": [
+     12,
+     18,
+     24,
+     36
+    ],
+    "min_down_pct": 10,
+    "default_months": 24
+   }
+  },
+  {
+   "do": "task",
+   "task": "sign",
+   "when": "bought_bike",
+   "header": {
+    "en": "Kongu Two-Wheeler Finance",
+    "ta": "கொங்கு டூ-வீலர் ஃபைனான்ஸ்"
+   },
+   "form": {
+    "en": "LOAN AGREEMENT: MOTORCYCLE",
+    "ta": "கடன் ஒப்பந்தம்: மோட்டார் சைக்கிள்"
+   },
+   "fields": [
+    [
+     {
+      "en": "Borrower",
+      "ta": "கடனாளி"
+     },
+     {
+      "en": "Karthik M",
+      "ta": "கார்த்திக் ம"
+     }
+    ],
+    [
+     {
+      "en": "Vehicle",
+      "ta": "வாகனம்"
+     },
+     {
+      "en": "Vela Kodai 125",
+      "ta": "வேலா கொடை 125"
+     }
+    ],
+    [
+     {
+      "en": "Hypothecation",
+      "ta": "அடமானம்"
+     },
+     {
+      "en": "In favour of the lender till the last EMI",
+      "ta": "கடைசி EMI வரை கடன் கொடுத்தவருக்கு"
+     }
+    ],
+    [
+     {
+      "en": "Late payment",
+      "ta": "தாமதம்"
+     },
+     {
+      "en": "₹590 bounce charge + 2% a month penal interest",
+      "ta": "₹590 + மாதம் 2% அபராத வட்டி"
+     }
+    ]
+   ],
+   "sign_label": {
+    "en": "Signature of the borrower",
+    "ta": "கடனாளி கையொப்பம்"
+   }
+  },
+  {
+   "do": "task",
+   "task": "sign",
+   "when": "bought_scooter",
+   "header": {
+    "en": "Kongu Two-Wheeler Finance",
+    "ta": "கொங்கு டூ-வீலர் ஃபைனான்ஸ்"
+   },
+   "form": {
+    "en": "LOAN AGREEMENT: SCOOTER",
+    "ta": "கடன் ஒப்பந்தம்: ஸ்கூட்டர்"
+   },
+   "fields": [
+    [
+     {
+      "en": "Borrower",
+      "ta": "கடனாளி"
+     },
+     {
+      "en": "Karthik M",
+      "ta": "கார்த்திக் ம"
+     }
+    ],
+    [
+     {
+      "en": "Vehicle",
+      "ta": "வாகனம்"
+     },
+     {
+      "en": "Vela Thendral 110",
+      "ta": "வேலா தென்றல் 110"
+     }
+    ],
+    [
+     {
+      "en": "Hypothecation",
+      "ta": "அடமானம்"
+     },
+     {
+      "en": "In favour of the lender till the last EMI",
+      "ta": "கடைசி EMI வரை கடன் கொடுத்தவருக்கு"
+     }
+    ],
+    [
+     {
+      "en": "Late payment",
+      "ta": "தாமதம்"
+     },
+     {
+      "en": "₹590 bounce charge + 2% a month penal interest",
+      "ta": "₹590 + மாதம் 2% அபராத வட்டி"
+     }
+    ]
+   ],
+   "sign_label": {
+    "en": "Signature of the borrower",
+    "ta": "கடனாளி கையொப்பம்"
+   }
+  },
+  {
+   "do": "talk",
+   "when": "finance_declined",
+   "lines": [
+    {
+     "who": "finance",
+     "to": "karthik",
+     "en": "Take a day. Sleep on it. The offer holds till Saturday.",
+     "ta": "ஒரு நாள் யோசிங்க. சனிக்கிழமை வரை இந்த ஆஃபர் இருக்கும்."
+    }
+   ]
+  },
+  {
+   "do": "talk",
+   "unless": "finance_declined",
+   "lines": [
+    {
+     "who": "finance",
+     "to": "karthik",
+     "en": "First EMI on the fifth. It'll come as a message a few days before. Don't miss it: the charges add up.",
+     "ta": "முதல் EMI அஞ்சாம் தேதி. சில நாள் முன்னாடி மெசேஜ் வரும். தவறவிடாதீங்க: அபராதம் ஏறிக்கிட்டே போகும்."
+    },
+    {
+     "who": "salesman",
+     "to": "karthik",
+     "en": "Keys, sir. Come, I'll show you the bike in the yard.",
+     "ta": "சாவி சார். வாங்க, யார்டுல பைக்க காட்டறேன்."
+    }
+   ]
+  },
+  {
+   "do": "learn",
+   "vehicle": "bike",
+   "unless": "finance_declined",
+   "lessons": [
+    {
+     "id": "mount",
+     "goal": {
+      "en": "Your new motorcycle, at the kerb. Get on it.",
+      "ta": "உங்க புது பைக், ஓரத்துல. ஏறுங்க."
+     },
+     "key": {
+      "en": "F: get on",
+      "ta": "F: ஏறுங்க"
+     },
+     "say": {
+      "en": "Sit, sir. Self start: it's already running. Feel the clutch, it's light.",
+      "ta": "உக்காருங்க சார். செல்ஃப் ஸ்டார்ட்: ஓடுது. கிளட்ச் லேசா இருக்கும்."
+     }
+    },
+    {
+     "id": "away",
+     "kmh": 20,
+     "goal": {
+      "en": "Pull away gently and get to 20 km/h.",
+      "ta": "மெதுவா கிளம்பி 20 கி.மீ வேகம் போங்க."
+     },
+     "key": {
+      "en": "W: throttle · A D: steer",
+      "ta": "W: ஆக்சிலரேட்டர் · A D: திருப்புங்க"
+     },
+     "say": {
+      "en": "Easy on the throttle. Look ahead, not at the speedometer.",
+      "ta": "ஆக்சிலரேட்டர் மெதுவா. ஸ்பீடோமீட்டர் பாக்காம முன்னாடி பாருங்க."
+     },
+     "well": {
+      "en": "Good.",
+      "ta": "சரி."
+     }
+    },
+    {
+     "id": "brake",
+     "dist": 40,
+     "goal": {
+      "en": "Stop inside the yellow box.",
+      "ta": "மஞ்சள் கட்டத்துக்குள்ள நிறுத்துங்க."
+     },
+     "key": {
+      "en": "S: brake · Space: rear brake",
+      "ta": "S: பிரேக் · Space: பின் பிரேக்"
+     },
+     "say": {
+      "en": "Both brakes together, front a little more. Stop in the box.",
+      "ta": "ரெண்டு பிரேக்கும் சேர்ந்து, முன் கொஞ்சம் அதிகம். கட்டத்துக்குள்ள நிறுத்துங்க."
+     },
+     "again": {
+      "en": "Past it. Again, and start braking earlier.",
+      "ta": "தாண்டிட்டீங்க. மறுபடி, கொஞ்சம் முன்னாடியே பிரேக் பிடிங்க."
+     },
+     "well": {
+      "en": "Smooth. That's it.",
+      "ta": "நல்லா நிறுத்தினீங்க."
+     }
+    },
+    {
+     "id": "indicate",
+     "goal": {
+      "en": "Indicate, then take the next turn.",
+      "ta": "இண்டிகேட்டர் போட்டு, அடுத்த திருப்பத்துல திரும்புங்க."
+     },
+     "key": {
+      "en": ", (comma): left · . (full stop): right",
+      "ta": ", : இடது · . : வலது"
+     },
+     "say": {
+      "en": "Indicator first, then a look over the shoulder, then turn. Every time.",
+      "ta": "முதல்ல இண்டிகேட்டர், தோள் மேல ஒரு பார்வை, அப்புறம் திரும்புங்க. எப்பவும்."
+     },
+     "well": {
+      "en": "It switches off by itself after the turn.",
+      "ta": "திரும்பின பிறகு தானா அணையும்."
+     }
+    },
+    {
+     "id": "horn",
+     "goal": {
+      "en": "A short horn: someone's stepping off the kerb.",
+      "ta": "சின்ன ஹார்ன்: யாரோ ஓரத்துல இருந்து இறங்கறாங்க."
+     },
+     "key": {
+      "en": "H: horn",
+      "ta": "H: ஹார்ன்"
+     },
+     "say": {
+      "en": "Short, only to warn. Not to scold anyone.",
+      "ta": "சின்னதா, எச்சரிக்க மட்டும். திட்ட இல்ல."
+     }
+    },
+    {
+     "id": "camera",
+     "goal": {
+      "en": "Try another view.",
+      "ta": "வேற பார்வை பாருங்க."
+     },
+     "key": {
+      "en": "V: camera · Q / E: look left / right · C: look behind",
+      "ta": "V: கேமரா · Q / E: இடது / வலது · C: பின்னாடி"
+     },
+     "say": {
+      "en": "Mirrors before every move. You'll get used to them.",
+      "ta": "ஒவ்வொரு திருப்பத்துக்கும் முன்னாடி கண்ணாடி. பழகிடும்."
+     }
+    },
+    {
+     "id": "park",
+     "goal": {
+      "en": "Back to the showroom. Park in the green box and get off.",
+      "ta": "ஷோரூமுக்கு திரும்புங்க. பச்சை கட்டத்துல நிறுத்தி இறங்குங்க."
+     },
+     "key": {
+      "en": "F: get off",
+      "ta": "F: இறங்குங்க"
+     },
+     "say": {
+      "en": "Bring it back here. Side stand down, key out, always.",
+      "ta": "இங்க திரும்ப கொண்டு வாங்க. சைட் ஸ்டாண்ட், சாவி எடுக்கணும், எப்பவும்."
+     },
+     "well": {
+      "en": "You ride well, sir. First service at a thousand kilometres, free.",
+      "ta": "நல்லா ஓட்டறீங்க சார். முதல் சர்வீஸ் ஆயிரம் கி.மீ.ல, இலவசம்."
+     }
+    }
+   ]
+  },
+  {
+   "do": "free",
+   "goal": {
+    "en": "(the ride home comes next)",
+    "ta": "(அடுத்து வீட்டுக்கு)"
+   }
+  }
  ]
 }

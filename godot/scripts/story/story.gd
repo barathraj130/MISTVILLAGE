@@ -356,6 +356,8 @@ func _process_timed(dt: float) -> void:
 				_shop_skip()
 		"choose":
 			_choose()
+		"learn":
+			_learn(dt)
 		"dealer":
 			_dealer_step()
 		"finance_desk":
@@ -575,8 +577,8 @@ func _next() -> void:
 	if cur.has("vehicle"):                              # (the night delivery is on his scooter; taken: Bala's bike)
 		var want := "bike" if str(cur["vehicle"]) == "karthik_scooter" and city.money and city.money.seized else str(cur["vehicle"])
 		if car.vehicle != want:
-			car.configure(want)
-			if not cur.get("delivery", false):          # (onto the scooter: a delivery shift, or not?)
+			car.configure(want, _owned_paint(want))
+			if not cur.get("delivery", false) and str(cur["do"]) != "learn":   # (onto the scooter: a delivery shift, or not?)
 				city.ask_shift()
 	if cur.get("delivery", false):                       # (an order on: the bag on his back)
 		car.set_delivery_bag(true)
@@ -864,6 +866,16 @@ func _next() -> void:
 			var a: Node3D = cast.get(cur["who"])
 			if a:
 				map.pin = Vector2(a.global_position.x, a.global_position.z)
+		"learn":                                         # the riding lesson: each thing done, not read (see _learn)
+			if city.walker:                              # (out of the showroom: with the bike at the kerb, then off it
+				_walk_out()                              #  beside it, so getting on is the first thing he does)
+			_cams_back()
+			car.speed = 0.0
+			if city.has_method("toggle_on_foot"):
+				city.toggle_on_foot()
+			_lesson = -1
+			_learn_home = car.global_transform
+			_next_lesson()
 		"dealer":                                        # the showroom: walk round the vehicles, look, choose
 			_load_room(str(cur["room"]), str(cur.get("at", data["spawn"])))
 			_cast(cur.get("cast", {}))
@@ -2041,6 +2053,182 @@ func _act_pay() -> void:
 	if fines:
 		fines.sim.money -= amt
 	_act_done("pay")
+
+
+# ---- the prologue's riding lesson ----
+## "learn": lessons in order ("lessons": [{"id", "goal", "key", "say"}]), each done by doing it:
+##   mount     on the vehicle (F beside it); the engine's running once he's on
+##   away      moving at "kmh" (W)
+##   brake     stopped (S, Space) inside the box painted "dist" m ahead; past it, the box is put ahead again
+##   indicate  an indicator on (Z / C... the game's keys), then a turn of 45° or more with it on
+##   horn      the horn (H)
+##   camera    another camera (V)
+##   park      back at the start, stopped, and off it (F)
+## The instructor's "say" as a line under the picture; the goal and its key on the screen as for any step.
+var _lesson := -1
+var _learn_home := Transform3D()
+var _l := {}                                # the lesson now: its state (start heading, the camera then, the box)
+var _l_props: Array = []
+
+
+func _owned_paint(kind: String) -> Color:
+	if city.get("garage") == null:
+		return Color(0, 0, 0, 0)
+	var v: Dictionary = city.garage.by_kind(kind)
+	var p = v.get("paint", "")
+	return Color.html(str(p)) if p is String and str(p).begins_with("#") else Color(0, 0, 0, 0)
+
+
+func _next_lesson() -> void:
+	for pr in _l_props:
+		if is_instance_valid(pr):
+			(pr as Node3D).queue_free()
+	_l_props = []
+	_lesson += 1
+	var ls: Array = cur.get("lessons", [])
+	if _lesson >= ls.size():
+		_next()
+		return
+	var les: Dictionary = ls[_lesson]
+	_l = {"id": str(les["id"]), "t": 0.0, "yaw": car.global_rotation.y, "cam": int(city.get("cam_mode")) if city.get("cam_mode") != null else 0, "ind": false}
+	if les.has("say"):
+		hud.say(tr_(data["people"].get(str(les.get("who", "salesman")), {"en": ""})), tr_(les["say"]), 5.0)
+	match str(les["id"]):
+		"brake":
+			var fwd: Vector3 = car.global_basis.z               # (a vehicle's nose is its +Z)
+			fwd.y = 0.0
+			var at: Vector3 = car.global_position + fwd.normalized() * float(les.get("dist", 35.0))
+			_l["box"] = at
+			_lesson_box(at, car.global_rotation.y, Color(1.0, 0.85, 0.1, 0.55))
+		"park":
+			_l["box"] = _learn_home.origin
+			_lesson_box(_learn_home.origin, _learn_home.basis.get_euler().y, Color(0.2, 0.9, 0.4, 0.55))
+	print("STORY lesson %d: %s" % [_lesson + 1, str(les["id"])])
+
+
+## A painted box on the road (the brake box, the parking spot) and a cone at each corner.
+func _lesson_box(at: Vector3, yaw: float, col: Color) -> void:
+	var y: float = city.streamer.height_at(at.x, at.z) if city.get("streamer") and city.streamer.has_method("height_at") else at.y - 0.3
+	var box := MeshInstance3D.new()
+	var bm := BoxMesh.new()
+	bm.size = Vector3(2.4, 0.02, 3.2)
+	box.mesh = bm
+	var m := StandardMaterial3D.new()
+	m.albedo_color = col
+	m.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	m.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	box.material_override = m
+	city.add_child(box)
+	box.global_transform = Transform3D(Basis(Vector3.UP, yaw), Vector3(at.x, y + 0.03, at.z))
+	_l_props.append(box)
+	var cm := StandardMaterial3D.new()
+	cm.albedo_color = Color(1.0, 0.4, 0.05)
+	for c in [Vector3(-1.2, 0, -1.6), Vector3(1.2, 0, -1.6), Vector3(-1.2, 0, 1.6), Vector3(1.2, 0, 1.6)]:
+		var cone := MeshInstance3D.new()
+		var cy := CylinderMesh.new()
+		cy.top_radius = 0.02
+		cy.bottom_radius = 0.14
+		cy.height = 0.45
+		cone.mesh = cy
+		cone.material_override = cm
+		city.add_child(cone)
+		cone.global_position = box.global_transform * c + Vector3.UP * 0.22
+		_l_props.append(cone)
+
+
+## (testing, --learnreal) what a learner would do in each lesson, through the car's own inputs.
+func _learn_drive(les: Dictionary) -> void:
+	car.autopilot = true
+	car.in_steer = 0.0
+	car.in_brake = 0.0
+	match str(_l["id"]):
+		"away":
+			car.in_throttle = 0.6
+		"brake":
+			var at: Vector3 = _l["box"]
+			var d := Vector2(car.global_position.x - at.x, car.global_position.z - at.z).length()
+			var v: float = absf(float(car.speed))
+			var stop_d := v * v / (2.0 * 5.0)                # (braking at ~0.5 g)
+			car.in_throttle = 0.0 if d < stop_d + 2.0 else 0.4
+			car.in_brake = 1.0 if d < stop_d + 1.5 else 0.0
+		"indicate":
+			car.indicator = 1
+			car.in_throttle = 0.3 if absf(float(car.speed)) < 4.0 else 0.0
+			car.in_steer = 0.7
+		"horn":
+			car.in_throttle = 0.0
+			car.in_brake = 1.0
+			if float(_l["t"]) > 0.5:
+				car.honk()
+		"camera":
+			if float(_l["t"]) > 0.5:
+				city.cam_mode = (int(city.cam_mode) + 1) % 5
+	if _skip and int(float(_l["t"]) * 2.0) != int((float(_l["t"]) - get_process_delta_time()) * 2.0):
+		var bx: Vector3 = _l.get("box", car.global_position)
+		print("STORY learn %s t %.1f: %.1f m/s, box %.1f m, yaw %.0f°, on it %s, lean %.0f°" % [str(_l["id"]), float(_l["t"]), float(car.speed),
+			Vector2(car.global_position.x - bx.x, car.global_position.z - bx.z).length(), rad_to_deg(car.global_rotation.y), str(city.walker == null),
+			rad_to_deg(float(car.lean))])
+	if float(_l["t"]) > 25.0:
+		print("STORY lesson %s: not done in 25 s" % str(_l["id"]))
+		_next_lesson()
+
+
+func _learn(dt: float) -> void:
+	if _lesson < 0 or _lesson >= (cur.get("lessons", []) as Array).size():
+		return
+	var les: Dictionary = cur["lessons"][_lesson]
+	_l["t"] = float(_l["t"]) + dt
+	var on_it: bool = city.walker == null
+	var spd: float = absf(float(car.speed))
+	var done := false
+	match str(_l["id"]):
+		"mount":
+			done = on_it
+			if _skip and float(_l["t"]) > 0.6 and not on_it and city.has_method("toggle_on_foot"):
+				city.toggle_on_foot()                        # (testing: F, beside it)
+		"away":
+			done = on_it and spd * 3.6 >= float(les.get("kmh", 20.0))
+		"brake":
+			var at: Vector3 = _l["box"]
+			var d := Vector2(car.global_position.x - at.x, car.global_position.z - at.z)
+			var fwd := Vector2(car.global_basis.z.x, car.global_basis.z.z).normalized()
+			if on_it and spd < 0.3 and d.length() < 2.4:
+				done = true
+			elif d.dot(fwd) > 14.0:                          # (past it: again, a box further on)
+				hud.say(tr_(data["people"].get("salesman", {"en": ""})), tr_(les.get("again", {"en": "Past it. Again: brake earlier."})), 3.0)
+				_lesson -= 1
+				_next_lesson()
+				return
+		"indicate":
+			if int(car.indicator) == 1 or int(car.indicator) == -1:
+				if not bool(_l["ind"]):
+					_l["ind"] = true
+					_l["yaw"] = car.global_rotation.y
+				done = absf(wrapf(car.global_rotation.y - float(_l["yaw"]), -PI, PI)) > deg_to_rad(45.0)
+		"horn":
+			done = bool(car.honked) or float(car.get("_horn_time")) > 0.0
+		"camera":
+			done = city.get("cam_mode") != null and int(city.cam_mode) != int(_l["cam"])
+		"park":
+			var at2: Vector3 = _l["box"]
+			done = not on_it and Vector2(city.walker.global_position.x - at2.x, city.walker.global_position.z - at2.z).length() < 4.0 \
+				and Vector2(car.global_position.x - at2.x, car.global_position.z - at2.z).length() < 3.5
+	if _skip and "--learnreal" in OS.get_cmdline_user_args() and str(_l["id"]) == "mount":
+		pass                                               # (getting on: done above, as a player would)
+	elif _skip and "--learnreal" in OS.get_cmdline_user_args() and str(_l["id"]) != "park":
+		_learn_drive(les)                                  # (testing: the lesson ridden, not ticked: the checks above decide)
+	elif _skip and float(_l["t"]) > 0.8:                    # (testing: each lesson as if done)
+		done = true
+	goal.text = tr_(les.get("goal", {"en": ""})) + ("\n" + tr_(les["key"]) if les.has("key") else "")
+	if done:
+		print("STORY lesson %s done in %.1f s" % [str(_l["id"]), float(_l["t"])])
+		if _skip:
+			car.autopilot = false
+			car.in_throttle = 0.0
+			car.in_steer = 0.0
+		if les.has("well"):
+			hud.say(tr_(data["people"].get(str(les.get("who", "salesman")), {"en": ""})), tr_(les["well"]), 2.5)
+		_next_lesson()
 
 
 # ---- the prologue's dealership (dealer.gd, garage.gd, finance.gd) ----
