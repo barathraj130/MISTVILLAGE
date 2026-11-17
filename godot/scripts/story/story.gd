@@ -935,6 +935,10 @@ func _next() -> void:
 			_gig = {}
 			_gig_done = 0
 			_gig_earned = 0
+			_shift0 = _shift_now()                        # (for the shift's account at the end: km, fuel, time)
+			_shift_fuel_in = 0.0
+			if city.get("bunks") and not city.bunks.filled.is_connected(_shift_filled):
+				city.bunks.filled.connect(_shift_filled)
 			_gig_offer()
 		"eat_out":
 			_in_task = false
@@ -4049,6 +4053,38 @@ func _since_noon(m: float) -> float:
 var _gig_take := 0                    # the rider app's answer: 1 taken, 2 shift ended
 
 
+var _shift0 := {}                     # the vehicle and the clock as the shift began
+var _shift_fuel_in := 0.0             # litres put in at a bunk during the shift
+
+
+func _shift_now() -> Dictionary:
+	var g = city.get("garage")
+	var v: Dictionary = g.vehicle(str(g.current)) if g else {}
+	return {"odo": float(v.get("odo_km", 0.0)), "fuel": float(v.get("fuel_l", 0.0)), "id": str(v.get("id", "")),
+		"day": fines.sim.day if fines else 0, "minute": fines.sim.minute if fines else 0.0}
+
+
+func _shift_filled(vehicle_id: String, litres: float, _rupees: int) -> void:
+	if str(cur.get("do", "")) == "gigs" and vehicle_id == str(_shift0.get("id", "")):
+		_shift_fuel_in += litres
+
+
+## The shift's account on the rider app: orders, distance, fuel used and what it cost, the time, earned, and what's
+## left of it after the petrol.
+func _shift_account() -> Dictionary:
+	var now := _shift_now()
+	var km := maxf(float(now["odo"]) - float(_shift0.get("odo", now["odo"])), 0.0)
+	var used := maxf(float(_shift0.get("fuel", now["fuel"])) + _shift_fuel_in - float(now["fuel"]), 0.0)
+	var cost := int(round(used * 101.5))
+	var mins := (int(now["day"]) - int(_shift0.get("day", now["day"]))) * 1440.0 + float(now["minute"]) - float(_shift0.get("minute", now["minute"]))
+	var net := _gig_earned - cost
+	print("STORY shift: %d orders, %.1f km, %.2f L (₹%d), %d min, earned ₹%d, net ₹%d" % [_gig_done, km, used, cost, int(mins), _gig_earned, net])
+	return {"en": "Shift ended: %d orders · %.1f km · petrol %.2f L (≈ ₹%d) · %d h %02d min · earned ₹%d · after petrol ₹%d." % [_gig_done, km, used, cost,
+		int(mins) / 60, int(mins) % 60, _gig_earned, net],
+		"ta": "ஷிஃப்ட் முடிஞ்சது: %d ஆர்டர் · %.1f கி.மீ · பெட்ரோல் %.2f லி (≈ ₹%d) · %d ம %02d நி · சம்பாத்தியம் ₹%d · பெட்ரோல் போக ₹%d." % [_gig_done, km, used, cost,
+		int(mins) / 60, int(mins) % 60, _gig_earned, net]}
+
+
 func _gig_answer(yes: bool) -> void:
 	if str(cur.get("do", "")) == "gigs":
 		_gig_take = 1 if yes else 2
@@ -4103,6 +4139,10 @@ func _clock12_of(m: float) -> String:
 
 func _gigs(dt: float) -> void:
 	_tick_clock(dt)
+	if str(_shift0.get("id", "")).is_empty():            # (on the vehicle at last: its readings now are the start)
+		var now := _shift_now()
+		if not str(now["id"]).is_empty():
+			_shift0 = now
 	if _skip and city.walker and city.has_method("toggle_on_foot"):   # (testing: back on the scooter)
 		city.walker.global_position = car.global_position + Vector3.UP
 		city.toggle_on_foot()
@@ -4128,8 +4168,7 @@ func _gigs(dt: float) -> void:
 				city.phone.rider["mode"] = "job"
 				city.phone.hold(false)
 			if q_hit or late_night:
-				city.phone.message(cur.get("app", {"en": "QuickBite Rider", "ta": "குவிக்பைட் ரைடர்"}),
-					{"en": "Shift ended: %d orders, ₹%d earned." % [_gig_done, _gig_earned], "ta": "ஷிஃப்ட் முடிஞ்சது: %d ஆர்டர், ₹%d." % [_gig_done, _gig_earned]})
+				city.phone.message(cur.get("app", {"en": "QuickBite Rider", "ta": "குவிக்பைட் ரைடர்"}), _shift_account())
 				city.phone.rider_clear()
 				print("STORY gigs: %d orders, ₹%d" % [_gig_done, _gig_earned])
 				flags["gig_orders"] = _gig_done

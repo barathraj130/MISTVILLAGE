@@ -37,6 +37,7 @@ const Phone := preload("res://scripts/story/phone.gd")
 const Bail := preload("res://scripts/city/bail.gd")
 const Money := preload("res://scripts/city/money.gd")
 const Garage := preload("res://scripts/city/garage.gd")
+const FuelBunks := preload("res://scripts/city/fuel_bunks.gd")
 const Hospital := preload("res://scripts/city/hospital.gd")
 const Citizens := preload("res://scripts/city/citizens.gd")
 const Gang := preload("res://scripts/city/gang.gd")
@@ -106,6 +107,7 @@ var citizens                                # the citizens with a day (citizens.
 var gang                                    # Suresh's people as the case closes in (gang.gd)
 var money                                   # his money after the arrest: the frozen account, bills (city/money.gd)
 var garage                                  # the vehicles he owns: fuel, wear, loans (city/garage.gd)
+var bunks                                   # the petrol bunks (city/fuel_bunks.gd)
 var phone                                   # Karthik's phone, P (story/phone.gd)
 var hands                                   # what he holds and carries, I (story/hands.gd)
 var _prof_frames := 0
@@ -437,7 +439,7 @@ func _ready() -> void:
 		var self_test := false                      # (a self-test never writes your saved game: wallet, challans, weather)
 		for flag in ["--testdrive", "--carshot", "--trafficshot", "--crashtest", "--peopletest", "--parkedtest",
 				"--potholetest", "--flyover", "--clock=", "--weather=", "--nohud", "--doortest", "--threattest", "--surfacetest", "--jointest", "--walkertest", "--activitytest",
-				"--hospitaltest", "--citizentest", "--interviewtest", "--unsticktest", "--livingtest", "--livingbench", "--hospitalat", "--shotview", "--interacttest", "--falltest", "--stairtest", "--gaittest", "--standtest", "--gangtest", "--gangstage", "--pursuittest", "--socialtest", "--streetaudit", "--sittest", "--ride", "--financetest", "--sfvehicletest", "--camtest", "--taketest", "--traffictest", "--lamptest", "--pedcheck", "--moneytest", "--menushot", "--crosstest"]:
+				"--hospitaltest", "--citizentest", "--interviewtest", "--unsticktest", "--livingtest", "--livingbench", "--hospitalat", "--shotview", "--interacttest", "--falltest", "--stairtest", "--gaittest", "--standtest", "--gangtest", "--gangstage", "--pursuittest", "--socialtest", "--streetaudit", "--sittest", "--ride", "--bunktest", "--bunksurvey", "--financetest", "--sfvehicletest", "--camtest", "--taketest", "--traffictest", "--lamptest", "--pedcheck", "--moneytest", "--menushot", "--crosstest"]:
 			self_test = self_test or " ".join(args).contains(flag)
 		fines.persist = not self_test
 		hud = DriveHud.new()
@@ -511,6 +513,10 @@ func _ready() -> void:
 		garage.name = "Garage"
 		garage.city = self
 		add_child(garage)
+		bunks = FuelBunks.new()                      # the petrol bunks: placed by the roads, filling up (fuel_bunks.gd)
+		bunks.name = "FuelBunks"
+		bunks.city = self
+		add_child(bunks)
 		citizens = Citizens.new()                    # people with a home, a job and a day (citizens.gd)
 		citizens.name = "Citizens"
 		citizens.city = self

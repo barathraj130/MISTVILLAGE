@@ -78,3 +78,17 @@ night) and everything to Day 20 stay as they are, with their evidence and their 
 5. **The prologue chapter** (`story/prologue.json`): the three days put together; New Game plays it, then Day 1.
 6. **The whole run tested:** prologue to Day 1's first steps, both dealership paths, saves and loads in the
    middle, the story's evidence and day numbers unchanged.
+
+## Progress
+
+- **Stage 1, the systems (17 Nov):** `city/finance.gd` (loans, the exact EMI, schedules, late charges, history),
+  `city/garage.gd` (owned vehicles: fuel by distance, throttle and wear; condition; refuelling; each EMI posted to
+  money.gd as a bill). `--financetest` PASS.
+- **Stage 2, the dealership and the lesson (17 Nov):** the showroom room, the `dealer` and `finance_desk` steps
+  (`story/dealer.gd`), the keep-or-trade choice, the loan papers signed; the `learn` step (get on, away, brake in
+  the box, indicate and turn, horn, camera, park and get off), checked by riding (`--learnreal`).
+- **Stage 3, the petrol bunks (17 Nov):** five bunks of our own brand ("Kongu Fuels", `tools/cars/build_bunk.py`)
+  as landmarks on main roads (lots cleared and levelled; places chosen by `--bunksurvey`), the pump's screen and an
+  attendant, filling a vehicle he owns (amount, cash or UPI, the screen and the gauge running), the low-fuel
+  message with the nearest bunk on the map (`city/fuel_bunks.gd`, `--bunktest` PASS); the delivery shift's account
+  (orders, km, petrol and its cost, time, earned, after petrol).
