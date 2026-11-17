@@ -1,0 +1,76 @@
+# Vehicles: audit and plan (17 November 2026)
+
+Phase 0 of the automotive overhaul brief. Nothing is changed by this document. Screenshots of every drivable vehicle
+as it is now, from outside and from the driver's seat: `docs/shots/vehicles/all_outside.jpg`, `all_seat.jpg` (and
+one picture of each, `NN_<kind>_outside.jpg` / `_seat.jpg`).
+
+## 1. Inventory (what the game drives and draws today)
+
+| Category | Model now (source) | Quality now | Physics now | Upgrade needed |
+|---|---|---|---|---|
+| Luxury SUV (the player's) | `luxury_suv.glb` (tools/luxury_suv.py + suv_interior.py): lofted body, glass, multi-spoke wheels, a modelled interior. 154 k tris, 17 materials | the best in the game; boxy, flat paint, opaque-looking glass from outside | VehicleBody3D, its own spec (2 150 kg, CoM, springs) | paint, glass, lamps, panel detail, LODs |
+| Sedan / taxi | `fleet_sedan.glb` (tools/fleet.py / carbody.py): one swept body, zones for glass/lamps/grille. 19.6 k tris, 10 materials | recognisable car, soft blobby shape, flat colours; the generic cabin's roof pokes through the body from outside | own spec (1 150 kg) | new model: the reference vehicle (Stage 1) |
+| Hatchback | `fleet_hatchback.glb` (same tools) | as the sedan | own spec (1 000 kg) | new model (Stage 3) |
+| Coupe | `coupe.glb` (tools/coupe.py): sports coupe | stylised, not a Coimbatore car | own spec | keep for now / retire |
+| SUV, XUV | built in code (jeep.gd boxes) | **boxes** | own spec | new models (Stage 2) |
+| Van, delivery van | built in code (boxes) | **boxes**; no interior (seat view inside a box) | own spec | new models (Stage 4) |
+| Bus | `fleet_bus.glb` (tools/bus_tn.py: our own Tamil Nadu express bus, no badges) | decent shape, flat colours; camera too close in the test | own spec (11 000 kg) | detail, materials, an Indian town bus as well |
+| Lorry | `fleet_lorry.glb` (tools/fleet.py) | simple cab and body | own spec (12 000 kg) | new model (Stage 4) |
+| Auto | `fleet_auto.glb` / `fleet_auto2.glb` (fleet.py; Sketchfab CC-BY auto, an earlier session's) | fair | own spec (450 kg, 3 wheels) | detail, interior (Stage 5) |
+| Motorcycle | built in code (boxes); parked: `bike_motorcycle_*.glb` (bikes_real.py) | **boxes** when driven | two-wheeler balance (works well: docs/VEHICLE_LAB.md) | use the detailed bikes (Stage 5) |
+| Scooter | `karthik_scooter.glb` (bikes_real.py + story_scooter.py), 43 k tris; the plain "scooter" is boxes | Karthik's is good; the plain one is boxes | balance, rider IK, mount (B1–B3) | the plain one from the detailed model |
+| Tractor | built in code (boxes) | **boxes** | own spec | new model (late) |
+| Parked bikes | `bike_scooter_*`, `bike_motorcycle_*` (MultiMesh) | good | static boxes | keep |
+
+**Systems** (all in `scripts/drive/jeep.gd` unless said):
+
+- **Physics**: VehicleBody3D + VehicleWheel3D, one controller for every vehicle, a spec each (`BASE_SPECS`: mass,
+  centre of mass, wheel radius, rest, travel, stiffness, torque, top speed, boxes for collision). Engine curve,
+  gears (a CVT on scooters), speed-sensitive steering capped by grip, front/rear brake split, anti-roll, surfaces
+  and wet grip; two-wheelers balance by torque (`_balance`). Tested in `docs/VEHICLE_LAB.md`. **Sound; keep.**
+- **Collision**: box shapes from the spec, layer 1; the street's furniture is on its own layer (4) that cars ignore.
+- **Interiors**: `interiors.py` cabins per kind (hatchback, sedan, taxi, auto, bus, lorry, coupe), fitted by
+  `_fit_cabin` with an Eye and a SteeringPivot; the luxury SUV its own. The box vehicles have none.
+- **Lights**: head and tail lamps by material/name, corner indicators (`_corner_lamps`), night; the traffic's own
+  indicators and brake lamps (`city_traffic.gd _lamps`) light any model whose lamp parts are named for it.
+- **Damage**: zones (front, rear, left, right), real mesh dents at the hit (`dents.gd`), a pull, hurt engine/lamps;
+  NPC-to-NPC crashes in `city_traffic.gd` (low/medium/high, once per contact).
+- **Audio**: synthesised engine (AudioStreamGenerator, rpm), road noise, horn; crash sound for traffic.
+- **Cameras**: chase, cockpit, bonnet (`cam_mode`), mirrors (a SubViewport).
+- **Traffic**: `city_traffic.gd` kinematic vehicles on lanes (drivers, signals, junctions, people, crashes), the
+  `fleet.gd` models; parked cars a MultiMesh per tile (`city_streamer.gd`) with collision boxes, takeable.
+- **LOD**: MultiMesh visibility ranges and `lod_bias` for parked; Godot's automatic mesh LOD; no hand-made LODs.
+
+**Dependencies to keep working** when a model changes: `fleet.gd` (traffic, parked meshes via `parts`), jeep.gd
+SPECS (`glb`, wheel names `Wheel_*`, the materials named Paint / Glass / Headlight / Taillight), `interiors.py`
+(the cabin's Eye and SteeringPivot), `dents.gd` (mesh-deformable surfaces), the parked MultiMesh (one merged mesh).
+
+**Other sessions' drafts** (not committed, not touched): `tools/aruvia_suv_concept.py`, `nilgiri_tourer_draft.py`,
+`real_vehicle_drafts.py`, `road_fleet_review.py`.
+
+## 2. What's wrong, in one line each
+
+Seven of the sixteen drivable vehicles are boxes; the modelled ones are soft, flat-coloured and simple-surfaced;
+glass reads as dark opaque panels; no PBR (paint is a flat colour, no clearcoat, no normal maps, tyres and rubber and
+chrome are all plain colours); the generic cabins show through the bodies from outside; no hand-made LODs.
+
+## 3. Plan (the brief's roadmap, adapted)
+
+**Stage 1, the reference sedan**: a new compact Indian sedan (our own, unbadged design, ~4.0 × 1.73 × 1.5 m,
+right-hand drive), modelled for quality: separate body panels (doors with gaps, bonnet, boot, bumpers, fenders,
+skirts), bevelled edges, weighted normals, real wheel arches; wheels with tyre sidewalls and tread, rims, hubs,
+discs and calipers; a full interior (dash, cluster, wheel, column, seats with headrests, door cards, pedals,
+mirrors, wipers, belts). A PBR material library used by every vehicle from then on: car paint (base, flakes,
+clearcoat via a ShaderMaterial), glass (transparent, reflective, tinted; cheap for distant cars), tyre rubber with
+a normal map, chrome, plastics, upholstery; lamp lenses with emissive parts named for the lamp system; LOD1/LOD2
+exported alongside. Into the game as `sedan` (player and traffic), tested in the city: pictures outside, inside,
+wheels, a drive, a crash, the traffic, frame times.
+
+**Stages 2–7**: the SUV (a different body, its own physics), the hatchback and an MPV, the commercial vehicles (a
+TN town bus, the lorry, a van and a goods carrier), the auto and the two-wheelers (from bikes_real.py), then the
+traffic LOD and the performance benchmark (5 / 15 / 30 / 50 vehicles).
+
+**One decision first (the user's)**: where the models come from. Our own, built in Blender (original, no licence
+questions, the existing pipeline; quality limited by what we can model in code, a vehicle a stage), or downloaded
+high-quality models with interiors (CC0 / CC-BY, cleaned up and unbadged: faster, possibly better looking, needs
+your approval and Sketchfab login for each, and the earlier ones were taken out for their quality).
