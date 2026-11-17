@@ -98,6 +98,11 @@ func _process(dt: float) -> void:
 		if placed.has(id) and is_instance_valid(placed[id]["tile"]) and placed[id]["tile"] == tile:
 			continue
 		_decorate(id, lm, tile)
+	var dark: bool = city.fines.sim.daylight() < 0.35 if city.fines else false
+	for id in placed:
+		for l in placed[id].get("lights", []):
+			if is_instance_valid(l):
+				(l as Light3D).visible = dark
 	_interact(dt)
 	_low_fuel()
 
@@ -132,6 +137,34 @@ func _decorate(id: String, lm: Dictionary, tile: Node3D) -> void:
 					p.get_animation(an).loop_mode = Animation.LOOP_LINEAR
 					p.play(an)
 					break
+	# a second attendant at the other pump, a customer's motorcycle on its stand by the air stand
+	for extra in [["res://assets/people/crowd_m2.glb", Vector3(4.1, 0.0, -0.2)], ["res://assets/vehicles/bike_motorcycle_1.glb", Vector3(8.6, 0.0, 2.2)]]:
+		if ResourceLoader.exists(str(extra[0])):
+			var e := (load(str(extra[0])) as PackedScene).instantiate() as Node3D
+			tile.add_child(e)
+			e.global_position = xf * (extra[1] as Vector3)
+			e.global_basis = xf.basis.rotated(Vector3.UP, PI * 0.5 if str(extra[0]).contains("bike") else PI)
+			for ap in e.find_children("*", "AnimationPlayer", true, false):
+				var p := ap as AnimationPlayer
+				for an in ["Idle", "idle", "Stand"]:
+					if p.has_animation(an):
+						p.get_animation(an).loop_mode = Animation.LOOP_LINEAR
+						p.play(an)
+						break
+	# the canopy's lights after dark: four downlights over the pumps, one at the sales window (no shadows: cheap)
+	var lights: Array = []
+	for lp in [Vector3(-4.8, 5.0, -1.0), Vector3(-1.6, 5.0, -1.0), Vector3(1.6, 5.0, -1.0), Vector3(4.8, 5.0, -1.0), Vector3(0.0, 2.9, -5.4)]:
+		var sl := SpotLight3D.new()
+		sl.light_color = Color(1.0, 0.97, 0.9)
+		sl.light_energy = 3.0
+		sl.spot_range = 9.0
+		sl.spot_angle = 62.0
+		sl.shadow_enabled = false
+		tile.add_child(sl)
+		sl.global_transform = Transform3D(Basis(Vector3.RIGHT, -PI * 0.5), xf * lp)
+		sl.visible = false
+		lights.append(sl)
+	rec["lights"] = lights
 	placed[id] = rec
 	print("BUNK %s at (%.0f, %.0f)" % [id, xf.origin.x, xf.origin.z])
 
