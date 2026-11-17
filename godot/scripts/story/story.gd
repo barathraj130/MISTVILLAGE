@@ -65,6 +65,7 @@ const Dvr := preload("res://scripts/story/dvr.gd")
 const Doorbell := preload("res://scripts/story/doorbell.gd")
 const Keypad := preload("res://scripts/story/keypad.gd")
 const Shop := preload("res://scripts/story/shop.gd")
+const Dealer := preload("res://scripts/story/dealer.gd")
 const Standing := preload("res://scripts/story/standing.gd")
 const Court := preload("res://scripts/story/court.gd")
 const Actor := preload("res://scripts/story/actor.gd")
@@ -116,6 +117,10 @@ var wall: Control                     # the wall in his room (wall.gd)
 var dvr: Control                      # a camera recorder's footage on someone's monitor (dvr.gd)
 var court: Control                    # the trial: the prosecution's points, his evidence, the night on the map (court.gd)
 var shop: Control                     # a shop's counter: racks, prices, his wallet (shop.gd)
+var dealer: Control                   # the dealership's cards and finance desk (dealer.gd)
+var _display: Array = []              # dealer: [[the vehicle on its podium, its model]]
+var picks := {}                       # dealer: "bike" / "scooter" → the model chosen (saved with the story)
+var _looking := {}                    # dealer: the model whose card is open
 var _outfit := {}                      # what he bought and has on ({"top": colour}), until he's home again
 var keypad: Control                   # a thing with a PIN, worked up close: Bala's key programmer (keypad.gd)
 var _kp := {}                          # a "keypad" step as it goes: tries, opened, the skip's own steps
@@ -351,6 +356,11 @@ func _process_timed(dt: float) -> void:
 				_shop_skip()
 		"choose":
 			_choose()
+		"dealer":
+			_dealer_step()
+		"finance_desk":
+			if _skip and t_step > 1.0 and dealer.visible:
+				dealer.auto()
 		"climb":
 			_climb_step(dt)
 		"gigs":
@@ -555,7 +565,8 @@ func _next() -> void:
 	if _climbing and not str(cur["do"]) in ["talk", "choose"]:     # out of the dark building, back to the street
 		_end_climb()
 	if room != null and not str(cur["do"]) in ["room", "task", "talk", "comfort_verdict", "deliver_verdict", "card", "home", "choose", "fight",
-			"give", "take", "note", "message", "contact", "pin", "call", "table", "dvr", "deal", "money", "bail", "snapshot", "evidence", "record"]:
+			"give", "take", "note", "message", "contact", "pin", "call", "table", "dvr", "deal", "money", "bail", "snapshot", "evidence", "record",
+			"dealer", "finance_desk"]:
 		_unload_room()
 		_cams_back()
 	for k in cur.get("hide", []):                       # (someone gone in: sir into his car, through his gate)
@@ -853,6 +864,29 @@ func _next() -> void:
 			var a: Node3D = cast.get(cur["who"])
 			if a:
 				map.pin = Vector2(a.global_position.x, a.global_position.z)
+		"dealer":                                        # the showroom: walk round the vehicles, look, choose
+			_load_room(str(cur["room"]), str(cur.get("at", data["spawn"])))
+			_cast(cur.get("cast", {}))
+			_walk_in(str(cur.get("start", "door")))
+			_place_display()
+			if _ring:
+				_ring.visible = false
+		"finance_desk":                                  # the finance officer: down payments, tenure, the EMIs
+			if city.walker:
+				city.walker.active = false
+			var items: Array = []
+			for g in ["bike", "scooter"]:
+				if picks.has(g):
+					var it := {"model": picks[g], "trade_in": 0, "rider": "karthik"}
+					if g == "scooter":
+						if flags.get("trade_in", false):
+							it["trade_in"] = int(cur.get("trade_in", 0))
+						else:
+							it["rider"] = "divya"
+					items.append(it)
+			dealer.lang = lang
+			dealer.open_finance(items, cur["finance"], fines.sim.money if fines else 0)
+			_shot()
 		"home":
 			_load_room(str(cur["room"]), str(cur.get("at", data["spawn"])))
 			_cast(cur.get("cast", {}))
@@ -2007,6 +2041,140 @@ func _act_pay() -> void:
 	if fines:
 		fines.sim.money -= amt
 	_act_done("pay")
+
+
+# ---- the prologue's dealership (dealer.gd, garage.gd, finance.gd) ----
+## The display vehicles on their podiums (the step's "models": each "at" a Mark_show_N, its "glb" and "paint").
+func _place_display() -> void:
+	for d in _display:
+		if is_instance_valid(d[0]):
+			(d[0] as Node3D).queue_free()
+	_display = []
+	for m in cur.get("models", []):
+		var mk := _mark(str(m["at"]))
+		if mk == null or not ResourceLoader.exists(str(m["glb"])):
+			continue
+		var node := (load(str(m["glb"])) as PackedScene).instantiate() as Node3D
+		room.add_child(node)
+		node.global_transform = Transform3D(mk.global_basis * Basis(Vector3.UP, PI * 0.5), mk.global_position + Vector3.UP * 0.13)
+		if m.has("paint"):
+			var col := Color.html(str(m["paint"]))
+			for mi in node.find_children("*", "MeshInstance3D", true, false):
+				var inst := mi as MeshInstance3D
+				for si in inst.mesh.get_surface_count():
+					var mat := inst.mesh.surface_get_material(si) as BaseMaterial3D
+					if mat and mat.resource_name == "Paint":
+						var v := mat.duplicate() as BaseMaterial3D
+						v.albedo_color = col
+						inst.set_surface_override_material(si, v)
+		_display.append([node, m])
+
+
+func _dealer_step() -> void:
+	if _in_task or city.walker == null or dealer.visible:
+		return
+	var need: Array = cur.get("need", ["bike", "scooter"])
+	var all_picked := need.all(func(g): return picks.has(g))
+	if _skip and t_step > 1.0:                           # (testing: the first of each kind, as a player who looked)
+		for d in _display:
+			var g := str(d[1]["group"])
+			if not picks.has(g):
+				picks[g] = d[1]
+				print("STORY dealer: chose %s (₹%d on the road)" % [str(d[1]["name"]["en"]), Dealer.on_road(d[1])])
+		_next()
+		return
+	var near: Array = []
+	var best := 1.9
+	for d in _display:
+		var dist: float = city.walker.global_position.distance_to((d[0] as Node3D).global_position)
+		if dist < best:
+			best = dist
+			near = d
+	var e := Input.is_key_pressed(KEY_E)
+	var hint := ""
+	if not near.is_empty():
+		var m: Dictionary = near[1]
+		hint = ("E: look at the %s" if lang == "en" else "E: %s பாருங்க") % tr_(m["name"])
+		if e and not _e_down:
+			_looking = m
+			city.walker.active = false
+			dealer.lang = lang
+			dealer.open_card(m, str(picks.get(str(m["group"]), {}).get("id", "")) == str(m["id"]))
+			_shot()
+	elif all_picked:
+		var mk := _mark(str(cur.get("desk", "karthik_sales")))
+		if mk:
+			_ring.visible = true
+			_ring.global_position = mk.global_position + Vector3.UP * 0.03
+			if city.walker.global_position.distance_to(mk.global_position) < 1.2:
+				hint = "E: talk" if lang == "en" else "E: பேசுங்க"
+				if e and not _e_down:
+					_ring.visible = false
+					_next()
+	_e_down = e
+	var line := ""
+	if not all_picked:
+		line = tr_(cur.get("goal", {"en": "Look round the vehicles and choose."}))
+	else:
+		line = tr_(cur.get("goal_done", {"en": "Go to the sales desk."}))
+	goal.text = line + ("\n" + hint if hint != "" else "")
+
+
+func _dealer_card_closed(chosen: bool) -> void:
+	if city.walker:
+		city.walker.active = true
+	if chosen and not _looking.is_empty():
+		picks[str(_looking["group"])] = _looking
+		print("STORY dealer: chose %s" % str(_looking["name"]["en"]))
+	_looking = {}
+
+
+## The papers signed: the vehicles his family's now (garage.gd), each loan opened (finance.gd), the down payments
+## paid from what he has; traded in, the old scooter's gone.
+func _finance_done(result: Dictionary) -> void:
+	if str(cur.get("do", "")) != "finance_desk":
+		return
+	if city.walker:
+		city.walker.active = true
+	if not bool(result.get("ok", false)):
+		flags["finance_declined"] = true
+		print("STORY finance: not now")
+		_next()
+		return
+	var g = city.garage
+	var cfg: Dictionary = cur["finance"]
+	var paid := 0
+	var plates: Dictionary = cur.get("plates", {})
+	for pl in result["plans"]:
+		var m: Dictionary = {}
+		for gk in picks:
+			if str(picks[gk]["id"]) == str(pl["id"]):
+				m = picks[gk]
+		var group := str(m["group"])
+		var rider := "karthik"
+		if group == "scooter" and not flags.get("trade_in", false):
+			rider = "divya"
+		var vid := "new_" + group
+		var name_d: Dictionary = {"en": "the motorcycle", "ta": "மோட்டார் சைக்கிள்"}
+		if group == "scooter":
+			name_d = {"en": "Divya's scooter", "ta": "திவ்யாவின் ஸ்கூட்டர்"} if rider == "divya" else {"en": "the new scooter", "ta": "புது ஸ்கூட்டர்"}
+		if g:
+			g.add_vehicle({"id": vid, "kind": str(m["kind"]), "name": name_d, "plate": str(plates.get(group, "")), "rider": rider,
+				"fuel_l": 1.0, "paint": str(m.get("paint", "")), "model": str(m["id"])})
+			g.finance_vehicle(vid, str(cfg["lender"]), Dealer.on_road(m), int(pl["down"]), int(pl["trade_in"]), float(cfg["rate_pa"]), int(pl["months"]))
+		paid += int(pl["down"])
+		flags["bought_" + group] = true
+		print("STORY finance: %s, down ₹%d, trade-in ₹%d, %d months, EMI %s" % [str(m["name"]["en"]), int(pl["down"]), int(pl["trade_in"]),
+			int(pl["months"]), Dealer.Finance.rupees(int(pl["emi"]))])
+	if fines:
+		fines.sim.money -= paid
+	if flags.get("trade_in", false) and g:
+		var old: Dictionary = g.vehicle("old_scooter")
+		if not old.is_empty():
+			g.vehicles.erase(old)
+			g.save()
+	print("STORY finance: paid ₹%d down, wallet ₹%d" % [paid, fines.sim.money if fines else 0])
+	_next()
 
 
 ## "shop": at a counter ("shop", its name), one thing from each of its "rows" (shop.gd); paid from his account. If
@@ -4080,6 +4248,10 @@ func _build_ui() -> void:
 	shop = Shop.new()
 	shop.finished.connect(_shop_done)
 	ui.add_child(shop)
+	dealer = Dealer.new()
+	dealer.card_closed.connect(_dealer_card_closed)
+	dealer.finance_done.connect(_finance_done)
+	ui.add_child(dealer)
 	keypad = Keypad.new()
 	keypad.closed.connect(_keypad_closed)
 	keypad.tried.connect(_keypad_tried)

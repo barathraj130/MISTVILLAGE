@@ -20,6 +20,8 @@ Rooms (room_<name>.glb):
     home        the story: Karthik's rented house in Ganapathy (front room with Amma's sewing machine, the family
                 photos, a lamp in the wall shrine, the kitchen corner; his own small room with a cot, the phone
                 charger, shirts and a cap on hooks)
+    showroom    the prologue: a two-wheeler dealership (made-up: Vela Two-Wheelers): podiums for the display
+                vehicles (Mark_show_1..4), the sales desk, the finance cabin behind glass
     dev_office  the story: Raghavan Developers, Gandhipuram (reception, Karthik's and Suresh's desks,
                 Raghavan's cabin behind a glass partition: big desk, the Mist Village photo, the Green Valley
                 file, a layout plan on the wall)
@@ -378,6 +380,79 @@ def office(M):
     empty("Staff", (0.0, 1.4, 0), math.pi)
 
 
+def showroom(M):
+    """A two-wheeler dealership (made-up: Vela Two-Wheelers, Avinashi Road): a glossy floor, the brand wall, four
+    round podiums for the display vehicles (Mark_show_1..4: the story puts the vehicles there), the sales desk,
+    the finance officer's cabin behind glass, brochures, a TV of offers, plants."""
+    gloss = mat("ShowroomFloor", (0.86, 0.86, 0.85), 0.12)
+    red = mat("BrandRed", (0.62, 0.05, 0.06), 0.4)
+    dark = mat("PodiumDark", (0.06, 0.06, 0.07), 0.15, 0.3)
+    rim = mat("PodiumRim", (0.85, 0.86, 0.88), 0.15, 1.0)
+    shell(M, "marble", "wall_white", door_w=2.4)
+    box((0, 0, 0.002), (W - 0.2, D - 0.2, 0.004), gloss, bev=0)
+    box((0, D / 2 - 0.04, 1.9), (W - 0.4, 0.06, 1.6), red, bev=0)                  # the brand wall
+    bpy.ops.object.text_add(location=(0, D / 2 - 0.08, 2.15), rotation=(math.pi / 2, 0, 0))
+    t = bpy.context.active_object
+    t.data.body = "VELA TWO-WHEELERS"
+    t.data.align_x = 'CENTER'
+    t.data.size = 0.42
+    t.data.extrude = 0.01
+    t.data.materials.append(M["white"])
+    bpy.ops.object.convert(target='MESH')
+    bpy.ops.object.text_add(location=(0, D / 2 - 0.08, 1.55), rotation=(math.pi / 2, 0, 0))
+    t = bpy.context.active_object
+    t.data.body = "Sales  ·  Finance  ·  Service"
+    t.data.align_x = 'CENTER'
+    t.data.size = 0.2
+    t.data.extrude = 0.005
+    t.data.materials.append(M["white"])
+    bpy.ops.object.convert(target='MESH')
+    for k, (x, y) in enumerate(((-3.3, -2.0), (-3.3, 0.6), (3.3, -2.0), (3.3, 0.6))):
+        cyl((x, y, 0.06), 1.05, 0.12, dark, verts=48)
+        cyl((x, y, 0.125), 1.06, 0.01, rim, verts=48)
+        yaw = math.pi / 2 if x < 0 else -math.pi / 2                              # (side-on to the aisle)
+        mark("show_%d" % (k + 1), x, y, yaw)
+        box((x + (0.9 if x < 0 else -0.9), y - 0.95, 0.55), (0.3, 0.02, 0.4), M["paper"], bev=0)   # the price card's stand
+        box((x + (0.9 if x < 0 else -0.9), y - 0.95, 0.25), (0.03, 0.03, 0.5), M["steel"], bev=0)
+    # the sales desk (left, at the back), the salesman behind it
+    box((-2.6, 2.6, 0.55), (2.2, 0.7, 1.1), M["white"], bev=0.02)
+    box((-2.6, 2.6, 1.11), (2.3, 0.78, 0.04), red, bev=0.005)
+    box((-2.9, 2.75, 1.35), (0.5, 0.04, 0.32), M["screen"], bev=0.005)
+    chair(M, -2.6, 3.25, 0, "black_chair")
+    mark("sales", -2.6, 3.15, math.pi)
+    mark("karthik_sales", -2.6, 1.85, 0.0)
+    for k in range(4):                                                            # brochures
+        box((-1.75, 2.45 + k * 0.08, 1.15), (0.22, 0.02, 0.3), [M["pk_r"], M["pk_b"], M["pk_w"], M["pk_y"]][k], bev=0, rot=(0.2, 0, 0))
+    # the finance cabin (right, at the back) behind glass, its desk, two chairs
+    box((1.4, 2.6, 1.2), (0.05, 2.6, 2.4), M["glass"], bev=0)
+    box((3.0, 2.95, 0.4), (1.6, 0.8, 0.04), M["wood"], bev=0.01)
+    box((3.0, 2.95, 0.76), (1.6, 0.8, 0.04), M["wood"], bev=0.01)
+    for s in (1, -1):
+        box((3.0 + s * 0.75, 2.95, 0.38), (0.05, 0.75, 0.76), M["wood"], bev=0)
+    box((3.3, 3.05, 0.9), (0.45, 0.04, 0.28), M["screen"], bev=0.005, rot=(0, 0, math.radians(-10)))
+    for k in range(3):
+        box((2.6 + k * 0.05, 2.85, 0.82), (0.24, 0.32, 0.02), M["paper"], bev=0)
+    chair(M, 3.0, 3.55, 0, "black_chair")
+    chair(M, 3.0, 2.25, math.pi, "plastic_blue")
+    mark("finance", 3.0, 3.5, math.pi)
+    mark("karthik_finance", 3.0, 2.15, 0.0)
+    box((4.6, 3.6, 1.0), (0.6, 0.5, 2.0), M["almirah"], bev=0.01)
+    # the offers on a TV, plants, a water dispenser, the visitors' sofa
+    box((0, D / 2 - 0.1, 0.95), (1.2, 0.05, 0.7), M["screen"], bev=0.01)
+    for x in (-4.5, 4.5):
+        cyl((x, -3.4, 0.3), 0.25, 0.6, M["pot"], verts=20)
+        cyl((x, -3.4, 0.95), 0.4, 0.8, M["plant"], verts=12)
+    box((-4.6, 2.0, 0.6), (0.35, 0.35, 1.2), M["white"], bev=0.02)
+    box((0.0, -1.0, 0.25), (1.8, 0.7, 0.5), M["sofa"], bev=0.04)
+    box((0.0, -0.75, 0.6), (1.8, 0.2, 0.5), M["sofa"], bev=0.04)
+    tube_lights(M, ((-3.3, -2.0), (-3.3, 0.6), (3.3, -2.0), (3.3, 0.6), (0, 1.5), (0, -2.0)))
+    mark("door", 0.0, -D / 2 + 1.0, 0.0)
+    empty("Staff", (-2.6, 3.15, 0), math.pi)
+    shot("floor", (0.0, -3.4, 1.7), (0.0, 0.6, 0.8))
+    shot("finance", (1.9, 1.5, 1.6), (3.0, 3.2, 1.0))
+    shot("sales", (-1.4, 1.2, 1.6), (-2.6, 3.0, 1.2))
+
+
 def mark(name, x, y, yaw):
     """Where a person stands (yaw: the way they face, 0 = towards +Y, the back wall)."""
     empty("Mark_" + name, (x, y, 0), yaw)
@@ -556,7 +631,8 @@ def materials():
 
 
 ROOMS = {"kirana": kirana, "restaurant": restaurant, "tea": tea, "hotel": hotel, "temple": temple,
-         "hospital": hospital, "bank": bank, "fuel": fuel, "office": office, "home": home, "dev_office": dev_office}
+         "hospital": hospital, "bank": bank, "fuel": fuel, "office": office, "home": home, "dev_office": dev_office,
+         "showroom": showroom}
 
 
 def finish(out):

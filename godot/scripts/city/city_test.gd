@@ -537,7 +537,11 @@ func _ready() -> void:
 		if "--story" in args or Engine.has_meta("story"):
 			story = Story.new()
 			story.name = "Story"
-			if story.load_chapter():
+			var chapter := "res://story/slice.json"
+			for a2 in args:                         # (testing: --storychapter=res://story/prologue.json)
+				if a2.begins_with("--storychapter="):
+					chapter = a2.get_slice("=", 1)
+			if story.load_chapter(chapter):
 				story.city = self
 				story.car = car
 				story.map = map
