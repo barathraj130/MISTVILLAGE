@@ -186,6 +186,7 @@ var _lamp_mat: StandardMaterial3D
 var _tail_mat: StandardMaterial3D
 var _rev_mat: StandardMaterial3D
 var _ind_mats: Array = []          # [left, right]
+var _ind_boxes: Array = []         # the stand-in indicator lamps _corner_lamps makes (hidden when the model has its own)
 var indicator := 0                 # 0 off, 1 left, -1 right, 2 hazards
 var _ind_yaw := 0.0
 var _blink := 0.0
@@ -282,14 +283,17 @@ const BASE_SPECS := {
 	## A commuter motorcycle and a step-through scooter (tools/cars/build_bikes.py, the rider scenes' detailed models):
 	## you ride them as on Karthik's scooter. "bar_mid" / "bar_axle" give the steering axis (the model's frame: x ahead, y
 	## up, z to his right), "grip" each grip from the bar's middle (±z), "peg" where each foot rests (±z).
-	"bike": {"name": "Motorbike", "glb": "res://assets/vehicles/bike_ride.glb", "mass": 230.0,
+	## Our own 125 cc commuter (tools/cars/build_moto.py): its own indicators blink ("own_ind"), its speedometer's
+	## needle reads to 120 km/h.
+	"bike": {"name": "Motorbike", "glb": "res://assets/vehicles/moto_commuter.glb", "mass": 235.0,
 		"com": Vector3(0, 0.55, -0.05), "radius": 0.3, "rest": 0.12, "travel": 0.1, "sag": 0.0, "stiff": 42.0, "torque": 0.16,
-		"top": 26.0, "seat": Vector3(0, 1.66, -0.2), "glass": "NoGlass", "head": ["Headlamp"], "tail": ["TailLamp"],
-		"lamp": Vector3(0.0, 0.93, 0.64), "boxes": [[Vector3(0.6, 0.85, 2.0), Vector3(0, 0.66, 0.0)]],
-		"ind": [Vector3(0.18, 0.92, 0.63), Vector3(0.17, 0.74, -0.8), Vector3(0.1, 0.6, -0.83)], "rider": true,
-		"two_wheeler": true, "rider_model": "story_karthik", "helmet": "res://assets/vehicles/helmet.glb",
-		"hip": Vector3(0, 0.985, -0.17), "bar_mid": Vector3(0.465, 1.06, 0.0), "bar_axle": Vector3(0.66, 0.3, 0.0),
-		"grip": Vector3(-0.04, 0.02, 0.36), "peg": Vector3(0.02, 0.38, 0.2)},
+		"top": 26.0, "seat": Vector3(0, 1.62, -0.17), "glass": "NoGlass", "head": ["Headlamp"], "tail": ["TailLamp"],
+		"lamp": Vector3(0.0, 0.88, 0.5), "boxes": [[Vector3(0.6, 0.8, 2.0), Vector3(0, 0.66, -0.1)]],
+		"ind": [Vector3(0.185, 0.91, 0.43), Vector3(0.175, 0.73, -0.81), Vector3(0.1, 0.6, -0.85)], "rider": true,
+		"two_wheeler": true, "rider_model": "story_karthik", "helmet": "res://assets/vehicles/helmet.glb", "own_ind": true,
+		"hip": Vector3(0, 0.93, -0.17), "bar_mid": Vector3(0.271, 1.04, 0.0), "bar_axle": Vector3(0.634, 0.295, 0.0),
+		"grip": Vector3(-0.095, -0.005, 0.345), "peg": Vector3(-0.03, 0.39, 0.2), "dial_kmh": 120.0,
+		"rider_eye": Vector3(0, 1.52, 0.0), "eye_pitch": 27.0, "bonnet": Vector3(0, 1.2, 0.08)},
 	## Karthik's own scooter (tools/story_scooter.py) with him riding it in his helmet (the story's night delivery)
 	"karthik_scooter": {"name": "Karthik's scooter", "glb": "res://assets/vehicles/karthik_scooter.glb", "mass": 190.0,
 		"com": Vector3(0, 0.5, -0.1), "radius": 0.24, "rest": 0.12, "travel": 0.1, "sag": 0.0, "stiff": 40.0, "torque": 0.11,
@@ -325,7 +329,7 @@ const RiderIK := preload("res://scripts/drive/rider_ik.gd")
 const BAR_PARTS := ["Bar", "BarEnd", "Grip", "Lever", "Mirror", "MirrorStem", "MirrorGlass", "Switches", "Cowl", "Speedo",
 	"Stanchion", "ForkSlider", "FrontGuard", "Handlebar", "Headlamp", "Bezel", "Visor", "Cluster", "Dial", "TopClamp", "Cable"]
 ## Parts of these names turn with the bar only at the front (a motorcycle's indicators: the rear ones stay put).
-const BAR_FRONT_PARTS := ["Indicator", "IndicatorStalk"]
+const BAR_FRONT_PARTS := ["Indicator", "IndicatorStalk", "Indicator_L_F", "Indicator_R_F", "NeedleSpeed"]
 var _bars: Node3D
 var _bar_axis := Vector3.UP
 var _grips: Array = []             # [left, right] markers on the bar
@@ -377,6 +381,7 @@ func configure(kind: String, paint := Color(0, 0, 0, 0)) -> void:
 		c.queue_free()
 	_wheels.clear()
 	_ind_mats.clear()
+	_ind_boxes.clear()
 	_headlights.clear()
 	_coupe_wheels.clear()
 	_cab_parts.clear()
@@ -432,7 +437,7 @@ func configure(kind: String, paint := Color(0, 0, 0, 0)) -> void:
 			_rider.position = RiderPose.seat_offset(kind)
 		_rider.name = "Rider"
 		add_child(_rider)
-		seat = Vector3(0, 1.62, -0.2)
+		seat = sp.get("rider_eye", Vector3(0, 1.62, -0.2))   # (the camera from his eyes)
 	elif sp.get("own_cabin", false):
 		_fit_own_cabin(sp)
 	elif sp.get("interior", false):
@@ -524,7 +529,7 @@ func _camera_rig(sp: Dictionary) -> void:
 	chase_up = clampf(0.9 + H * 0.9, 1.9, 6.0)
 	bonnet = Vector3(0, H * 0.72 + 0.1, L * 0.5 - 0.5)
 	if sp.get("rider", false):
-		bonnet = Vector3(0, 1.45, 0.3)
+		bonnet = sp.get("bonnet", Vector3(0, 1.45, 0.3))   # (a two-wheeler's: a camera on the bars)
 
 
 func _build_kit(sp: Dictionary) -> void:
@@ -651,6 +656,8 @@ func _build_glb(sp: Dictionary) -> void:
 		w.transform = Transform3D(xf.basis, Vector3.ZERO)
 		_coupe_wheels.append([w, xf, wn.substr(6, 1) == "F"])
 	_corner_lamps(sp["ind"][0], sp["ind"][1], sp["ind"][2])
+	if sp.get("own_ind", false):
+		_own_indicators(model)
 	_add_driver(sp["seat"])
 	if sp.get("two_wheeler", false):
 		_make_bars(model)
@@ -676,6 +683,9 @@ func _make_bars(model: Node3D) -> void:
 		var nm := String(c.name).get_slice(".", 0)
 		if c != _bars and (nm in BAR_PARTS or (nm in BAR_FRONT_PARTS and _front_of(c as Node3D, bar_mid.x - 0.3))):
 			(c as Node3D).reparent(_bars, true)
+	var nd := _bars.find_child("NeedleSpeed", true, false) as Node3D
+	if nd:
+		_needles["NeedleSpeed"] = [nd, nd.basis]
 	_grips = []
 	var gp: Vector3 = sp.get("grip", Vector3(-0.01, 0.0, 0.345))
 	for z in [-gp.z, gp.z]:                               # (left, right: his right is the model's +z)
@@ -1012,6 +1022,20 @@ func _corner_lamps(front: Vector3, rear: Vector3, rev_at: Vector3) -> void:
 		ind_mi.material_override = m
 		add_child(ind_mi)
 		_ind_mats.append(m)
+		_ind_boxes.append(ind_mi)
+
+
+## The model's own indicator lenses (Indicator_L_* / Indicator_R_*, tools/cars/build_moto.py) blink, not stand-ins.
+func _own_indicators(model: Node3D) -> void:
+	var found := 0
+	for n in model.find_children("Indicator_*", "", true, false):
+		var side := 0 if String(n.name).begins_with("Indicator_L") else 1
+		for mi in ([n] if n is MeshInstance3D else []) + n.find_children("*", "MeshInstance3D", true, false):
+			(mi as MeshInstance3D).material_override = _ind_mats[side]
+			found += 1
+	if found > 0:
+		for b in _ind_boxes:
+			(b as Node3D).visible = false
 
 
 func _add_driver(eye: Vector3) -> void:
@@ -1493,6 +1517,7 @@ func _build_body() -> void:
 		ind_mi.material_override = m
 		add_child(ind_mi)
 		_ind_mats.append(m)
+		_ind_boxes.append(ind_mi)
 	var tail := MB.new()
 	for sx in [-1.0, 1.0]:
 		tail.box(at.call(Vector3(sx * 0.78, 1.0, -2.3)), Vector3(0.3, 0.08, 0.03), Color.WHITE)
@@ -2065,7 +2090,8 @@ func _hit(zone: String, severity: float, other: Object) -> void:
 		else:
 			lp.z *= 0.6
 		var skip: Array = _wheels + _cab_parts + [_rider]
-		var n := Dents.dent(self, to_global(lp), hit_normal, 0.45 + severity * 0.75, 0.04 + severity * 0.26, _dents, skip)
+		var n := Dents.dent(self, to_global(lp), hit_normal, (0.45 + severity * 0.75) * (0.4 if two_wheeler else 1.0),
+			(0.04 + severity * 0.26) * (0.4 if two_wheeler else 1.0), _dents, skip)   # (a bike's parts are small)
 		print("DENT %d vertices, %d meshes, at %s local" % [n, _dents.size(), str(lp.snapped(Vector3.ONE * 0.01))])
 	impacted.emit(zone, severity, other)
 

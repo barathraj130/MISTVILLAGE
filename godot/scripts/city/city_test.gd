@@ -435,7 +435,7 @@ func _ready() -> void:
 		var self_test := false                      # (a self-test never writes your saved game: wallet, challans, weather)
 		for flag in ["--testdrive", "--carshot", "--trafficshot", "--crashtest", "--peopletest", "--parkedtest",
 				"--potholetest", "--flyover", "--clock=", "--weather=", "--nohud", "--doortest", "--threattest", "--surfacetest", "--jointest", "--walkertest", "--activitytest",
-				"--hospitaltest", "--citizentest", "--interviewtest", "--unsticktest", "--livingtest", "--livingbench", "--hospitalat", "--shotview", "--interacttest", "--falltest", "--stairtest", "--gaittest", "--standtest", "--gangtest", "--gangstage", "--pursuittest", "--socialtest", "--streetaudit", "--sittest"]:
+				"--hospitaltest", "--citizentest", "--interviewtest", "--unsticktest", "--livingtest", "--livingbench", "--hospitalat", "--shotview", "--interacttest", "--falltest", "--stairtest", "--gaittest", "--standtest", "--gangtest", "--gangstage", "--pursuittest", "--socialtest", "--streetaudit", "--sittest", "--ride"]:
 			self_test = self_test or " ".join(args).contains(flag)
 		fines.persist = not self_test
 		hud = DriveHud.new()
@@ -2330,7 +2330,7 @@ func _drive_camera(dt: float) -> void:
 				give = _head
 			var roll := -lat * 0.0035 * k if cam_mode == 2 else 0.0
 			var into_turn: float = car.steering * (0.35 if cam_mode == 2 else 0.12)
-			var look := face * Basis(Vector3.UP, _orbit.x * 1.6 + _look_yaw + into_turn) * Basis(Vector3.RIGHT, deg_to_rad(-5.0) + _orbit.y * inv) \
+			var look := face * Basis(Vector3.UP, _orbit.x * 1.6 + _look_yaw + into_turn) * Basis(Vector3.RIGHT, deg_to_rad(-float(Jeep.SPECS.get(car.vehicle, {}).get("eye_pitch", 5.0))) + _orbit.y * inv) \
 				* Basis(Vector3.BACK, roll)
 			# (the car's frame: x left, y up, z ahead; give's x is to his right)
 			var off := Vector3(-give.x, give.y, give.z)

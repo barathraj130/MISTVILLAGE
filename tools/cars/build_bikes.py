@@ -20,8 +20,7 @@ import bikes_real as BR  # noqa: E402
 import carkit as K  # noqa: E402
 
 OUT = os.path.join(HERE, "..", "..", "godot", "assets", "vehicles")
-BIKES = {"motorcycle": ("bike_ride.glb", (0.42, 0.015, 0.02)),     # a deep red commuter
-         "scooter": ("scooter_ride.glb", (0.6, 0.6, 0.62))}        # a pearl white scooter
+BIKES = {"scooter": ("scooter_ride.glb", (0.6, 0.6, 0.62))}        # a pearl white scooter (the motorcycle: build_moto.py)
 
 
 def export(root, path):
