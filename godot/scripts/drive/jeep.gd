@@ -250,12 +250,13 @@ const BASE_SPECS := {
 		"head": ["Headlight"], "tail": ["TailBar"], "lamp": Vector3(0.6, 0.64, 2.24),
 		"boxes": [[Vector3(1.74, 0.72, 4.35), Vector3(0, 0.6, 0)], [Vector3(1.4, 0.55, 2.4), Vector3(0, 1.15, -0.2)]],
 		"ind": [Vector3(0.7, 0.5, 2.18), Vector3(0.62, 0.78, -2.2), Vector3(0.4, 0.45, -2.21)]},
-	"auto": {"name": "Auto-rickshaw", "glb": "res://assets/vehicles/fleet_auto.glb", "mass": 450.0,
-		"com": Vector3(0, 0.55, -0.2), "radius": 0.22, "rest": 0.14, "travel": 0.12, "stiff": 30.0, "torque": 0.2,
-		"top": 15.0, "seat": Vector3(0, 1.45, 0.3), "nocab": true, "glass": "Glass",
-		"head": ["Headlight"], "tail": ["TailBar"], "lamp": Vector3(0.0, 0.82, 1.4),
-		"boxes": [[Vector3(1.3, 1.3, 2.6), Vector3(0, 0.95, 0)]],
-		"ind": [Vector3(0.5, 0.9, 1.25), Vector3(0.62, 0.62, -1.33), Vector3(0.3, 0.5, -1.34)]},
+	"auto": {"name": "Auto-rickshaw", "glb": "res://assets/vehicles/car_auto.glb", "mass": 450.0,
+		"com": Vector3(0, 0.55, -0.2), "radius": 0.215, "rest": 0.14, "travel": 0.12, "stiff": 30.0, "torque": 0.2,
+		"top": 15.0, "seat": Vector3(0, 1.5, 0.36), "own_cabin": true, "glass": "Glass",
+		"steer_ratio": 1.0, "dial_kmh": 60.0,
+		"head": ["Headlight"], "tail": ["Taillight"], "lamp": Vector3(0.0, 0.8, 1.38),
+		"boxes": [[Vector3(1.3, 0.75, 2.64), Vector3(0, 0.72, 0)], [Vector3(1.3, 0.62, 2.3), Vector3(0, 1.4, -0.15)]],
+		"ind": [Vector3(0.3, 0.9, 1.3), Vector3(0.47, 0.59, -1.34), Vector3(0.3, 0.44, -1.34)]},
 	"bus": {"name": "Bus", "glb": "res://assets/vehicles/fleet_bus.glb", "mass": 11000.0,
 		"com": Vector3(0, 1.1, 0), "radius": 0.5, "rest": 0.25, "travel": 0.2, "stiff": 30.0, "torque": 4.5,
 		"top": 22.0, "seat": Vector3(-0.75, 2.25, 2.92), "cabin": Vector3(-0.33, 0.75, 3.0), "glass": "Glass",
@@ -1080,7 +1081,7 @@ func _turn_needles() -> void:
 	if _needles.is_empty():
 		return
 	var kmh := absf(speed) * 3.6
-	var vals := {"NeedleSpeed": clampf(kmh / 180.0, 0.0, 1.0), "NeedleRPM": clampf(rpm / 7000.0, 0.0, 1.0),
+	var vals := {"NeedleSpeed": clampf(kmh / float(SPECS[vehicle].get("dial_kmh", 180.0)), 0.0, 1.0), "NeedleRPM": clampf(rpm / 7000.0, 0.0, 1.0),
 		"NeedleFuel": clampf(fuel_frac, 0.0, 1.0)}
 	for nm in _needles:
 		var e: Array = _needles[nm]
@@ -2133,7 +2134,7 @@ func _process_body(delta: float) -> void:
 		elif Input.is_action_just_pressed("shift_down") and (gear > 1 or absf(speed) < 1.0):
 			gear -= 1
 			_shift_timer = 0.3
-	_steering_wheel.basis = _steer_base * Basis(_steer_axis, -steering * 7.5)
+	_steering_wheel.basis = _steer_base * Basis(_steer_axis, -steering * float(SPECS[vehicle].get("steer_ratio", 7.5)))
 	_turn_needles()
 	if _bars:                                            # the handlebar turns as the front wheel does
 		_bars.basis = Basis(_bar_axis, steering)

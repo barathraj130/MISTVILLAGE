@@ -125,3 +125,17 @@ pictures outside, through his window and from his eyes: `docs/shots/fleet/`).
 
 Next: the auto (our own), then the two-wheelers; buses and heavy trucks as downloads only with your approval of
 each; LODs, then the new cars into the traffic and the parked cars.
+
+**Stage 5, the auto-rickshaw (17 Nov)**: `tools/cars/build_auto.py` on the car kit: our own Coimbatore auto,
+unbadged (2.64 × 1.30 × 1.72 m, 2.0 m wheelbase, 4.00-8 tyres on pressed-steel rims with drums): the narrow cowl
+with the round chrome-rimmed headlamp, amber indicators, the horn grille, the front mudguard and fork; the
+footboard and leg shield; the passenger tub with its rear arches and rubber lips; the black canvas hood on its
+hoops (piping, the fringe over the open sides, a clear rear window); windscreen, wiper, round mirrors on stalks;
+tail lamps (tail, brake, indicator) and reflectors, the rear guard; the engine, silencer and swing arms underneath;
+yellow commercial plates (made up). Inside: the driver's bench in the middle, the handlebar on its raked steering
+head (the SteeringPivot turns it one to one with the front wheel: `steer_ratio`), the speedometer and fuel gauge on
+it (their needles turned; the speedometer to 60 km/h: `dial_kmh`), grips, levers, switch pods, the fare meter on
+its bracket with lit digits, the grab rail, the passengers' bench for three. Karthik on the bench, his hands on the
+grips, his feet on the footboard. 86 k triangles, 2.3 MB. In the game as `auto` (`car_auto.glb`, 450 kg, three
+wheels). Tested (`--sfvehicletest=auto`: three wheels, seat; `--camtest=auto`: every camera; pictures
+`docs/shots/fleet/auto_*`, `blender_auto.jpg`).
