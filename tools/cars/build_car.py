@@ -91,6 +91,31 @@ SPECS = {
         intake=[(-0.56, 0.25), (0.56, 0.25), (0.61, 0.39), (-0.61, 0.39)], plate_f=0.43, plate_r=0.62,
         rows=[-0.92, -1.72], int_dz=0.03, eye=(-0.24, 1.36), paint=(0.88, 0.88, 0.86), plate="TN 99 MP 3318"),
 }
+# The player's own SUV: a full-size luxury SUV of our own (the user's premium-SUV brief and references, 17 Nov: the
+# proportions and poise of the modern British luxury SUVs, nothing copied): a long, high, flat bonnet; upright,
+# nearly flat flanks under a high, level beltline; a long flat roof; slim high head lamps either side of a wide
+# grille; vertical tail lamp strips joined by a black band; a vent in each front door; 22-inch multi-spoke wheels.
+def _luxury():
+    return dict(
+        L=5.05, W=2.0, H=1.87, front_over=0.95, WB=3.0, R=0.405, TRACK=1.7, RIM_D=0.559, TYRE_W=0.285,
+        TOP=[(2.525, 0.8), (2.515, 0.92), (2.49, 0.99), (2.42, 1.04), (2.2, 1.075), (1.7, 1.095), (1.2, 1.115), (0.95, 1.13),
+             (0.7, 1.32), (0.45, 1.55), (0.2, 1.78), (-0.1, 1.86), (-0.8, 1.87), (-1.6, 1.865), (-2.1, 1.85), (-2.3, 1.82),
+             (-2.42, 1.7), (-2.49, 1.45), (-2.515, 1.15), (-2.525, 0.95)],
+        BOT=[(2.525, 0.55), (2.5, 0.45), (2.36, 0.37), (1.95, 0.31), (0.0, 0.27), (-1.95, 0.31), (-2.36, 0.37), (-2.5, 0.46), (-2.525, 0.56)],
+        HALF=[(2.525, 0.64), (2.512, 0.86), (2.47, 0.94), (2.25, 0.985), (1.5, 1.0), (0.0, 1.0), (-1.5, 1.0), (-2.25, 0.99),
+              (-2.46, 0.955), (-2.512, 0.89), (-2.525, 0.7)],
+        BELT=[(2.0, 1.13), (0.95, 1.145), (0.0, 1.155), (-1.4, 1.165), (-2.3, 1.175)],
+        COWL=0.95, ROOF_F=0.2, ROOF_R=-2.25, BOOT=-2.5, TUMBLE=0.22, tail="hatch",
+        door_f=0.9, B=-0.36, door_r=-1.28, bump_f=0.62, bump_r=0.9, quarter=True, cladding=False, rails=False,
+        head=[(0.58, 0.955), (0.9, 0.96), (0.95, 0.985), (0.93, 1.015), (0.6, 1.01)],
+        tail_lamp=[(0.84, 0.97), (0.93, 0.97), (0.935, 1.36), (0.855, 1.36)],
+        fog=(0.82, 0.46), grille=[(-0.52, 0.68), (0.52, 0.68), (0.55, 0.97), (-0.55, 0.97)],
+        intake=[(-0.74, 0.36), (0.74, 0.36), (0.78, 0.52), (-0.78, 0.52)], plate_f=0.58, plate_r=0.78,
+        rows=[-1.12], int_dz=0.2, eye=(-0.22, 1.62), paint=(0.46, 0.38, 0.27), plate="TN 38 AR 0007",
+        spokes=10, gill=True, tail_band=True, dual_exhaust=True, lux=True)
+
+
+SPECS["luxury"] = _luxury()
 KIND = "sedan"
 SPEC = SPECS[KIND]
 L = W = H = HX = WB = AX_F = AX_R = R = TRACK = RIM_D = TYRE_W = 0.0
@@ -776,7 +801,7 @@ def side_trim(body, tree, M):
 def wheels(M):
     out = []
     for nm, x, side in (("Wheel_FL", AX_F, 1.0), ("Wheel_FR", AX_F, -1.0), ("Wheel_RL", AX_R, 1.0), ("Wheel_RR", AX_R, -1.0)):
-        piv, fixed = K.wheel(M, nm, (x, side * TRACK / 2, R), R, TYRE_W, RIM_D, spokes=5, left=side > 0, steer=nm[-2] == "F")
+        piv, fixed = K.wheel(M, nm, (x, side * TRACK / 2, R), R, TYRE_W, RIM_D, spokes=int(SPEC.get("spokes", 5)), left=side > 0, steer=nm[-2] == "F")
         out += [piv] + fixed
     return out
 
@@ -980,13 +1005,52 @@ def interior(M):
         else:
             mk.location = at
             add(mk)
+    if SPEC.get("lux"):                                       # a luxury cabin: a wide touchscreen, a digital cluster, wood
+        add(box("Infotainment", (0.012, 0.36, 0.2), (0.45, 0.0, 0.9), M["Screen"], rot=(0, math.radians(-12), 0), bevel=0.006))
+        add(box("InfotainmentBezel", (0.016, 0.38, 0.22), (0.456, 0.0, 0.9), M["BlackGloss"], rot=(0, math.radians(-12), 0), bevel=0.01))
+        add(box("DigitalCluster", (0.004, 0.3, 0.12), (0.486, DY, 0.885), M["Screen"], rot=(0, math.radians(-12), 0)))
+        add(box("DashWood", (0.012, 1.3, 0.035), (0.462, 0.0, 0.72), K._mat("Walnut", (0.2, 0.1, 0.05), rough=0.35, coat=0.6)))
+        add(box("DashLeather", (0.08, 1.36, 0.03), (0.55, 0.0, 0.93), K._mat("Leather", (0.05, 0.045, 0.04), rough=0.55, coat=0.1), bevel=0.012))
+        sel = box("GearSelector", (0.07, 0.05, 0.06), (0.05, 0.0, 0.53), M["Chrome"], bevel=0.02)
+        add(sel)
+        add(box("ConsoleTop", (0.5, 0.2, 0.02), (0.0, 0.0, 0.5), K._mat("Walnut", (0.2, 0.1, 0.05), rough=0.35, coat=0.6), bevel=0.01))
     root.location = (COWL - 0.84, 0.0, SPEC["int_dz"])       # (the cabin into this car's frame)
     return out
 
 
 def extras(body, tree, M):
-    """An SUV's black cladding over its arches and along its sills, and its roof rails."""
+    """An SUV's black cladding over its arches and along its sills, and its roof rails; a luxury SUV's vent in each
+    front door, the black band across its tailgate between the lamps, its twin exhaust tips."""
     out = []
+    if SPEC.get("gill"):
+        for side in (1.0, -1.0):
+            x = SPEC["door_f"] - 0.09
+            y = side * (K.cr(HALF, x) + 0.004)
+            out.append(box("DoorVent", (0.06, 0.012, 0.36), (x, y, 0.86), M["Chrome"], bevel=0.015))
+            out.append(box("DoorVentSlot", (0.03, 0.014, 0.3), (x, y, 0.86), M["BlackGloss"], bevel=0.008))
+    if SPEC.get("tail_band"):
+        out.append(box("TailBand", (0.012, 1.68, 0.11), (-HX - 0.002, 0.0, 1.27), M["BlackGloss"], bevel=0.01))
+        out.append(box("TailTrim", (0.012, 1.4, 0.018), (-HX - 0.003, 0.0, 0.88), M["Chrome"]))
+    if SPEC.get("lux"):
+        # a panoramic glass roof; chrome round the side windows; flush door handles; a gloss-black sill line; the
+        # rear LED bar across the tailgate (lit with the tail lamps: its name begins Taillight)
+        roof_z = K.cr(TOP, -0.8) + 0.004
+        out.append(box("PanoRoof", (1.75, 1.32, 0.012), (-0.85, 0.0, roof_z), M["GlassTint"], bevel=0.02))
+        out.append(box("PanoFrame", (1.82, 1.4, 0.008), (-0.85, 0.0, roof_z - 0.004), M["BlackGloss"], bevel=0.02))
+        for side in (1.0, -1.0):
+            zb = K.cr(BELT, -0.6) + 0.012
+            for (x0, x1) in ((0.9, -0.36), (-0.36, -2.22)):
+                xm = (x0 + x1) / 2
+                out.append(box("WindowChrome", (abs(x1 - x0), 0.012, 0.014), (xm, side * (K.cr(HALF, xm) - 0.05), zb), M["Chrome"]))
+            for hx in (0.15, -1.0):
+                out.append(box("FlushHandle", (0.2, 0.012, 0.03), (hx, side * (K.cr(HALF, hx) + 0.002), 1.04), M["BlackGloss"], bevel=0.01))
+                out.append(box("HandleTrim", (0.21, 0.013, 0.006), (hx, side * (K.cr(HALF, hx) + 0.003), 1.058), M["Chrome"]))
+            sl = WB - 2 * R - 0.32                            # (between the arches only)
+            out.append(box("SillBlack", (sl, 0.014, 0.06), (AX_F - WB / 2, side * (K.cr(HALF, 0.0) + 0.001), 0.36), M["BlackGloss"]))
+        out.append(box("Taillight_Bar", (0.012, 1.5, 0.022), (-HX - 0.004, 0.0, 1.36), M["Taillight"], bevel=0.006))
+    if SPEC.get("dual_exhaust"):
+        for side in (1.0, -1.0):
+            out.append(box("ExhaustTip", (0.04, 0.16, 0.06), (-HX + 0.02, side * 0.55, 0.42), M["Chrome"], bevel=0.02))
     if SPEC.get("cladding"):
         for ax in (AX_F, AX_R):                               # arch flares: a band round each arch
             for side in (1.0, -1.0):

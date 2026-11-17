@@ -28,6 +28,17 @@ var forward := Vector3.FORWARD       # the vehicle's forward, in the world (the 
 var hide_head := false
 var recline := 0.0                   # (in a car's seat: leaning back against its back, radians)               # (the camera at his eyes, in a car: his head shrunk away, his arms on the wheel seen)
 var up := Vector3.UP
+##   wheel     a car's steering wheel (its pivot; the column along its own X): the hands are set on its rim, the
+##             knuckles along the rim's curve there, the fingers toward the dash, curled round it. Without one (a
+##             handlebar), along the bar (his side), the fingers forward and down over it.
+##   grip      0..1, how closed the fingers are round the rim or the grip
+var wheel: Node3D
+var grip := 1.0
+var wheel_turn := 0.0                # the wheel's turn now (radians about its column): the hands go round with it to
+const HAND_TURN := 1.05              # ±60°, then hold where they are while it turns on through them (as hands shuffle)
+const PALM := 0.075                  # (from the wrist to the middle of the palm: the palm, not the wrist, on the rim)
+const FINGERS := ["index", "middle", "ring", "pinky"]
+const CURL := [0.95, 1.2, 0.75]      # (each finger's three joints, radians when fully closed)
 
 
 func _process_modification_with_delta(_delta: float) -> void:
@@ -43,10 +54,20 @@ func _process_modification_with_delta(_delta: float) -> void:
 	_turn_bone(sk, "neck_01", forward, lean * 0.55)
 	_turn_bone(sk, "head", up, look * 0.6)
 	if grip_l and grip_r:
-		weight = w0 * float(limbs["arm_l"])
-		_limb(sk, "upperarm_l", "lowerarm_l", "hand_l", _aim("arm_l", grip_l.global_position), -forward * 0.6 + Vector3.DOWN - _side(sk) * 0.6)
-		weight = w0 * float(limbs["arm_r"])
-		_limb(sk, "upperarm_r", "lowerarm_r", "hand_r", _aim("arm_r", grip_r.global_position), -forward * 0.6 + Vector3.DOWN + _side(sk) * 0.6)
+		for hs in [["l", grip_l, -1.0], ["r", grip_r, 1.0]]:
+			var side: String = hs[0]
+			var gp: Vector3 = (hs[1] as Node3D).global_position
+			if wheel and is_instance_valid(wheel) and absf(wheel_turn) > HAND_TURN:
+				var held := clampf(wheel_turn, -HAND_TURN, HAND_TURN)
+				var loc: Vector3 = wheel.global_transform.affine_inverse() * gp
+				gp = wheel.global_transform * (Basis(Vector3.RIGHT, held - wheel_turn) * loc)
+			var frame := _grip_frame(gp)                 # [along the rim or bar, the fingers' way]
+			weight = w0 * float(limbs["arm_" + side])
+			var target := _aim("arm_" + side, gp - (frame[1] as Vector3) * PALM)
+			_limb(sk, "upperarm_" + side, "lowerarm_" + side, "hand_" + side, target,
+				-forward * 0.6 + Vector3.DOWN + _side(sk) * 0.6 * float(hs[2]))
+			if not over.has("arm_" + side) or float(over["arm_" + side][1]) < 0.5:
+				_hand(sk, side, frame[0], frame[1], gp)
 	if foot_l and foot_r:
 		var fl := foot_l.global_position.lerp(ground_l, foot_down)
 		weight = w0 * float(limbs["leg_l"])
@@ -62,6 +83,84 @@ func _process_modification_with_delta(_delta: float) -> void:
 			if hb >= 0:
 				var hg := sk.get_bone_global_pose(hb)
 				sk.set_bone_global_pose(hb, Transform3D(hg.basis.scaled(Vector3.ONE * 0.001), hg.origin))
+
+
+## Where a hand holds: [the line it closes round (the rim's tangent there, or the bar along his side), the way the
+## fingers point (toward the dash over a wheel's rim; forward and down over a bar)], in the world.
+func _grip_frame(gp: Vector3) -> Array:
+	if wheel and is_instance_valid(wheel):
+		var axis := (wheel.global_basis.x).normalized()   # (the column, from him toward the dash)
+		var radial := gp - wheel.global_position
+		radial = (radial - axis * radial.dot(axis)).normalized()
+		var tangent := axis.cross(radial).normalized()
+		var fingers := (axis * 0.8 - radial * 0.6).normalized()   # (over the rim toward the dash, a little inward)
+		return [tangent, fingers]
+	return [_side(null), (forward * 0.75 + Vector3.DOWN * 0.65).normalized()]
+
+
+## The hand turned to hold: its knuckles along `along`, its fingers toward `fingers`; then the fingers and the thumb
+## closed round the rim or the bar at `at` (each finger curling the way that brings its tip round it).
+func _hand(sk: Skeleton3D, side: String, along: Vector3, fingers: Vector3, at: Vector3) -> void:
+	var bh := sk.find_bone("hand_" + side)
+	var bi := sk.find_bone("index_01_" + side)
+	var bp := sk.find_bone("pinky_01_" + side)
+	var bm := sk.find_bone("middle_01_" + side)
+	if bh < 0 or bi < 0 or bp < 0 or bm < 0:
+		return
+	var inv := sk.global_basis.inverse()
+	var al := (inv * along).normalized()
+	var fi := (inv * fingers).normalized()
+	var at_l := sk.global_transform.affine_inverse() * at
+	var g := sk.get_bone_global_pose(bh)
+	# the knuckles along the line (whichever way round they already lie), then the fingers round it toward `fingers`
+	var k := sk.get_bone_global_pose(bi).origin - sk.get_bone_global_pose(bp).origin
+	var al2 := al if k.dot(al) >= 0.0 else -al
+	var r1 := _turn(k, k.lerp(al2 * k.length(), weight))
+	g = Transform3D(r1 * g.basis, g.origin)
+	sk.set_bone_global_pose(bh, g)
+	var f := sk.get_bone_global_pose(bm).origin - g.origin
+	var f_flat := f - al2 * f.dot(al2)
+	var want := fi - al2 * fi.dot(al2)
+	if f_flat.length() > 1e-4 and want.length() > 1e-4:
+		var ang := f_flat.normalized().signed_angle_to(want.normalized(), al2) * weight
+		g = Transform3D(Basis(al2, ang) * g.basis, g.origin)
+		sk.set_bone_global_pose(bh, g)
+	# the fingers: the curl's sign from the middle finger (whichever way takes its tip nearer the line it holds)
+	var c := clampf(grip * weight, 0.0, 1.0)
+	if c < 0.01:
+		return
+	var sgn := _curl_sign(sk, side, al2, at_l)
+	for fn in FINGERS:
+		for j in 3:
+			_turn_local(sk, "%s_%02d_%s" % [fn, j + 1, side], al2, sgn * CURL[j] * c)
+	var ts := 1.0 if side == "l" else -1.0                # (the thumb across, under the rim)
+	_turn_local(sk, "thumb_01_" + side, fi, ts * 0.35 * c)
+	_turn_local(sk, "thumb_02_" + side, al2, sgn * 0.4 * c)
+	_turn_local(sk, "thumb_03_" + side, al2, sgn * 0.5 * c)
+
+
+func _curl_sign(sk: Skeleton3D, side: String, axis: Vector3, at_l: Vector3) -> float:
+	var b1 := sk.find_bone("middle_01_" + side)
+	var b3 := sk.find_bone("middle_03_" + side)
+	if b1 < 0 or b3 < 0:
+		return 1.0
+	var p1 := sk.get_bone_global_pose(b1).origin
+	var tip := sk.get_bone_global_pose(b3).origin
+	var dist := func(p: Vector3) -> float:                 # (from the line through `at` along the axis)
+		var d := p - at_l
+		return (d - axis * d.dot(axis)).length()
+	var plus := p1 + Basis(axis, 0.6) * (tip - p1)
+	var minus := p1 + Basis(axis, -0.6) * (tip - p1)
+	return 1.0 if dist.call(plus) <= dist.call(minus) else -1.0
+
+
+## A bone turned about an axis given in the skeleton's frame, at its own place (its children follow).
+func _turn_local(sk: Skeleton3D, bone: String, axis: Vector3, ang: float) -> void:
+	var b := sk.find_bone(bone)
+	if b < 0 or absf(ang) < 0.0005:
+		return
+	var g := sk.get_bone_global_pose(b)
+	sk.set_bone_global_pose(b, Transform3D(Basis(axis.normalized(), ang) * g.basis, g.origin))
 
 
 ## A limb's target: its own, or overridden (blended by the override's weight).

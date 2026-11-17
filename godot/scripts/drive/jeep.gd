@@ -211,12 +211,14 @@ var _horn_time := 0.0
 ## separate wheels and (luxury SUV) a modelled interior. Others reuse the traffic / parked models.
 ## len/w/h in metres; torque multiplies the 450 N·m curve; top in m/s; seat = driver's eyes.
 const BASE_SPECS := {
-	"luxury_suv": {"name": "Luxury SUV", "glb": "res://assets/vehicles/luxury_suv.glb", "mass": 2150.0,
-		"com": Vector3(0, 0.5, 0.05), "radius": 0.40, "rest": 0.2, "travel": 0.22, "stiff": 34.0, "torque": 1.15,
-		"top": 50.0, "seat": Vector3(-0.42, 1.47, -0.3), "interior": true, "glass": "Greenhouse",
-		"head": ["Headlight", "FogDRL"], "tail": ["TailCorner", "TailStrip"], "lamp": Vector3(0.7, 0.99, 2.55),
-		"boxes": [[Vector3(2.0, 0.9, 5.0), Vector3(0, 0.75, 0)], [Vector3(1.7, 0.7, 3.4), Vector3(0, 1.5, -0.65)]],
-		"ind": [Vector3(0.9, 0.99, 2.47), Vector3(0.82, 1.2, -2.5), Vector3(0.82, 0.62, -2.5)]},
+	## Karthik's own SUV: a full-size luxury SUV of our own (tools/cars/build_car.py --kind luxury; the user's premium
+	## SUV brief, 17 Nov): 5.05 m, 22-inch wheels, its own cabin; its weight and drive as before.
+	"luxury_suv": {"name": "Luxury SUV", "glb": "res://assets/vehicles/car_luxury.glb", "mass": 2350.0,
+		"com": Vector3(0, 0.62, 0.05), "radius": 0.405, "rest": 0.2, "travel": 0.22, "stiff": 34.0, "torque": 1.15,
+		"top": 50.0, "seat": Vector3(-0.37, 1.62, -0.2), "own_cabin": true, "glass": "Glass",
+		"head": ["Headlight", "DRL"], "tail": ["Taillight"], "lamp": Vector3(0.75, 0.98, 2.52),
+		"boxes": [[Vector3(2.0, 0.95, 5.02), Vector3(0, 0.78, 0)], [Vector3(1.72, 0.7, 3.5), Vector3(0, 1.55, -0.4)]],
+		"ind": [Vector3(0.92, 0.98, 2.5), Vector3(0.89, 1.15, -2.52), Vector3(0.6, 0.55, -2.53)]},
 	"coupe": {"name": "Sports Coupe", "glb": "res://assets/vehicles/coupe.glb", "mass": 1450.0,
 		"com": Vector3(0, 0.32, 0.05), "radius": 0.34, "rest": 0.16, "travel": 0.14, "stiff": 48.0, "torque": 1.0,
 		"top": 52.0, "seat": Vector3(-0.4, 1.17, -0.36), "cabin": Vector3(0, -0.12, -0.15), "glass": "Canopy",
@@ -2210,6 +2212,8 @@ func _process_body(delta: float) -> void:
 			_rik.foot_down = 0.0
 			_rik.look = clampf(steering * 1.2, -0.4, 0.4)
 			_rik.recline = 0.2
+			_rik.wheel = _steering_wheel                   # (the hands on its rim, closed round it: rider_ik.gd _hand)
+			_rik.wheel_turn = -steering * float(SPECS[vehicle].get("steer_ratio", 7.5))
 	_screen_speed.text = "%d" % roundi(absf(speed) * 3.6)
 	_screen_info.text = "km/h\n%s   %s rpm" % [("M" + gear_name()) if manual else ("D" + gear_name() if gear > 0 else "R"),
 		str(roundi(rpm / 50.0) * 50)]

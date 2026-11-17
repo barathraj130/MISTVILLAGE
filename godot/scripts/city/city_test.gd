@@ -1510,6 +1510,19 @@ func _sfv_test(keys: PackedStringArray) -> void:
 			for f in 3:
 				await RenderingServer.frame_post_draw
 			get_viewport().get_texture().get_image().save_jpg(ProjectSettings.globalize_path("user://sfv_%s_driver.jpg" % key), 0.85)
+			if car._steering_wheel and is_instance_valid(car._steering_wheel):   # (his hands on the rim, close: from the passenger side)
+				var wp: Vector3 = car._steering_wheel.global_position
+				for turn in [["hands", 0.0], ["hands_left", 0.5], ["hands_right", -0.5]]:
+					car.steering = float(turn[1])
+					for f in 4:
+						await get_tree().physics_frame
+					c.global_position = wp + car.global_basis.x * 0.55 - car.global_basis.z * 0.25 + Vector3.UP * 0.18
+					c.look_at(wp + Vector3.DOWN * 0.03, Vector3.UP)
+					for f in 3:
+						await RenderingServer.frame_post_draw
+					get_viewport().get_texture().get_image().save_jpg(ProjectSettings.globalize_path("user://sfv_%s_%s.jpg" % [key, turn[0]]), 0.85)
+				car.steering = 0.0
+
 		for end in [["front", 1.0], ["back", -1.0]]:      # (close, nose and tail: its badges, plates)
 			c.global_position = car.global_position + car.global_basis.z * float(end[1]) * (L * 0.5 + 2.6) + Vector3.UP * 1.1
 			c.look_at(car.global_position + car.global_basis.z * float(end[1]) * L * 0.5 + Vector3.UP * 0.7, Vector3.UP)
@@ -2350,7 +2363,7 @@ func _drive_camera(dt: float) -> void:
 				give = _head
 			var roll := -lat * 0.0035 * k if cam_mode == 2 else 0.0
 			var into_turn: float = car.steering * (0.35 if cam_mode == 2 else 0.12)
-			var look := face * Basis(Vector3.UP, _orbit.x * 1.6 + _look_yaw + into_turn) * Basis(Vector3.RIGHT, deg_to_rad(-float(Jeep.SPECS.get(car.vehicle, {}).get("eye_pitch", 5.0))) + _orbit.y * inv) \
+			var look := face * Basis(Vector3.UP, _orbit.x * 1.6 + _look_yaw + into_turn) * Basis(Vector3.RIGHT, deg_to_rad(-float(Jeep.SPECS.get(car.vehicle, {}).get("eye_pitch", 16.0 if Jeep.SPECS.get(car.vehicle, {}).get("own_cabin", false) else 5.0))) + _orbit.y * inv) \
 				* Basis(Vector3.BACK, roll)
 			# (the car's frame: x left, y up, z ahead; give's x is to his right)
 			var off := Vector3(-give.x, give.y, give.z)
