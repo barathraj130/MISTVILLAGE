@@ -170,81 +170,270 @@
      "accessories": 1500
     },
     {
-     "id": "kodai_grey",
+     "id": "ooty_classic",
      "group": "bike",
      "kind": "bike",
      "at": "show_2",
-     "glb": "res://assets/vehicles/moto_commuter.glb",
-     "paint": "#2b2e33",
+     "glb": "res://assets/vehicles/moto_classic.glb",
+     "display_only": true,
      "name": {
-      "en": "Vela Kodai 125, gunmetal grey",
-      "ta": "வேலா கொடை 125, சாம்பல்"
+      "en": "Vela Ooty 350 Classic",
+      "ta": "வேலா ஊட்டி 350 கிளாசிக்"
      },
      "kind_label": {
-      "en": "Commuter motorcycle · disc brake · self start",
-      "ta": "கம்யூட்டர் மோட்டார் சைக்கிள் · டிஸ்க் பிரேக் · செல்ஃப் ஸ்டார்ட்"
+      "en": "Classic roadster · wire-spoke wheels",
+      "ta": "கிளாசிக் ரோட்ஸ்டர் · கம்பி சக்கரங்கள்"
      },
      "specs": [
       [
        {
         "en": "Engine",
-        "ta": "என்ஜின்"
+        "ta": "Engine"
        },
-       "124.7 cc, single cylinder, air-cooled"
+       "349 cc, single cylinder, air-oil cooled"
       ],
       [
        {
         "en": "Power",
-        "ta": "சக்தி"
+        "ta": "Power"
        },
-       "10.7 bhp @ 7,500 rpm"
+       "20.2 bhp @ 6,100 rpm"
+      ],
+      [
+       {
+        "en": "Torque",
+        "ta": "Torque"
+       },
+       "27 Nm @ 4,000 rpm"
       ],
       [
        {
         "en": "Mileage (claimed)",
-        "ta": "மைலேஜ்"
+        "ta": "Mileage (claimed)"
        },
-       "62 km/l"
+       "35 km/l"
       ],
       [
        {
         "en": "Fuel tank",
-        "ta": "எரிபொருள் தொட்டி"
+        "ta": "Fuel tank"
        },
-       "11 L"
+       "13 L"
+      ],
+      [
+       {
+        "en": "Kerb weight",
+        "ta": "Kerb weight"
+       },
+       "195 kg"
       ],
       [
        {
         "en": "Seat height",
-        "ta": "இருக்கை உயரம்"
+        "ta": "Seat height"
        },
-       "790 mm"
+       "805 mm"
       ],
       [
        {
         "en": "Brakes",
-        "ta": "பிரேக்"
+        "ta": "Brakes"
        },
-       "240 mm disc / 130 mm drum"
+       "300 mm disc / 153 mm drum"
+      ]
+     ],
+     "ex_showroom": 193000,
+     "rto": 17370,
+     "insurance": 9200,
+     "accessories": 0,
+     "note": {
+      "en": "Nearly two lakhs on the road. Not this time.",
+      "ta": "ரோட்டுக்கு கிட்டத்தட்ட ரெண்டு லட்சம். இந்த தடவை இல்ல."
+     }
+    },
+    {
+     "id": "arrow_sport",
+     "group": "bike",
+     "kind": "bike",
+     "at": "show_3",
+     "glb": "res://assets/vehicles/moto_sport.glb",
+     "display_only": true,
+     "name": {
+      "en": "Vela Arrow 200 Sport",
+      "ta": "வேலா ஆரோ 200 ஸ்போர்ட்"
+     },
+     "kind_label": {
+      "en": "Sport · half fairing · clip-on bars",
+      "ta": "ஸ்போர்ட் · ஃபேரிங் · கிளிப்-ஆன் ஹேண்டில்"
+     },
+     "specs": [
+      [
+       {
+        "en": "Engine",
+        "ta": "Engine"
+       },
+       "199.5 cc, single cylinder, liquid-cooled"
       ],
       [
        {
-        "en": "This colour",
-        "ta": "இந்த நிறம்"
+        "en": "Power",
+        "ta": "Power"
        },
-       "₹1,000 less: last year's stock"
+       "24.5 bhp @ 9,750 rpm"
+      ],
+      [
+       {
+        "en": "Torque",
+        "ta": "Torque"
+       },
+       "18.7 Nm @ 8,000 rpm"
+      ],
+      [
+       {
+        "en": "Mileage (claimed)",
+        "ta": "Mileage (claimed)"
+       },
+       "38 km/l"
+      ],
+      [
+       {
+        "en": "Fuel tank",
+        "ta": "Fuel tank"
+       },
+       "12 L"
+      ],
+      [
+       {
+        "en": "Kerb weight",
+        "ta": "Kerb weight"
+       },
+       "152 kg"
+      ],
+      [
+       {
+        "en": "Seat height",
+        "ta": "Seat height"
+       },
+       "810 mm"
+      ],
+      [
+       {
+        "en": "Brakes",
+        "ta": "Brakes"
+       },
+       "300 mm disc / 230 mm disc, ABS"
+      ],
+      [
+       {
+        "en": "Tyres",
+        "ta": "Tyres"
+       },
+       "100/80-17 / 130/70-17"
       ]
      ],
-     "ex_showroom": 83900,
-     "rto": 7550,
-     "insurance": 5860,
-     "accessories": 1500
+     "ex_showroom": 142000,
+     "rto": 12780,
+     "insurance": 7400,
+     "accessories": 0,
+     "note": {
+      "en": "Fast, and too much for deliveries and EMIs. He moves on.",
+      "ta": "வேகம், ஆனா டெலிவரிக்கும் EMI-க்கும் அதிகம். அடுத்தது பாக்கறாரு."
+     }
+    },
+    {
+     "id": "nilgiri_adv",
+     "group": "bike",
+     "kind": "bike",
+     "at": "show_4",
+     "glb": "res://assets/vehicles/moto_adventure.glb",
+     "display_only": true,
+     "name": {
+      "en": "Vela Nilgiri 400 Adventure",
+      "ta": "வேலா நீலகிரி 400 அட்வென்சர்"
+     },
+     "kind_label": {
+      "en": "Adventure tourer · tall screen · panniers",
+      "ta": "அட்வென்சர் டூரர் · உயர் திரை · பக்க பெட்டிகள்"
+     },
+     "specs": [
+      [
+       {
+        "en": "Engine",
+        "ta": "Engine"
+       },
+       "411 cc, single cylinder, air-oil cooled"
+      ],
+      [
+       {
+        "en": "Power",
+        "ta": "Power"
+       },
+       "24.3 bhp @ 6,500 rpm"
+      ],
+      [
+       {
+        "en": "Torque",
+        "ta": "Torque"
+       },
+       "32 Nm @ 4,250 rpm"
+      ],
+      [
+       {
+        "en": "Mileage (claimed)",
+        "ta": "Mileage (claimed)"
+       },
+       "30 km/l"
+      ],
+      [
+       {
+        "en": "Fuel tank",
+        "ta": "Fuel tank"
+       },
+       "15 L"
+      ],
+      [
+       {
+        "en": "Kerb weight",
+        "ta": "Kerb weight"
+       },
+       "199 kg"
+      ],
+      [
+       {
+        "en": "Seat height",
+        "ta": "Seat height"
+       },
+       "800 mm"
+      ],
+      [
+       {
+        "en": "Suspension",
+        "ta": "Suspension"
+       },
+       "200 mm travel front, 180 mm rear"
+      ],
+      [
+       {
+        "en": "Includes",
+        "ta": "Includes"
+       },
+       "Side cases, top box, crash bars"
+      ]
+     ],
+     "ex_showroom": 285000,
+     "rto": 25650,
+     "insurance": 11800,
+     "accessories": 24000,
+     "note": {
+      "en": "The hills, one day. Today it's a commuter.",
+      "ta": "மலைக்கு, ஒரு நாள். இன்னைக்கு கம்யூட்டர் தான்."
+     }
     },
     {
      "id": "thendral_blue",
      "group": "scooter",
      "kind": "scooter",
-     "at": "show_3",
+     "at": "show_5",
      "glb": "res://assets/vehicles/scooter_commuter.glb",
      "paint": "#0b2a55",
      "name": {
@@ -336,7 +525,7 @@
      "id": "thendral_white",
      "group": "scooter",
      "kind": "scooter",
-     "at": "show_4",
+     "at": "show_6",
      "glb": "res://assets/vehicles/scooter_commuter.glb",
      "paint": "#d9d8d2",
      "name": {

@@ -37,6 +37,47 @@ HEAD_TOP = Vector((0.30, 0.0, 0.985))             # the steering head's top
 AXIS = Vector((math.sin(RAKE), 0.0, -math.cos(RAKE)))   # down the steering axis
 
 
+## The showroom's other motorcycles (the redesign brief, stage 3): each its own design, built on this commuter's
+## parts with its own front, wheels, tank, seat, bars, exhaust and extras. "commuter" is the ridden one (jeep.gd's
+## "bike"); the others are for display (story/prologue.json's dealer models).
+STYLES = {
+    "commuter": {},
+    "classic": {"paint": (0.02, 0.06, 0.035), "spokes": True, "lamp": "round", "bar": "tall", "tank": "teardrop", "seat": "bench",
+                "exhaust": "peashooter", "side_panels": True, "crash_guard": True, "chrome_guards": True},
+    "sport": {"paint": (0.04, 0.12, 0.42), "lamp": "fairing", "bar": "clipon", "tank": "sport", "seat": "split", "exhaust": "underbelly",
+              "side_panels": False, "crash_guard": False, "belly_pan": True, "saree": False, "tyre_r": 0.11},
+    "adventure": {"paint": (0.75, 0.75, 0.73), "spokes": True, "lamp": "adv", "bar": "wide", "tank": "adv", "seat": "tall",
+                  "exhaust": "upswept", "side_panels": False, "crash_guard": False, "crash_bars": True, "panniers": True, "hand_guards": True},
+}
+STYLE = {}
+
+
+def use_style(name):
+    global STYLE, PAINT
+    STYLE = STYLES[name]
+    PAINT = STYLE.get("paint", (0.36, 0.008, 0.012))
+
+
+def spoke_wheel(M, pn, rim_r, rw):
+    """A wire-spoke wheel: a chrome rim, 36 laced spokes (two crossing sets), the hub with its flanges."""
+    out = []
+    rim = K.lathe(pn + "_Rim", [(rim_r + 0.012, -rw * 0.5), (rim_r, -rw * 0.42), (rim_r - 0.008, 0.0), (rim_r, rw * 0.42), (rim_r + 0.012, rw * 0.5),
+                                (rim_r - 0.004, rw * 0.5), (rim_r - 0.016, 0.0), (rim_r - 0.004, -rw * 0.5)], 96, 'Y', [M["Chrome"]])
+    out.append(rim)
+    hub = K.lathe(pn + "_Hub", [(0.0, -0.07), (0.035, -0.07), (0.06, -0.055), (0.062, -0.04), (0.045, -0.03), (0.045, 0.03), (0.062, 0.04),
+                                (0.06, 0.055), (0.035, 0.07), (0.0, 0.07)], 40, 'Y', [M["EngineAlu"]])
+    out.append(hub)
+    for k in range(36):
+        a = 2 * math.pi * k / 36
+        side = 1 if k % 2 else -1
+        twist = 0.35 * (1 if (k // 2) % 2 else -1)
+        a0 = a + twist
+        p0 = (math.cos(a0) * 0.055, side * 0.05, math.sin(a0) * 0.055)
+        p1 = (math.cos(a) * (rim_r - 0.012), side * 0.008, math.sin(a) * (rim_r - 0.012))
+        out.append(P.tube(pn + "_Spoke", [p0, p1], 0.0022, M["Chrome"], segs=4))
+    return out
+
+
 def on_axis(z):
     """The point on the steering axis at height z."""
     t = (z - HEAD_TOP.z) / AXIS.z
@@ -178,8 +219,10 @@ def wheels(M):
         K.link(piv)
         piv.location = (x, 0, R)
         pn = "WF" if nm == "Wheel_F" else "WR"
+        if nm == "Wheel_R" and STYLE.get("tyre_r"):
+            tw = float(STYLE["tyre_r"])
         kids = [tyre(M, pn + "_Tyre", R, tw, RIM_D / 2 + 0.008)]
-        kids += alloy(M, pn, RIM_D / 2, tw * 0.62)
+        kids += spoke_wheel(M, pn, RIM_D / 2, tw * 0.62) if STYLE.get("spokes") else alloy(M, pn, RIM_D / 2, tw * 0.62)
         if nm == "Wheel_F":
             kids += disc(M, pn, 0.12, 0.072, 1.0)
         else:
@@ -247,7 +290,12 @@ def front(M):
     nac = P.loft("Nacelle", [(hc.x - 0.11, 0.075, hc.z + 0.01, 0.07, 0.07, 2.4, 2.4), (hc.x - 0.05, 0.1, hc.z, 0.095, 0.095, 2.6, 2.6),
                              (hc.x + 0.02, 0.105, hc.z, 0.1, 0.1, 2.6, 2.6), (hc.x + 0.045, 0.1, hc.z, 0.095, 0.095, 2.6, 2.6)],
                  M["Paint"], n=40)
-    bars.append(nac)
+    lamp_style = STYLE.get("lamp", "nacelle")
+    if lamp_style == "nacelle":
+        bars.append(nac)
+    else:
+        K.remove(nac)
+        bars += front_style(M, lamp_style, hc)
     bez = K.lathe("Bezel", [(0.088, 0.0), (0.095, 0.004), (0.094, 0.012), (0.084, 0.016)], 48, 'X', [M["Chrome"]])
     bez.location = (hc.x + 0.045, 0, hc.z)
     bars.append(bez)
@@ -261,7 +309,10 @@ def front(M):
     lamp.location = (hc.x + 0.05, 0, hc.z)
     visor = P.loft("Visor", [(hc.x - 0.12, 0.09, hc.z + 0.115, 0.03, 0.02, 2.2, 2.2), (hc.x - 0.02, 0.105, hc.z + 0.105, 0.035, 0.02, 2.2, 2.2),
                              (hc.x + 0.05, 0.08, hc.z + 0.095, 0.02, 0.012, 2.2, 2.2)], M["Paint"], n=28)
-    bars.append(visor)
+    if lamp_style != "nacelle":
+        K.remove(visor)
+    else:
+        bars.append(visor)
     # the cluster: a hooded analogue speedometer (its needle turned by the game), the fuel gauge, tell-tales
     cl_at = Vector((0.27, 0.0, 1.07))
     tilt = math.radians(50)
@@ -288,9 +339,17 @@ def front(M):
     for k, col in enumerate(("Indicator", "DRL", "Headlight")):
         bars.append(P.box("TellTale", (0.004, 0.008, 0.006), cl_at + Vector((0, -0.01 - k * 0.012, 0.045)) + face_n * 0.03, M[col]))
     # the handlebar (a commuter's swept-back tube), clamps, the switch housings, the master cylinder, levers, mirrors
-    gz = 1.035
+    gz = {"tall": 1.09, "clipon": 0.97, "wide": 1.12}.get(STYLE.get("bar", ""), 1.035)
     bar_pts = [(0.17, 0.37, gz), (0.18, 0.3, gz), (0.215, 0.2, gz + 0.008), (0.25, 0.08, gz + 0.012), (0.255, 0.0, gz + 0.012),
                (0.25, -0.08, gz + 0.012), (0.215, -0.2, gz + 0.008), (0.18, -0.3, gz), (0.17, -0.37, gz)]
+    if STYLE.get("bar") == "tall":                            # (a classic's: up and back, chrome)
+        bar_pts = [(0.15, 0.38, gz), (0.18, 0.3, gz + 0.02), (0.24, 0.18, gz + 0.06), (0.26, 0.0, gz + 0.07), (0.24, -0.18, gz + 0.06),
+                   (0.18, -0.3, gz + 0.02), (0.15, -0.38, gz)]
+    elif STYLE.get("bar") == "clipon":                        # (a sport's: two short bars below the top yoke, angled down)
+        bar_pts = [(0.17, 0.36, gz - 0.03), (0.24, 0.12, gz), (0.25, 0.0, gz + 0.02), (0.24, -0.12, gz), (0.17, -0.36, gz - 0.03)]
+    elif STYLE.get("bar") == "wide":                          # (an adventure bike's: wide and flat, on risers)
+        bar_pts = [(0.17, 0.42, gz), (0.2, 0.3, gz + 0.01), (0.25, 0.1, gz + 0.02), (0.26, 0.0, gz + 0.02), (0.25, -0.1, gz + 0.02),
+                   (0.2, -0.3, gz + 0.01), (0.17, -0.42, gz)]
     bars.append(P.tube("Bar", bar_pts, 0.011, M["Chrome"], smooth_pts=6))
     for y in (0.045, -0.045):
         bars.append(P.box("BarClamp", (0.04, 0.03, 0.035), (0.255, y, gz + 0.005), M["EngineDark"], bevel=0.008))
@@ -339,6 +398,45 @@ def front(M):
     handle = P.join(bars, "Handlebar")
     grip = P.join(grips, "Grip")
     return [handle, grip, lamp, needle, inds["L"], inds["R"]]
+
+
+def front_style(M, style, hc):
+    """The front of the other styles (turning with the bars): a classic's chrome headlamp bucket; a sport's half
+    fairing with twin LED lamps and a small screen; an adventure bike's beak, fairing and tall screen. The lamp, its
+    lens and reflector stay the commuter's (they're set inside these)."""
+    out = []
+    if style == "round":
+        bucket = K.lathe("Bucket", [(0.0, -0.13), (0.06, -0.125), (0.09, -0.09), (0.1, -0.03), (0.098, 0.0)], 48, 'X', [M["Chrome"]])
+        bucket.location = (hc.x + 0.045, 0, hc.z)
+        out.append(bucket)
+        for s2 in (1, -1):
+            out.append(P.tube("LampEar", [(hc.x - 0.01, s2 * 0.075, hc.z - 0.02), (hc.x - 0.05, s2 * 0.085, hc.z - 0.12)], 0.012, M["Chrome"]))
+        return out
+    if style == "fairing":
+        fa = P.loft("Fairing", [(hc.x - 0.16, 0.15, hc.z + 0.05, 0.13, 0.14, 2.0, 2.0), (hc.x - 0.04, 0.14, hc.z + 0.03, 0.12, 0.12, 2.0, 2.0),
+                                (hc.x + 0.08, 0.1, hc.z, 0.08, 0.08, 1.8, 1.8), (hc.x + 0.14, 0.04, hc.z - 0.02, 0.03, 0.03, 1.6, 1.6)], M["Paint"], n=40)
+        out.append(fa)
+        for s2 in (1, -1):
+            out.append(P.box("LEDSlit", (0.12, 0.05, 0.022), (hc.x + 0.06, s2 * 0.075, hc.z + 0.03), M["DRL"], rot=(0, math.radians(-25), s2 * math.radians(20))))
+        sc = P.loft("Screen", [(hc.x - 0.16, 0.11, hc.z + 0.2, 0.005, 0.005, 2.2, 2.2), (hc.x - 0.06, 0.1, hc.z + 0.16, 0.005, 0.005, 2.2, 2.2),
+                               (hc.x + 0.02, 0.08, hc.z + 0.12, 0.005, 0.005, 2.2, 2.2)], M["GlassTint"], n=20)
+        out.append(sc)
+        return out
+    if style == "adv":
+        beak = P.loft("Beak", [(hc.x - 0.05, 0.11, hc.z - 0.1, 0.03, 0.02, 2.4, 2.4), (hc.x + 0.12, 0.1, hc.z - 0.14, 0.03, 0.02, 2.4, 2.4),
+                               (hc.x + 0.26, 0.06, hc.z - 0.2, 0.02, 0.015, 2.2, 2.2)], M["Paint"], n=24)
+        out.append(beak)
+        fa = P.loft("Fairing", [(hc.x - 0.16, 0.16, hc.z + 0.06, 0.12, 0.13, 2.2, 2.2), (hc.x - 0.04, 0.15, hc.z + 0.03, 0.12, 0.11, 2.2, 2.2),
+                                (hc.x + 0.06, 0.1, hc.z, 0.07, 0.07, 2.0, 2.0)], M["Plastic"], n=36)
+        out.append(fa)
+        sc = P.loft("Screen", [(hc.x - 0.2, 0.15, hc.z + 0.42, 0.005, 0.005, 2.2, 2.2), (hc.x - 0.12, 0.15, hc.z + 0.3, 0.005, 0.005, 2.2, 2.2),
+                               (hc.x - 0.04, 0.13, hc.z + 0.16, 0.005, 0.005, 2.2, 2.2)], M["GlassTint"], n=20)
+        out.append(sc)
+        for s2 in (1, -1):
+            out.append(P.loft("HandGuard", [(0.12, 0.035, 0.0, 0.03, 0.02, 2.2, 2.2), (0.2, 0.045, 0.0, 0.04, 0.025, 2.4, 2.4)], M["Plastic"], n=16))
+            out[-1].location = (0.05, s2 * 0.42, 1.12)
+        return out
+    return out
 
 
 # ----------------------------------------------------------------------------------------------------- the rest
@@ -411,8 +509,22 @@ def body(M):
     # the exhaust: the header out under the head, down under the engine, up into the silencer with its heat shield
     hdr = [tuple(hd + Vector((0.04, -0.02, -0.06))), (0.36, -0.04, 0.36), (0.3, -0.07, 0.2), (0.1, -0.1, 0.17), (-0.15, -0.14, 0.2),
            (-0.32, -0.16, 0.28)]
+    ex = STYLE.get("exhaust", "")
+    if ex == "peashooter":                                    # (a long chrome tube, low and nearly level)
+        hdr = [tuple(hd + Vector((0.04, -0.02, -0.06))), (0.36, -0.05, 0.36), (0.3, -0.09, 0.22), (0.05, -0.14, 0.2), (-0.25, -0.17, 0.24)]
+    elif ex == "underbelly":                                  # (a sport's: a short box under the engine)
+        hdr = [tuple(hd + Vector((0.04, -0.02, -0.06))), (0.36, -0.04, 0.33), (0.3, -0.05, 0.18), (0.15, -0.05, 0.15)]
+    elif ex == "upswept":                                     # (an adventure bike's: high, under the seat's side)
+        hdr = [tuple(hd + Vector((0.04, -0.02, -0.06))), (0.36, -0.04, 0.36), (0.3, -0.08, 0.2), (0.0, -0.13, 0.2), (-0.22, -0.16, 0.38),
+               (-0.36, -0.17, 0.55)]
     chrome.append(P.tube("Header", hdr, 0.019, M["Chrome"], smooth_pts=6))
     sil_a, sil_b = Vector((-0.32, -0.165, 0.28)), Vector((-0.86, -0.17, 0.42))
+    if ex == "peashooter":
+        sil_a, sil_b = Vector((-0.25, -0.17, 0.24)), Vector((-0.98, -0.18, 0.33))
+    elif ex == "underbelly":
+        sil_a, sil_b = Vector((0.15, -0.05, 0.15)), Vector((-0.2, -0.07, 0.16))
+    elif ex == "upswept":
+        sil_a, sil_b = Vector((-0.36, -0.17, 0.55)), Vector((-0.8, -0.19, 0.74))
     sd = (sil_b - sil_a).normalized()
     sil = K.lathe("Silencer", [(0.0, 0.0), (0.03, 0.0), (0.05, 0.06), (0.058, 0.14), (0.058, 0.44), (0.052, 0.53), (0.035, 0.55), (0.0, 0.55)], 40, 'X', [M["Chrome"]])
     P.place(sil, sil_a, sd)
@@ -462,9 +574,20 @@ def body(M):
     cg.modifiers.new("S", 'SOLIDIFY').thickness = 0.003
     black.append(cg)
     # the tank: a sculpted loft with knee recesses, its filler cap, rubber knee pads
-    tank = P.loft("Tank", [(0.31, 0.06, 0.93, 0.04, 0.06, 2.2, 2.2), (0.25, 0.12, 0.92, 0.075, 0.1, 2.4, 2.4),
-                           (0.15, 0.15, 0.91, 0.09, 0.12, 2.6, 2.6), (0.04, 0.145, 0.895, 0.09, 0.12, 2.6, 2.6),
-                           (-0.05, 0.12, 0.875, 0.075, 0.1, 2.4, 2.6), (-0.1, 0.09, 0.85, 0.05, 0.07, 2.2, 2.4)], M["Paint"], n=40)
+    tank_st = [(0.31, 0.06, 0.93, 0.04, 0.06, 2.2, 2.2), (0.25, 0.12, 0.92, 0.075, 0.1, 2.4, 2.4),
+               (0.15, 0.15, 0.91, 0.09, 0.12, 2.6, 2.6), (0.04, 0.145, 0.895, 0.09, 0.12, 2.6, 2.6),
+               (-0.05, 0.12, 0.875, 0.075, 0.1, 2.4, 2.6), (-0.1, 0.09, 0.85, 0.05, 0.07, 2.2, 2.4)]
+    tk = STYLE.get("tank", "")
+    if tk == "teardrop":                                      # (a classic's: rounded, high in front, tapering back)
+        tank_st = [(0.32, 0.05, 0.95, 0.04, 0.05, 2.0, 2.0), (0.26, 0.12, 0.94, 0.09, 0.1, 2.2, 2.2), (0.14, 0.155, 0.92, 0.11, 0.12, 2.2, 2.3),
+                   (0.0, 0.14, 0.9, 0.1, 0.11, 2.2, 2.3), (-0.1, 0.09, 0.88, 0.07, 0.08, 2.0, 2.2), (-0.15, 0.04, 0.87, 0.04, 0.04, 2.0, 2.0)]
+    elif tk == "sport":                                       # (a sport's: angular, high, with deep knee cuts)
+        tank_st = [(0.33, 0.08, 0.97, 0.05, 0.08, 3.0, 3.0), (0.25, 0.16, 0.96, 0.09, 0.12, 3.4, 3.2), (0.12, 0.18, 0.94, 0.11, 0.13, 3.6, 3.2),
+                   (0.0, 0.15, 0.92, 0.1, 0.12, 3.4, 3.2), (-0.1, 0.1, 0.88, 0.06, 0.09, 3.0, 3.0)]
+    elif tk == "adv":                                         # (an adventure bike's: tall and broad, shrouds at its sides)
+        tank_st = [(0.34, 0.1, 1.0, 0.06, 0.1, 2.6, 2.6), (0.24, 0.19, 0.99, 0.11, 0.15, 3.0, 3.0), (0.1, 0.2, 0.97, 0.12, 0.16, 3.0, 3.0),
+                   (-0.03, 0.16, 0.94, 0.1, 0.13, 2.8, 2.8), (-0.12, 0.1, 0.9, 0.06, 0.09, 2.4, 2.6)]
+    tank = P.loft("Tank", tank_st, M["Paint"], n=40)
     for v in tank.data.vertices:                                # knee recesses: the flanks drawn in low at the back
         if -0.08 < v.co.x < 0.12 and v.co.z < 0.9 and abs(v.co.y) > 0.07:
             k = 0.88 + 0.12 * min(1.0, abs(v.co.x - 0.02) / 0.1)
@@ -476,9 +599,20 @@ def body(M):
         pad = P.box("KneePad", (0.12, 0.008, 0.07), (0.0, s * 0.128, 0.86), M["Rubber"], rot=(s * math.radians(-12), 0, 0), bevel=0.02)
         black.append(pad)
     # the seat: one long cushion stepping up for the pillion, red piping and stitching along its edges
-    seat = P.loft("Seat", [(-0.06, 0.08, 0.81, 0.02, 0.04, 2.2, 3.0), (-0.12, 0.135, 0.815, 0.035, 0.05, 2.6, 3.0),
-                           (-0.3, 0.145, 0.815, 0.04, 0.055, 2.8, 3.0), (-0.45, 0.13, 0.83, 0.045, 0.055, 2.8, 3.0),
-                           (-0.65, 0.12, 0.845, 0.045, 0.05, 2.6, 3.0), (-0.76, 0.08, 0.84, 0.035, 0.04, 2.2, 3.0)], M["SeatVinyl"], n=40)
+    seat_st = [(-0.06, 0.08, 0.81, 0.02, 0.04, 2.2, 3.0), (-0.12, 0.135, 0.815, 0.035, 0.05, 2.6, 3.0),
+               (-0.3, 0.145, 0.815, 0.04, 0.055, 2.8, 3.0), (-0.45, 0.13, 0.83, 0.045, 0.055, 2.8, 3.0),
+               (-0.65, 0.12, 0.845, 0.045, 0.05, 2.6, 3.0), (-0.76, 0.08, 0.84, 0.035, 0.04, 2.2, 3.0)]
+    st = STYLE.get("seat", "")
+    if st == "bench":                                         # (a classic's: flat and long, ribbed)
+        seat_st = [(-0.12, 0.1, 0.83, 0.02, 0.04, 2.2, 3.0), (-0.18, 0.15, 0.83, 0.04, 0.05, 3.0, 3.0), (-0.5, 0.15, 0.83, 0.045, 0.05, 3.2, 3.0),
+                   (-0.72, 0.13, 0.835, 0.04, 0.05, 3.0, 3.0), (-0.8, 0.08, 0.83, 0.03, 0.04, 2.2, 3.0)]
+    elif st == "split":                                       # (a sport's: the rider low, the pillion's perch high)
+        seat_st = [(-0.1, 0.09, 0.8, 0.02, 0.03, 2.2, 3.0), (-0.16, 0.13, 0.8, 0.035, 0.04, 2.8, 3.0), (-0.36, 0.12, 0.81, 0.04, 0.04, 2.8, 3.0),
+                   (-0.42, 0.09, 0.86, 0.06, 0.04, 2.6, 3.0), (-0.62, 0.08, 0.9, 0.035, 0.04, 2.6, 3.0), (-0.7, 0.05, 0.9, 0.02, 0.03, 2.2, 3.0)]
+    elif st == "tall":                                        # (an adventure bike's: high and broad)
+        seat_st = [(-0.1, 0.09, 0.87, 0.02, 0.04, 2.2, 3.0), (-0.16, 0.15, 0.87, 0.045, 0.05, 2.8, 3.0), (-0.42, 0.15, 0.88, 0.05, 0.06, 3.0, 3.0),
+                   (-0.66, 0.13, 0.9, 0.045, 0.05, 2.8, 3.0), (-0.78, 0.08, 0.89, 0.03, 0.04, 2.2, 3.0)]
+    seat = P.loft("Seat", seat_st, M["SeatVinyl"], n=40)
     other.append(seat)
     for s in (1, -1):
         stitch = []
@@ -497,7 +631,7 @@ def body(M):
             zt = 0.78 - 0.02 * k / 8
             zb = 0.56 + 0.1 * (k / 8) ** 1.5
             rows.append([(x, s * (0.115 + 0.012 * math.sin(math.pi * j / 6)), zb + (zt - zb) * j / 6) for j in range(7)])
-        sp = P.grid("SidePanel", rows, M["Paint"])
+        sp = P.grid("SidePanel", rows, M["Paint"] if STYLE.get("side_panels", True) else M["Plastic"])
         sp.modifiers.new("S", 'SOLIDIFY').thickness = 0.004
         K.smooth(sp, 40)
         painted.append(sp)
@@ -566,8 +700,27 @@ def body(M):
         black.append(P.tube("CentreStand", [(-0.12, s * 0.09, 0.33), (-0.38, s * 0.13, 0.17)], 0.013, M["FrameBlack"]))
     black.append(P.tube("CentreStandBar", [(-0.38, 0.13, 0.17), (-0.38, -0.13, 0.17)], 0.012, M["FrameBlack"]))
     # a crash guard in front of the engine (as most here are fitted), the battery and tool box behind the panels
-    chrome.append(P.tube("CrashGuard", [(0.3, 0.06, 0.75), (0.36, 0.2, 0.62), (0.34, 0.24, 0.4), (0.26, 0.18, 0.3)], 0.013, M["Chrome"], smooth_pts=6))
-    chrome.append(P.tube("CrashGuard", [(0.3, -0.06, 0.75), (0.36, -0.2, 0.62), (0.34, -0.24, 0.4), (0.26, -0.18, 0.3)], 0.013, M["Chrome"], smooth_pts=6))
+    if STYLE.get("crash_guard", True):
+        chrome.append(P.tube("CrashGuard", [(0.3, 0.06, 0.75), (0.36, 0.2, 0.62), (0.34, 0.24, 0.4), (0.26, 0.18, 0.3)], 0.013, M["Chrome"], smooth_pts=6))
+        chrome.append(P.tube("CrashGuard", [(0.3, -0.06, 0.75), (0.36, -0.2, 0.62), (0.34, -0.24, 0.4), (0.26, -0.18, 0.3)], 0.013, M["Chrome"], smooth_pts=6))
+    if STYLE.get("belly_pan"):                                # (a sport's: the engine's underside cowled)
+        painted.append(P.loft("BellyPan", [(0.33, 0.06, 0.3, 0.06, 0.06, 2.4, 2.4), (0.2, 0.15, 0.26, 0.1, 0.08, 2.6, 2.6), (-0.05, 0.15, 0.25, 0.1, 0.08, 2.6, 2.6),
+                                           (-0.18, 0.09, 0.27, 0.07, 0.06, 2.4, 2.4)], M["Paint"], n=28))
+    if STYLE.get("crash_bars"):                               # (an adventure bike's: steel bars round the engine and the tank)
+        for s2 in (1, -1):
+            black.append(P.tube("CrashBar", [(0.3, s2 * 0.08, 0.86), (0.4, s2 * 0.25, 0.7), (0.38, s2 * 0.28, 0.42), (0.2, s2 * 0.22, 0.3),
+                                             (0.05, s2 * 0.17, 0.32)], 0.016, M["FrameBlack"], smooth_pts=6))
+            black.append(P.tube("CrashBarUp", [(0.38, s2 * 0.27, 0.6), (0.22, s2 * 0.24, 0.85), (0.05, s2 * 0.18, 0.88)], 0.014, M["FrameBlack"], smooth_pts=4))
+    if STYLE.get("panniers"):                                 # (aluminium side cases on their racks)
+        for s2 in (1, -1):
+            other.append(P.box("Pannier", (0.45, 0.17, 0.36), (-0.62, s2 * 0.28, 0.72), M["EngineAlu"], bevel=0.02))
+            other.append(P.box("PannierLid", (0.46, 0.175, 0.04), (-0.62, s2 * 0.28, 0.9), M["BlackGloss"], bevel=0.01))
+            black.append(P.tube("PannierRack", [(-0.3, s2 * 0.18, 0.78), (-0.4, s2 * 0.2, 0.6), (-0.86, s2 * 0.2, 0.6), (-0.86, s2 * 0.18, 0.85)], 0.01,
+                                M["FrameBlack"], smooth_pts=3))
+        other.append(P.box("TopCase", (0.36, 0.34, 0.26), (-0.82, 0.0, 1.03), M["EngineAlu"], bevel=0.03))
+    if STYLE.get("chrome_guards"):                            # (a classic's mudguards in chrome over the painted ones)
+        for x0, x1, R0 in ((AX_R, AX_R, RR),):
+            pass
     black.append(P.box("Battery", (0.1, 0.07, 0.12), (-0.2, 0.0, 0.52), M["Plastic"], bevel=0.008))
     out = [P.join(painted, "Body"), P.join(frame, "Frame"), P.join(engine, "Engine"), P.join(chrome, "Brightwork"),
            P.join(black, "Blackwork"), P.join(other, "Details"), tl, rear_ind["L"], rear_ind["R"]]
@@ -576,6 +729,8 @@ def body(M):
 
 def main():
     args = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else []
+    global STYLE
+    use_style(args[args.index("--style") + 1] if "--style" in args else "commuter")
     bpy.ops.wm.read_factory_settings(use_empty=True)
     M = materials()
     root = bpy.data.objects.new("Motorcycle", None)

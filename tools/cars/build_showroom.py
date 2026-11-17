@@ -289,7 +289,7 @@ def build(M):
         out.append(P.cyl("Plant", 0.45, 1.1, (x, y, 1.15), C["plant"], axis='Z', segs=10, r2=0.15))
     # ---- the accessories wall, left: helmets, jackets, gloves on lit shelves ----
     out.append(P.box("AccPanel", (0.06, 5.6, 2.8), (x0 + 0.03, 0.4, 1.7), C["brand_dark"]))
-    out.append(text("AccWord", "GENUINE ACCESSORIES", (x0 + 0.08, 0.4, 3.35), 0.18, C["letters"], rot=(math.pi / 2, 0, -math.pi / 2)))
+    out.append(text("AccWord", "GENUINE ACCESSORIES", (x0 + 0.08, 0.4, 3.35), 0.18, C["letters"], rot=(math.pi / 2, 0, math.pi / 2)))
     for r, z in enumerate((0.9, 1.6, 2.3)):
         out.append(P.box("Shelf", (0.42, 5.2, 0.03), (x0 + 0.25, 0.4, z), C["white_gloss"]))
         out.append(P.box("ShelfLED", (0.02, 5.2, 0.01), (x0 + 0.45, 0.4, z - 0.02), C["led"]))

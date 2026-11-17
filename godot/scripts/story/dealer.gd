@@ -139,6 +139,12 @@ func open_card(m: Dictionary, already_chosen := false) -> void:
 	var h := HBoxContainer.new()
 	h.add_theme_constant_override("separation", 12)
 	_box.add_child(h)
+	if m.get("display_only", false):                  # (on show, not within what he came for: look, and back)
+		_label(t_(m.get("note", {"en": "More than he came to spend.", "ta": "அவர் செலவழிக்க வந்ததை விட அதிகம்."})), 15, Color(0.75, 0.75, 0.78))
+		_button(L("Back", "திரும்ப"), func() -> void:
+			_close()
+			card_closed.emit(false), h)
+		return
 	_button(L("Chosen ✓", "தேர்ந்தெடுத்தது ✓") if already_chosen else L("Choose this one", "இதை தேர்வு செய்"), func() -> void:
 		_close()
 		card_closed.emit(true), h)

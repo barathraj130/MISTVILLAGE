@@ -309,6 +309,10 @@ func _ready() -> void:
 	for a in OS.get_cmdline_user_args():
 		if a.begins_with("--ride="):
 			_ride_on.call_deferred(a.substr(7))
+	if "--gfxaudit" in OS.get_cmdline_user_args():      # (testing: the graphics audit's captures, gfx_audit.gd)
+		var ga = load("res://scripts/city/gfx_audit.gd").new()
+		ga.city = self
+		add_child.call_deferred(ga)
 	if "--profsweep" in OS.get_cmdline_user_args():
 		_profsweep.call_deferred()
 	if "--jointest" in OS.get_cmdline_user_args():
@@ -439,7 +443,7 @@ func _ready() -> void:
 		var self_test := false                      # (a self-test never writes your saved game: wallet, challans, weather)
 		for flag in ["--testdrive", "--carshot", "--trafficshot", "--crashtest", "--peopletest", "--parkedtest",
 				"--potholetest", "--flyover", "--clock=", "--weather=", "--nohud", "--doortest", "--threattest", "--surfacetest", "--jointest", "--walkertest", "--activitytest",
-				"--hospitaltest", "--citizentest", "--interviewtest", "--unsticktest", "--livingtest", "--livingbench", "--hospitalat", "--shotview", "--interacttest", "--falltest", "--stairtest", "--gaittest", "--standtest", "--gangtest", "--gangstage", "--pursuittest", "--socialtest", "--streetaudit", "--sittest", "--ride", "--bunktest", "--bunksurvey", "--financetest", "--sfvehicletest", "--camtest", "--taketest", "--traffictest", "--lamptest", "--pedcheck", "--moneytest", "--menushot", "--crosstest"]:
+				"--hospitaltest", "--citizentest", "--interviewtest", "--unsticktest", "--livingtest", "--livingbench", "--hospitalat", "--shotview", "--interacttest", "--falltest", "--stairtest", "--gaittest", "--standtest", "--gangtest", "--gangstage", "--pursuittest", "--socialtest", "--streetaudit", "--sittest", "--ride", "--gfxaudit", "--bunktest", "--bunksurvey", "--financetest", "--sfvehicletest", "--camtest", "--taketest", "--traffictest", "--lamptest", "--pedcheck", "--moneytest", "--menushot", "--crosstest"]:
 			self_test = self_test or " ".join(args).contains(flag)
 		fines.persist = not self_test
 		hud = DriveHud.new()

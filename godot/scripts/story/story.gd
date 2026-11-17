@@ -2270,7 +2270,7 @@ func _dealer_step() -> void:
 	if _skip and t_step > 1.0:                           # (testing: the first of each kind, as a player who looked)
 		for d in _display:
 			var g := str(d[1]["group"])
-			if not picks.has(g):
+			if not picks.has(g) and not d[1].get("display_only", false):
 				picks[g] = d[1]
 				print("STORY dealer: chose %s (₹%d on the road)" % [str(d[1]["name"]["en"]), Dealer.on_road(d[1])])
 		_next()

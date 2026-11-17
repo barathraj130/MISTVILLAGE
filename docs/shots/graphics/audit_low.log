@@ -1,0 +1,288 @@
+Godot Engine v4.7.2.stable.official.ed1daf0bf - https://godotengine.org
+Metal 4.0 - Forward+ - Using Device #0: Apple - Apple M1 (Apple7)
+
+CITIZENS 23 people, 13 things known
+GRAPHICS low (fsr, window 1600×900 px, screen scale 2.0): scale 0.50, shadows 2048 px soft 1 to 80 m, ssao false, lod 6
+CITIZENS footpath graph: 4719 points in 9 tiles, 102.9 ms
+TILES instanced 25, 6.3 ms each on average, worst 25.0 ms
+CITY t=  5s fps= 26 tiles= 25 built=  25 unloaded=   0 blds=3611 designed=3594 mem=349MB vmem=1920MB draws=2260 pos=(2,8)
+TIMES process=62.9ms physics=16.5ms nav=0.0ms objects=12674
+PROF car_physics 0.29ms  traffic_phys 10.52ms  threats_phys 0.03ms  potholes_phys 0.27ms  bystanders_phys 1.45ms  weather_phys 0.10ms  hud_draw 0.47ms  minimap_draw 1.15ms  city 0.62ms  streamer 1.96ms  walkers 1.20ms  doors 0.01ms  water 0.02ms  car_process 1.63ms  life 0.03ms  bodies 0.03ms  police 0.00ms  hands 0.03ms  phone 0.01ms  bail 0.00ms  living 0.01ms  money 0.01ms  citizens 1.34ms  road_name 0.02ms  map 0.03ms
+PRIMS 1907k gpu=0.0ms cpu=16.4ms
+GFX adapter Apple M1 (Apple7) · 4.0 · window (1600, 900) · preset low
+CITIZENS footpath graph: 4111 points in 9 tiles, 60.3 ms
+TILES instanced 42, 5.8 ms each on average, worst 25.0 ms
+CITY t= 10s fps=  7 tiles= 32 built=  42 unloaded=  10 blds=5935 designed=5918 mem=387MB vmem=2048MB draws=2198 pos=(-559,258)
+TIMES process=121.1ms physics=20.1ms nav=0.0ms objects=16064
+PROF city 0.81ms  streamer 1.40ms  walkers 1.33ms  doors 0.02ms  water 0.04ms  car_process 2.27ms  life 0.04ms  bodies 0.07ms  police 0.01ms  hands 0.04ms  phone 0.01ms  bail 0.00ms  living 0.01ms  money 0.02ms  citizens 1.12ms  map 0.04ms  hud_draw 0.50ms  minimap_draw 1.71ms  car_physics 0.43ms  traffic_phys 13.47ms  threats_phys 0.06ms  potholes_phys 0.43ms  bystanders_phys 3.63ms  weather_phys 0.15ms  road_name 0.02ms
+PRIMS 2114k gpu=0.0ms cpu=10.6ms
+WEATHER clear
+TILES instanced 42, 5.8 ms each on average, worst 25.0 ms
+CITY t= 15s fps= 11 tiles= 32 built=  42 unloaded=  10 blds=5935 designed=5918 mem=390MB vmem=2133MB draws=2278 pos=(-559,258)
+TIMES process=67.7ms physics=30.7ms nav=0.0ms objects=16087
+PROF city 1.30ms  streamer 0.08ms  walkers 2.23ms  doors 0.03ms  water 0.06ms  car_process 3.78ms  life 0.07ms  bodies 0.03ms  police 0.01ms  hands 0.05ms  phone 0.01ms  bail 0.00ms  living 0.02ms  money 0.02ms  citizens 25.87ms  map 0.07ms  hud_draw 0.45ms  minimap_draw 2.56ms  car_physics 1.10ms  traffic_phys 24.76ms  threats_phys 0.09ms  potholes_phys 0.31ms  bystanders_phys 10.93ms  weather_phys 0.26ms  road_name 0.05ms
+PRIMS 2122k gpu=0.0ms cpu=22.2ms
+GFX gandhipuram_0715         8.5 fps · CPU  72.8 ms · GPU   0.0 ms ·  2262 draws · 13216 objects ·   2122 k prims · VRAM 2134 MB · RAM  390 MB
+WEATHER clear
+TILES instanced 42, 5.8 ms each on average, worst 25.0 ms
+CITY t= 20s fps= 13 tiles= 32 built=  42 unloaded=  10 blds=5935 designed=5918 mem=390MB vmem=2133MB draws=2066 pos=(-559,258)
+TIMES process=67.9ms physics=22.2ms nav=0.0ms objects=16087
+PROF city 1.73ms  streamer 0.10ms  walkers 2.09ms  doors 0.06ms  water 0.07ms  car_process 5.56ms  life 0.07ms  bodies 0.04ms  police 0.01ms  hands 0.07ms  phone 0.02ms  bail 0.00ms  living 0.03ms  money 0.09ms  citizens 0.54ms  map 0.08ms  hud_draw 0.86ms  minimap_draw 2.94ms  car_physics 0.99ms  traffic_phys 28.46ms  threats_phys 0.11ms  potholes_phys 0.43ms  bystanders_phys 16.86ms  weather_phys 0.30ms  road_name 0.05ms
+PRIMS 2011k gpu=0.0ms cpu=14.6ms
+GFX gandhipuram_1300        14.4 fps · CPU  65.6 ms · GPU   0.0 ms ·  2067 draws · 13013 objects ·   2011 k prims · VRAM 2134 MB · RAM  390 MB
+WEATHER clear
+TILES instanced 42, 5.8 ms each on average, worst 25.0 ms
+CITY t= 25s fps= 10 tiles= 32 built=  42 unloaded=  10 blds=5935 designed=5918 mem=392MB vmem=2422MB draws=2280 pos=(-559,258)
+TIMES process=58.3ms physics=37.8ms nav=0.0ms objects=16205
+PROF city 0.89ms  streamer 0.07ms  walkers 0.87ms  doors 0.02ms  water 0.04ms  car_process 2.53ms  life 0.04ms  bodies 0.02ms  police 0.01ms  hands 0.05ms  phone 0.01ms  bail 0.00ms  living 0.02ms  money 0.02ms  citizens 16.11ms  map 0.05ms  hud_draw 0.32ms  minimap_draw 1.69ms  car_physics 0.53ms  traffic_phys 14.39ms  threats_phys 0.06ms  potholes_phys 0.18ms  bystanders_phys 5.16ms  weather_phys 0.16ms  road_name 0.03ms
+PRIMS 2157k gpu=0.0ms cpu=14.1ms
+GFX gandhipuram_1810        11.7 fps · CPU  75.1 ms · GPU   0.0 ms ·  2289 draws · 13259 objects ·   2157 k prims · VRAM 2422 MB · RAM  392 MB
+WEATHER clear
+TILES instanced 42, 5.8 ms each on average, worst 25.0 ms
+CITY t= 30s fps=  6 tiles= 32 built=  42 unloaded=  10 blds=5935 designed=5918 mem=400MB vmem=2455MB draws=2034 pos=(-559,258)
+TIMES process=316.6ms physics=31.6ms nav=0.0ms objects=16201
+PROF city 1.07ms  streamer 0.08ms  walkers 1.11ms  doors 0.02ms  water 0.04ms  car_process 2.99ms  life 0.05ms  bodies 0.03ms  police 0.01ms  hands 0.05ms  phone 0.01ms  bail 0.00ms  living 0.02ms  money 0.02ms  citizens 0.45ms  map 0.06ms  hud_draw 0.33ms  minimap_draw 1.92ms  car_physics 0.61ms  traffic_phys 21.31ms  threats_phys 0.17ms  potholes_phys 0.26ms  bystanders_phys 6.53ms  weather_phys 0.21ms  road_name 0.03ms
+PRIMS 1904k gpu=0.0ms cpu=12.4ms
+GFX gandhipuram_2130        10.5 fps · CPU  86.2 ms · GPU   0.0 ms ·  2041 draws · 13015 objects ·   1906 k prims · VRAM 2455 MB · RAM  401 MB
+WEATHER rain
+TILES instanced 42, 5.8 ms each on average, worst 25.0 ms
+CITY t= 35s fps=  9 tiles= 32 built=  42 unloaded=  10 blds=5935 designed=5918 mem=400MB vmem=2455MB draws=2068 pos=(-559,258)
+TIMES process=298.7ms physics=20.5ms nav=0.0ms objects=16187
+PROF city 0.91ms  streamer 0.06ms  walkers 0.86ms  doors 0.01ms  water 0.04ms  car_process 2.83ms  life 0.04ms  bodies 0.02ms  police 0.01ms  hands 0.05ms  phone 0.01ms  bail 0.00ms  living 0.01ms  money 0.02ms  citizens 0.31ms  road_name 0.03ms  map 0.04ms  hud_draw 0.24ms  minimap_draw 1.54ms  car_physics 0.51ms  traffic_phys 16.97ms  threats_phys 0.05ms  potholes_phys 0.17ms  bystanders_phys 5.67ms  weather_phys 0.17ms
+PRIMS 1904k gpu=0.0ms cpu=6.5ms
+GFX gandhipuram_2130r       13.4 fps · CPU  64.2 ms · GPU   0.0 ms ·  2063 draws · 13025 objects ·   1904 k prims · VRAM 2455 MB · RAM  401 MB
+TILES instanced 42, 5.8 ms each on average, worst 25.0 ms
+CITY t= 40s fps= 13 tiles= 32 built=  42 unloaded=  42 blds=5935 designed=5918 mem=269MB vmem=2458MB draws=55 pos=(456,-1546)
+TIMES process=269.9ms physics=14.7ms nav=0.0ms objects=541
+PROF city 0.69ms  streamer 0.09ms  walkers 0.80ms  doors 0.01ms  water 0.03ms  car_process 2.26ms  life 0.03ms  bodies 0.02ms  police 0.00ms  hands 0.04ms  phone 0.01ms  bail 0.00ms  living 0.01ms  money 0.01ms  citizens 0.25ms  road_name 0.02ms  map 0.04ms  hud_draw 0.21ms  minimap_draw 1.30ms  car_physics 0.32ms  traffic_phys 11.48ms  threats_phys 0.03ms  potholes_phys 0.08ms  bystanders_phys 3.32ms  weather_phys 0.10ms
+PRIMS 18k gpu=0.0ms cpu=5.3ms
+BUNK ganapathy at (1197, -2063)
+CITIZENS footpath graph: 4913 points in 9 tiles, 82.1 ms
+TILES instanced 67, 5.5 ms each on average, worst 25.0 ms
+CITY t= 45s fps= 24 tiles= 25 built=  67 unloaded=  42 blds=10117 designed=10100 mem=353MB vmem=2367MB draws=1339 pos=(701,-1982)
+TIMES process=62.0ms physics=13.3ms nav=0.0ms objects=11517
+PROF city 0.75ms  streamer 1.55ms  walkers 0.88ms  doors 0.02ms  water 0.03ms  car_process 1.81ms  life 0.04ms  bodies 0.06ms  police 0.01ms  hands 0.05ms  phone 0.01ms  bail 0.00ms  living 0.01ms  money 0.02ms  citizens 1.08ms  map 0.04ms  hud_draw 0.34ms  minimap_draw 1.21ms  car_physics 0.24ms  traffic_phys 5.86ms  threats_phys 0.04ms  potholes_phys 0.27ms  bystanders_phys 1.29ms  weather_phys 0.10ms  road_name 0.02ms
+PRIMS 1249k gpu=0.0ms cpu=6.0ms
+WEATHER clear
+TILES instanced 67, 5.5 ms each on average, worst 25.0 ms
+CITY t= 50s fps= 10 tiles= 25 built=  67 unloaded=  42 blds=10117 designed=10100 mem=353MB vmem=2367MB draws=1802 pos=(701,-1982)
+TIMES process=105.3ms physics=13.4ms nav=0.0ms objects=11789
+PROF city 0.70ms  streamer 0.06ms  walkers 1.14ms  doors 0.01ms  water 0.03ms  car_process 2.06ms  life 0.03ms  bodies 0.02ms  police 0.01ms  hands 0.05ms  phone 0.01ms  bail 0.00ms  living 0.01ms  money 0.02ms  citizens 0.11ms  map 0.04ms  hud_draw 0.31ms  minimap_draw 1.15ms  car_physics 0.33ms  traffic_phys 8.75ms  threats_phys 0.03ms  potholes_phys 0.09ms  bystanders_phys 2.98ms  weather_phys 0.11ms  road_name 0.02ms
+PRIMS 1756k gpu=0.0ms cpu=6.5ms
+GFX ganapathy_0715          11.2 fps · CPU  91.2 ms · GPU   0.0 ms ·  1801 draws · 13580 objects ·   1756 k prims · VRAM 2368 MB · RAM  354 MB
+WEATHER clear
+TILES instanced 67, 5.5 ms each on average, worst 25.0 ms
+CITY t= 55s fps= 18 tiles= 25 built=  67 unloaded=  42 blds=10117 designed=10100 mem=353MB vmem=2367MB draws=1646 pos=(701,-1982)
+TIMES process=53.3ms physics=14.7ms nav=0.0ms objects=11789
+PROF city 0.68ms  streamer 0.05ms  walkers 0.92ms  doors 0.01ms  water 0.03ms  car_process 2.13ms  life 0.03ms  bodies 0.02ms  police 0.00ms  hands 0.04ms  phone 0.01ms  bail 0.00ms  living 0.01ms  money 0.01ms  citizens 0.10ms  map 0.03ms  hud_draw 0.28ms  minimap_draw 1.03ms  car_physics 0.32ms  traffic_phys 10.37ms  threats_phys 0.03ms  potholes_phys 0.09ms  bystanders_phys 2.36ms  weather_phys 0.10ms  road_name 0.02ms
+PRIMS 1640k gpu=0.0ms cpu=7.6ms
+GFX ganapathy_1300          14.4 fps · CPU  59.9 ms · GPU   0.0 ms ·  1647 draws · 13446 objects ·   1641 k prims · VRAM 2368 MB · RAM  354 MB
+WEATHER clear
+TILES instanced 67, 5.5 ms each on average, worst 25.0 ms
+CITY t= 60s fps= 14 tiles= 25 built=  67 unloaded=  42 blds=10117 designed=10100 mem=354MB vmem=2367MB draws=1884 pos=(701,-1982)
+TIMES process=68.8ms physics=10.9ms nav=0.0ms objects=11901
+PROF city 0.64ms  streamer 0.05ms  walkers 0.85ms  doors 0.01ms  water 0.03ms  car_process 1.97ms  life 0.03ms  bodies 0.01ms  police 0.00ms  hands 0.04ms  phone 0.01ms  bail 0.00ms  living 0.01ms  money 0.01ms  citizens 0.10ms  road_name 0.02ms  map 0.03ms  hud_draw 0.23ms  minimap_draw 0.97ms  car_physics 0.29ms  traffic_phys 10.05ms  threats_phys 0.03ms  potholes_phys 0.08ms  bystanders_phys 2.23ms  weather_phys 0.09ms
+PRIMS 1765k gpu=0.0ms cpu=3.7ms
+GFX ganapathy_1810          16.1 fps · CPU  62.6 ms · GPU   0.0 ms ·  1899 draws · 13770 objects ·   1765 k prims · VRAM 2368 MB · RAM  354 MB
+WEATHER clear
+TILES instanced 67, 5.5 ms each on average, worst 25.0 ms
+CITY t= 65s fps= 14 tiles= 25 built=  67 unloaded=  42 blds=10117 designed=10100 mem=354MB vmem=2367MB draws=1466 pos=(701,-1982)
+TIMES process=197.2ms physics=7.2ms nav=0.0ms objects=11901
+PROF city 0.35ms  streamer 0.03ms  walkers 0.53ms  doors 0.01ms  water 0.01ms  car_process 1.05ms  life 0.01ms  bodies 0.01ms  police 0.00ms  hands 0.02ms  phone 0.00ms  bail 0.00ms  living 0.01ms  money 0.01ms  citizens 0.05ms  map 0.02ms  hud_draw 0.13ms  minimap_draw 0.50ms  car_physics 0.18ms  traffic_phys 5.84ms  threats_phys 0.01ms  potholes_phys 0.04ms  bystanders_phys 1.17ms  weather_phys 0.05ms  road_name 0.01ms
+PRIMS 1274k gpu=0.0ms cpu=6.2ms
+GFX ganapathy_2130           7.0 fps · CPU 130.5 ms · GPU   0.0 ms ·  1420 draws · 13271 objects ·   1259 k prims · VRAM 2368 MB · RAM  354 MB
+WEATHER rain
+TILES instanced 67, 5.5 ms each on average, worst 25.0 ms
+CITY t= 70s fps=  4 tiles= 25 built=  67 unloaded=  42 blds=10117 designed=10100 mem=354MB vmem=2367MB draws=1424 pos=(701,-1982)
+TIMES process=377.6ms physics=126.0ms nav=0.0ms objects=11865
+PROF city 1.63ms  streamer 0.08ms  walkers 1.51ms  doors 0.02ms  water 0.05ms  car_process 5.54ms  life 0.05ms  bodies 0.03ms  police 0.01ms  hands 0.06ms  phone 0.01ms  bail 0.00ms  living 0.02ms  money 0.03ms  citizens 0.16ms  map 0.08ms  hud_draw 0.51ms  minimap_draw 3.55ms  car_physics 0.91ms  traffic_phys 40.46ms  threats_phys 0.09ms  potholes_phys 0.88ms  bystanders_phys 7.58ms  weather_phys 0.26ms  road_name 0.06ms
+PRIMS 1258k gpu=0.0ms cpu=7.0ms
+TILES instanced 67, 5.5 ms each on average, worst 25.0 ms
+CITY t= 75s fps= 13 tiles= 25 built=  67 unloaded=  42 blds=10117 designed=10100 mem=354MB vmem=2367MB draws=1428 pos=(701,-1982)
+TIMES process=68.7ms physics=11.5ms nav=0.0ms objects=11849
+PROF city 0.76ms  streamer 0.05ms  walkers 0.94ms  doors 0.01ms  water 0.03ms  car_process 13.23ms  life 0.05ms  bodies 0.02ms  police 0.01ms  hands 0.04ms  phone 0.01ms  bail 0.00ms  living 0.01ms  money 0.01ms  citizens 0.36ms  map 0.04ms  hud_draw 0.52ms  minimap_draw 1.13ms  car_physics 0.46ms  traffic_phys 15.45ms  threats_phys 0.04ms  potholes_phys 0.12ms  bystanders_phys 3.00ms  weather_phys 0.13ms  road_name 0.02ms
+PRIMS 1253k gpu=0.0ms cpu=4.0ms
+GFX ganapathy_2130r         12.9 fps · CPU  68.1 ms · GPU   0.0 ms ·  1429 draws · 13255 objects ·   1255 k prims · VRAM 2368 MB · RAM  354 MB
+CITIZENS footpath graph: 3157 points in 6 tiles, 166.9 ms
+CITIZENS footpath graph: 4766 points in 9 tiles, 89.1 ms
+TILES instanced 77, 5.4 ms each on average, worst 25.0 ms
+CITY t= 80s fps=  6 tiles= 30 built=  77 unloaded=  47 blds=11516 designed=11499 mem=365MB vmem=2374MB draws=2107 pos=(1197,-2045)
+TIMES process=181.1ms physics=42.9ms nav=0.0ms objects=12989
+PROF city 1.78ms  streamer 1.26ms  walkers 1.64ms  doors 0.03ms  water 0.06ms  car_process 5.21ms  life 0.05ms  bodies 0.08ms  police 0.01ms  hands 0.05ms  phone 0.01ms  bail 0.01ms  living 0.02ms  money 0.02ms  citizens 5.74ms  road_name 0.04ms  map 0.06ms  hud_draw 2.27ms  minimap_draw 1.78ms  car_physics 1.01ms  traffic_phys 17.70ms  threats_phys 0.09ms  potholes_phys 0.75ms  bystanders_phys 10.27ms  weather_phys 0.27ms
+PRIMS 1712k gpu=0.0ms cpu=8.6ms
+WEATHER clear
+TRAFFIC crash low taxi-auto, closing 3.0 m/s at (1030.7, 421.3, -2318.1) (speeds 7.9/5.1, headings 0.93, roads residential/residential same false, i 1/0, claims 140/126, targets 7.9/5.1)
+TILES instanced 77, 5.4 ms each on average, worst 25.0 ms
+CITY t= 85s fps= 13 tiles= 30 built=  77 unloaded=  47 blds=11516 designed=11499 mem=365MB vmem=2374MB draws=2331 pos=(1197,-2045)
+TIMES process=169.2ms physics=15.2ms nav=0.0ms objects=13253
+PROF city 1.02ms  streamer 0.06ms  walkers 1.91ms  doors 0.01ms  water 0.03ms  car_process 4.45ms  life 0.04ms  bodies 0.02ms  police 0.01ms  hands 0.04ms  phone 0.01ms  bail 0.00ms  living 0.01ms  money 0.02ms  citizens 0.13ms  road_name 0.02ms  map 0.04ms  hud_draw 0.25ms  minimap_draw 1.04ms  car_physics 0.46ms  traffic_phys 18.66ms  threats_phys 0.05ms  potholes_phys 0.13ms  bystanders_phys 3.44ms  weather_phys 0.15ms
+PRIMS 2075k gpu=0.0ms cpu=6.5ms
+GFX bunk_0715                8.0 fps · CPU  79.0 ms · GPU   0.0 ms ·  2334 draws · 12587 objects ·   2076 k prims · VRAM 2375 MB · RAM  366 MB
+WEATHER clear
+TILES instanced 77, 5.4 ms each on average, worst 25.0 ms
+CITY t= 90s fps= 18 tiles= 30 built=  77 unloaded=  47 blds=11516 designed=11499 mem=365MB vmem=2374MB draws=2247 pos=(1197,-2045)
+TIMES process=53.4ms physics=22.9ms nav=0.0ms objects=13253
+PROF city 0.93ms  streamer 0.09ms  walkers 2.21ms  doors 0.02ms  water 0.04ms  car_process 2.34ms  life 0.05ms  bodies 0.03ms  police 0.01ms  hands 0.06ms  phone 0.01ms  bail 0.00ms  living 0.02ms  money 0.02ms  citizens 0.33ms  road_name 0.14ms  map 0.16ms  hud_draw 0.96ms  minimap_draw 1.48ms  car_physics 1.07ms  traffic_phys 24.56ms  threats_phys 0.08ms  potholes_phys 0.16ms  bystanders_phys 8.89ms  weather_phys 0.16ms
+PRIMS 2000k gpu=0.0ms cpu=14.0ms
+GFX bunk_1300               16.2 fps · CPU  53.4 ms · GPU   0.0 ms ·  2249 draws · 12473 objects ·   2001 k prims · VRAM 2375 MB · RAM  366 MB
+WEATHER clear
+TILES instanced 77, 5.4 ms each on average, worst 25.0 ms
+CITY t= 95s fps=  8 tiles= 30 built=  77 unloaded=  47 blds=11516 designed=11499 mem=366MB vmem=2374MB draws=2552 pos=(1197,-2045)
+TIMES process=80.1ms physics=26.1ms nav=0.0ms objects=13363
+PROF city 1.16ms  streamer 0.08ms  walkers 2.31ms  doors 0.03ms  water 0.05ms  car_process 3.95ms  life 0.05ms  bodies 0.03ms  police 0.01ms  hands 0.05ms  phone 0.01ms  bail 0.00ms  living 0.02ms  money 0.02ms  citizens 0.16ms  map 0.06ms  hud_draw 0.37ms  minimap_draw 1.64ms  car_physics 0.69ms  traffic_phys 20.66ms  threats_phys 0.08ms  potholes_phys 0.24ms  bystanders_phys 5.33ms  weather_phys 0.23ms  road_name 0.04ms
+PRIMS 2152k gpu=0.0ms cpu=14.1ms
+GFX bunk_1810               10.2 fps · CPU  79.4 ms · GPU   0.0 ms ·  2556 draws · 12796 objects ·   2152 k prims · VRAM 2375 MB · RAM  367 MB
+WEATHER clear
+TILES instanced 77, 5.4 ms each on average, worst 25.0 ms
+CITY t=100s fps=  5 tiles= 30 built=  77 unloaded=  47 blds=11516 designed=11499 mem=366MB vmem=2394MB draws=2217 pos=(1197,-2045)
+TIMES process=239.4ms physics=20.2ms nav=0.0ms objects=13363
+PROF city 1.27ms  streamer 0.07ms  walkers 2.03ms  doors 0.02ms  water 0.05ms  car_process 3.86ms  life 0.06ms  bodies 0.03ms  police 0.01ms  hands 0.11ms  phone 0.01ms  bail 0.00ms  living 0.05ms  money 0.02ms  citizens 0.18ms  map 0.05ms  hud_draw 0.32ms  minimap_draw 1.39ms  car_physics 0.87ms  traffic_phys 25.23ms  threats_phys 0.11ms  potholes_phys 0.28ms  bystanders_phys 6.02ms  weather_phys 0.27ms  road_name 0.04ms
+PRIMS 1723k gpu=0.0ms cpu=11.0ms
+GFX bunk_2130                5.8 fps · CPU 191.0 ms · GPU   0.0 ms ·  2223 draws · 12476 objects ·   1724 k prims · VRAM 2395 MB · RAM  367 MB
+WEATHER rain
+TILES instanced 77, 5.4 ms each on average, worst 25.0 ms
+CITY t=105s fps= 12 tiles= 30 built=  77 unloaded=  47 blds=11516 designed=11499 mem=366MB vmem=2394MB draws=2226 pos=(1197,-2045)
+TIMES process=76.0ms physics=20.2ms nav=0.0ms objects=13331
+PROF city 0.99ms  streamer 0.06ms  walkers 1.75ms  doors 0.02ms  water 0.05ms  car_process 3.43ms  life 0.04ms  bodies 0.03ms  police 0.01ms  hands 0.04ms  phone 0.01ms  bail 0.00ms  living 0.01ms  money 0.02ms  citizens 0.16ms  map 0.05ms  hud_draw 0.30ms  minimap_draw 1.43ms  car_physics 0.65ms  traffic_phys 18.28ms  threats_phys 0.07ms  potholes_phys 0.20ms  bystanders_phys 4.94ms  weather_phys 0.21ms  road_name 0.03ms
+PRIMS 1722k gpu=0.0ms cpu=9.7ms
+GFX bunk_2130r               7.9 fps · CPU 103.4 ms · GPU   0.0 ms ·  2230 draws · 12497 objects ·   1725 k prims · VRAM 2395 MB · RAM  367 MB
+TILES instanced 90, 5.3 ms each on average, worst 25.0 ms
+CITY t=110s fps=  7 tiles=  9 built=  86 unloaded=  77 blds=12840 designed=12823 mem=299MB vmem=2350MB draws=796 pos=(263,-93)
+TIMES process=146.1ms physics=7.0ms nav=0.0ms objects=6171
+PROF city 1.55ms  streamer 1.59ms  walkers 1.46ms  doors 0.02ms  water 0.05ms  car_process 4.58ms  life 0.05ms  bodies 0.07ms  police 0.01ms  hands 0.05ms  phone 0.02ms  bail 0.00ms  living 0.02ms  money 0.02ms  citizens 0.18ms  map 0.06ms  hud_draw 0.98ms  minimap_draw 1.57ms  car_physics 0.71ms  traffic_phys 17.38ms  threats_phys 0.09ms  potholes_phys 0.53ms  bystanders_phys 4.56ms  weather_phys 0.26ms  road_name 0.04ms
+PRIMS 826k gpu=0.0ms cpu=29.6ms
+CITIZENS footpath graph: 4338 points in 9 tiles, 57.7 ms
+TILES instanced 102, 5.3 ms each on average, worst 25.0 ms
+CITY t=115s fps= 19 tiles= 25 built= 102 unloaded=  77 blds=14938 designed=14904 mem=372MB vmem=2377MB draws=1741 pos=(263,-93)
+TIMES process=67.7ms physics=8.3ms nav=0.0ms objects=12272
+PROF city 0.58ms  streamer 0.90ms  walkers 0.87ms  doors 0.01ms  water 0.02ms  car_process 1.65ms  life 0.03ms  bodies 0.02ms  police 0.00ms  hands 0.04ms  phone 0.01ms  bail 0.00ms  living 0.01ms  money 0.01ms  citizens 0.87ms  map 0.03ms  hud_draw 0.22ms  minimap_draw 0.93ms  car_physics 0.29ms  traffic_phys 6.08ms  threats_phys 0.03ms  potholes_phys 0.30ms  bystanders_phys 1.98ms  weather_phys 0.10ms  road_name 0.02ms
+PRIMS 1568k gpu=0.0ms cpu=4.0ms
+WEATHER clear
+TILES instanced 102, 5.3 ms each on average, worst 25.0 ms
+CITY t=120s fps=  6 tiles= 25 built= 102 unloaded=  77 blds=14938 designed=14904 mem=373MB vmem=2377MB draws=2183 pos=(263,-93)
+TIMES process=126.3ms physics=13.3ms nav=0.0ms objects=12548
+PROF city 0.93ms  streamer 0.04ms  walkers 1.33ms  doors 0.01ms  water 0.04ms  car_process 3.67ms  life 0.03ms  bodies 0.02ms  police 0.00ms  hands 0.04ms  phone 0.01ms  bail 0.00ms  living 0.01ms  money 0.01ms  citizens 0.14ms  map 0.04ms  hud_draw 0.20ms  minimap_draw 0.99ms  car_physics 0.48ms  traffic_phys 18.23ms  threats_phys 0.04ms  potholes_phys 0.12ms  bystanders_phys 4.13ms  weather_phys 0.15ms  road_name 0.03ms
+PRIMS 2002k gpu=0.0ms cpu=5.1ms
+GFX police_0715              7.7 fps · CPU 126.3 ms · GPU   0.0 ms ·  2182 draws · 14372 objects ·   2002 k prims · VRAM 2378 MB · RAM  373 MB
+WEATHER clear
+TILES instanced 102, 5.3 ms each on average, worst 25.0 ms
+CITY t=125s fps= 12 tiles= 25 built= 102 unloaded=  77 blds=14938 designed=14904 mem=373MB vmem=2377MB draws=2040 pos=(263,-93)
+TIMES process=89.8ms physics=7.6ms nav=0.0ms objects=12548
+PROF city 0.39ms  streamer 0.02ms  walkers 0.72ms  doors 0.01ms  water 0.01ms  car_process 1.20ms  life 0.01ms  bodies 0.01ms  police 0.00ms  hands 0.03ms  phone 0.00ms  bail 0.00ms  living 0.01ms  money 0.01ms  citizens 0.05ms  map 0.02ms  hud_draw 0.12ms  minimap_draw 0.53ms  car_physics 0.21ms  traffic_phys 5.88ms  threats_phys 0.01ms  potholes_phys 0.04ms  bystanders_phys 1.45ms  weather_phys 0.05ms  road_name 0.01ms
+PRIMS 1954k gpu=0.0ms cpu=3.4ms
+GFX police_1300             11.1 fps · CPU  80.4 ms · GPU   0.0 ms ·  2047 draws · 14211 objects ·   1963 k prims · VRAM 2378 MB · RAM  373 MB
+WEATHER clear
+TILES instanced 102, 5.3 ms each on average, worst 25.0 ms
+CITY t=130s fps= 10 tiles= 25 built= 102 unloaded=  77 blds=14938 designed=14904 mem=373MB vmem=2377MB draws=2190 pos=(263,-93)
+TIMES process=95.8ms physics=9.0ms nav=0.0ms objects=12660
+PROF city 0.54ms  streamer 0.03ms  walkers 0.91ms  doors 0.01ms  water 0.02ms  car_process 1.96ms  life 0.02ms  bodies 0.01ms  police 0.00ms  hands 0.03ms  phone 0.00ms  bail 0.00ms  living 0.01ms  money 0.01ms  citizens 0.07ms  map 0.03ms  hud_draw 0.13ms  minimap_draw 0.57ms  car_physics 0.34ms  traffic_phys 11.85ms  threats_phys 0.03ms  potholes_phys 0.08ms  bystanders_phys 2.60ms  weather_phys 0.09ms  road_name 0.02ms
+PRIMS 2065k gpu=0.0ms cpu=3.9ms
+GFX police_1810             10.7 fps · CPU  95.8 ms · GPU   0.0 ms ·  2191 draws · 14378 objects ·   2065 k prims · VRAM 2378 MB · RAM  373 MB
+WEATHER clear
+TILES instanced 102, 5.3 ms each on average, worst 25.0 ms
+CITY t=135s fps=  9 tiles= 25 built= 102 unloaded=  77 blds=14938 designed=14904 mem=373MB vmem=2377MB draws=1979 pos=(263,-93)
+TIMES process=97.5ms physics=18.6ms nav=0.0ms objects=12660
+PROF city 0.84ms  streamer 0.05ms  walkers 1.50ms  doors 0.01ms  water 0.04ms  car_process 3.09ms  life 0.03ms  bodies 0.02ms  police 0.00ms  hands 0.04ms  phone 0.01ms  bail 0.00ms  living 0.01ms  money 0.01ms  citizens 0.13ms  map 0.04ms  hud_draw 0.72ms  minimap_draw 1.29ms  car_physics 0.62ms  traffic_phys 18.46ms  threats_phys 0.05ms  potholes_phys 0.15ms  bystanders_phys 4.27ms  weather_phys 0.16ms  road_name 0.03ms
+PRIMS 1813k gpu=0.0ms cpu=8.0ms
+GFX police_2130              7.2 fps · CPU 115.7 ms · GPU   0.0 ms ·  1970 draws · 14160 objects ·   1812 k prims · VRAM 2378 MB · RAM  373 MB
+WEATHER rain
+TILES instanced 102, 5.3 ms each on average, worst 25.0 ms
+CITY t=140s fps= 11 tiles= 25 built= 102 unloaded=  77 blds=14938 designed=14904 mem=373MB vmem=2377MB draws=1967 pos=(263,-93)
+TIMES process=81.0ms physics=7.9ms nav=0.0ms objects=12660
+PROF city 0.71ms  streamer 0.04ms  walkers 1.04ms  doors 0.01ms  water 0.03ms  car_process 2.62ms  life 0.02ms  bodies 0.01ms  police 0.00ms  hands 0.03ms  phone 0.00ms  bail 0.00ms  living 0.01ms  money 0.01ms  citizens 0.11ms  map 0.03ms  hud_draw 0.17ms  minimap_draw 0.81ms  car_physics 0.38ms  traffic_phys 13.83ms  threats_phys 0.03ms  potholes_phys 0.09ms  bystanders_phys 2.99ms  weather_phys 0.11ms  road_name 0.02ms
+PRIMS 1812k gpu=0.0ms cpu=4.5ms
+GFX police_2130r            11.6 fps · CPU  71.1 ms · GPU   0.0 ms ·  1967 draws · 14192 objects ·   1804 k prims · VRAM 2358 MB · RAM  373 MB
+TILES instanced 116, 5.3 ms each on average, worst 25.0 ms
+CITY t=145s fps=  6 tiles=  9 built= 111 unloaded= 102 blds=15783 designed=15748 mem=315MB vmem=2343MB draws=787 pos=(237,2408)
+TIMES process=470.1ms physics=6.8ms nav=0.0ms objects=6962
+PROF city 0.86ms  streamer 1.40ms  walkers 1.14ms  doors 0.01ms  water 5.19ms  car_process 3.10ms  life 0.04ms  bodies 0.04ms  police 0.01ms  hands 0.04ms  phone 0.01ms  bail 0.00ms  living 0.01ms  money 0.02ms  citizens 0.13ms  map 0.05ms  hud_draw 0.28ms  minimap_draw 1.47ms  car_physics 0.49ms  traffic_phys 14.96ms  threats_phys 0.06ms  potholes_phys 0.27ms  bystanders_phys 3.13ms  weather_phys 0.16ms  road_name 0.03ms
+PRIMS 917k gpu=0.0ms cpu=26.7ms
+CITIZENS footpath graph: 3441 points in 9 tiles, 46.4 ms
+TILES instanced 127, 5.2 ms each on average, worst 25.0 ms
+CITY t=150s fps= 22 tiles= 25 built= 127 unloaded= 102 blds=17640 designed=17604 mem=355MB vmem=2355MB draws=1435 pos=(237,2404)
+TIMES process=50.5ms physics=17.4ms nav=0.0ms objects=12246
+PROF city 0.71ms  streamer 0.77ms  walkers 1.23ms  doors 0.01ms  water 0.03ms  car_process 2.01ms  life 0.03ms  bodies 0.03ms  police 0.01ms  hands 0.04ms  phone 0.01ms  bail 0.00ms  living 0.01ms  money 0.01ms  citizens 0.76ms  map 0.04ms  hud_draw 0.31ms  minimap_draw 1.70ms  car_physics 0.33ms  traffic_phys 8.87ms  threats_phys 0.05ms  potholes_phys 0.22ms  bystanders_phys 2.99ms  weather_phys 0.12ms  road_name 0.03ms
+PRIMS 1800k gpu=0.0ms cpu=7.0ms
+WEATHER clear
+TILES instanced 127, 5.2 ms each on average, worst 25.0 ms
+CITY t=155s fps=  7 tiles= 25 built= 127 unloaded= 102 blds=17640 designed=17604 mem=356MB vmem=2355MB draws=1805 pos=(237,2404)
+TIMES process=123.2ms physics=16.1ms nav=0.0ms objects=12518
+PROF city 1.12ms  streamer 0.06ms  walkers 1.73ms  doors 0.01ms  water 0.04ms  car_process 3.66ms  life 0.04ms  bodies 0.02ms  police 0.01ms  hands 0.04ms  phone 0.01ms  bail 0.00ms  living 0.01ms  money 0.02ms  citizens 0.17ms  map 0.05ms  hud_draw 0.26ms  minimap_draw 1.83ms  car_physics 0.64ms  traffic_phys 23.13ms  threats_phys 0.07ms  potholes_phys 0.20ms  bystanders_phys 6.14ms  weather_phys 0.21ms  road_name 0.03ms
+PRIMS 2354k gpu=0.0ms cpu=9.9ms
+GFX hospital_0715            9.2 fps · CPU 113.7 ms · GPU   0.0 ms ·  1803 draws · 14622 objects ·   2354 k prims · VRAM 2355 MB · RAM  356 MB
+WEATHER clear
+TILES instanced 127, 5.2 ms each on average, worst 25.0 ms
+CITY t=160s fps= 11 tiles= 25 built= 127 unloaded= 102 blds=17640 designed=17604 mem=356MB vmem=2355MB draws=1692 pos=(237,2404)
+TIMES process=70.4ms physics=22.7ms nav=0.0ms objects=12516
+PROF city 0.96ms  streamer 0.07ms  walkers 1.74ms  doors 0.02ms  water 0.04ms  car_process 3.04ms  life 0.04ms  bodies 0.03ms  police 0.01ms  hands 0.04ms  phone 0.01ms  bail 0.00ms  living 0.02ms  money 0.02ms  citizens 0.13ms  map 0.04ms  hud_draw 0.33ms  minimap_draw 2.19ms  car_physics 0.62ms  traffic_phys 18.84ms  threats_phys 0.07ms  potholes_phys 0.28ms  bystanders_phys 5.61ms  weather_phys 0.19ms  road_name 0.03ms
+PRIMS 2295k gpu=0.0ms cpu=9.5ms
+GFX hospital_1300           10.7 fps · CPU  70.4 ms · GPU   0.0 ms ·  1692 draws · 14522 objects ·   2296 k prims · VRAM 2355 MB · RAM  356 MB
+WEATHER clear
+TILES instanced 127, 5.2 ms each on average, worst 25.0 ms
+CITY t=165s fps=  4 tiles= 25 built= 127 unloaded= 102 blds=17640 designed=17604 mem=356MB vmem=2355MB draws=1803 pos=(237,2404)
+TIMES process=157.3ms physics=58.3ms nav=0.0ms objects=12624
+PROF city 1.80ms  streamer 0.09ms  walkers 2.49ms  doors 0.07ms  water 0.08ms  car_process 5.62ms  life 0.06ms  bodies 0.06ms  police 0.01ms  hands 0.15ms  phone 0.01ms  bail 0.00ms  living 0.02ms  money 0.04ms  citizens 0.29ms  road_name 0.07ms  map 0.09ms  hud_draw 0.43ms  minimap_draw 3.02ms  car_physics 1.29ms  traffic_phys 45.60ms  threats_phys 0.26ms  potholes_phys 0.66ms  bystanders_phys 14.21ms  weather_phys 0.53ms
+PRIMS 2333k gpu=0.0ms cpu=33.2ms
+GFX hospital_1810            5.6 fps · CPU 157.3 ms · GPU   0.0 ms ·  1803 draws · 14658 objects ·   2333 k prims · VRAM 2355 MB · RAM  357 MB
+WEATHER clear
+TILES instanced 127, 5.2 ms each on average, worst 25.0 ms
+CITY t=170s fps= 11 tiles= 25 built= 127 unloaded= 102 blds=17640 designed=17604 mem=356MB vmem=2355MB draws=1623 pos=(237,2404)
+TIMES process=79.6ms physics=50.2ms nav=0.0ms objects=12624
+PROF city 1.44ms  streamer 0.08ms  walkers 2.67ms  doors 0.04ms  water 0.05ms  car_process 3.97ms  life 0.06ms  bodies 0.04ms  police 0.01ms  hands 0.05ms  phone 0.02ms  bail 0.00ms  living 0.02ms  money 0.02ms  citizens 0.20ms  map 0.07ms  hud_draw 0.52ms  minimap_draw 2.96ms  car_physics 1.49ms  traffic_phys 43.50ms  threats_phys 0.13ms  potholes_phys 0.38ms  bystanders_phys 11.81ms  weather_phys 0.33ms  road_name 0.05ms
+PRIMS 2126k gpu=0.0ms cpu=11.6ms
+GFX hospital_2130            6.8 fps · CPU  98.5 ms · GPU   0.0 ms ·  1623 draws · 14455 objects ·   2126 k prims · VRAM 2355 MB · RAM  357 MB
+WEATHER rain
+TILES instanced 127, 5.2 ms each on average, worst 25.0 ms
+CITY t=175s fps=  7 tiles= 25 built= 127 unloaded= 102 blds=17640 designed=17604 mem=356MB vmem=2355MB draws=1604 pos=(237,2404)
+TIMES process=114.3ms physics=27.1ms nav=0.0ms objects=12624
+PROF city 1.35ms  streamer 0.07ms  walkers 1.77ms  doors 0.03ms  water 0.07ms  car_process 5.47ms  life 0.06ms  bodies 0.05ms  police 0.01ms  hands 0.05ms  phone 0.01ms  bail 0.00ms  living 0.02ms  money 0.02ms  citizens 0.20ms  map 0.07ms  hud_draw 0.34ms  minimap_draw 2.38ms  car_physics 0.95ms  traffic_phys 34.57ms  threats_phys 0.13ms  potholes_phys 0.36ms  bystanders_phys 10.06ms  weather_phys 0.39ms  road_name 0.05ms
+PRIMS 2123k gpu=0.0ms cpu=10.2ms
+GFX hospital_2130r           9.0 fps · CPU 101.3 ms · GPU   0.0 ms ·  1608 draws · 14439 objects ·   2125 k prims · VRAM 2355 MB · RAM  357 MB
+BUNK race_course at (1112, 1658)
+TILES instanced 146, 5.5 ms each on average, worst 25.0 ms
+CITY t=180s fps=  8 tiles= 28 built= 143 unloaded= 115 blds=18537 designed=18501 mem=382MB vmem=2377MB draws=313 pos=(963,1995)
+TIMES process=102.5ms physics=23.5ms nav=0.0ms objects=14251
+PROF city 1.05ms  streamer 2.81ms  walkers 1.35ms  doors 0.02ms  water 0.04ms  car_process 3.37ms  life 0.04ms  bodies 0.06ms  police 0.01ms  hands 0.05ms  phone 0.01ms  bail 0.01ms  living 0.02ms  money 0.02ms  citizens 0.17ms  map 0.05ms  hud_draw 0.33ms  minimap_draw 2.00ms  car_physics 0.59ms  traffic_phys 16.53ms  threats_phys 0.08ms  potholes_phys 0.41ms  bystanders_phys 5.25ms  weather_phys 0.21ms  road_name 0.03ms
+PRIMS 546k gpu=0.0ms cpu=20.4ms
+CITIZENS footpath graph: 4111 points in 9 tiles, 55.0 ms
+WEATHER clear
+TILES instanced 146, 5.5 ms each on average, worst 25.0 ms
+CITY t=185s fps=  4 tiles= 31 built= 146 unloaded= 115 blds=18747 designed=18707 mem=382MB vmem=2377MB draws=1873 pos=(963,1995)
+TIMES process=280.8ms physics=20.1ms nav=0.0ms objects=14535
+PROF city 1.08ms  streamer 0.08ms  walkers 1.94ms  doors 0.02ms  water 0.05ms  car_process 3.70ms  life 0.05ms  bodies 0.04ms  police 0.01ms  hands 0.05ms  phone 0.01ms  bail 0.00ms  living 0.02ms  money 0.02ms  citizens 1.14ms  map 0.05ms  hud_draw 0.37ms  minimap_draw 2.20ms  car_physics 0.66ms  traffic_phys 12.92ms  threats_phys 0.07ms  potholes_phys 0.21ms  bystanders_phys 5.22ms  weather_phys 0.20ms  road_name 0.03ms
+PRIMS 2318k gpu=0.0ms cpu=11.2ms
+GFX race_course_0715         9.9 fps · CPU 123.3 ms · GPU   0.0 ms ·  1889 draws · 15479 objects ·   2319 k prims · VRAM 2378 MB · RAM  383 MB
+WEATHER clear
+TILES instanced 146, 5.5 ms each on average, worst 25.0 ms
+CITY t=190s fps= 14 tiles= 31 built= 146 unloaded= 115 blds=18747 designed=18707 mem=382MB vmem=2377MB draws=1875 pos=(963,1995)
+TIMES process=223.5ms physics=7.9ms nav=0.0ms objects=14535
+PROF city 0.47ms  streamer 0.03ms  walkers 0.76ms  doors 0.01ms  water 0.02ms  car_process 1.63ms  life 0.02ms  bodies 0.01ms  police 0.00ms  hands 0.03ms  phone 0.00ms  bail 0.00ms  living 0.01ms  money 0.01ms  citizens 0.06ms  map 0.02ms  hud_draw 0.15ms  minimap_draw 0.76ms  car_physics 0.23ms  traffic_phys 6.52ms  threats_phys 0.02ms  potholes_phys 0.05ms  bystanders_phys 2.17ms  weather_phys 0.07ms  road_name 0.01ms
+PRIMS 2312k gpu=0.0ms cpu=3.1ms
+GFX race_course_1300         8.9 fps · CPU  96.1 ms · GPU   0.0 ms ·  1886 draws · 15461 objects ·   2313 k prims · VRAM 2378 MB · RAM  383 MB
+WEATHER clear
+TILES instanced 146, 5.5 ms each on average, worst 25.0 ms
+CITY t=195s fps=  5 tiles= 31 built= 146 unloaded= 115 blds=18747 designed=18707 mem=382MB vmem=2377MB draws=2056 pos=(963,1995)
+TIMES process=434.4ms physics=23.3ms nav=0.0ms objects=14645
+PROF city 0.71ms  streamer 0.04ms  walkers 1.09ms  doors 0.01ms  water 0.03ms  car_process 2.86ms  life 0.02ms  bodies 0.01ms  police 0.00ms  hands 0.04ms  phone 0.01ms  bail 0.00ms  living 0.01ms  money 0.01ms  citizens 0.10ms  map 0.03ms  hud_draw 0.20ms  minimap_draw 1.19ms  car_physics 0.42ms  traffic_phys 12.82ms  threats_phys 0.04ms  potholes_phys 0.13ms  bystanders_phys 3.98ms  weather_phys 0.14ms  road_name 0.02ms
+PRIMS 2433k gpu=0.0ms cpu=10.3ms
+GFX race_course_1810         7.3 fps · CPU 103.7 ms · GPU   0.0 ms ·  2067 draws · 15664 objects ·   2457 k prims · VRAM 2378 MB · RAM  383 MB
+WEATHER clear
+TILES instanced 146, 5.5 ms each on average, worst 25.0 ms
+CITY t=200s fps=  5 tiles= 31 built= 146 unloaded= 115 blds=18747 designed=18707 mem=382MB vmem=2377MB draws=1817 pos=(963,1995)
+TIMES process=434.4ms physics=19.1ms nav=0.0ms objects=14647
+PROF city 1.11ms  streamer 0.06ms  walkers 1.62ms  doors 0.02ms  water 0.06ms  car_process 4.00ms  life 0.04ms  bodies 0.03ms  police 0.01ms  hands 0.05ms  phone 0.01ms  bail 0.00ms  living 0.02ms  money 0.02ms  citizens 0.20ms  map 0.06ms  hud_draw 0.28ms  minimap_draw 1.95ms  car_physics 0.85ms  traffic_phys 26.65ms  threats_phys 0.11ms  potholes_phys 0.29ms  bystanders_phys 7.45ms  weather_phys 0.29ms  road_name 0.04ms
+PRIMS 2232k gpu=0.0ms cpu=14.0ms
+TILES instanced 146, 5.5 ms each on average, worst 25.0 ms
+CITY t=205s fps= 11 tiles= 31 built= 146 unloaded= 115 blds=18747 designed=18707 mem=382MB vmem=2377MB draws=1822 pos=(963,1995)
+TIMES process=76.8ms physics=17.1ms nav=0.0ms objects=14645
+PROF city 1.01ms  streamer 0.06ms  walkers 1.24ms  doors 0.02ms  water 0.06ms  car_process 2.99ms  life 0.04ms  bodies 0.03ms  police 0.01ms  hands 0.05ms  phone 0.01ms  bail 0.00ms  living 0.01ms  money 0.02ms  citizens 0.17ms  map 0.06ms  hud_draw 0.27ms  minimap_draw 1.74ms  car_physics 0.63ms  traffic_phys 19.93ms  threats_phys 0.06ms  potholes_phys 0.20ms  bystanders_phys 5.87ms  weather_phys 0.20ms  road_name 0.03ms
+PRIMS 2198k gpu=0.0ms cpu=8.0ms
+GFX race_course_2130        10.2 fps · CPU  81.0 ms · GPU   0.0 ms ·  1808 draws · 15367 objects ·   2196 k prims · VRAM 2378 MB · RAM  383 MB
+WEATHER rain
+TILES instanced 146, 5.5 ms each on average, worst 25.0 ms
+CITY t=210s fps= 12 tiles= 31 built= 146 unloaded= 115 blds=18747 designed=18707 mem=382MB vmem=2377MB draws=1825 pos=(963,1995)
+TIMES process=71.2ms physics=18.1ms nav=0.0ms objects=14629
+PROF city 0.88ms  streamer 0.07ms  walkers 1.38ms  doors 0.02ms  water 0.04ms  car_process 2.80ms  life 0.04ms  bodies 0.03ms  police 0.01ms  hands 0.04ms  phone 0.01ms  bail 0.00ms  living 0.01ms  money 0.02ms  citizens 0.13ms  map 0.04ms  hud_draw 0.26ms  minimap_draw 1.72ms  car_physics 0.55ms  traffic_phys 18.29ms  threats_phys 0.08ms  potholes_phys 0.20ms  bystanders_phys 5.11ms  weather_phys 0.18ms  road_name 0.03ms
+PRIMS 2176k gpu=0.0ms cpu=10.1ms
+GFX race_course_2130r       11.3 fps · CPU  71.2 ms · GPU   0.0 ms ·  1819 draws · 15401 objects ·   2176 k prims · VRAM 2378 MB · RAM  383 MB
+GFX done: 30 captures
