@@ -96,3 +96,19 @@ Still to do on it: the A pillar is too thick from the driver's seat; the dash wa
 seated with his hands on the wheel (IK); LODs; the traffic and parked cars keep the old model until the traffic
 stage (a 226 k-triangle car is too heavy for hundreds of parked copies without LODs); then the cameras (the
 interiors-and-cameras brief).
+
+**Cameras and the driver (17 Nov)**, the interiors-and-cameras brief, first part: five driving cameras on V
+(city_test.gd `CAM_MODES`): Chase (lagging into bends, speed-aware, kept off walls/poles/vehicles by a ball's sweep
+not a ray), Driver (his eyes: the faintest give to the car's accelerations, ~1 cm), Driver (head) (a soft spring
+against pulling away, braking, cornering and bumps, ~2–4 cm, a little roll, looking into the turn), Bonnet,
+Cinematic (a slow orbit); Q / E look left / right and C behind, held, in any of them, without touching the
+steering. Settings (field of view inside and out, follow distance, height, smoothing, head movement, shake, invert)
+in the settings screen's Camera section (scrolls now), saved in settings.cfg. Karthik sits in the sedan (the Sit
+clip, reclined against the seat, hands on the rim at ten to two turning with it, feet on the pedals: rider_ik.gd),
+the cockpit camera at his own eyes (jeep.gd `eye_point`), his head and neck hidden from there so his arms and hands
+on the wheel are seen. Tested (`--camtest=sedan`: every mode pulling away and braking, the looks;
+`docs/shots/cameras/`).
+
+Still to do on the cameras: per-vehicle camera configurations (bus, truck, auto, two-wheelers), his hands closed
+round the rim, the steering wheel easier to see, entering through the door (an animation), interior/exterior
+audio states.

@@ -233,7 +233,7 @@ const BASE_SPECS := {
 	## the reference sedan (tools/cars/sedan_ref.py: our own, 3.995 m, right-hand drive, its own cabin)
 	"sedan": {"name": "Sedan", "glb": "res://assets/vehicles/car_sedan.glb", "mass": 1080.0,
 		"com": Vector3(0, 0.42, 0.05), "radius": 0.31, "rest": 0.16, "travel": 0.17, "stiff": 38.0, "torque": 0.62,
-		"top": 46.0, "seat": Vector3(-0.37, 1.18, -0.2), "own_cabin": true, "glass": "Glass",
+		"top": 46.0, "seat": Vector3(-0.37, 1.31, -0.24), "own_cabin": true, "glass": "Glass",
 		"head": ["Headlight", "DRL"], "tail": ["Taillight"], "lamp": Vector3(0.62, 0.7, 1.95),
 		"boxes": [[Vector3(1.72, 0.66, 3.98), Vector3(0, 0.56, 0)], [Vector3(1.3, 0.52, 2.2), Vector3(0, 1.16, -0.3)]],
 		"ind": [Vector3(0.75, 0.7, 1.93), Vector3(0.75, 0.92, -1.98), Vector3(0.5, 0.45, -2.0)]},
@@ -1043,6 +1043,27 @@ func _seat_driver(model: Node3D) -> void:
 	node.position = at - Vector3(0, 0.5, 0)
 
 
+## Where the driver's eyes are now (the vehicle's frame): his head bone's, a little ahead of it and above, when he's
+## sitting in it (our own cars); else the spec's seat. The cockpit camera goes there: his head, hidden, never in the
+## way, wherever the clip and the IK have put it.
+var _eye_sk: Skeleton3D
+var _eye_bone := -1
+
+func eye_point() -> Vector3:
+	if _rider == null or not is_instance_valid(_rider) or not SPECS.get(vehicle, {}).get("own_cabin", false):
+		return seat
+	if _eye_sk == null or not is_instance_valid(_eye_sk):
+		var sks := _rider.find_children("*", "Skeleton3D", true, false)
+		if sks.is_empty():
+			return seat
+		_eye_sk = sks[0] as Skeleton3D
+		_eye_bone = _eye_sk.find_bone("head")
+	if _eye_bone < 0:
+		return seat
+	var head_now := _eye_sk.global_transform * _eye_sk.get_bone_global_pose(_eye_bone).origin
+	return to_local(head_now) + Vector3(0, 0.01, 0.1)
+
+
 func _turn_needles() -> void:
 	if _needles.is_empty():
 		return
@@ -1555,7 +1576,7 @@ func set_cockpit(on: bool) -> void:
 	cockpit = on
 	if _driver:
 		_driver.visible = not on and _rider == null      # (a two-wheeler has its real rider: the dummy had shown on his back)
-	if _rider:
+	if _rider and not SPECS.get(vehicle, {}).get("own_cabin", false):
 		_rider.visible = not on
 	if kit:
 		kit.set_active(on)
@@ -2114,6 +2135,7 @@ func _process_body(delta: float) -> void:
 			_rik.lean = 0.0
 			_rik.foot_down = 0.0
 			_rik.look = clampf(steering * 1.2, -0.4, 0.4)
+			_rik.recline = 0.2
 	_screen_speed.text = "%d" % roundi(absf(speed) * 3.6)
 	_screen_info.text = "km/h\n%s   %s rpm" % [("M" + gear_name()) if manual else ("D" + gear_name() if gear > 0 else "R"),
 		str(roundi(rpm / 50.0) * 50)]

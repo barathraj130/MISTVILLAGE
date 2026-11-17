@@ -37,11 +37,16 @@ func _ready() -> void:
 	title.add_theme_font_size_override("font_size", int(34 * k))
 	title.add_theme_font_override("font", Style.font(600))
 	box.add_child(title)
+	var scroll := ScrollContainer.new()               # (all of it fits on any window: it scrolls)
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	scroll.custom_minimum_size = Vector2(0, minf(get_viewport_rect().size.y * 0.62, 660.0 * k))
+	box.add_child(scroll)
 	var grid := GridContainer.new()
 	grid.columns = 2
 	grid.add_theme_constant_override("h_separation", int(40 * k))
 	grid.add_theme_constant_override("v_separation", int(14 * k))
-	box.add_child(grid)
+	grid.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	scroll.add_child(grid)
 
 	_heading(grid, "Graphics", k)
 	var names := []
@@ -69,6 +74,24 @@ func _ready() -> void:
 		func(v: float):
 			Jeep.steer_sens = v / 100.0
 			Settings.set_value("driving", "steer_sens", v / 100.0), k)
+
+	_heading(grid, "Camera", k)                      # (city_test.gd's driving cameras read these)
+	_slider(grid, "Field of view (inside)", 55, 95, 1, float(Settings.get_value("camera", "fov", 72.0)), func(v: float):
+		Settings.set_value("camera", "fov", v), k, "°")
+	_slider(grid, "Field of view (outside)", 50, 90, 1, float(Settings.get_value("camera", "fov_chase", 64.0)), func(v: float):
+		Settings.set_value("camera", "fov_chase", v), k, "°")
+	_slider(grid, "Follow distance", 60, 160, 5, float(Settings.get_value("camera", "follow", 1.0)) * 100.0, func(v: float):
+		Settings.set_value("camera", "follow", v / 100.0), k)
+	_slider(grid, "Camera height", 60, 160, 5, float(Settings.get_value("camera", "height", 1.0)) * 100.0, func(v: float):
+		Settings.set_value("camera", "height", v / 100.0), k)
+	_slider(grid, "Smoothing", 40, 200, 10, float(Settings.get_value("camera", "smooth", 1.0)) * 100.0, func(v: float):
+		Settings.set_value("camera", "smooth", v / 100.0), k)
+	_slider(grid, "Head movement", 0, 200, 10, float(Settings.get_value("camera", "head", 1.0)) * 100.0, func(v: float):
+		Settings.set_value("camera", "head", v / 100.0), k)
+	_slider(grid, "Camera shake", 0, 200, 10, float(Settings.get_value("camera", "shake", 1.0)) * 100.0, func(v: float):
+		Settings.set_value("camera", "shake", v / 100.0), k)
+	_toggle(grid, "Invert look", bool(Settings.get_value("camera", "invert", false)), func(on: bool):
+		Settings.set_value("camera", "invert", on), k)
 
 	_heading(grid, "Language", k)
 	var langs := ["auto", "en", "ta"]
@@ -144,7 +167,7 @@ func _toggle(grid: GridContainer, t: String, on: bool, cb: Callable, k: float) -
 	grid.add_child(c)
 
 
-func _slider(grid: GridContainer, t: String, lo: float, hi: float, step: float, v: float, cb: Callable, k: float) -> void:
+func _slider(grid: GridContainer, t: String, lo: float, hi: float, step: float, v: float, cb: Callable, k: float, unit := "%") -> void:
 	_label(grid, t, k)
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation", int(14 * k))
@@ -156,10 +179,10 @@ func _slider(grid: GridContainer, t: String, lo: float, hi: float, step: float, 
 	s.custom_minimum_size = Vector2(300 * k, 44 * k)
 	s.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	var n := Label.new()
-	n.text = "%d%%" % roundi(s.value)
+	n.text = "%d%s" % [roundi(s.value), unit]
 	n.custom_minimum_size = Vector2(66 * k, 0)
 	s.value_changed.connect(func(x: float):
-		n.text = "%d%%" % roundi(x)
+		n.text = "%d%s" % [roundi(x), unit]
 		cb.call(x))
 	row.add_child(s)
 	row.add_child(n)

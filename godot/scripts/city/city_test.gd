@@ -70,7 +70,25 @@ var indoors := false                        # a story scene in a room under the 
 var dark_room := false                      # a story room whose power has failed: only a torch and the street's glow
 var driving := false
 var placed := false                         # the car waits, frozen, until the road under it has loaded
-var cam_mode := 0                           # 0 chase, 1 cockpit, 2 bonnet
+var cam_mode := 0                           # CAM_MODES: 0 chase, 1 driver's eyes, 2 driver's head, 3 bonnet, 4 cinematic
+## The driving cameras (V steps through them; Q / E look left / right, C behind, held; the mouse looks round):
+##   Chase       behind and above, the heading lagging into a bend, further back with speed, never through a wall
+##   Driver      his eyes, steady: only the faintest give to braking, pulling away, a corner, a bump
+##   Driver head his head as it moves: a soft spring against the car's accelerations (back as it pulls away, on as
+##               it brakes, out in a corner, a little lift over a bump), looking into the turn
+##   Bonnet      over the bonnet, looking ahead
+##   Cinematic   a slow orbit round the car, kept off walls
+## Their settings (field of view, follow distance and height, smoothing, head movement, shake, invert) are the
+## settings screen's "Camera" ones (settings.gd: camera/*).
+const CAM_MODES := ["Chase", "Driver", "Driver (head)", "Bonnet", "Cinematic"]
+var _cam_cfg := {}
+var _cam_cfg_t := 0.0
+var _head := Vector3.ZERO                   # the head's give, in the car's frame (m): right, up, forward
+var _head_v := Vector3.ZERO
+var _look_yaw := 0.0                        # Q / E / C: looking aside or behind (radians), eased
+var _cine := 0.0                            # the cinematic camera's angle round the car
+var _cam_prev_vy := 0.0
+var _look_force := 0.0                      # (testing: a look held)
 var _cam_prev_speed := 0.0
 var _cam_acc := 0.0
 var _cam_heading := Vector3.ZERO           # the chase camera follows a lagging heading: it swings out in corners
@@ -1120,6 +1138,65 @@ func _traffic_test() -> void:
 	get_tree().quit()
 
 
+## (testing) --camtest[=kind]: in that vehicle on the road, each camera in turn: pulling away (a picture), braking
+## (a picture), the head's give printed; from the driver's seat a look left, right and behind (pictures):
+## user://cam_<mode>_<moment>.jpg.
+func _cam_test(kind: String) -> void:
+	await get_tree().create_timer(10.0).timeout
+	if car.vehicle != kind and car.SPECS.has(kind):
+		var at: Vector3 = car.global_position
+		car.configure(kind)
+		car.global_position = at + Vector3.UP * 0.4
+		await get_tree().create_timer(2.0).timeout
+	car.autopilot = true
+	for m in CAM_MODES.size():
+		cam_mode = m
+		car.set_cockpit(m == 1 or m == 2)
+		car.in_brake = 0.0
+		car.in_throttle = 0.7
+		car.in_steer = 0.0
+		var peak := Vector3.ZERO
+		var t := 0.0
+		while t < 2.2:
+			await get_tree().process_frame
+			t += get_process_delta_time()
+			if _head.length() > peak.length():
+				peak = _head
+		await _cam_snap("cam_%d_accel" % m)
+		car.in_throttle = 0.0
+		car.in_brake = 1.0
+		var peak_b := Vector3.ZERO
+		t = 0.0
+		while t < 0.7:
+			await get_tree().process_frame
+			t += get_process_delta_time()
+			if _head.z > peak_b.z:
+				peak_b = _head
+		await _cam_snap("cam_%d_brake" % m)
+		print("CAMTEST %s: %.1f km/h; head pulling away %s, braking %s; fov %.0f" % [CAM_MODES[m], absf(car.speed) * 3.6,
+			str(peak.snapped(Vector3.ONE * 0.001)), str(peak_b.snapped(Vector3.ONE * 0.001)), cam.fov])
+		t = 0.0
+		while t < 1.5:
+			await get_tree().process_frame
+			t += get_process_delta_time()
+		if m == 1:
+			for lk in [["left", 1.35], ["right", -1.35], ["behind", PI]]:
+				_look_force = lk[1]
+				await get_tree().create_timer(0.8).timeout
+				await _cam_snap("cam_1_look_%s" % lk[0])
+			_look_force = 0.0
+			await get_tree().create_timer(0.8).timeout
+	car.in_brake = 0.0
+	car.autopilot = false
+	get_tree().quit()
+
+
+func _cam_snap(nm: String) -> void:
+	for f in 2:
+		await RenderingServer.frame_post_draw
+	get_viewport().get_texture().get_image().save_jpg(ProjectSettings.globalize_path("user://%s.jpg" % nm), 0.85)
+
+
 ## (testing) --lamptest: the camera behind one of the pack's vehicles in the traffic for 40 s: how long it indicated
 ## (and which way, and whether it then turned that way), braked; a picture the first time each (user://lamp_*.jpg).
 func _lamp_test() -> void:
@@ -2147,6 +2224,36 @@ func _now12() -> String:
 	return "%d:%02d %s" % [12 if h % 12 == 0 else h % 12, floori(fmod(m, 60.0)), "AM" if h < 12 else "PM"]
 
 
+## The camera settings (settings.gd "camera"), re-read twice a second (the settings screen changes them).
+func _camera_cfg(dt: float) -> Dictionary:
+	_cam_cfg_t -= dt
+	if _cam_cfg.is_empty() or _cam_cfg_t <= 0.0:
+		_cam_cfg_t = 0.5
+		_cam_cfg = {"fov": float(Settings.get_value("camera", "fov", 72.0)), "fov_chase": float(Settings.get_value("camera", "fov_chase", 64.0)),
+			"follow": float(Settings.get_value("camera", "follow", 1.0)), "height": float(Settings.get_value("camera", "height", 1.0)),
+			"smooth": maxf(float(Settings.get_value("camera", "smooth", 1.0)), 0.3), "head": float(Settings.get_value("camera", "head", 1.0)),
+			"shake": float(Settings.get_value("camera", "shake", 1.0)), "invert": bool(Settings.get_value("camera", "invert", false))}
+	return _cam_cfg
+
+
+## The camera kept off walls, poles, trees and other vehicles between the car and it: a ball's sweep from the pivot
+## (a ray alone slipped past a pole's edge), then a little short of what it met.
+func _clear_view(pivot: Vector3, at: Vector3) -> Vector3:
+	var space := get_world_3d().direct_space_state
+	var q := PhysicsShapeQueryParameters3D.new()
+	var ball := SphereShape3D.new()
+	ball.radius = 0.25
+	q.shape = ball
+	q.transform = Transform3D(Basis(), pivot)
+	q.motion = at - pivot
+	q.exclude = [car.get_rid()]
+	q.collision_mask = 0xFFFFFFFF
+	var r := space.cast_motion(q)
+	if r.size() == 2 and r[0] < 1.0:
+		return pivot + (at - pivot) * maxf(r[0] - 0.02, 0.05)
+	return at
+
+
 func _drive_camera(dt: float) -> void:
 	# the car's pose between physics steps (physics interpolation): smooth at any frame rate
 	var jt: Transform3D = car.get_global_transform_interpolated()
@@ -2157,49 +2264,88 @@ func _drive_camera(dt: float) -> void:
 	_orbit_idle += dt
 	if _orbit_idle > 1.6:
 		_orbit = _orbit.lerp(Vector2.ZERO, 1.0 - exp(-dt * 2.5))
+	var cfg := _camera_cfg(dt)
+	# what the car is doing (its frame): pulling away or braking, cornering, over a bump: the camera answers these
+	var acc: float = (car.speed - _cam_prev_speed) / maxf(dt, 0.001)
+	_cam_prev_speed = car.speed
+	_cam_acc = lerpf(_cam_acc, clampf(acc, -9.0, 5.0), 1.0 - exp(-dt * 4.0 / float(cfg["smooth"])))
+	var lat: float = clampf(car.speed * car.angular_velocity.dot(jt.basis.y), -9.0, 9.0)   # (m/s², to its left +)
+	var vy: float = car.linear_velocity.dot(jt.basis.y)
+	var bump: float = clampf((vy - _cam_prev_vy) / maxf(dt, 0.001), -30.0, 30.0)
+	_cam_prev_vy = vy
+	# looking aside or behind (held), eased out and back
+	var want_look := _look_force
+	if driving and walker == null and _look_force == 0.0:
+		if Input.is_key_pressed(KEY_Q):
+			want_look = 1.35
+		elif Input.is_key_pressed(KEY_E):
+			want_look = -1.35
+		elif Input.is_key_pressed(KEY_C):
+			want_look = PI
+	_look_yaw = lerp_angle(_look_yaw, want_look, 1.0 - exp(-dt * 7.0))
+	var inv := -1.0 if bool(cfg["invert"]) else 1.0
 	match cam_mode:
-		0:
-			var acc: float = (car.speed - _cam_prev_speed) / maxf(dt, 0.001)
-			_cam_prev_speed = car.speed
-			_cam_acc = lerpf(_cam_acc, clampf(acc, -8.0, 4.0), 1.0 - exp(-dt * 3.0))
+		0, 4:
 			# the heading lags the car's: in a bend the camera swings out and shows the corner
 			if _cam_heading == Vector3.ZERO:
 				_cam_heading = flat
-			_cam_heading = _cam_heading.slerp(flat, 1.0 - exp(-dt * lerpf(2.2, 4.0, clampf(absf(car.speed) / 25.0, 0.0, 1.0)))).normalized()
-			var h := _cam_heading.rotated(Vector3.UP, _orbit.x)
-			var back: float = car.chase_back + _cam_acc * 0.14 + clampf(absf(car.speed) / 30.0, 0.0, 1.0) * 1.2
-			var up: float = car.chase_up + _orbit.y * back
+			_cam_heading = _cam_heading.slerp(flat, 1.0 - exp(-dt * lerpf(2.2, 4.0, clampf(absf(car.speed) / 25.0, 0.0, 1.0)) / float(cfg["smooth"]))).normalized()
+			var h := _cam_heading.rotated(Vector3.UP, _orbit.x + _look_yaw)
+			var back: float = (car.chase_back + _cam_acc * 0.14 + clampf(absf(car.speed) / 30.0, 0.0, 1.0) * 1.2) * float(cfg["follow"])
+			var up: float = car.chase_up * float(cfg["height"]) + _orbit.y * back * inv
+			if cam_mode == 4:                                 # cinematic: round it slowly, a little lower, nearer
+				_cine += dt * 0.22
+				h = flat.rotated(Vector3.UP, _cine + _orbit.x)
+				back = car.chase_back * 0.85 * float(cfg["follow"])
+				up = car.chase_up * 0.55 * float(cfg["height"]) + _orbit.y * back * inv
 			var want := jt.origin - h * back + Vector3.UP * up
-			cam.global_position = cam.global_position.lerp(want, 1.0 - exp(-dt * 6.0))
+			cam.global_position = cam.global_position.lerp(want, 1.0 - exp(-dt * 6.0 / float(cfg["smooth"])))
 			var pivot := jt.origin + Vector3.UP * 1.6
-			var q := PhysicsRayQueryParameters3D.create(pivot, cam.global_position)
-			q.exclude = [car.get_rid()]
-			var hit := get_world_3d().direct_space_state.intersect_ray(q)
-			if not hit.is_empty():
-				cam.global_position = hit["position"] + (pivot - hit["position"]).normalized() * 0.4
-			cam.look_at(jt.origin + Vector3.UP * (car.chase_up * 0.48) + h * 4.0)
-			cam.fov = lerpf(cam.fov, 64.0 + clampf(absf(car.speed) / 30.0, 0.0, 1.0) * 10.0, 1.0 - exp(-dt * 1.5))
-		1:
-			cam.fov = 74.0
-			# head turns with the mouse; a little head movement from the road and the g-forces
-			var look := face * Basis(Vector3.UP, _orbit.x * 1.6) * Basis(Vector3.RIGHT, deg_to_rad(-5.0) + _orbit.y)
-			var bob := Vector3(0, -clampf(car.jolt / 400.0, 0.0, 0.03), -clampf(_cam_acc * 0.006, -0.04, 0.04))
-			cam.global_transform = Transform3D(look, jt * (car.seat + bob))
-		2:
-			cam.fov = 70.0
-			cam.global_transform = Transform3D(face * Basis(Vector3.UP, _orbit.x), jt * car.bonnet)
+			cam.global_position = _clear_view(pivot, cam.global_position)
+			cam.look_at(jt.origin + Vector3.UP * (car.chase_up * 0.48) + h * (4.0 if cam_mode == 0 else 0.0))
+			cam.fov = lerpf(cam.fov, float(cfg["fov_chase"]) + clampf(absf(car.speed) / 30.0, 0.0, 1.0) * 10.0, 1.0 - exp(-dt * 1.5))
+		1, 2:
+			cam.fov = float(cfg["fov"])
+			var k: float = float(cfg["head"])
+			var give := Vector3.ZERO
+			if cam_mode == 1:                                 # his eyes: steady, the faintest give
+				give = Vector3(-lat * 0.0016, -clampf(bump * 0.0006, -0.01, 0.01), -_cam_acc * 0.0022) * k
+				_head = give
+				_head_v = Vector3.ZERO
+			else:                                             # his head: a soft spring against what the car does
+				var force := Vector3(-lat * 0.006, -bump * 0.0012, -_cam_acc * 0.0065) * k
+				_head_v += (force * 60.0 - _head * 60.0 - _head_v * 11.0) * dt
+				_head += _head_v * dt
+				_head = Vector3(clampf(_head.x, -0.06, 0.06), clampf(_head.y, -0.035, 0.035), clampf(_head.z, -0.06, 0.06))
+				give = _head
+			var roll := -lat * 0.0035 * k if cam_mode == 2 else 0.0
+			var into_turn: float = car.steering * (0.35 if cam_mode == 2 else 0.12)
+			var look := face * Basis(Vector3.UP, _orbit.x * 1.6 + _look_yaw + into_turn) * Basis(Vector3.RIGHT, deg_to_rad(-5.0) + _orbit.y * inv) \
+				* Basis(Vector3.BACK, roll)
+			# (the car's frame: x left, y up, z ahead; give's x is to his right)
+			var off := Vector3(-give.x, give.y, give.z)
+			cam.global_transform = Transform3D(look, jt * (car.eye_point() + off))
+		3:
+			cam.fov = float(cfg["fov"]) - 2.0
+			cam.global_transform = Transform3D(face * Basis(Vector3.UP, _orbit.x + _look_yaw), jt * car.bonnet)
 	if _shake > 0.001:
-		cam.global_position += Vector3(randf() - 0.5, randf() - 0.5, randf() - 0.5) * _shake * 0.12
+		cam.global_position += Vector3(randf() - 0.5, randf() - 0.5, randf() - 0.5) * _shake * 0.12 * float(_cam_cfg.get("shake", 1.0))
 
 
 func _process(dt: float) -> void:
 	if car and car.get("_rider") != null and is_instance_valid(car._rider) and not car.mounting:
-		car._rider.visible = walker == null and not car.cockpit   # (on foot, he isn't also sitting on the scooter)
+		var own: bool = car.SPECS.get(car.vehicle, {}).get("own_cabin", false)
+		car._rider.visible = walker == null and (own or not car.cockpit)   # (on foot, he isn't also sitting in it)
+		if own and car.get("_rik") != null and is_instance_valid(car._rik):
+			car._rik.hide_head = car.cockpit                 # (from his eyes: his arms and hands, not inside his head)
 	if not _sfv_started and car:
 		for a in OS.get_cmdline_user_args():
 			if a == "--pedcheck" and not _sfv_started:
 				_sfv_started = true
 				_ped_check.call_deferred()
+			if a.begins_with("--camtest") and not _sfv_started:
+				_sfv_started = true
+				_cam_test.call_deferred(a.get_slice("=", 1) if a.contains("=") else "sedan")
 			if a == "--lamptest" and not _sfv_started:
 				_sfv_started = true
 				_lamp_test.call_deferred()
@@ -2617,13 +2763,15 @@ func _unhandled_input(e: InputEvent) -> void:
 		_orbit_idle = 0.0
 		return
 	if car and driving and e is InputEventJoypadButton and e.pressed and e.button_index == JOY_BUTTON_Y:
-		cam_mode = (cam_mode + 1) % 3
-		car.set_cockpit(cam_mode == 1)
+		cam_mode = (cam_mode + 1) % CAM_MODES.size()
+		car.set_cockpit(cam_mode == 1 or cam_mode == 2)
 		return
 	if car and e is InputEventKey and e.pressed and not e.echo:
 		if e.keycode == KEY_V and driving:
-			cam_mode = (cam_mode + 1) % 3
-			car.set_cockpit(cam_mode == 1)
+			cam_mode = (cam_mode + 1) % CAM_MODES.size()
+			car.set_cockpit(cam_mode == 1 or cam_mode == 2)
+			if hud:
+				hud.warn("Camera: " + CAM_MODES[cam_mode], 1.5)
 			return
 		if e.keycode == KEY_F and driving:
 			toggle_on_foot()

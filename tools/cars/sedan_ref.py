@@ -818,11 +818,11 @@ def interior(M):
         add(box("Belt", (0.02, 0.004, 0.62), (-0.36, side * 0.7, 0.96), M["BlackTrim"], rot=(math.radians(-side * 8), math.radians(25), 0)))
     eye = bpy.data.objects.new("Eye", None)
     K.link(eye)
-    eye.location = (-0.2, DY, 1.18)
+    eye.location = (-0.24, DY, 1.31)                          # (a seated man's eyes, ~0.79 m over the cushion)
     add(eye)
     # where the driver goes (jeep.gd seats Karthik by these): his hips on the cushion, his hands at ten to two on the
     # rim (on the pivot: they turn with it), his feet on the clutch's rest and the accelerator
-    for nm, at, par in (("DriverHip", (-0.17, DY, 0.6), None), ("GripL", (0.0, 0.158, 0.092), piv), ("GripR", (0.0, -0.158, 0.092), piv),
+    for nm, at, par in (("DriverHip", (-0.17, DY, 0.56), None), ("GripL", (0.0, 0.158, 0.092), piv), ("GripR", (0.0, -0.158, 0.092), piv),
                         ("FootL", (0.58, DY + 0.13, 0.36), None), ("FootR", (0.58, DY - 0.11, 0.37), None)):
         mk = bpy.data.objects.new(nm, None)
         K.link(mk)

@@ -25,6 +25,8 @@ var weight := 1.0
 var limbs := {"arm_l": 1.0, "arm_r": 1.0, "leg_l": 1.0, "leg_r": 1.0, "body": 1.0}
 var over := {}                       # limb → [world point, weight 0..1]
 var forward := Vector3.FORWARD       # the vehicle's forward, in the world (the knees and elbows bend toward it)
+var hide_head := false
+var recline := 0.0                   # (in a car's seat: leaning back against its back, radians)               # (the camera at his eyes, in a car: his head shrunk away, his arms on the wheel seen)
 var up := Vector3.UP
 
 
@@ -35,6 +37,8 @@ func _process_modification_with_delta(_delta: float) -> void:
 	# the body first: a little more lean into the turn, the head toward level and the way he's going
 	var w0 := weight
 	weight = w0 * float(limbs["body"])
+	if absf(recline) > 0.001:                            # (back against the seat: about his side-to-side axis)
+		_turn_bone(sk, "spine_01", forward.cross(up).normalized(), -recline)
 	_turn_bone(sk, "spine_02", forward, -lean * 0.25)
 	_turn_bone(sk, "neck_01", forward, lean * 0.55)
 	_turn_bone(sk, "head", up, look * 0.6)
@@ -52,6 +56,12 @@ func _process_modification_with_delta(_delta: float) -> void:
 		_limb(sk, "thigh_r", "calf_r", "foot_r", _aim("leg_r", foot_r.global_position), forward + Vector3.UP * 0.3)
 		_flat_foot(sk, "foot_r", "ball_r")
 	weight = w0
+	if hide_head:
+		for bn in ["neck_01", "head"]:
+			var hb := sk.find_bone(bn)
+			if hb >= 0:
+				var hg := sk.get_bone_global_pose(hb)
+				sk.set_bone_global_pose(hb, Transform3D(hg.basis.scaled(Vector3.ONE * 0.001), hg.origin))
 
 
 ## A limb's target: its own, or overridden (blended by the override's weight).
