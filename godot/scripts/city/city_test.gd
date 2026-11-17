@@ -235,6 +235,13 @@ func _joins_for_test(roads: Array) -> Dictionary:
 	return Streamer._joins_core(roads)
 
 
+## (testing) --ride=KIND: you on that vehicle once the street's loaded (with --ridetest: the riding test on it).
+func _ride_on(kind: String) -> void:
+	while not placed or streamer.loaded.size() < 20 or not streamer.pending.is_empty():
+		await get_tree().process_frame
+	car.configure(kind)
+
+
 ## (testing) --surfacetest[=scooter]: the car (or Karthik's scooter) set down on the asphalt street 25 m before it
 ## becomes an earth road (x 463, z −1715, near home), driven straight on through the change and along the earth,
 ## at about 30 km/h; every half second: the surface its wheels feel, its speed, its height over the road, the
@@ -295,6 +302,9 @@ func _surfacetest() -> void:
 func _ready() -> void:
 	if " --surfacetest" in " " + " ".join(OS.get_cmdline_user_args()):
 		_surfacetest.call_deferred()
+	for a in OS.get_cmdline_user_args():
+		if a.begins_with("--ride="):
+			_ride_on.call_deferred(a.substr(7))
 	if "--profsweep" in OS.get_cmdline_user_args():
 		_profsweep.call_deferred()
 	if "--jointest" in OS.get_cmdline_user_args():

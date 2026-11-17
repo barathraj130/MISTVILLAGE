@@ -139,3 +139,17 @@ its bracket with lit digits, the grab rail, the passengers' bench for three. Kar
 grips, his feet on the footboard. 86 k triangles, 2.3 MB. In the game as `auto` (`car_auto.glb`, 450 kg, three
 wheels). Tested (`--sfvehicletest=auto`: three wheels, seat; `--camtest=auto`: every camera; pictures
 `docs/shots/fleet/auto_*`, `blender_auto.jpg`).
+
+**Stage 5, the two-wheelers (17 Nov)**: the motorcycle and the scooter you can ride were boxes built in code; now
+the rider scenes' detailed models (`tools/bikes_real.py`: a round-tube cradle frame, the finned engine, header and
+silencer, chain and sprockets, coil-spring shocks, forks, switchgear, levers, cables, mirrors, lamps), exported by
+`tools/cars/build_bikes.py` with made-up registrations on their plates: `bike_ride.glb` (a deep red commuter
+motorcycle, 58 k triangles) and `scooter_ride.glb` (a pearl white step-through, 46 k). You ride them as Karthik's
+own scooter: in his helmet, hands on the grips, feet on the pegs or the floorboard, a foot down when stopped,
+balanced and leaning into turns. jeep.gd's handlebar takes its steering axis, grips and footrests from each spec
+(`bar_mid`, `bar_axle`, `grip`, `peg`); the motorcycle's headlamp, visor, dials, clamp, cables and front indicators
+turn with the bar (the rear indicators don't). The motorcycle's gearing made a commuter's (overall 27 / 18 / 13.5 /
+11.5 / 10.3: its first gear had been so tall the engine sat at idle at 11 km/h). Tested: `--sfvehicletest=bike,scooter`
+(two wheels, seat, mass; `docs/shots/fleet/bikes_in_game.jpg`), `--ride=bike --ridetest` (a new test flag: standing
+with a foot down, away at 3.4 m/s after 2 s at 60 % throttle, 9° and 12° of lean in the turns, braked to a stop;
+`bike_ride_test.jpg`), the scooter the same.

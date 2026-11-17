@@ -67,7 +67,7 @@ const DRIVE := {
 	"scooter": {"torque": [[1500.0, 6.0], [5000.0, 8.8], [7500.0, 8.0], [9000.0, 6.0]], "cvt": [22.0, 8.0], "rpm_band": [3200.0, 7000.0],
 		"final": 1.0, "reverse": 0.0, "idle": 1500.0, "redline": 9000.0, "up": [0.0, 0.0], "brake_g": 0.7, "cda": 0.6, "crr": 0.015, "grip": 4.0,
 		"wet_k": 1.55},
-	"bike": {"torque": [[1500.0, 6.0], [4000.0, 11.0], [7000.0, 13.0], [9500.0, 11.0]], "ratios": [14.5, 9.6, 7.2, 5.9, 5.0],
+	"bike": {"torque": [[1500.0, 6.0], [4000.0, 11.0], [7000.0, 13.0], [9500.0, 11.0]], "ratios": [27.0, 18.0, 13.5, 11.5, 10.3],
 		"final": 1.0, "reverse": 0.0, "idle": 1400.0, "redline": 9500.0, "up": [4000.0, 8500.0], "brake_g": 0.8, "cda": 0.5, "crr": 0.015, "grip": 4.4,
 		"wet_k": 1.3},
 	"heavy": {"torque": [[600.0, 400.0], [1200.0, 800.0], [1800.0, 800.0], [2600.0, 600.0]], "ratios": [4.5, 2.8, 1.8, 1.3, 1.0],
@@ -279,7 +279,17 @@ const BASE_SPECS := {
 	"van": {"name": "Van", "kenney": "van", "len": 4.6, "w": 1.85, "h": 2.0, "mass": 1800.0, "radius": 0.34, "torque": 0.7, "top": 36.0},
 	"delivery": {"name": "Delivery truck", "kenney": "delivery", "len": 5.2, "w": 1.95, "h": 2.3, "mass": 2400.0, "radius": 0.36, "torque": 0.8, "top": 32.0},
 	"tractor": {"name": "Tractor", "kenney": "tractor", "len": 3.9, "w": 1.9, "h": 2.4, "mass": 2500.0, "radius": 0.5, "torque": 1.0, "top": 9.0},
-	"bike": {"name": "Motorbike", "built": "bike", "len": 2.0, "w": 0.8, "h": 1.4, "mass": 230.0, "radius": 0.31, "torque": 0.16, "top": 26.0, "rider": true},
+	## A commuter motorcycle and a step-through scooter (tools/cars/build_bikes.py, the rider scenes' detailed models):
+	## you ride them as on Karthik's scooter. "bar_mid" / "bar_axle" give the steering axis (the model's frame: x ahead, y
+	## up, z to his right), "grip" each grip from the bar's middle (±z), "peg" where each foot rests (±z).
+	"bike": {"name": "Motorbike", "glb": "res://assets/vehicles/bike_ride.glb", "mass": 230.0,
+		"com": Vector3(0, 0.55, -0.05), "radius": 0.3, "rest": 0.12, "travel": 0.1, "sag": 0.0, "stiff": 42.0, "torque": 0.16,
+		"top": 26.0, "seat": Vector3(0, 1.66, -0.2), "glass": "NoGlass", "head": ["Headlamp"], "tail": ["TailLamp"],
+		"lamp": Vector3(0.0, 0.93, 0.64), "boxes": [[Vector3(0.6, 0.85, 2.0), Vector3(0, 0.66, 0.0)]],
+		"ind": [Vector3(0.18, 0.92, 0.63), Vector3(0.17, 0.74, -0.8), Vector3(0.1, 0.6, -0.83)], "rider": true,
+		"two_wheeler": true, "rider_model": "story_karthik", "helmet": "res://assets/vehicles/helmet.glb",
+		"hip": Vector3(0, 0.985, -0.17), "bar_mid": Vector3(0.465, 1.06, 0.0), "bar_axle": Vector3(0.66, 0.3, 0.0),
+		"grip": Vector3(-0.04, 0.02, 0.36), "peg": Vector3(0.02, 0.38, 0.2)},
 	## Karthik's own scooter (tools/story_scooter.py) with him riding it in his helmet (the story's night delivery)
 	"karthik_scooter": {"name": "Karthik's scooter", "glb": "res://assets/vehicles/karthik_scooter.glb", "mass": 190.0,
 		"com": Vector3(0, 0.5, -0.1), "radius": 0.24, "rest": 0.12, "travel": 0.1, "sag": 0.0, "stiff": 40.0, "torque": 0.11,
@@ -288,7 +298,13 @@ const BASE_SPECS := {
 		"ind": [Vector3(0.2, 0.9, 0.49), Vector3(0.135, 0.6, -0.9), Vector3(0.1, 0.5, -0.92)], "rider": true,
 		"two_wheeler": true, "rider_model": "story_karthik", "helmet": "res://assets/vehicles/helmet.glb",
 		"hip": Vector3(0, 0.945, -0.17)},
-	"scooter": {"name": "Scooter", "built": "scooter", "len": 1.8, "w": 0.75, "h": 1.4, "mass": 190.0, "radius": 0.25, "torque": 0.11, "top": 21.0, "rider": true},
+	"scooter": {"name": "Scooter", "glb": "res://assets/vehicles/scooter_ride.glb", "mass": 190.0,
+		"com": Vector3(0, 0.5, -0.1), "radius": 0.24, "rest": 0.12, "travel": 0.1, "sag": 0.0, "stiff": 40.0, "torque": 0.11,
+		"top": 21.0, "seat": Vector3(0, 1.62, -0.2), "glass": "NoGlass", "head": ["Headlamp"], "tail": ["TailLamp"],
+		"lamp": Vector3(0.0, 1.02, 0.5), "boxes": [[Vector3(0.6, 0.8, 1.85), Vector3(0, 0.62, -0.15)]],
+		"ind": [Vector3(0.2, 0.9, 0.49), Vector3(0.135, 0.6, -0.9), Vector3(0.1, 0.5, -0.92)], "rider": true,
+		"two_wheeler": true, "rider_model": "story_karthik", "helmet": "res://assets/vehicles/helmet.glb",
+		"hip": Vector3(0, 0.945, -0.17)},
 }
 ## Every vehicle (the ones above).
 static var SPECS: Dictionary = BASE_SPECS
@@ -307,7 +323,9 @@ const RiderIK := preload("res://scripts/drive/rider_ik.gd")
 ## A two-wheeler's handlebar that turns (the bar, grips, levers, mirrors, switches, its cowl, the fork: jeep.gd
 ## _make_bars), the rider's hands and feet on it (rider_ik.gd), and his left foot down when he stops.
 const BAR_PARTS := ["Bar", "BarEnd", "Grip", "Lever", "Mirror", "MirrorStem", "MirrorGlass", "Switches", "Cowl", "Speedo",
-	"Stanchion", "ForkSlider", "FrontGuard"]
+	"Stanchion", "ForkSlider", "FrontGuard", "Handlebar", "Headlamp", "Bezel", "Visor", "Cluster", "Dial", "TopClamp", "Cable"]
+## Parts of these names turn with the bar only at the front (a motorcycle's indicators: the rear ones stay put).
+const BAR_FRONT_PARTS := ["Indicator", "IndicatorStalk"]
 var _bars: Node3D
 var _bar_axis := Vector3.UP
 var _grips: Array = []             # [left, right] markers on the bar
@@ -646,8 +664,9 @@ func _make_bars(model: Node3D) -> void:
 	if grip == null:
 		return
 	var root := grip.get_parent() as Node3D
-	var bar_mid := Vector3(0.35, 1.05, 0.0)               # (in the model's frame: x ahead, y up, z to his right)
-	var axle := Vector3(0.6, 0.24, 0.0)
+	var sp: Dictionary = SPECS[vehicle]
+	var bar_mid: Vector3 = sp.get("bar_mid", Vector3(0.35, 1.05, 0.0))   # (in the model's frame: x ahead, y up, z to his right)
+	var axle: Vector3 = sp.get("bar_axle", Vector3(0.6, 0.24, 0.0))
 	_bar_axis = (bar_mid - axle).normalized()
 	_bars = Node3D.new()
 	_bars.name = "Bars"
@@ -655,20 +674,30 @@ func _make_bars(model: Node3D) -> void:
 	_bars.position = bar_mid
 	for c in root.get_children():
 		var nm := String(c.name).get_slice(".", 0)
-		if c != _bars and nm in BAR_PARTS:
+		if c != _bars and (nm in BAR_PARTS or (nm in BAR_FRONT_PARTS and _front_of(c as Node3D, bar_mid.x - 0.3))):
 			(c as Node3D).reparent(_bars, true)
 	_grips = []
-	for z in [-0.345, 0.345]:                             # (left, right: his right is the model's +z)
+	var gp: Vector3 = sp.get("grip", Vector3(-0.01, 0.0, 0.345))
+	for z in [-gp.z, gp.z]:                               # (left, right: his right is the model's +z)
 		var g := Node3D.new()
 		_bars.add_child(g)
-		g.position = Vector3(-0.01, 0.0, z)
+		g.position = Vector3(gp.x, gp.y, z)
 		_grips.append(g)
 	_pegs = []
-	for z in [-0.11, 0.11]:
+	var pg: Vector3 = sp.get("peg", Vector3(0.12, 0.41, 0.11))   # (ankles 8 cm over the floorboard's top, 0.33)
+	for z in [-pg.z, pg.z]:
 		var f := Node3D.new()
 		root.add_child(f)
-		f.position = Vector3(0.12, 0.41, z)              # (ankles 8 cm over the floorboard's top, 0.33)
+		f.position = Vector3(pg.x, pg.y, z)
 		_pegs.append(f)
+
+
+## Whether a part's middle (its mesh's box, in its parent's frame) is ahead of x.
+func _front_of(n: Node3D, x: float) -> bool:
+	var mi := n as MeshInstance3D
+	if mi == null or mi.mesh == null:
+		return n.position.x > x
+	return (n.transform * mi.mesh.get_aabb().get_center()).x > x
 
 
 ## His hands to the grips, his feet to the floorboard (rider_ik.gd), once he's settled on the seat.
