@@ -133,6 +133,9 @@ func add_bill(b: Dictionary) -> void:
 			return
 	var bill := {"id": str(b["id"]), "label": b["label"], "amount": int(b["amount"]), "paid": 0,
 		"due": _day() + int(b.get("in_days", 7)), "kind": str(b.get("kind", "other")), "stage": 0, "missed": 0}
+	if b.has("loan"):                                # (a vehicle loan's instalment: garage.gd keeps its loan)
+		bill["loan"] = str(b["loan"])
+		bill["n"] = int(b.get("n", 0))
 	bills.append(bill)
 	if not city.phone.contacts.any(func(c): return str(c.get("id", "")) == "bala"):
 		city.phone.add_contact(BALA)
@@ -235,6 +238,8 @@ func _process_timed(_dt: float) -> void:
 
 ## A bill not paid, `late` days past its date: what happens, once each stage.
 func _overdue(b: Dictionary, late: int) -> void:
+	if b.has("loan") and city.get("garage") and city.garage.bill_overdue(b, late):
+		return
 	var k := str(b["kind"])
 	var stage := int(b["stage"])
 	var amma := {"en": "Amma", "ta": "அம்மா"}
@@ -514,6 +519,10 @@ func _shot(dir: String, name: String) -> void:
 # ---- the ways out ----
 ## A bill paid off: what it ends (the scooter back; the chain home again).
 func _paid_off(b: Dictionary) -> void:
+	if b.has("loan") and city.get("garage"):
+		city.garage.bill_paid(b)
+		_save()
+		return
 	match str(b["kind"]):
 		"redeem":
 			seized = false
