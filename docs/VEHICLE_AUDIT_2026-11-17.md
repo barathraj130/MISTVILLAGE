@@ -74,3 +74,25 @@ traffic LOD and the performance benchmark (5 / 15 / 30 / 50 vehicles).
 questions, the existing pipeline; quality limited by what we can model in code, a vehicle a stage), or downloaded
 high-quality models with interiors (CC0 / CC-BY, cleaned up and unbadged: faster, possibly better looking, needs
 your approval and Sketchfab login for each, and the earlier ones were taken out for their quality).
+
+## 4. Progress
+
+**Stage 1, the reference sedan, first version (17 Nov)** — `tools/cars/sedan_ref.py` on `tools/cars/carkit.py`:
+our own compact sedan (3.995 × 1.735 × 1.515 m, 2.45 m wheelbase, 185/65 R15, right-hand drive), in the game as
+the drivable `sedan` (`godot/assets/vehicles/car_sedan.glb`, `"own_cabin": true`). The body swept through
+cross-sections; panel gaps cut (doors, bonnet, boot, bumpers, the fuel lid); arches cut and lined; glass, lamps,
+grille, intake and fog lamps cut to their outlines on the curved surface (clean edges); lamps with housings,
+projectors, DRLs, indicators, tail/brake/reverse segments named for the lamp system; slatted grille, intake mesh,
+mirrors with indicators, handles, wipers, aerial, exhaust, Indian plates (made-up registration); wheels with
+shaped tyres and tread, alloys, hubs, discs and calipers; a PBR library (clear-coated paint, see-through glass,
+chrome, grained plastics, fabric, carpet, rubber; their detail textures made in the script). The cabin: dash with
+a hooded cluster (speed, revs, fuel dials whose needles the game turns), centre screen, vents, hazard switch,
+climate knobs, glovebox; the wheel on its column (turns with the steering), stalks, three pedals, bolstered seats
+with headrests, rear bench, console with gear lever and handbrake, door cards, headliner, visors, rear-view
+mirror, belts, cabin light; the driver's Eye. 226 k triangles. Tested: `--sfvehicletest=sedan` (pictures
+`docs/shots/sedan_ref/`), `--taketest` (taken from the street, driven, parked).
+
+Still to do on it: the A pillar is too thick from the driver's seat; the dash wants more shape and detail; Karthik
+seated with his hands on the wheel (IK); LODs; the traffic and parked cars keep the old model until the traffic
+stage (a 226 k-triangle car is too heavy for hundreds of parked copies without LODs); then the cameras (the
+interiors-and-cameras brief).

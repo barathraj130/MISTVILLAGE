@@ -230,12 +230,13 @@ const BASE_SPECS := {
 		"head": ["Headlight"], "tail": ["TailBar"], "lamp": Vector3(0.6, 0.64, 1.95),
 		"boxes": [[Vector3(1.7, 0.72, 3.8), Vector3(0, 0.6, 0)], [Vector3(1.4, 0.55, 2.4), Vector3(0, 1.17, -0.3)]],
 		"ind": [Vector3(0.7, 0.5, 1.9), Vector3(0.62, 0.78, -1.92), Vector3(0.4, 0.45, -1.93)]},
-	"sedan": {"name": "Sedan", "glb": "res://assets/vehicles/fleet_sedan.glb", "mass": 1150.0,
-		"com": Vector3(0, 0.45, 0), "radius": 0.30, "rest": 0.16, "travel": 0.16, "stiff": 40.0, "torque": 0.65,
-		"top": 46.0, "seat": Vector3(-0.36, 1.26, 0.0), "cabin": Vector3(0, -0.22, 0.1), "cab_scale": 0.78, "glass": "Glass",
-		"head": ["Headlight"], "tail": ["TailBar"], "lamp": Vector3(0.6, 0.64, 2.24),
-		"boxes": [[Vector3(1.74, 0.72, 4.35), Vector3(0, 0.6, 0)], [Vector3(1.4, 0.55, 2.4), Vector3(0, 1.15, -0.2)]],
-		"ind": [Vector3(0.7, 0.5, 2.18), Vector3(0.62, 0.78, -2.2), Vector3(0.4, 0.45, -2.21)]},
+	## the reference sedan (tools/cars/sedan_ref.py: our own, 3.995 m, right-hand drive, its own cabin)
+	"sedan": {"name": "Sedan", "glb": "res://assets/vehicles/car_sedan.glb", "mass": 1080.0,
+		"com": Vector3(0, 0.42, 0.05), "radius": 0.31, "rest": 0.16, "travel": 0.17, "stiff": 38.0, "torque": 0.62,
+		"top": 46.0, "seat": Vector3(-0.37, 1.18, -0.2), "own_cabin": true, "glass": "Glass",
+		"head": ["Headlight", "DRL"], "tail": ["Taillight"], "lamp": Vector3(0.62, 0.7, 1.95),
+		"boxes": [[Vector3(1.72, 0.66, 3.98), Vector3(0, 0.56, 0)], [Vector3(1.3, 0.52, 2.2), Vector3(0, 1.16, -0.3)]],
+		"ind": [Vector3(0.75, 0.7, 1.93), Vector3(0.75, 0.92, -1.98), Vector3(0.5, 0.45, -2.0)]},
 	"taxi": {"name": "Taxi", "glb": "res://assets/vehicles/fleet_sedan.glb", "mass": 1150.0,
 		"com": Vector3(0, 0.45, 0), "radius": 0.30, "rest": 0.16, "travel": 0.16, "stiff": 40.0, "torque": 0.6,
 		"top": 42.0, "seat": Vector3(-0.36, 1.26, 0.0), "cabin": Vector3(0, -0.22, 0.1), "cab_scale": 0.78, "glass": "Glass",
@@ -348,6 +349,8 @@ func configure(kind: String, paint := Color(0, 0, 0, 0)) -> void:
 	_headlights.clear()
 	_coupe_wheels.clear()
 	_cab_parts.clear()
+	_steer_axis = Vector3.UP
+	_needles.clear()
 	screens.clear()
 	_cluster_ui = null
 	_nav = null
@@ -398,6 +401,8 @@ func configure(kind: String, paint := Color(0, 0, 0, 0)) -> void:
 		_rider.name = "Rider"
 		add_child(_rider)
 		seat = Vector3(0, 1.62, -0.2)
+	elif sp.get("own_cabin", false):
+		_fit_own_cabin(sp)
 	elif sp.get("interior", false):
 		_fit_model_interior(sp)
 	elif ResourceLoader.exists(CABINS % _cabin_name(kind)):
@@ -414,7 +419,7 @@ func configure(kind: String, paint := Color(0, 0, 0, 0)) -> void:
 			n3.scale.x *= cs
 		if not sp.has("seat"):
 			seat = DRIVER_SEAT + shift
-	if not sp.get("rider", false) and not sp.get("nocab", false):
+	if not sp.get("rider", false) and not sp.get("nocab", false) and not sp.get("own_cabin", false):
 		_build_kit(sp)
 	else:
 		kit = null
@@ -979,6 +984,46 @@ func _add_driver(eye: Vector3) -> void:
 
 ## The luxury SUV brings its own cabin: hide the stand-in dash, turn the modelled steering wheel
 ## with the car's steering, and put the live speed / gear readouts on its screens.
+## Our own cars' cabins (tools/cars/*.py, docs/VEHICLE_AUDIT_2026-11-17.md): the model brings its whole interior;
+## its SteeringPivot turns the wheel (about its column, the pivot's own X), its Eye is the driver's eyes, and its
+## dials' needles (NeedleSpeed, NeedleRPM, NeedleFuel) are turned to the real speed, revs and fuel.
+var _steer_axis := Vector3.UP
+var _needles := {}                   # name → [Node3D, its rest basis]
+
+func _fit_own_cabin(_sp: Dictionary) -> void:
+	var model := get_node("Model") as Node3D
+	for c in _cab_parts:
+		if c is Node3D:
+			(c as Node3D).visible = false
+	var piv := model.find_child("SteeringPivot", true, false) as Node3D
+	if piv:
+		_steering_wheel = piv
+		_steer_base = piv.basis
+		_steer_axis = Vector3.RIGHT
+	var eye := model.find_child("Eye", true, false) as Node3D
+	if eye:
+		seat = _rel(eye, self).origin
+	_needles.clear()
+	for nm in ["NeedleSpeed", "NeedleRPM", "NeedleFuel"]:
+		var nd := model.find_child(nm, true, false) as Node3D
+		if nd:
+			_needles[nm] = [nd, nd.basis]
+	if _driver:
+		_driver.visible = false
+
+
+func _turn_needles() -> void:
+	if _needles.is_empty():
+		return
+	var kmh := absf(speed) * 3.6
+	var vals := {"NeedleSpeed": clampf(kmh / 180.0, 0.0, 1.0), "NeedleRPM": clampf(rpm / 7000.0, 0.0, 1.0),
+		"NeedleFuel": clampf(fuel_frac, 0.0, 1.0)}
+	for nm in _needles:
+		var e: Array = _needles[nm]
+		var sweep := 4.2 if nm != "NeedleFuel" else 1.6     # (radians across the dial: 240°, the fuel gauge's 90°)
+		(e[0] as Node3D).basis = (e[1] as Basis) * Basis(Vector3.RIGHT, sweep * 0.5 - float(vals[nm]) * sweep)
+
+
 func _fit_model_interior(_sp: Dictionary) -> void:
 	var model := get_node("Model") as Node3D
 	for c in _cab_parts:
@@ -2024,7 +2069,8 @@ func _process_body(delta: float) -> void:
 		elif Input.is_action_just_pressed("shift_down") and (gear > 1 or absf(speed) < 1.0):
 			gear -= 1
 			_shift_timer = 0.3
-	_steering_wheel.basis = _steer_base * Basis(Vector3.UP, -steering * 7.5)
+	_steering_wheel.basis = _steer_base * Basis(_steer_axis, -steering * 7.5)
+	_turn_needles()
 	if _bars:                                            # the handlebar turns as the front wheel does
 		_bars.basis = Basis(_bar_axis, steering)
 	if _rik and is_instance_valid(_rik):
