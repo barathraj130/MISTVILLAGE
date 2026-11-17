@@ -20,8 +20,7 @@ Rooms (room_<name>.glb):
     home        the story: Karthik's rented house in Ganapathy (front room with Amma's sewing machine, the family
                 photos, a lamp in the wall shrine, the kitchen corner; his own small room with a cot, the phone
                 charger, shirts and a cap on hooks)
-    showroom    the prologue: a two-wheeler dealership (made-up: Vela Two-Wheelers): podiums for the display
-                vehicles (Mark_show_1..4), the sales desk, the finance cabin behind glass
+    (showroom   the prologue's dealership: built by tools/cars/build_showroom.py now)
     dev_office  the story: Raghavan Developers, Gandhipuram (reception, Karthik's and Suresh's desks,
                 Raghavan's cabin behind a glass partition: big desk, the Mist Village photo, the Green Valley
                 file, a layout plan on the wall)
@@ -631,8 +630,8 @@ def materials():
 
 
 ROOMS = {"kirana": kirana, "restaurant": restaurant, "tea": tea, "hotel": hotel, "temple": temple,
-         "hospital": hospital, "bank": bank, "fuel": fuel, "office": office, "home": home, "dev_office": dev_office,
-         "showroom": showroom}
+         "hospital": hospital, "bank": bank, "fuel": fuel, "office": office, "home": home, "dev_office": dev_office}
+# (the showroom's room_showroom.glb is tools/cars/build_showroom.py's now; showroom() here was its first, plain version)
 
 
 def finish(out):
