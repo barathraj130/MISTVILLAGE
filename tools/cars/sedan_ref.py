@@ -284,7 +284,7 @@ def a_line(z):
     zc = K.cr(TOP, COWL)
     zr = K.cr(TOP, ROOF_F)
     t = min(max((z - zc) / (zr - zc), 0.0), 1.0)
-    return COWL - 0.07 + (ROOF_F - 0.0 - (COWL - 0.07)) * t
+    return COWL - 0.05 + (ROOF_F + 0.02 - (COWL - 0.05)) * t
 
 
 def c_line(z):
@@ -398,7 +398,7 @@ def openings(body, M, names):
             left.append((x, w))
             right.append((x, -w))
         return left + list(reversed(right))
-    got["ws"] = mark(bm, screen(COWL - 0.03, ROOF_F + 0.03, 0.045), "top", (0.93, 1.6), names.index("Glass"))
+    got["ws"] = mark(bm, screen(COWL - 0.03, ROOF_F + 0.03, 0.028), "top", (0.93, 1.6), names.index("Glass"))
     got["bs"] = mark(bm, screen(ROOF_R - 0.03, BOOT + 0.04, 0.09), "top", (1.0, 1.6), names.index("GlassTint"))
     gr = [(-0.42, 0.47), (0.42, 0.47), (0.44, 0.6), (0.38, 0.625), (-0.38, 0.625), (-0.44, 0.6)]
     got["grille"] = mark(bm, gr, "front", (HX - 0.3, HX + 0.1), names.index("BlackGloss"))
@@ -820,6 +820,19 @@ def interior(M):
     K.link(eye)
     eye.location = (-0.2, DY, 1.18)
     add(eye)
+    # where the driver goes (jeep.gd seats Karthik by these): his hips on the cushion, his hands at ten to two on the
+    # rim (on the pivot: they turn with it), his feet on the clutch's rest and the accelerator
+    for nm, at, par in (("DriverHip", (-0.17, DY, 0.6), None), ("GripL", (0.0, 0.158, 0.092), piv), ("GripR", (0.0, -0.158, 0.092), piv),
+                        ("FootL", (0.58, DY + 0.13, 0.36), None), ("FootR", (0.58, DY - 0.11, 0.37), None)):
+        mk = bpy.data.objects.new(nm, None)
+        K.link(mk)
+        if par is not None:
+            mk.parent = par
+            mk.location = at
+            out.append(mk)
+        else:
+            mk.location = at
+            add(mk)
     return out
 
 
@@ -843,6 +856,9 @@ def finish(body, M, extra):
         so = o.modifiers.new("Skin", 'SOLIDIFY')
         so.thickness = th
         so.offset = -1.0
+        if main == "Paint":                                     # (its inside: the cabin's trim, not paint: the pillars,
+            o.data.materials.append(M["DashLight"])            #  the door frames, seen from the seat)
+            so.material_offset = len(o.data.materials) - 1
         K.apply_mods(o)
     return root
 

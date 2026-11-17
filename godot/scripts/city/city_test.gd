@@ -1373,6 +1373,18 @@ func _sfv_test(keys: PackedStringArray) -> void:
 		c.fov = 50.0
 		add_child(c)
 		var L := float(car.SPECS[key].get("len", 4.5))
+		var mdl := car.get_node_or_null("Model") as Node3D       # (its real length, where the spec doesn't say)
+		if mdl:
+			var lo := INF
+			var hi := -INF
+			for mi in mdl.find_children("*", "MeshInstance3D", true, false):
+				var ab: AABB = (mi as MeshInstance3D).global_transform * (mi as MeshInstance3D).get_aabb()
+				for corner in 8:
+					var z: float = car.to_local(ab.get_endpoint(corner)).z
+					lo = minf(lo, z)
+					hi = maxf(hi, z)
+			if hi > lo:
+				L = maxf(L, hi - lo)
 		c.global_position = car.global_position + car.global_basis.x * (L * 0.45 + 1.2) + car.global_basis.z * (L * 0.5) + Vector3.UP * (1.6 + L * 0.35)
 		c.look_at(car.global_position + Vector3.UP * 0.8, Vector3.UP)
 		c.make_current()
@@ -1384,6 +1396,13 @@ func _sfv_test(keys: PackedStringArray) -> void:
 		for f in 3:
 			await RenderingServer.frame_post_draw
 		get_viewport().get_texture().get_image().save_jpg(ProjectSettings.globalize_path("user://sfv_%s_out2.jpg" % key), 0.85)
+		if car.SPECS[key].get("own_cabin", false):        # (the driver, close, through his window)
+			var st: Vector3 = car.to_global(car.seat)
+			c.global_position = st - car.global_basis.x * 1.25 + car.global_basis.z * 0.25 + Vector3.UP * 0.05
+			c.look_at(st + Vector3.DOWN * 0.25 + car.global_basis.z * 0.25, Vector3.UP)
+			for f in 3:
+				await RenderingServer.frame_post_draw
+			get_viewport().get_texture().get_image().save_jpg(ProjectSettings.globalize_path("user://sfv_%s_driver.jpg" % key), 0.85)
 		for end in [["front", 1.0], ["back", -1.0]]:      # (close, nose and tail: its badges, plates)
 			c.global_position = car.global_position + car.global_basis.z * float(end[1]) * (L * 0.5 + 2.6) + Vector3.UP * 1.1
 			c.look_at(car.global_position + car.global_basis.z * float(end[1]) * L * 0.5 + Vector3.UP * 0.7, Vector3.UP)

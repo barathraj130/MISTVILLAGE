@@ -356,6 +356,7 @@ func configure(kind: String, paint := Color(0, 0, 0, 0)) -> void:
 	_nav = null
 	_glass = null
 	_rider = null
+	_rik = null
 	_steer_base = Basis(Vector3.RIGHT, deg_to_rad(-65.0))
 	vehicle = kind
 	var sp: Dictionary = SPECS[kind]
@@ -1010,6 +1011,36 @@ func _fit_own_cabin(_sp: Dictionary) -> void:
 			_needles[nm] = [nd, nd.basis]
 	if _driver:
 		_driver.visible = false
+	_seat_driver(model)
+
+
+## Karthik in the driver's seat of a car with its own cabin: the sitting clip, his hips on the cushion (DriverHip),
+## his hands to the rim (GripL / GripR, on the steering pivot: they turn with it) and his feet to the pedals (FootL /
+## FootR), by rider_ik.gd, as on his scooter.
+func _seat_driver(model: Node3D) -> void:
+	var hip := model.find_child("DriverHip", true, false) as Node3D
+	var gl := model.find_child("GripL", true, false) as Node3D
+	var gr := model.find_child("GripR", true, false) as Node3D
+	var fl := model.find_child("FootL", true, false) as Node3D
+	var fr := model.find_child("FootR", true, false) as Node3D
+	var path := "res://assets/people/story_karthik.glb"
+	if hip == null or gl == null or fl == null or not ResourceLoader.exists(path):
+		return
+	var node := (load(path) as PackedScene).instantiate() as Node3D
+	node.name = "Rider"
+	var aps := node.find_children("*", "AnimationPlayer", true, false)
+	if not aps.is_empty():
+		var ap := aps[0] as AnimationPlayer
+		if ap.has_animation("Sit"):
+			ap.get_animation("Sit").loop_mode = Animation.LOOP_LINEAR
+			node.ready.connect(func() -> void: ap.play("Sit"))
+	var at := _rel(hip, self).origin
+	_rider = node
+	_grips = [gl, gr]
+	_pegs = [fl, fr]
+	node.ready.connect(func() -> void: get_tree().create_timer(0.15).timeout.connect(_settle_rider.bind(node, at, "")))
+	add_child(node)
+	node.position = at - Vector3(0, 0.5, 0)
 
 
 func _turn_needles() -> void:
@@ -2074,7 +2105,15 @@ func _process_body(delta: float) -> void:
 	if _bars:                                            # the handlebar turns as the front wheel does
 		_bars.basis = Basis(_bar_axis, steering)
 	if _rik and is_instance_valid(_rik):
-		_ride_pose(delta)
+		if two_wheeler:
+			_ride_pose(delta)
+		else:                                            # (in a car's seat: his hands on the rim, feet on the pedals)
+			var fwd := global_basis.z.normalized()
+			_rik.forward = fwd
+			_rik.up = global_basis.y.normalized()
+			_rik.lean = 0.0
+			_rik.foot_down = 0.0
+			_rik.look = clampf(steering * 1.2, -0.4, 0.4)
 	_screen_speed.text = "%d" % roundi(absf(speed) * 3.6)
 	_screen_info.text = "km/h\n%s   %s rpm" % [("M" + gear_name()) if manual else ("D" + gear_name() if gear > 0 else "R"),
 		str(roundi(rpm / 50.0) * 50)]
