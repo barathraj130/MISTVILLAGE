@@ -112,3 +112,16 @@ on the wheel are seen. Tested (`--camtest=sedan`: every mode pulling away and br
 Still to do on the cameras: per-vehicle camera configurations (bus, truck, auto, two-wheelers), his hands closed
 round the rim, the steering wheel easier to see, entering through the door (an animation), interior/exterior
 audio states.
+
+**Stages 2–3, the hatchback, the SUV and the MPV (17 Nov)**: the sedan's builder made general
+(`tools/cars/build_car.py --kind sedan|hatchback|suv|mpv`, one table of dimensions and parts per kind: length,
+width, height, wheelbase, tyres, roof and boot lines, a boot or a tailgate, door cuts, lamps, grille, cladding,
+roof rails, seat rows). Our own designs, unbadged, right-hand drive: a compact hatchback (3.8 m, silver), a
+compact SUV (4.3 m, navy, black arch and sill cladding, roof rails, taller wheels, a higher seat) and a three-row
+MPV (4.4 m, white). Each with the sedan's full cabin, Karthik seated, the turning wheel and working dials. In the
+game as `hatchback` (950 kg), `suv` (1 450 kg, a higher centre of mass, longer travel, stiffer springs) and `mpv`
+(1 250 kg); 227–252 k triangles each. Tested (`--sfvehicletest=hatchback,suv,mpv`: four wheels, seat, mass; the
+pictures outside, through his window and from his eyes: `docs/shots/fleet/`).
+
+Next: the auto (our own), then the two-wheelers; buses and heavy trucks as downloads only with your approval of
+each; LODs, then the new cars into the traffic and the parked cars.
