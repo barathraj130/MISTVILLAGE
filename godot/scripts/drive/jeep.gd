@@ -302,13 +302,17 @@ const BASE_SPECS := {
 		"ind": [Vector3(0.2, 0.9, 0.49), Vector3(0.135, 0.6, -0.9), Vector3(0.1, 0.5, -0.92)], "rider": true,
 		"two_wheeler": true, "rider_model": "story_karthik", "helmet": "res://assets/vehicles/helmet.glb",
 		"hip": Vector3(0, 0.945, -0.17)},
-	"scooter": {"name": "Scooter", "glb": "res://assets/vehicles/scooter_ride.glb", "mass": 190.0,
-		"com": Vector3(0, 0.5, -0.1), "radius": 0.24, "rest": 0.12, "travel": 0.1, "sag": 0.0, "stiff": 40.0, "torque": 0.11,
-		"top": 21.0, "seat": Vector3(0, 1.62, -0.2), "glass": "NoGlass", "head": ["Headlamp"], "tail": ["TailLamp"],
-		"lamp": Vector3(0.0, 1.02, 0.5), "boxes": [[Vector3(0.6, 0.8, 1.85), Vector3(0, 0.62, -0.15)]],
-		"ind": [Vector3(0.2, 0.9, 0.49), Vector3(0.135, 0.6, -0.9), Vector3(0.1, 0.5, -0.92)], "rider": true,
-		"two_wheeler": true, "rider_model": "story_karthik", "helmet": "res://assets/vehicles/helmet.glb",
-		"hip": Vector3(0, 0.945, -0.17)},
+	## Our own 110 cc step-through (tools/cars/build_scooter.py): its own handling (a lower seat and centre of mass, a
+	## wider lock, small tyres that hold less), feet on the floorboard, the apron's lamps fixed, the bar cowl turning.
+	"scooter": {"name": "Scooter", "glb": "res://assets/vehicles/scooter_commuter.glb", "mass": 185.0,
+		"com": Vector3(0, 0.45, -0.12), "radius": 0.226, "rest": 0.11, "travel": 0.09, "sag": 0.0, "stiff": 38.0, "torque": 0.11,
+		"top": 23.0, "seat": Vector3(0, 1.55, -0.1), "glass": "NoGlass", "head": ["HeadlampApron"], "tail": ["TailLamp"],
+		"lamp": Vector3(0.0, 0.84, 0.5), "boxes": [[Vector3(0.6, 0.75, 1.85), Vector3(0, 0.6, -0.15)]],
+		"ind": [Vector3(0.2, 0.79, 0.47), Vector3(0.12, 0.66, -0.93), Vector3(0.1, 0.5, -0.94)], "rider": true,
+		"two_wheeler": true, "rider_model": "story_karthik", "helmet": "res://assets/vehicles/helmet.glb", "own_ind": true,
+		"hip": Vector3(0, 0.88, -0.2), "bar_mid": Vector3(0.195, 1.03, 0.0), "bar_axle": Vector3(0.6, 0.235, 0.0),
+		"grip": Vector3(-0.078, -0.01, 0.325), "peg": Vector3(0.19, 0.38, 0.11), "dial_kmh": 100.0,
+		"rider_eye": Vector3(0, 1.55, -0.08), "eye_pitch": 31.0, "bonnet": Vector3(0, 1.15, 0.04), "steer_max": 40.0, "grip_g": 0.85},
 }
 ## Every vehicle (the ones above).
 static var SPECS: Dictionary = BASE_SPECS
@@ -2020,14 +2024,16 @@ func _physics_process_body(delta: float) -> void:
 	var s := smoothstep(0.0, 18.0, absf(speed))
 	# (s^0.75: at 40 km/h about 10.5° of lock, enough for a car to use its ~0.8 g; sqrt(s) had held it to 8°, 0.67 g,
 	#  under what the tyres hold; the highway end is unchanged)
-	var max_s := lerpf(MAX_STEER, HIGH_SPEED_STEER, pow(s, 0.75)) * (lerpf(1.0, steer_sens, s) if not autopilot else 1.0)
+	var lock := deg_to_rad(float(SPECS[vehicle]["steer_max"])) if SPECS[vehicle].has("steer_max") else MAX_STEER
+	var max_s := lerpf(lock, HIGH_SPEED_STEER, pow(s, 0.75)) * (lerpf(1.0, steer_sens, s) if not autopilot else 1.0)
 	var lat_g := float(DRIVE.get(drive_kind, {}).get("lat_g", 0.0)) if not two_wheeler else 0.0
 	if lat_g > 0.0 and _wheels.size() >= 2 and absf(speed) > 3.0:   # (the wheel turned no further than the tyres hold)
 		var wbc := maxf(absf((_wheels[0] as Node3D).position.z - (_wheels[_wheels.size() - 1] as Node3D).position.z), 1.0)
 		max_s = minf(max_s, atan(wbc * lat_g * _wet_grip() * _surface_grip * 9.81 / maxf(speed * speed, 1.0)))
 	if two_wheeler and _wheels.size() >= 2:              # (a rider's bars ask no more turn than the tyres hold: ~0.95 g)
 		var wb := maxf(absf((_wheels[0] as Node3D).position.z - (_wheels[_wheels.size() - 1] as Node3D).position.z), 0.8)
-		max_s = minf(max_s, atan(wb * 0.95 * _wet_grip() * _surface_grip * 9.81 / maxf(speed * speed, 1.0)))
+		var gg := float(SPECS[vehicle].get("grip_g", 0.95))   # (small scooter tyres hold less than a motorcycle's)
+		max_s = minf(max_s, atan(wb * gg * _wet_grip() * _surface_grip * 9.81 / maxf(speed * speed, 1.0)))
 	steering = move_toward(steering, _steer_in * max_s + _pull, delta * (1.0 if not autopilot else 2.5))
 
 

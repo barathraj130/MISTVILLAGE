@@ -61,10 +61,41 @@ Pictures: `docs/shots/two_wheelers/moto_blender.jpg` (bars, engine, front, three
 three-quarter, both sides, wheel), `moto_in_game.jpg` (standing, riding, turning, braking, stopped),
 `moto_cameras.jpg`. No frame-time measurement yet (one bike of 62 k triangles; the traffic stage will measure).
 
-## 3. Not done yet
+## 3. The scooter (`tools/cars/build_scooter.py`)
+
+Our own 110 cc step-through family scooter, unbadged, its own architecture (not the motorcycle with panels): a
+curved front apron raked with the steering (the head lamp, LED strip, chrome garnish and indicators on its face,
+the front plate), the black leg shield behind it with the glovebox and bag hook; a flat floorboard with ribbed
+rubber mats, painted skirts and chrome strips; one moulded rear body over the frame and the storage bin, the
+wheel's well cut under it with a liner, side vents and a chrome line; the seat (stitched, piped) over the bin, a
+cast grab rail, fold-out pillion pegs; the tail lamp and indicators in the body's end, the rear mudguard, plate
+holder, plate and lamp. The bars under a moulded cowl (turning: the cluster with an analogue speedometer whose
+needle reads the real speed and an LCD, tell-tales, the switch pods, two brake levers and no clutch, mirrors), a
+short telescopic fork with the mudguard. The engine and belt drive one unit on the left (the finned cylinder
+under its shroud, the long CVT case and cover to the rear axle, the air filter on top, the kick lever) with a
+single shock; the exhaust on the right (a chrome header, a black silencer under a heat shield, a chrome tip);
+centre and side stands. 90/90-12 and 90/100-10 tyres on five-spoke alloys, a 190 mm front disc, a rear drum.
+Metallic blue (recoloured by the game). 50 k triangles, 16 objects, 1.7 MB.
+
+**Its own handling** (jeep.gd's spec, against the motorcycle's): a lower seat (hips at 0.88 m against 0.93) and a
+lower centre of mass; 40° of lock against 34° (`steer_max`: a tighter turn at a walk); small tyres that hold less
+(`grip_g` 0.85 against 0.95: less lean and turn at speed); softer springs; the CVT's pull (the "scooter" engine
+profile) and a 23 m/s top. Upright on it, his feet on the floorboard, not pegs.
+
+**In the game** as `scooter` (`scooter_commuter.glb`; the interim scooter_ride.glb and tools/cars/build_bikes.py
+removed). Tested: `--sfvehicletest=scooter`; `--ride=scooter --ridetest` (foot down standing; away at 4.7 m/s
+after 2 s; 9.9° and 10.2° of lean in the turns; braked, foot down); `--ride=scooter --camtest=scooter` (his eyes:
+the cowl, speedometer, LCD and both mirrors; the handlebar camera over the cluster); `--ride=scooter --crashtest`
+(into a hatchback at 58 km/h and an auto: front damage, local dents, the rider hurt). Pictures
+`docs/shots/two_wheelers/scooter_*.jpg`. (The test's end logs "Parameter material is null" as the renderer
+frees the scene on quitting: after the results, not from the crash.)
+
+Karthik's own scooter in the story (`karthik_scooter.glb`) is still the earlier model: his paint on this one next.
+
+## 4. Not done yet
 
 - On this motorcycle: the engine's carburettor and air box are still plain shapes; the knee pads flat; no LODs.
-- The scooter (its own step-through architecture, apron, under-seat storage, floorboard, its own handling).
+- Karthik's own scooter rebuilt on the new one (his paint, the helmet).
 - Colour variants exposed in the game (the paint is recoloured; no list per bike yet); high/low beam; the indicator
   tick sound; broken mirrors and indicators in a crash; falling off and sliding (docs/wip/bike_crash_B4.patch).
 - The rest of the fleet (a classic roadster, a sport bike, a tourer; a family scooter, a modern scooter, an
