@@ -30,6 +30,11 @@ const Prof := preload("res://scripts/drive/prof.gd")
 const SPAWN_MIN := 35.0
 const SPAWN_MAX := 85.0
 const NEAR := 50.0
+# Continuity (the population brief): nobody appears or vanishes where Karthik can see it. A walker is only set down,
+# hidden or moved where the camera can't see the spot (outside its view, or behind a building); past HARD_FAR they
+# may go whatever the view (too small to notice at that range on any preset).
+const HARD_FAR := 170.0
+const VIEW_FAR := 170.0
 
 var city
 var count := 24
@@ -38,6 +43,7 @@ var _rng := RandomNumberGenerator.new()
 var _strips: Array = []                        # [{"p": PackedVector3Array, "c": PackedFloat32Array (cumulative m), "hw": half width}]
 var _strips_t := 0.0
 var _frame := 0
+var pops := {"spawn": 0, "spawn_seen": 0, "hide": 0, "hide_seen": 0, "move": 0, "move_seen": 0, "held": 0}   # (testing)
 var crossed := 0                               # (testing: crossings made, start to the far kerb)
 var gave_up := 0
 var sig_waits := 0                             # (testing: crossings at a signal, waited for; made on its red)
@@ -128,6 +134,7 @@ func _test(dt: float, me: Node3D) -> void:
 					off_ground += 1
 		print("WALKERS t=%.0f out of %d: %s, within 40 m %d, stuck %d, off the ground %d, footpaths %d, busy %.2f, crossed %d (at signals %d of %d), gave up %d" % [_test_t,
 			people.size(), str(states), near, stuck, off_ground, _strips.size(), _busy(), crossed, sig_cross, sig_waits, gave_up])
+		print("WALKERS pops %s" % str(pops))
 	var crossing := people.any(func(q): return q["state"] in ["kerb", "cross"])
 	if (_test_t > (90.0 if "--crosstest" in OS.get_cmdline_user_args() else 30.0) or (crossing and "--crosstest" in OS.get_cmdline_user_args() and _test_t > 60.0)) and not has_meta("shot"):
 		var best: Dictionary = {}
@@ -201,12 +208,16 @@ func _process_timed(dt: float) -> void:
 		vel = city.car.linear_velocity
 	for i in people.size():
 		var q: Dictionary = people[i]
-		if i >= want:                                          # (fewer out at this hour)
+		if i >= want:                                          # (fewer out at this hour: they go when unseen)
 			if q["state"] != "off" and not q["node"].visible:
 				q["state"] = "off"
-			if q["state"] != "off" and (q["node"] as Node3D).global_position.distance_to(me.global_position) > SPAWN_MIN:
-				q["state"] = "off"
-				q["node"].visible = false
+			if q["state"] != "off":
+				var gp: Vector3 = (q["node"] as Node3D).global_position
+				var gd := gp.distance_to(me.global_position)
+				if gd > SPAWN_MIN and (gd > HARD_FAR or not _seen(gp)):
+					q["state"] = "off"
+					q["node"].visible = false
+					pops["hide"] += 1
 			if q["state"] == "off":
 				continue
 		if q["state"] == "off":
@@ -214,9 +225,14 @@ func _process_timed(dt: float) -> void:
 			continue
 		var node: Node3D = q["node"]
 		var d := node.global_position.distance_to(me.global_position)
-		if d > SPAWN_MAX + 10.0:
-			_spawn(q, me.global_position)
-			continue
+		if d > SPAWN_MAX + 10.0 and (d > HARD_FAR or not _seen(node.global_position)):
+			if _spawn(q, me.global_position):
+				pops["move"] += 1
+				continue
+			if d > HARD_FAR:                                   # (nowhere unseen to go: out of the way till there is)
+				q["state"] = "off"
+				node.visible = false
+				continue
 		q["acc"] = float(q["acc"]) + dt
 		if d > NEAR and (_frame + i) % 4 != 0:                 # (far: a quarter as often)
 			continue
@@ -283,11 +299,26 @@ func _gather(at: Vector3) -> void:
 
 
 ## Set one down on a footpath 35–85 m away, out of Karthik's sight where it can be.
-func _spawn(q: Dictionary, at: Vector3) -> void:
-	if _strips.is_empty():
-		return
+## Can the camera see this spot (a person's chest there)? In its view, within VIEW_FAR, and nothing solid between.
+func _seen(pos: Vector3) -> bool:
 	var cam := get_viewport().get_camera_3d()
-	var look := -cam.global_basis.z if cam else Vector3.FORWARD
+	if cam == null:
+		return false
+	var chest := pos + Vector3.UP * 1.2
+	if cam.global_position.distance_to(chest) > VIEW_FAR or not cam.is_position_in_frustum(chest):
+		return false
+	var rq := PhysicsRayQueryParameters3D.create(cam.global_position, chest)
+	if city.car:
+		rq.exclude = [city.car.get_rid()]
+	var hit := cam.get_world_3d().direct_space_state.intersect_ray(rq)
+	return hit.is_empty() or (hit["position"] as Vector3).distance_to(chest) < 1.0
+
+
+## Set down on a footpath 35–85 m from him where the camera can't see it. Returns false if no such spot was found
+## this time (tried again on a later tick: never put down in view as a fallback).
+func _spawn(q: Dictionary, at: Vector3) -> bool:
+	if _strips.is_empty():
+		return false
 	for attempt in 12:
 		var j := _rng.randi() % _strips.size()
 		var st: Dictionary = _strips[j]
@@ -297,8 +328,7 @@ func _spawn(q: Dictionary, at: Vector3) -> void:
 		var d := pos.distance_to(at)
 		if d < SPAWN_MIN or d > SPAWN_MAX:
 			continue
-		var seen := (pos - at).normalized().dot(look) > 0.5 and attempt < 9
-		if seen and d < 60.0:
+		if _seen(pos):
 			continue
 		var side0 := _road_side(st)
 		if city.streamer.solid_at(pos + _left(st, s, 1.0) * side0):
@@ -318,7 +348,10 @@ func _spawn(q: Dictionary, at: Vector3) -> void:
 		q["yaw"] = _heading(st, s, float(q["dir"]))
 		node.rotation.y = q["yaw"]
 		_anim(q, "Walk", float(q["speed"]) / STRIDE)
-		return
+		pops["spawn"] += 1
+		return true
+	pops["held"] += 1
+	return false
 
 
 func _think(q: Dictionary, i: int, dt: float, me: Node3D, on_foot: bool, vel: Vector3, d: float) -> void:
