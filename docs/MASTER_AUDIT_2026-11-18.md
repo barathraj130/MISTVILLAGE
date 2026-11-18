@@ -84,10 +84,78 @@ citizen systems' own swaps (no pops from them were seen in these runs).
    salary; the scooter breaks down while riding on day 1. These fit together if day 1 is the payday. **Proposal:**
    breakdown on the morning ride (day 1), late to Raghavan's, drives the SUV, salary in the evening, Amma's talk that
    night, dealership on day 2, deliveries on day 3. This needs your yes, since it moves the payday from where the
-   current `prologue.json` has it.
+   current `prologue.json` has it. **Approved 18 Nov; built (section 8).**
 4. **The brief's branch A** says "purchase a motorcycle for Karthik" when he keeps the old scooter; the built branch
    A buys a scooter for Divya and overhauls his old one. **Proposal:** keep what you chose on 17 Nov (Divya's
-   scooter, his old one overhauled) and treat the motorcycle as an optional later purchase. Needs your yes.
+   scooter, his old one overhauled) and treat the motorcycle as an optional later purchase. **Approved 18 Nov; built:
+   the motorcycles are on show only, on both branches.**
+5. **Raghavan's car on Day 1:** `slice.json` Day 1 drives Raghavan in a "sedan"; the bible and the brief call it his
+   white SUV, and the prologue uses the luxury SUV. Not changed in the slice (it's canon you may want to settle).
+
+## 7. CPU profile (18 Nov): where the frame goes
+
+**Method.** Three tools, because the first two were too noisy alone:
+1. `--profsweep` (each script's processing switched off and on): differences of ±100 ms between repeats, unusable.
+2. `--cpusplit` (new, `cpu_split.gd`: animation players, IK modifiers, skeletons, all scripts switched off and on):
+   ±10 ms noise; no kind made a difference larger than the noise.
+3. **Whole runs**, 150 s each at the start place, 09:00, Low preset, medians of the 5-second readings after 40 s,
+   with a baseline run before, between and after (the M1 Air heats up). Then the **macOS sampler** (`sample`, 15 s
+   at 1 ms) on a running game, and the game's own per-system timers (`PROF`).
+
+**Whole runs** (process / physics ms, fps):
+
+| Run | Process | Physics | fps |
+|---|---|---|---|
+| Baseline (three runs) | 43.3 / 40.5 / 39.6 | 12.6 / 12.4 / 10.9 | 23.5 / 23.5 / 24.0 |
+| No traffic | 54.1 | 8.1 | 20.5 |
+| No people (street figures) | 41.4 | 12.2 | 24.0 |
+| No walkers | 41.7 | 9.2 | 25.0 |
+| No parked vehicles | 39.7 | 16.4 | 23.0 |
+| No trees | 35.0 | 14.9 | 24.5 |
+
+No one system explains the frame: removing any of them moves it by a few ms at most.
+
+**The sampler** (main thread, 6 097 samples, busy all the time):
+
+| Share | What (from the call tree) | About, per frame |
+|---|---|---|
+| 46 % | Rendering on the main thread: Metal command encoding for ~2 900 draw calls (shadow passes included) | 19 ms |
+| 26 % | Scripts' `_physics_process` (GDScript), run ~2.5 times a frame (60 Hz physics at ~24 fps) | 10 ms |
+| 9 % | Scripts' `_process` | 4 ms |
+| 6 % | UI drawing (the HUD's and the minimap's `_draw`) | 2.5 ms |
+| 4 % | Physics server and the rest | 1.5 ms |
+
+**Scripts, by the game's own timers** (ms per drawn frame, same run, after 40 s): `city_traffic.gd` physics
+**4.1–11.4**, bystanders 0.9–1.7, walkers 0.6–1.2, the car 0.8–1.5, the minimap 0.7–1.2, the HUD 0.4–0.6, the city
+script 0.3–0.7; everything else under 0.1.
+
+**So, in order:** (1) the main-thread rendering (draw calls), the largest single cost; (2) the traffic's physics
+tick; (3) everything else is small.
+
+**What draws** (`--cpusplit --cpukinds=census`: everything visible, by system): the city's kit buildings are
+**3 201 MultiMesh instances** (a near and a far one per house variant per 64 m cell, 25 tiles loaded), against 389
+surfaces for 42 traffic vehicles (after merging, below), 307 for the player's car and 162 for the walkers.
+
+**Fixes made** (each measured inside one run, switched on and off every 10 s, so the machine's state is the same for
+both; `--trafficab`):
+
+| Change | Traffic script per physics tick | Frame | Draws |
+|---|---|---|---|
+| Before (same run) | 2.69 ms | 53.4 ms | 2 817 |
+| After: traffic models merged by material (`fleet.gd merged()`: ~24 parts → ~9 surfaces a car, shared per model and paint; lamps kept apart), far vehicles' bodies moved a tick in 4 and their logic every other tick (beyond 150 m), vehicles past 60 m deciding every 100 ms instead of 67 ms, lamp materials set only when they change | **1.94 ms (−28 %)** | 51.2 ms | 2 780 |
+
+The traffic's behaviour is the same: who follows whom, signals, give-way, crossings and turns all run as before
+within 60 m of him; further out the same decisions are made a little less often (a driver's 100 ms). Checked with
+`--trafficshot` (the merged models look as before).
+
+**Tried and rejected:** merging each 64 m cell's far buildings into one mesh (all variants share one material).
+Draws fell 25–30 % (2 900 → 2 000–2 300) but triangles doubled (2.2 M → 4.3 M), video memory rose ~350 MB and the
+frame rate didn't improve (`--gfxaudit` at three places, 13:00 and 18:10). Reverted. The building draws need
+another way: fewer variants per cell, a shared far mesh with per-instance data, or occlusion culling (next).
+
+**Measurement caveat:** frame times on this machine move by ±30 % between runs (the M1 Air's heat, other apps, macOS
+slowing a hidden window). Only comparisons inside one run are trustworthy; whole-run numbers here are medians of
+several runs with baselines between.
 
 ## 5. Prioritised list
 

@@ -314,6 +314,10 @@ func _ready() -> void:
 		ga.city = self
 		add_child.call_deferred(ga)
 	for a in OS.get_cmdline_user_args():               # (testing: people appearing or vanishing in view, pop_watch.gd)
+		if a.begins_with("--cpusplit"):
+			var cs = load("res://scripts/city/cpu_split.gd").new()
+			cs.city = self
+			add_child.call_deferred(cs)
 		if a.begins_with("--popwatch"):
 			var pw = load("res://scripts/city/pop_watch.gd").new()
 			pw.city = self
@@ -448,7 +452,7 @@ func _ready() -> void:
 		var self_test := false                      # (a self-test never writes your saved game: wallet, challans, weather)
 		for flag in ["--testdrive", "--carshot", "--trafficshot", "--crashtest", "--peopletest", "--parkedtest",
 				"--potholetest", "--flyover", "--clock=", "--weather=", "--nohud", "--doortest", "--threattest", "--surfacetest", "--jointest", "--walkertest", "--activitytest",
-				"--hospitaltest", "--citizentest", "--interviewtest", "--unsticktest", "--livingtest", "--livingbench", "--hospitalat", "--shotview", "--interacttest", "--falltest", "--stairtest", "--gaittest", "--standtest", "--gangtest", "--gangstage", "--pursuittest", "--socialtest", "--streetaudit", "--sittest", "--ride", "--gfxaudit", "--bunktest", "--bunksurvey", "--financetest", "--sfvehicletest", "--camtest", "--taketest", "--traffictest", "--lamptest", "--pedcheck", "--moneytest", "--menushot", "--crosstest", "--popwatch"]:
+				"--hospitaltest", "--citizentest", "--interviewtest", "--unsticktest", "--livingtest", "--livingbench", "--hospitalat", "--shotview", "--interacttest", "--falltest", "--stairtest", "--gaittest", "--standtest", "--gangtest", "--gangstage", "--pursuittest", "--socialtest", "--streetaudit", "--sittest", "--ride", "--gfxaudit", "--bunktest", "--bunksurvey", "--financetest", "--sfvehicletest", "--camtest", "--taketest", "--traffictest", "--lamptest", "--pedcheck", "--moneytest", "--menushot", "--crosstest", "--popwatch", "--cpusplit", "--trafficab"]:
 			self_test = self_test or " ".join(args).contains(flag)
 		fines.persist = not self_test
 		hud = DriveHud.new()

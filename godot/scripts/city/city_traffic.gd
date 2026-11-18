@@ -57,6 +57,10 @@ var signals: Array = []
 ## physics steps, in turn, while its speed and place move on every step.
 const GRID := 40.0                         # (≥ the 40 m a driver looks ahead: the 3×3 round him holds all of it)
 const THINK_EVERY := 4
+const THINK_NEAR := 60.0                    # (within this of him, every vehicle thinks a tick in THINK_EVERY;
+const THINK_FAR_EVERY := 6                  #  beyond, a tick in THINK_FAR_EVERY: 100 ms at 60 Hz)
+const FAR := 150.0                          # (beyond this from him, a vehicle's body is moved a tick in FAR_EVERY)
+const FAR_EVERY := 4
 var sig_grid := {}                         # Vector2i → [signal, ...]
 var _veh_grid := {}                        # Vector2i → [vehicle, ...] (this step)
 var _tick := 0
@@ -78,10 +82,52 @@ func _ready() -> void:
 	_brake_on.emission_energy_multiplier = 3.0
 
 
+var optimise := true                       # (the far bodies moved less often, lamps set only when they change)
+var _ab := {}                              # (testing --trafficab: the cost per tick, optimised and not, in turns)
+
+
 func _physics_process(delta: float) -> void:
 	var _p0 := Time.get_ticks_usec()
 	_physics_process_timed(delta)
 	Prof.add("traffic_phys", _p0)
+	if _ab_on:
+		_ab_tick(Time.get_ticks_usec() - _p0)
+
+
+var _ab_on := "--trafficab" in OS.get_cmdline_user_args()
+
+
+## (testing) --trafficab: every 10 s the optimisation switched over; the script's own time per physics tick for each,
+## and how many vehicles, printed ("TRAFFICAB ..."), after the first 40 s.
+func _ab_tick(us: int) -> void:
+	var t := Time.get_ticks_msec() / 1000.0
+	if t < 40.0:
+		return
+	var mode := "on" if optimise else "off"
+	var a: Dictionary = _ab.get(mode, {"us": 0, "n": 0, "veh": 0})
+	a["us"] = int(a["us"]) + us
+	a["n"] = int(a["n"]) + 1
+	a["veh"] = int(a["veh"]) + vehicles.size()
+	if Engine.get_frames_drawn() != int(_ab.get("frame_n", 0)):        # (a frame's time, once a frame)
+		_ab["frame_n"] = Engine.get_frames_drawn()
+		a["frame"] = float(a.get("frame", 0.0)) + 1000.0 / maxf(Engine.get_frames_per_second(), 1.0)
+		a["fn"] = int(a.get("fn", 0)) + 1
+		a["dr"] = float(a.get("dr", 0.0)) + Performance.get_monitor(Performance.RENDER_TOTAL_DRAW_CALLS_IN_FRAME)
+	_ab[mode] = a
+	if int(t / 10.0) != int(_ab.get("slot", -1)):
+		_ab["slot"] = int(t / 10.0)
+		optimise = not optimise
+		for v2 in vehicles:                                   # (merged models with the optimisation, the parts without)
+			var bd: Node = v2["body"]
+			for c in bd.get_children():
+				if c is Node3D and c.get_child_count() > 0 and not (c is CollisionShape3D):
+					(c as Node3D).visible = (String(c.name) == "Unmerged") != optimise
+		_ab["draws_" + ("on" if not optimise else "off")] = Performance.get_monitor(Performance.RENDER_TOTAL_DRAW_CALLS_IN_FRAME)
+		for m in ["on", "off"]:
+			if _ab.has(m):
+				var b: Dictionary = _ab[m]
+				print("TRAFFICAB %-3s %.3f ms a tick over %d ticks, %.1f vehicles, frame %.1f ms, draws %d" % [m, float(b["us"]) / 1000.0 / maxi(int(b["n"]), 1), int(b["n"]),
+					float(b["veh"]) / maxi(int(b["n"]), 1), float(b.get("frame", 0.0)) / maxi(int(b.get("fn", 0)), 1), int(float(b.get("dr", 0.0)) / maxi(int(b.get("fn", 0)), 1))])
 
 
 func _physics_process_timed(delta: float) -> void:
@@ -91,6 +137,7 @@ func _physics_process_timed(delta: float) -> void:
 		_built_seen = streamer.stats["built"] + streamer.stats["unloaded"]
 		_index()
 	var me := player.global_position
+	var _q := Time.get_ticks_usec()
 	for v in vehicles.duplicate():
 		if v["pos"].distance_to(me) > 480.0 or not is_instance_valid(v["road_node"]):
 			_remove(v)
@@ -103,6 +150,8 @@ func _physics_process_timed(delta: float) -> void:
 	while vehicles.size() < want and tries < 8:
 		tries += 1
 		_spawn(me)
+	Prof.add("tr_spawn", _q)
+	_q = Time.get_ticks_usec()
 	_tick += 1
 	_veh_grid.clear()
 	for v in vehicles:
@@ -114,12 +163,34 @@ func _physics_process_timed(delta: float) -> void:
 	if _ped_t <= 0.0:                                       # (who's on the road on foot, a few times a second)
 		_ped_t = 0.25
 		_gather_peds()
+	Prof.add("tr_grid_peds", _q)
+	_q = Time.get_ticks_usec()
 	for i in vehicles.size():
-		_drive(vehicles[i], delta, me, (i + _tick) % THINK_EVERY == 0 or not vehicles[i].has("target"))
+		var vi: Dictionary = vehicles[i]
+		vi["far"] = (vi["pos"] as Vector3).distance_to(me) > FAR
+		vi["slot"] = i
+		var _d0 := Time.get_ticks_usec()
+		var every := THINK_EVERY
+		if optimise and (vi["pos"] as Vector3).distance_to(me) > THINK_NEAR:
+			every = THINK_FAR_EVERY                          # (out past 60 m: a decision every 100 ms, not 67)
+		var th: bool = (i + _tick) % every == 0 or not vi.has("target")
+		var dt := delta
+		if optimise and bool(vi["far"]):                     # (far off: moved every other tick, twice the step; its
+			if (i + _tick) % 2 != 0 and not th:              #  thinking as often as anyone's)
+				continue
+			dt = delta * 2.0
+		vi["every"] = float(every) * delta / dt          # (ticks between decisions, in this call's own steps)
+		_drive(vi, dt, me, th)
+		Prof.add("tr_think" if th else "tr_move", _d0)
+	Prof.add("tr_drive", _q)
+	_q = Time.get_ticks_usec()
 	_collide(delta)
+	Prof.add("tr_collide", _q)
+	_q = Time.get_ticks_usec()
 	for v in vehicles:
 		if (v["pos"] as Vector3).distance_to(me) < 200.0:   # (lamps only where they can be seen)
 			_lamps(v, delta)
+	Prof.add("tr_lamps", _q)
 
 
 ## The hour's share of the busy count (BY_HOUR), from the city's clock; 1 without one.
@@ -233,7 +304,13 @@ func _spawn(me: Vector3) -> void:
 	cs.position = Vector3(0, dims.y * 0.5 + 0.25, 0)
 	body.add_child(cs)
 	var lamps := {}
-	body.add_child(Fleet.model(kind, Fleet.paint_for(kind, _rng)))
+	var paint := Fleet.paint_for(kind, _rng)
+	body.add_child(Fleet.merged(kind, paint))                 # (parts merged by material: fewer draws)
+	if _ab_on:                                                # (testing: the unmerged model too, shown in turns)
+		var un := Fleet.model(kind, paint)
+		un.name = "Unmerged"
+		un.visible = false
+		body.add_child(un)
 	_find_lamps(body, lamps)
 	add_child(body)
 	var driver := "commercial" if kind in ["bus", "lorry", "taxi"] or (kind == "auto" and _rng.randf() < 0.6) else _pick_driver()
@@ -277,6 +354,9 @@ func _lamps(v: Dictionary, delta: float) -> void:
 	var on := float(v["blink"]) < 0.35
 	for side in ["l", "r"]:
 		var lit: bool = on and ((side == "l" and turn > 0.3) or (side == "r" and turn < -0.3))
+		if optimise and lit == bool(v.get("lit_" + side, false)):          # (only when it changes: each set is the renderer's work)
+			continue
+		v["lit_" + side] = lit
 		for gi in lm[side]:
 			if is_instance_valid(gi):
 				(gi as MeshInstance3D).material_override = _lamp_on if lit else null
@@ -348,7 +428,9 @@ func _place(v: Dictionary) -> void:
 	var basis := Basis.looking_at(-flat, Vector3.UP).rotated(Vector3.UP, float(v.get("yaw", 0.0)))
 	var pitch := atan2(b.y - a.y, Vector2(b.x - a.x, b.z - a.z).length())
 	basis = basis.rotated(left, -pitch) if absf(pitch) < 0.3 else basis
-	var body: AnimatableBody3D = v["body"]
+	if optimise and bool(v.get("far", false)) and (_tick + int(v.get("slot", 0))) % FAR_EVERY != 0:
+		return                                                # (far off: where it is, kept every tick; its body moved
+	var body: AnimatableBody3D = v["body"]                    #  a tick in FAR_EVERY, too far to see the difference)
 	body.global_transform = Transform3D(basis, c)
 
 
@@ -539,7 +621,7 @@ func _drive(v: Dictionary, delta: float, me: Vector3, think := true) -> void:
 		_choose(v)
 	if v.get("pick_road") != r and float(v.get("turn_after", 0.0)) <= 0.0:
 		v["turn"] = 0.0
-	v["turn_after"] = maxf(float(v.get("turn_after", 0.0)) - delta * (THINK_EVERY if think else 1.0), 0.0)
+	v["turn_after"] = maxf(float(v.get("turn_after", 0.0)) - delta * (float(v.get("every", THINK_EVERY)) if think else 1.0), 0.0)
 	if to_end < 18.0:                                     # (a bus or lorry slower into the turn: its size)
 		target = minf(target, (6.0 + to_end * 0.35) * float(DYN.get(v["kind"], [0, 0, 1.0])[2]))
 	# vehicles and you ahead in my lane

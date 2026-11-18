@@ -16,6 +16,7 @@ const LORRY_PAINT := [Color(0.85, 0.42, 0.05), Color(0.9, 0.7, 0.05), Color(0.1,
 static var _scenes := {}
 static var _mats := {}
 static var _parts := {}
+static var _merged := {}
 
 
 static func has(kind: String) -> bool:
@@ -117,3 +118,66 @@ static func parts(kind: String, paint: Color) -> Array:
 	root.free()
 	_parts[key] = out
 	return out
+
+
+## The same model with its parts merged by material (one draw per material, not one per part): a car of 20–25
+## parts drawn as ~8. What a vehicle's lamps are stay their own meshes, under nodes named as they were, so
+## city_traffic.gd still finds and lights them (indicators, brake lamps). The merged meshes are built once per model
+## and paint and shared; dents.gd copies a mesh before it dents it, so sharing is safe.
+static func merged(kind: String, paint: Color) -> Node3D:
+	var key := kind + paint.to_html()
+	if not _merged.has(key):
+		var src := model(kind, paint)
+		var by_mat := {}                         # material → SurfaceTool
+		var kept: Array = []                     # [mesh with materials baked, xf, name, parent name]
+		for mi in src.find_children("*", "MeshInstance3D", true, false):
+			var inst := mi as MeshInstance3D
+			var xf := Transform3D()
+			var cur: Node = inst
+			while cur and cur != src:
+				if cur is Node3D:
+					xf = (cur as Node3D).transform * xf
+				cur = cur.get_parent()
+			var nm := String(inst.name).to_lower() + "|" + String(inst.get_parent().name).to_lower()
+			if nm.contains("turn_") or nm.contains("indicator") or nm.contains("brake") or nm.contains("light_break"):
+				var mesh := inst.mesh.duplicate() as Mesh
+				for s in mesh.get_surface_count():
+					var o := inst.get_surface_override_material(s)
+					if o:
+						mesh.surface_set_material(s, o)
+				kept.append([mesh, xf, String(inst.name), String(inst.get_parent().name)])
+				continue
+			for s in inst.mesh.get_surface_count():
+				var mat: Material = inst.get_surface_override_material(s)
+				if mat == null:
+					mat = inst.mesh.surface_get_material(s)
+				if inst.mesh.surface_get_primitive_type(s) != Mesh.PRIMITIVE_TRIANGLES:
+					continue
+				if not by_mat.has(mat):
+					var st := SurfaceTool.new()
+					st.begin(Mesh.PRIMITIVE_TRIANGLES)
+					by_mat[mat] = st
+				(by_mat[mat] as SurfaceTool).append_from(inst.mesh, s, xf)
+		var am := ArrayMesh.new()
+		for mat in by_mat:
+			var st: SurfaceTool = by_mat[mat]
+			am = st.commit(am)
+			am.surface_set_material(am.get_surface_count() - 1, mat)
+		src.free()
+		_merged[key] = [am, kept]
+	var root := Node3D.new()
+	var body := MeshInstance3D.new()
+	body.name = "Merged"
+	body.mesh = _merged[key][0]
+	root.add_child(body)
+	for k in _merged[key][1]:
+		var holder := Node3D.new()
+		holder.name = k[3]
+		root.add_child(holder)
+		var lamp := MeshInstance3D.new()
+		lamp.name = k[2]
+		lamp.mesh = k[0]
+		lamp.transform = k[1]
+		holder.add_child(lamp)
+	return root
+
