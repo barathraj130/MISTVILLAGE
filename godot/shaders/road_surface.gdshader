@@ -24,6 +24,7 @@ uniform float wear = 1.0;                  // 0 new road … 1 well used
 uniform float wet = 0.0;
 uniform bool city_marks = false;
 uniform vec3 paint_col : source_color = vec3(0.86, 0.85, 0.8);
+uniform float ao_k = 1.0;                  // the gutters' contact shading (0: off, --noshaderao)
 
 varying vec3 wpos;
 
@@ -149,4 +150,12 @@ void fragment() {
 	ROUGHNESS = clamp(rough, 0.05, 1.0);
 	NORMAL_MAP = mix(nrm, vec3(0.5, 0.5, 1.0), pool * 0.85);
 	SPECULAR = mix(0.4, 0.7, wet);
+	// the gutters: the last half metre by each kerb gets less of the sky (the kerb and the footpath beside it)
+	if (COLOR.r < 0.95) {
+		float across_m = UV.x * 6.0;
+		float width_m = COLOR.r * 20.0;
+		float to_kerb = min(across_m, width_m - across_m);
+		AO = mix(1.0, mix(0.62, 1.0, smoothstep(0.0, 0.7, to_kerb)), ao_k);
+		AO_LIGHT_AFFECT = 0.0;
+	}
 }

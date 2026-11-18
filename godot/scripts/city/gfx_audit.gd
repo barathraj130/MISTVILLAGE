@@ -13,6 +13,14 @@ const PLACES := [
 	{"id": "police", "en": "Nagar police station", "x": 262.0, "z": -101.0},
 	{"id": "hospital", "en": "Government hospital", "x": 236.0, "z": 2400.0},
 	{"id": "race_course", "en": "Race Course: trees", "x": 962.0, "z": 1987.0},
+	# fixed cameras on the baked-AO test landmarks (tools/bake/bake_ao.py): the camera 8 m up over a road spot, looking
+	# at the landmark ("at"), the same every run (only with --gfxonly naming them)
+	# "lm": in front of that landmark (its door side, local -Z), "dist" m off; "bld": the generated building nearest
+	# (x, z), seen from the street side
+	{"id": "lm_hospital", "en": "Government hospital (baked AO test)", "x": 236.0, "z": 2470.0, "lm": "hospital", "dist": 60.0, "cam": true},
+	{"id": "lm_hotel", "en": "The Siruvani Grand (baked AO test)", "x": 2920.0, "z": -440.0, "lm": "hotel_grand", "dist": 45.0, "up": 15.0, "cam": true},
+	{"id": "lm_bunk", "en": "Kongu Fuels, Ganapathy (baked AO test)", "x": 1197.0, "z": -2040.0, "lm": "bunk_ganapathy", "dist": 26.0, "up": 9.0, "cam": true},
+	{"id": "lm_police", "en": "Nagar police station (shader AO test)", "x": 261.7, "z": -101.3, "bld": true, "dist": 26.0, "up": 14.0, "cam": true},
 ]
 const HOURS := ["07:15", "13:00", "18:10", "21:30", "21:30r"]
 
@@ -38,7 +46,7 @@ func _run() -> void:
 	print("GFX adapter %s · %s · window %s · preset %s" % [RenderingServer.get_video_adapter_name(), RenderingServer.get_video_adapter_api_version(),
 		str(DisplayServer.window_get_size()), str(load("res://scripts/graphics.gd").preset())])
 	for p in PLACES:
-		if not only.is_empty() and not str(p["id"]) in only:
+		if (not only.is_empty() and not str(p["id"]) in only) or (only.is_empty() and p.has("cam")):
 			continue
 		var car = city.car
 		car.freeze = true
@@ -53,6 +61,39 @@ func _run() -> void:
 		car.global_position = Vector3(float(p["x"]), (g if not is_nan(g) else 400.0) + 0.6, float(p["z"]))
 		car.linear_velocity = Vector3.ZERO
 		await tree.create_timer(3.0).timeout
+		var fixed: Camera3D = null
+		if p.has("cam"):                                  # (the same pose every run: before and after comparable)
+			fixed = Camera3D.new()
+			fixed.fov = 60.0
+			add_child(fixed)
+			var gy: float = g if not is_nan(g) else 400.0
+			var ax := float(p["x"])
+			var az := float(p["z"])
+			var ly := gy
+			var away := Vector2(0, 1)
+			for lm in city.streamer.landmarks:               # (a landmark: from its door side; its own ground)
+				if str(lm.get("name", "")) == str(p.get("lm", "")):
+					ax = float(lm["x"])
+					az = float(lm["z"])
+					ly = float(lm["y"])
+					away = Vector2(sin(float(lm["yaw"])), cos(float(lm["yaw"])))   # (its door: Blender -Y, Godot +Z)
+			if p.has("bld"):                                 # (a generated building: the nearest one's centre)
+				var bd := 30.0
+				var here := Vector2(ax, az)
+				var best := here
+				for node in city.streamer.loaded.values():
+					for b in (node as Node3D).get_meta("bldinfo", []):
+						var c: Vector2 = b[1]
+						if c.distance_to(here) < bd:
+							bd = c.distance_to(here)
+							best = c
+				away = (here - best).normalized() if best != here else Vector2(0, 1)
+				ax = best.x
+				az = best.y
+			away *= float(p.get("dist", 55.0))
+			fixed.global_position = Vector3(ax + away.x, ly + float(p.get("up", 30.0)), az + away.y)   # (high: over the
+			fixed.look_at(Vector3(ax, ly + 4.0, az), Vector3.UP)                                     #  neighbours)
+			fixed.make_current()
 		for h in hours:
 			var rain := str(h).ends_with("r")
 			var hm: PackedStringArray = str(h).trim_suffix("r").split(":")
@@ -65,10 +106,14 @@ func _run() -> void:
 			for f in 2:
 				await RenderingServer.frame_post_draw
 			get_viewport().get_texture().get_image().save_jpg(ProjectSettings.globalize_path("user://gfx/%s.jpg" % name), 0.85)
+			if fixed:
+				fixed.make_current()
 			var line := "GFX %-22s %5.1f fps · CPU %5.1f ms · GPU %5.1f ms · %5d draws · %5d objects · %6.0f k prims · VRAM %4.0f MB · RAM %4.0f MB" % [name,
 				m["fps"], m["cpu"], m["gpu"], m["draws"], m["objects"], m["prims"] / 1000.0, m["vram"], m["ram"]]
 			print(line)
 			lines.append(line)
+		if fixed:
+			fixed.queue_free()
 	print("GFX done: %d captures" % lines.size())
 	tree.quit()
 

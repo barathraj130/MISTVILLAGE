@@ -7,6 +7,7 @@ shader_type spatial;
 uniform float floor_h = 3.2;
 uniform float bay = 2.6;
 uniform float night = 0.0;                 // 0 day → 1 night: some windows light up
+uniform float ao_k = 1.0;                  // contact shading's strength (0: off, --noshaderao)
 
 float hash(float n) { return fract(sin(n) * 43758.5453); }
 
@@ -15,6 +16,7 @@ void fragment() {
 	vec3 c = paint;
 	float rough = 0.9;
 	vec3 glow = vec3(0.0);
+	float ao = 1.0;
 	if (COLOR.a > 0.5) {
 		float u = UV.x;
 		float v = UV.y;
@@ -33,6 +35,8 @@ void fragment() {
 			c = mix(c, paint * 0.5, frame);
 			c = mix(c, glass, win);
 			rough = mix(rough, 0.12, win);
+			ao = mix(ao, 0.8, frame);                        // (a window is set back in the wall: less sky reaches it)
+			ao = mix(ao, 0.65, win);
 			glow = win * step(0.55, h) * night * vec3(1.0, 0.72, 0.4) * 1.6;
 		} else {
 			// shop front: rolling shutter with slats under a coloured sign band
@@ -47,7 +51,12 @@ void fragment() {
 		}
 		c *= 0.8 + 0.2 * smoothstep(0.0, 1.4, v);            // grime near the ground
 		c *= 1.0 - 0.1 * step(fv, 0.035);                    // floor lines
+		// contact shading where the wall meets the ground: by height above the building's own base, so every
+		// building, and every tile, gets the same at the same height (no seams between neighbours)
+		ao *= mix(0.55, 1.0, smoothstep(0.0, 1.6, v));
 	}
+	AO = mix(1.0, ao, ao_k);                                // (Godot: ambient light only; the sun as before)
+	AO_LIGHT_AFFECT = 0.0;
 	ALBEDO = c;
 	ROUGHNESS = rough;
 	EMISSION = glow;

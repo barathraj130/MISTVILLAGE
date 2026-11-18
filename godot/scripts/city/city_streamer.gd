@@ -231,6 +231,10 @@ func set_materials(road: Material, ground: Material, buildings: Material, walk: 
 	building_mat = buildings
 	walk_mat = walk
 	kerb_mat = kerb
+	if "--noshaderao" in OS.get_cmdline_user_args():     # (testing: the shaders' contact shading off, to compare)
+		for m in [road, buildings, kit.material if kit else null]:
+			if m is ShaderMaterial:
+				(m as ShaderMaterial).set_shader_parameter("ao_k", 0.0)
 
 
 ## The material for a road that isn't asphalt (made once, shared by every tile): rural_road.gdshader, with the
@@ -2799,12 +2803,37 @@ func _level(x0: float, z0: float, n: int, step: float, h: PackedFloat32Array) ->
 	return out
 
 
+## A model's baked copy if there is one (tools/bake/bake_ao.py: NAME_ao.glb beside it, its corners' and eaves'
+## contact shading baked in as ambient occlusion), else the model itself. --noao: the originals (to compare; and the
+## rollback is only deleting the _ao copies).
+static func baked(path: String) -> String:
+	var ao := path.get_basename() + "_ao.glb"
+	if not "--noao" in OS.get_cmdline_user_args() and ResourceLoader.exists(ao):
+		return ao
+	return path
+
+
+## A baked copy's occlusion is on its second UV set (glTF texCoord 1), which Godot's importer doesn't carry over:
+## set it here, and to the ambient light only (the sun and the lamps light it as before).
+static func use_baked_ao(root: Node) -> void:
+	for mi in root.find_children("*", "MeshInstance3D", true, false):
+		var m := mi as MeshInstance3D
+		for s in m.mesh.get_surface_count():
+			var mat := m.get_active_material(s) as BaseMaterial3D
+			if mat and mat.ao_enabled and mat.ao_texture != null:
+				mat.ao_on_uv2 = true
+				mat.ao_light_affect = 0.0
+
+
 ## The landmarks standing in tile k (godot/assets/landmarks/landmarks.json), solid like the rest of the city.
 func _landmarks(k: Vector2i, node: Node3D) -> void:
 	for lm in landmarks:
 		if floori(float(lm["x"]) / tile) != k.x or floori(float(lm["z"]) / tile) != k.y or not ResourceLoader.exists(lm["glb"]):
 			continue
-		var sc := (load(lm["glb"]) as PackedScene).instantiate() as Node3D
+		var lp := baked(lm["glb"])
+		var sc := (load(lp) as PackedScene).instantiate() as Node3D
+		if lp.ends_with("_ao.glb"):
+			use_baked_ao(sc)
 		node.add_child(sc)
 		sc.global_position = Vector3(lm["x"], lm["y"], lm["z"])
 		sc.rotation.y = float(lm["yaw"])

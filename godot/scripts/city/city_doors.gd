@@ -292,11 +292,13 @@ func _room_for(b: Array, s) -> String:
 
 
 func enter(d: Dictionary, walker: Node3D) -> void:
-	var path: String = ROOMS % ROOM_MODEL.get(d["room"], d["room"])
+	var path: String = load("res://scripts/city/city_streamer.gd").baked(ROOMS % ROOM_MODEL.get(d["room"], d["room"]))
 	if not ResourceLoader.exists(path):
 		return
 	inside = d
 	_room = (load(path) as PackedScene).instantiate() as Node3D
+	if path.ends_with("_ao.glb"):
+		load("res://scripts/city/city_streamer.gd").use_baked_ao(_room)
 	_room.name = "Room"
 	add_child(_room)
 	_room.global_position = d["pos"] + Vector3(0, -DEPTH, 0)
@@ -712,10 +714,16 @@ func _room_test(kinds: Array) -> void:
 	for kind in kinds:
 		var seen := {}
 		var found := false
-		for k in 600:
+		var forced := false
+		for k in 601:
 			var d := _a_door(home, seen)
-			if d.is_empty():
-				break
+			if k == 600 or d.is_empty():                 # (no such door near: that kind of room at the nearest door,
+				if forced or _a_door(home, {}).is_empty():  #  e.g. the dealership's showroom, reached in the story)
+					break
+				forced = true
+				d = _a_door(home, {})
+				d["room"] = kind
+				d["key"] = "test_" + str(kind)
 			seen[d["key"]] = true
 			if str(d["room"]) != str(kind):
 				continue

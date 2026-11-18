@@ -12,6 +12,7 @@ uniform float roughs[15];
 uniform float metals[15];
 uniform float night = 0.0;
 uniform float wet = 0.0;
+uniform float ao_k = 1.0;                  // contact shading's strength (0: off, --noshaderao)
 
 varying vec3 wpos;
 varying vec3 wnrm;
@@ -86,5 +87,9 @@ void fragment() {
 		NORMAL = normalize((VIEW_MATRIX * vec4(wn, 0.0)).xyz);
 		ROUGHNESS = mix(roughs[li], 0.25, wet * 0.6);
 		METALLIC = metals[li];
+		// contact shading at the foot of a wall (height above the building's base: the same for every building)
+		float foot_ao = mix(0.55, 1.0, smoothstep(0.0, 1.6, hloc));
+		AO = mix(1.0, mix(foot_ao, 1.0, smoothstep(0.5, 0.8, abs(n.y))), ao_k);
+		AO_LIGHT_AFFECT = 0.0;
 	}
 }
