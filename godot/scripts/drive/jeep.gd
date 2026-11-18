@@ -214,11 +214,11 @@ const BASE_SPECS := {
 	## Karthik's own SUV: a full-size luxury SUV of our own (tools/cars/build_car.py --kind luxury; the user's premium
 	## SUV brief, 17 Nov): 5.05 m, 22-inch wheels, its own cabin; its weight and drive as before.
 	"luxury_suv": {"name": "Luxury SUV", "glb": "res://assets/vehicles/car_luxury.glb", "mass": 2350.0,
-		"com": Vector3(0, 0.62, 0.05), "radius": 0.405, "rest": 0.2, "travel": 0.22, "stiff": 34.0, "torque": 1.15,
+		"com": Vector3(0, 0.62, 0.05), "radius": 0.415, "rest": 0.2, "travel": 0.22, "stiff": 34.0, "torque": 1.15,
 		"top": 50.0, "seat": Vector3(-0.37, 1.62, -0.2), "own_cabin": true, "glass": "Glass",
-		"head": ["Headlight", "DRL"], "tail": ["Taillight"], "lamp": Vector3(0.75, 0.98, 2.52),
-		"boxes": [[Vector3(2.0, 0.95, 5.02), Vector3(0, 0.78, 0)], [Vector3(1.72, 0.7, 3.5), Vector3(0, 1.55, -0.4)]],
-		"ind": [Vector3(0.92, 0.98, 2.5), Vector3(0.89, 1.15, -2.52), Vector3(0.6, 0.55, -2.53)]},
+		"head": ["Headlight", "DRL"], "tail": ["Taillight"], "lamp": Vector3(0.75, 1.03, 2.47),
+		"boxes": [[Vector3(2.02, 0.9, 4.94), Vector3(0, 0.8, 0)], [Vector3(1.66, 0.56, 3.3), Vector3(0, 1.5, -0.5)]],
+		"ind": [Vector3(0.92, 1.03, 2.46), Vector3(0.89, 1.1, -2.47), Vector3(0.6, 0.58, -2.48)]},
 	"coupe": {"name": "Sports Coupe", "glb": "res://assets/vehicles/coupe.glb", "mass": 1450.0,
 		"com": Vector3(0, 0.32, 0.05), "radius": 0.34, "rest": 0.16, "travel": 0.14, "stiff": 48.0, "torque": 1.0,
 		"top": 52.0, "seat": Vector3(-0.4, 1.17, -0.36), "cabin": Vector3(0, -0.12, -0.15), "glass": "Canopy",
@@ -612,6 +612,7 @@ func _build_glb(sp: Dictionary) -> void:
 	glass.metallic = 0.55
 	glass.roughness = 0.04
 	glass.metallic_specular = 0.9
+	glass.cull_mode = BaseMaterial3D.CULL_DISABLED                # (some panes' faces point in: seen from both sides)
 	for mi in model.find_children("*", "MeshInstance3D", true, false):
 		var m := mi as MeshInstance3D
 		var top: Node = m

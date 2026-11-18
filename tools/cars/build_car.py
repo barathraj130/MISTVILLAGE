@@ -97,22 +97,23 @@ SPECS = {
 # grille; vertical tail lamp strips joined by a black band; a vent in each front door; 22-inch multi-spoke wheels.
 def _luxury():
     return dict(
-        L=5.05, W=2.0, H=1.87, front_over=0.95, WB=3.0, R=0.405, TRACK=1.7, RIM_D=0.559, TYRE_W=0.285,
-        TOP=[(2.525, 0.8), (2.515, 0.92), (2.49, 0.99), (2.42, 1.04), (2.2, 1.075), (1.7, 1.095), (1.2, 1.115), (0.95, 1.13),
-             (0.7, 1.32), (0.45, 1.55), (0.2, 1.78), (-0.1, 1.86), (-0.8, 1.87), (-1.6, 1.865), (-2.1, 1.85), (-2.3, 1.82),
-             (-2.42, 1.7), (-2.49, 1.45), (-2.515, 1.15), (-2.525, 0.95)],
-        BOT=[(2.525, 0.55), (2.5, 0.45), (2.36, 0.37), (1.95, 0.31), (0.0, 0.27), (-1.95, 0.31), (-2.36, 0.37), (-2.5, 0.46), (-2.525, 0.56)],
-        HALF=[(2.525, 0.64), (2.512, 0.86), (2.47, 0.94), (2.25, 0.985), (1.5, 1.0), (0.0, 1.0), (-1.5, 1.0), (-2.25, 0.99),
-              (-2.46, 0.955), (-2.512, 0.89), (-2.525, 0.7)],
-        BELT=[(2.0, 1.13), (0.95, 1.145), (0.0, 1.155), (-1.4, 1.165), (-2.3, 1.175)],
-        COWL=0.95, ROOF_F=0.2, ROOF_R=-2.25, BOOT=-2.5, TUMBLE=0.22, tail="hatch",
-        door_f=0.9, B=-0.36, door_r=-1.28, bump_f=0.62, bump_r=0.9, quarter=True, cladding=False, rails=False,
-        head=[(0.58, 0.955), (0.9, 0.96), (0.95, 0.985), (0.93, 1.015), (0.6, 1.01)],
-        tail_lamp=[(0.84, 0.97), (0.93, 0.97), (0.935, 1.36), (0.855, 1.36)],
-        fog=(0.82, 0.46), grille=[(-0.52, 0.68), (0.52, 0.68), (0.55, 0.97), (-0.55, 0.97)],
-        intake=[(-0.74, 0.36), (0.74, 0.36), (0.78, 0.52), (-0.78, 0.52)], plate_f=0.58, plate_r=0.78,
-        rows=[-1.12], int_dz=0.2, eye=(-0.22, 1.62), paint=(0.46, 0.38, 0.27), plate="TN 38 AR 0007",
-        spokes=10, gill=True, tail_band=True, dual_exhaust=True, lux=True)
+        L=4.95, W=2.04, H=1.785, front_over=0.92, WB=2.99, R=0.415, TRACK=1.74, RIM_D=0.559, TYRE_W=0.285,
+        TOP=[(2.475, 0.88), (2.468, 1.03), (2.445, 1.1), (2.38, 1.135), (2.15, 1.16), (1.6, 1.18), (1.15, 1.195), (0.95, 1.205),
+             (0.7, 1.34), (0.4, 1.5), (0.1, 1.645), (-0.15, 1.74), (-0.4, 1.78), (-0.9, 1.785), (-1.4, 1.768), (-1.8, 1.735),
+             (-2.08, 1.67), (-2.24, 1.57), (-2.36, 1.45), (-2.44, 1.25), (-2.468, 1.1), (-2.475, 0.98)],
+        BOT=[(2.475, 0.6), (2.45, 0.5), (2.3, 0.44), (1.9, 0.4), (0.0, 0.36), (-1.9, 0.4), (-2.3, 0.45), (-2.45, 0.52), (-2.475, 0.62)],
+        HALF=[(2.475, 0.6), (2.462, 0.84), (2.42, 0.93), (2.25, 0.98), (1.8, 0.995), (0.0, 0.99), (-1.8, 1.0), (-2.25, 0.985),
+              (-2.41, 0.95), (-2.462, 0.88), (-2.475, 0.68)],
+        BELT=[(2.0, 1.18), (0.95, 1.225), (0.0, 1.25), (-1.3, 1.285), (-2.2, 1.32)],
+        COWL=0.95, ROOF_F=-0.15, ROOF_R=-2.06, BOOT=-2.42, TUMBLE=0.32, tail="hatch",
+        door_f=0.9, B=-0.38, door_r=-1.3, bump_f=0.62, bump_r=0.9, quarter=True, cladding=False, rails=False,
+        head=[(0.58, 1.0), (0.9, 1.005), (0.95, 1.03), (0.92, 1.06), (0.6, 1.055)],
+        tail_lamp=[(0.83, 0.97), (0.92, 0.97), (0.925, 1.2), (0.845, 1.2)],
+        fog=(0.82, 0.5), grille=[(-0.5, 0.7), (0.5, 0.7), (0.54, 1.02), (-0.54, 1.02)],
+        intake=[(-0.74, 0.4), (0.74, 0.4), (0.78, 0.55), (-0.78, 0.55)], plate_f=0.6, plate_r=0.74,
+        rows=[-1.15], int_dz=0.2, eye=(-0.22, 1.58), paint=(0.46, 0.38, 0.27), plate="TN 38 AR 0007",
+        spokes=10, gill=True, tail_band=True, dual_exhaust=True, lux=True, dome=0.0, crest=0.012, float_roof=True,
+        dpillar=0.2, sculpt=dict(flare=0.038, haunch=0.03, scallop=0.024, shoulder=0.012, dome=0.025))
 
 
 SPECS["luxury"] = _luxury()
@@ -137,6 +138,8 @@ def use(kind):
     R, TRACK, RIM_D, TYRE_W = sp["R"], sp["TRACK"], sp["RIM_D"], sp["TYRE_W"]
     TOP, BOT, HALF, BELT = sp["TOP"], sp["BOT"], sp["HALF"], sp["BELT"]
     COWL, ROOF_F, ROOF_R, BOOT, TUMBLE = sp["COWL"], sp["ROOF_F"], sp["ROOF_R"], sp["BOOT"], sp["TUMBLE"]
+    global SPANS
+    SPANS = [4, 3, 8, 10, 12, 6, 6, 8, 3, 10, 4, 5, 8] if sp.get("sculpt") else [4, 3, 4, 5, 6, 3, 3, 5, 3, 10, 4, 5, 8]
 
 
 def smoothstep(a, b, x):
@@ -174,10 +177,15 @@ def section(x):
     z_c0 = max(zc - 0.12, zb + h * 0.42)
     zc = min(max(zc, zb + h * 0.62), side_top - h * 0.12)
     z_c1 = min(zc + 0.03, side_top - h * 0.06)
-    pts = [(0.0, zb), (w * 0.5, zb + 0.002), (w - 0.09, zb + 0.008), (w - 0.022, z_r1), (w - 0.006, z_r2),
-           (w + 0.002, z_c0), (w + 0.008, zc), (w - 0.002, z_c1), (w - 0.022, side_top - min(0.008, h * 0.03)),
+    # (a luxury SUV's sculpture: the body swelling over each wheel, the haunches; the bonnet domed a little at its
+    #  middle with its edges, the fender crests, standing up a little)
+    hb = float(SPEC.get("haunch", 0.0)) * (math.exp(-((x - AX_F) / 0.55) ** 2) + math.exp(-((x - AX_R) / 0.6) ** 2))
+    dome = float(SPEC.get("dome", 0.0)) * (1.0 - g) * smoothstep(HX - 0.02, HX - 0.5, x)
+    crest = float(SPEC.get("crest", 0.0)) * (1.0 - g) * smoothstep(HX - 0.02, HX - 0.35, x)
+    pts = [(0.0, zb), (w * 0.5, zb + 0.002), (w - 0.09, zb + 0.008), (w - 0.022 + hb * 0.6, z_r1), (w - 0.006 + hb, z_r2),
+           (w + 0.002 + hb, z_c0), (w + 0.008 + hb * 0.8, zc), (w - 0.002 + hb * 0.3, z_c1), (w - 0.022, side_top - min(0.008, h * 0.03)),
            (w - 0.034 - 0.02 * g, side_top + 0.004),
-           (wt + 0.012 * g, rail - 0.012 * g), (wt - 0.07, top - 0.004), (wt * 0.45, top + 0.012), (0.0, top + 0.016)]
+           (wt + 0.012 * g, rail - 0.012 * g), (wt - 0.07, top - 0.004 + crest), (wt * 0.45, top + 0.012 + dome * 0.7), (0.0, top + 0.016 + dome)]
     return pts
 
 
@@ -214,6 +222,8 @@ def zone_material(x, y, z, zone, M):
         return "BlackTrim"
     if x < -HX + 0.14 and z < 0.36:
         return "BlackTrim"                                        # (the rear bumper's lower part)
+    if SPEC.get("float_roof") and zone in (6, 7) and greenhouse(x) > 0.5:
+        return "BlackGloss"                                       # (the pillars black: the roof floats over the glass)
     return "Paint"
 
 
@@ -248,6 +258,37 @@ def build_body(M):
     bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
     body = K.mesh_obj("Body", bm, mats)
     return body
+
+
+def sculpt(body):
+    """The luxury SUV's body sculpted, the loft's mesh moved (not trim on it): its sides pushed out in a flare round
+    each wheel arch and a haunch over it, a shoulder along the waist with a crisp lower edge, the lower doors drawn in
+    (a scallop between the arches), so the side isn't a flat slab; its bonnet's centre raised in a long power dome."""
+    sc = SPEC.get("sculpt")
+    if not sc:
+        return
+    ra = R + 0.045                                                  # (the arch's cut, cut_arches())
+    for v in body.data.vertices:
+        x, y, z = v.co
+        w = K.cr(HALF, x)
+        if w <= 0.05:
+            continue
+        side = smoothstep(0.62, 0.9, abs(y) / w) * smoothstep(1.32, 1.15, z)   # (only the body side, not the roof)
+        d = 0.0
+        for ax in (AX_F, AX_R):
+            r = math.hypot(x - ax, z - (R + 0.02))
+            if r > ra - 0.03:
+                d += sc["flare"] * math.exp(-((r - ra - 0.06) / 0.1) ** 2)      # (the arch's lip, standing out)
+            d += sc["haunch"] * math.exp(-((r - 0.62) / 0.2) ** 2) * smoothstep(R - 0.1, R + 0.25, z)
+        between = smoothstep(AX_F - 0.35, AX_F - 0.7, x) * smoothstep(AX_R + 0.35, AX_R + 0.7, x)
+        d -= sc["scallop"] * between * math.exp(-((z - 0.66) / 0.14) ** 2)
+        d += sc["shoulder"] * smoothstep(0.86, 0.93, z) * smoothstep(1.11, 1.05, z) * smoothstep(HX - 0.05, HX - 0.35, x) * smoothstep(-HX + 0.05, -HX + 0.3, x)
+        if abs(y) > 0.01:
+            v.co.y += math.copysign(d * side, y)
+        top = smoothstep(0.55, 0.15, abs(y) / w)
+        if x > COWL + 0.1 and z > 0.9:
+            v.co.z += sc["dome"] * top * smoothstep(HX - 0.05, HX - 0.45, x) * smoothstep(COWL + 0.05, COWL + 0.3, x)
+    body.data.update()
 
 
 def prism_side(name, pts_xz, y0, y1):
@@ -424,7 +465,8 @@ def c_line(z):
     t = min(max((z - zb) / (zr - zb), 0.0), 1.0)
     if SPEC["tail"] == "boot":
         return BOOT + 0.32 + (ROOF_R + 0.04 - (BOOT + 0.32)) * t
-    return BOOT + 0.14 + (ROOF_R + 0.1 - (BOOT + 0.14)) * t
+    dp = float(SPEC.get("dpillar", 0.0))                          # (a thick D pillar: the quarter glass shorter)
+    return BOOT + 0.14 + dp + (ROOF_R + 0.1 + dp * 1.3 - (BOOT + 0.14 + dp)) * t
 
 
 def dlo(x0, x1, front_fn=None, rear_fn=None, n=24):
@@ -1029,14 +1071,27 @@ def extras(body, tree, M):
             out.append(box("DoorVent", (0.06, 0.012, 0.36), (x, y, 0.86), M["Chrome"], bevel=0.015))
             out.append(box("DoorVentSlot", (0.03, 0.014, 0.3), (x, y, 0.86), M["BlackGloss"], bevel=0.008))
     if SPEC.get("tail_band"):
-        out.append(box("TailBand", (0.012, 1.68, 0.11), (-HX - 0.002, 0.0, 1.27), M["BlackGloss"], bevel=0.01))
+        out.append(box("TailBand", (0.012, 1.62, 0.1), (-HX - 0.002, 0.0, 1.13), M["BlackGloss"], bevel=0.01))
         out.append(box("TailTrim", (0.012, 1.4, 0.018), (-HX - 0.003, 0.0, 0.88), M["Chrome"]))
     if SPEC.get("lux"):
         # a panoramic glass roof; chrome round the side windows; flush door handles; a gloss-black sill line; the
         # rear LED bar across the tailgate (lit with the tail lamps: its name begins Taillight)
-        roof_z = K.cr(TOP, -0.8) + 0.004
-        out.append(box("PanoRoof", (1.75, 1.32, 0.012), (-0.85, 0.0, roof_z), M["GlassTint"], bevel=0.02))
-        out.append(box("PanoFrame", (1.82, 1.4, 0.008), (-0.85, 0.0, roof_z - 0.004), M["BlackGloss"], bevel=0.02))
+        def roof_sheet(name, x0, x1, hw, lift, mat):              # (on the roof's own curve, lengthwise and across)
+            bm = bmesh.new()
+            nx, ny = 16, 8
+            vs = [[bm.verts.new((x0 + (x1 - x0) * i / nx, -hw + 2 * hw * j / ny,
+                                 K.cr(TOP, x0 + (x1 - x0) * i / nx) + 0.016 + lift - 0.035 * ((-hw + 2 * hw * j / ny) / 0.62) ** 2))
+                   for j in range(ny + 1)] for i in range(nx + 1)]
+            for i in range(nx):
+                for j in range(ny):
+                    bm.faces.new((vs[i][j], vs[i + 1][j], vs[i + 1][j + 1], vs[i][j + 1]))
+            ob = K.mesh_obj(name, bm, [mat])
+            so = ob.modifiers.new("T", 'SOLIDIFY')
+            so.thickness = 0.008
+            K.apply_mods(ob)
+            return ob
+        out.append(roof_sheet("PanoFrame", -1.58, -0.12, 0.56, 0.008, M["BlackGloss"]))
+        out.append(roof_sheet("PanoRoof", -1.54, -0.16, 0.52, 0.016, M["GlassTint"]))
         for side in (1.0, -1.0):
             zb = K.cr(BELT, -0.6) + 0.012
             for (x0, x1) in ((0.9, -0.36), (-0.36, -2.22)):
@@ -1046,8 +1101,8 @@ def extras(body, tree, M):
                 out.append(box("FlushHandle", (0.2, 0.012, 0.03), (hx, side * (K.cr(HALF, hx) + 0.002), 1.04), M["BlackGloss"], bevel=0.01))
                 out.append(box("HandleTrim", (0.21, 0.013, 0.006), (hx, side * (K.cr(HALF, hx) + 0.003), 1.058), M["Chrome"]))
             sl = WB - 2 * R - 0.32                            # (between the arches only)
-            out.append(box("SillBlack", (sl, 0.014, 0.06), (AX_F - WB / 2, side * (K.cr(HALF, 0.0) + 0.001), 0.36), M["BlackGloss"]))
-        out.append(box("Taillight_Bar", (0.012, 1.5, 0.022), (-HX - 0.004, 0.0, 1.36), M["Taillight"], bevel=0.006))
+            out.append(box("SillBlack", (sl, 0.014, 0.06), (AX_F - WB / 2, side * (K.cr(HALF, 0.0) + 0.001), K.cr(BOT, 0.0) + 0.05), M["BlackGloss"]))
+        out.append(box("Taillight_Bar", (0.012, 1.5, 0.022), (-HX - 0.004, 0.0, 1.2), M["Taillight"], bevel=0.006))
     if SPEC.get("dual_exhaust"):
         for side in (1.0, -1.0):
             out.append(box("ExhaustTip", (0.04, 0.16, 0.06), (-HX + 0.02, side * 0.55, 0.42), M["Chrome"], bevel=0.02))
@@ -1103,6 +1158,55 @@ def extras(body, tree, M):
     return out
 
 
+def lux_details(tree, M):
+    """The luxury SUV's finish, front and rear: a layered grille (fine slats ahead of vertical vanes in a chrome
+    surround, depth between them), parking sensors in both bumpers, red reflectors and a diffuser with fins at the
+    back, the rear wiper on its tailgate glass."""
+    out = []
+    g = SPEC["grille"]
+    gz0, gz1 = min(p[1] for p in g), max(p[1] for p in g)
+    gy = min(abs(p[0]) for p in g)
+    loc, _n = hit(tree, (HX + 0.5, 0.0, (gz0 + gz1) / 2), (-1, 0, 0))
+    if loc:
+        gx = loc.x
+        for k in range(9):                                    # (fine slats, set back 15 mm)
+            z = gz0 + 0.02 + (gz1 - gz0 - 0.04) * k / 8
+            out.append(box("GrilleBar%d" % k, (0.01, gy * 2 - 0.02, 0.008), (gx - 0.015, 0.0, z), M["BlackGloss"], bevel=0.003))
+        for k in range(15):                                   # (vanes behind them, 45 mm back)
+            y = -gy + 0.04 + (gy * 2 - 0.08) * k / 14
+            out.append(box("GrilleVane%d" % k, (0.05, 0.006, gz1 - gz0 - 0.03), (gx - 0.045, y, (gz0 + gz1) / 2), M["BlackTrim"]))
+        out.append(box("GrilleBack", (0.01, gy * 2, gz1 - gz0), (gx - 0.08, 0.0, (gz0 + gz1) / 2), M["BlackTrim"]))
+        for z in (gz0, gz1):                                  # (the chrome surround)
+            out.append(box("GrilleSurround", (0.02, gy * 2 + 0.03, 0.014), (gx + 0.002, 0.0, z), M["Chrome"], bevel=0.005))
+        for sy in (1.0, -1.0):
+            out.append(box("GrilleSurround", (0.02, 0.014, gz1 - gz0 + 0.014), (gx + 0.002, sy * (gy + 0.008), (gz0 + gz1) / 2), M["Chrome"], bevel=0.005))
+    for end, zs in ((1.0, 0.5), (-1.0, 0.56)):                # (parking sensors: four a bumper)
+        for y in (-0.62, -0.22, 0.22, 0.62):
+            loc, n = hit(tree, (end * (HX + 0.5), y, zs), (-end, 0, 0))
+            if loc:
+                sn = K.lathe("ParkSensor", [(0.0, 0.004), (0.011, 0.004), (0.012, -0.004)], 16, 'X', [M["Paint"]])
+                sn.location = loc
+                out.append(sn)
+    for sy in (1.0, -1.0):                                    # (rear reflectors, low on the bumper's corners)
+        loc, _n = hit(tree, (-HX - 0.5, sy * 0.78, 0.5), (1, 0, 0))
+        if loc:
+            out.append(box("RearReflector", (0.008, 0.14, 0.025), loc + Vector((-0.003, 0, 0)), M["RedReflector"], bevel=0.004))
+    loc, _n = hit(tree, (-HX - 0.5, 0.0, 0.42), (1, 0, 0))   # (the diffuser and its fins)
+    if loc:
+        out.append(box("Diffuser", (0.16, 1.0, 0.04), (loc.x + 0.06, 0.0, 0.4), M["BlackTrim"], bevel=0.01))
+        for k in range(6):
+            out.append(box("DiffuserFin", (0.15, 0.008, 0.06), (loc.x + 0.06, -0.4 + 0.16 * k, 0.37), M["BlackTrim"]))
+    # the rear wiper: its pivot under the tailgate glass, the arm and blade lying along it
+    zg = 1.31
+    loc, n = hit(tree, (-HX - 0.5, 0.0, zg), (1, 0, 0))
+    if loc:
+        tilt = math.atan2(-n.x, n.z) if n else 0.3
+        out.append(box("RearWiperCap", (0.03, 0.04, 0.025), loc + Vector((-0.012, 0, 0)), M["BlackTrim"], bevel=0.008))
+        arm = box("RearWiper", (0.008, 0.5, 0.012), loc + Vector((-0.012, 0.22, 0.03)), M["BlackTrim"], rot=(math.radians(8), 0, 0), bevel=0.003)
+        out.append(arm)
+    return out
+
+
 def finish(body, M, extra):
     """The body: its glass and trim split off by material, the paint a 10 mm skin. Every part stays a top-level
     object (the game knows lamps and glass by their top-level names: Headlight_*, DRL_*, Taillight_*, Glass_*)."""
@@ -1136,8 +1240,20 @@ def main():
     use(kind)
     bpy.ops.wm.read_factory_settings(use_empty=True)
     M = K.materials(SPEC["paint"])
+    M["RedReflector"] = K._mat("RedReflector", (0.6, 0.02, 0.02), rough=0.08, coat=1.0)
+    if SPEC.get("lux"):                                          # (champagne metallic: more metal in it, under the coat)
+        pb = M["Paint"].node_tree.nodes.get("Principled BSDF")
+        if pb:
+            pb.inputs["Metallic"].default_value = 0.6
+            pb.inputs["Roughness"].default_value = 0.3
+    if SPEC.get("lux"):                                          # (a luxury car's glass: dark, as in the game)
+        bsdf = M["Glass"].node_tree.nodes.get("Principled BSDF")
+        if bsdf:
+            bsdf.inputs["Alpha"].default_value = 0.6
+            bsdf.inputs["Base Color"].default_value = (0.02, 0.025, 0.03, 1.0)
     body = build_body(M)
     print("CAR %s loft %d faces" % (kind, len(body.data.polygons)), flush=True)
+    sculpt(body)
     cut_panels(body)
     names = [m.name if m else "-" for m in body.data.materials]
     got = openings(body, M, names)
@@ -1150,6 +1266,8 @@ def main():
     extra += front_trim(body, tree, M)
     extra += side_trim(body, tree, M)
     extra += extras(body, tree, M)
+    if SPEC.get("lux"):
+        extra += lux_details(tree, M)
     extra += wheels(M)
     extra += interior(M)
     finish(body, M, extra)
@@ -1169,10 +1287,25 @@ def main():
         bpy.ops.export_scene.gltf(filepath=out, export_format='GLB', use_selection=True, export_yup=True,
                                   export_apply=True, export_image_format='JPEG')
         print("CAR exported %s (%.1f MB)" % (out, os.path.getsize(out) / 1e6), flush=True)
+    if os.environ.get("CARKIT_CLAY"):                            # (the silhouette test: one neutral clay, glass dark)
+        clay = K._mat("Clay", (0.55, 0.55, 0.55), rough=0.6)
+        dark = K._mat("ClayGlass", (0.03, 0.03, 0.035), rough=0.1)
+        for o in bpy.data.objects:
+            if o.type == 'MESH' and not o.name.startswith("Preview"):
+                for i, m in enumerate(o.data.materials):
+                    o.data.materials[i] = dark if (m and m.name.startswith("Glass")) or o.name.startswith("Glass") else clay
     if "--preview" in args:
         d = args[args.index("--preview") + 1]
         os.makedirs(d, exist_ok=True)
         K.previews(os.path.join(d, kind), target=Vector((0, 0, H * 0.45)), dist=L * 1.55)
+        if os.environ.get("CARKIT_MOODS"):                     # (evening, night, the showroom)
+            for mood, world, sun, lamps_on in (("evening", "sunset.exr", 1.2, 0.0), ("night", "night.exr", 0.0, 1.0), ("showroom", "interior.exr", 0.6, 0.0)):
+                for nm in ("Headlight", "DRL", "Taillight"):
+                    b = M[nm].node_tree.nodes.get("Principled BSDF")
+                    if b:
+                        b.inputs["Emission Strength"].default_value = {"Headlight": 6.0, "DRL": 8.0, "Taillight": 6.0}[nm] if lamps_on else {"Headlight": 0.0, "DRL": 2.0, "Taillight": 0.4}[nm]
+                K.previews(os.path.join(d, kind + "_" + mood), target=Vector((0, 0, H * 0.45)), dist=L * 1.55,
+                           views={"front34": (35, 10), "rear34": (150, 10)}, world=world, sun_k=sun)
 
 if __name__ != "probe":
     main()

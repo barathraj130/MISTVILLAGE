@@ -423,7 +423,7 @@ def plate(M, name, text, at, facing, w=0.5, h=0.12):
 
 
 # ----------------------------------------------------------------------------------------------------- previews
-def previews(out_prefix, target=Vector((0, 0, 0.7)), dist=6.2, views=None, res=(1280, 720), world="city.exr"):
+def previews(out_prefix, target=Vector((0, 0, 0.7)), dist=6.2, views=None, res=(1280, 720), world="city.exr", sun_k=3.0):
     """Renders from round the car under an outdoor HDRI (Eevee), to judge the model by: <prefix>_<view>.png."""
     sc = bpy.context.scene
     engines = [e.identifier for e in sc.render.bl_rna.properties["engine"].enum_items]
@@ -437,14 +437,14 @@ def previews(out_prefix, target=Vector((0, 0, 0.7)), dist=6.2, views=None, res=(
     env = nt.nodes.new("ShaderNodeTexEnvironment")
     env.image = bpy.data.images.load(STUDIO + world)
     bg = nt.nodes["Background"]
-    bg.inputs["Strength"].default_value = 1.2
     nt.links.new(env.outputs[0], bg.inputs[0])
     if "PreviewFloor" not in bpy.data.objects:
         bm = bmesh.new()
         bmesh.ops.create_grid(bm, x_segments=1, y_segments=1, size=30)
         fl = mesh_obj("PreviewFloor", bm, [_mat("PreviewAsphalt", (0.09, 0.09, 0.095), rough=0.85)])
     sun = bpy.data.objects.get("PreviewSun") or link(bpy.data.objects.new("PreviewSun", bpy.data.lights.new("PreviewSun", 'SUN')))
-    sun.data.energy = 3.0
+    sun.data.energy = sun_k
+    bg.inputs["Strength"].default_value = 1.2 if sun_k > 0.5 else 0.35
     sun.data.angle = math.radians(2.0)
     sun.rotation_euler = (math.radians(42), 0, math.radians(35))
     cam = bpy.data.objects.get("PreviewCam") or link(bpy.data.objects.new("PreviewCam", bpy.data.cameras.new("PreviewCam")))
@@ -465,8 +465,14 @@ def previews(out_prefix, target=Vector((0, 0, 0.7)), dist=6.2, views=None, res=(
         bpy.ops.render.render(write_still=True)
         cam.data.lens = 50
     out = []
+    ortho = os.environ.get("CARKIT_ORTHO")                       # (front, side, rear square on: orthographic)
+    if ortho:
+        views = dict(views)
+        views.update({"o_side": (90, 0), "o_front": (0, 0), "o_rear": (180, 0)})
     for nm, (az, el) in views.items():
         a, e = math.radians(az), math.radians(el)
+        cam.data.type = 'ORTHO' if nm.startswith("o_") else 'PERSP'
+        cam.data.ortho_scale = 6.0 if nm == "o_side" else 2.8
         cam.location = target + Vector((math.cos(a) * math.cos(e), -math.sin(a) * math.cos(e), math.sin(e))) * dist
         cam.rotation_euler = (target - cam.location).to_track_quat('-Z', 'Y').to_euler()
         sc.render.filepath = "%s_%s.png" % (out_prefix, nm)
