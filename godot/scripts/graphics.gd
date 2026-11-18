@@ -94,7 +94,7 @@ static func apply(vp: Viewport, env: Environment, sun: DirectionalLight3D) -> vo
 	RenderingServer.environment_set_ssao_quality(int(p["ssao_q"]) as RenderingServer.EnvironmentSSAOQuality,
 		int(p["ssao_q"]) < 2, 0.5, 2, 50.0, 300.0)
 	if env:
-		env.ssao_enabled = bool(p["ssao"])
+		env.ssao_enabled = bool(p["ssao"]) and not "--nossao" in OS.get_cmdline_user_args()   # (--nossao: to measure it)
 		if not bool(p["vfog"]):
 			env.volumetric_fog_enabled = false
 	if sun:

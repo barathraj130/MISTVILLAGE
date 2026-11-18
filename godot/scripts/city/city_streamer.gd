@@ -806,6 +806,7 @@ func _flyovers(roads: Array, out: Dictionary) -> void:
 	var panel_b := Color(0.42, 0.41, 0.39)
 	var piers: Array = []
 	var lamps2: Array = []
+	var pools2: Array = []                          # (the light each flyover lamp throws on the deck: lamp_pool)
 	for r in roads:
 		if not r.get("fly", false):
 			continue
@@ -898,6 +899,7 @@ func _flyovers(roads: Array, out: Dictionary) -> void:
 				var c := a.lerp(b, f)
 				var right := Vector3(-dir.z, 0, dir.x)          # the driver's right: the median side of a divided road
 				lamps2.append(Transform3D(Basis(basis_x, Vector3.UP, basis_z), c + right * (half + 0.19) + Vector3(0, 0.9, 0)))
+				pools2.append(Transform3D(Basis().scaled(Vector3(7.5, 1.0, 7.5)), c + right * (half - 2.4) + Vector3(0, 0.12, 0)))   # (its light on the deck)
 				next_lamp += 30.0
 			along += L
 	if (t[0] as PackedVector3Array).is_empty():
@@ -915,7 +917,7 @@ func _flyovers(roads: Array, out: Dictionary) -> void:
 	shape.backface_collision = true
 	shape.set_faces(faces)
 	out["fly_shape"] = shape
-	for pair in [["fly_piers", piers, pier_mesh], ["fly_lamps", lamps2, fly_lamp_mesh]]:
+	for pair in [["fly_piers", piers, pier_mesh], ["fly_lamps", lamps2, fly_lamp_mesh], ["fly_pools", pools2, pool_mesh]]:
 		var xs: Array = pair[1]
 		if xs.is_empty() or pair[2] == null:
 			continue
@@ -2590,11 +2592,12 @@ func _instance(k: Vector2i, d: Dictionary) -> void:
 		var fcs := CollisionShape3D.new()
 		fcs.shape = d["fly_shape"]
 		_shape(node, fcs)
-	for fk in ["fly_piers", "fly_lamps"]:
+	for fk in ["fly_piers", "fly_lamps", "fly_pools"]:
 		if d.has(fk):
 			var fpi := MultiMeshInstance3D.new()
 			fpi.multimesh = _real(d[fk])
-			fpi.visibility_range_end = 900.0
+			fpi.visibility_range_end = 900.0 if fk != "fly_pools" else 300.0
+			fpi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF if fk == "fly_pools" else fpi.cast_shadow
 			node.add_child(fpi)
 	if d.has("sep_plants"):
 		var spi := MultiMeshInstance3D.new()

@@ -604,6 +604,9 @@ func _environment() -> void:
 	env.ambient_light_source = Environment.AMBIENT_SOURCE_SKY
 	env.ambient_light_energy = 0.45
 	env.tonemap_mode = Environment.TONE_MAPPER_AGX
+	env.tonemap_exposure = 0.92                  # (the resort's look, brought to the city: walls lit, not washed out,
+	env.adjustment_enabled = true                #  a little more contrast)
+	env.adjustment_contrast = 1.08
 	env.ssao_enabled = true
 	env.fog_enabled = true
 	env.fog_density = 0.0003
@@ -666,13 +669,21 @@ func _daylight() -> void:
 		return
 	env.ambient_light_source = Environment.AMBIENT_SOURCE_SKY
 	env.ssil_enabled = false
-	env.ssao_intensity = 2.0
+	env.ssao_intensity = 2.2
 	var sim = fines.sim
 	var sd: Vector3 = sim.sun_dir()
 	var day: float = sim.daylight()
 	_city_lights(clampf((0.55 - day) / 0.45, 0.0, 1.0))
 	env.background_energy_multiplier = lerpf(0.1, 1.0, day)
-	env.ambient_light_energy = lerpf(0.16, 0.45, day)          # a city's night: street lights and shops keep it grey, not black
+	# The light from the sky stays through twilight (the sun to ~9° under the horizon), not falling with the sun:
+	# at dusk the walls away from the sun are lit by the glowing sky, not black against it. After that a city's
+	# night: its shops, lamps and their glow on the haze keep the street readable (a cool grey floor, blended in
+	# as the sky goes dark), the lamps and windows still the bright things in it.
+	var tw := smoothstep(-0.16, 0.1, sd.y)
+	var lit := maxf(day, tw)
+	env.ambient_light_color = Color(0.3, 0.32, 0.4)
+	env.ambient_light_sky_contribution = smoothstep(0.0, 0.35, lit)
+	env.ambient_light_energy = lerpf(0.75, 0.45, lit) * lerpf(1.0, 1.5, tw * (1.0 - day))   # (twilight: the sky's glow up)
 	env.fog_light_color = Color(0.74, 0.76, 0.8) * lerpf(0.05, 1.0, day)
 	# the sky with the sun: blue by day; at sunset the horizon goes orange and the haze warm; then deep blue night
 	# (cloud greys it: the weather's share, city_weather.gd)
