@@ -30,6 +30,10 @@
   "dosa_coffee": {"en": "Masala dosa & filter coffee", "ta": "மசாலா தோசை, ஃபில்டர் காபி", "desc": {"en": "Ghee roast dosa and a davara of coffee", "ta": "நெய் ரோஸ்ட், டபரா காபி"}, "energy": 55},
   "curd_pickle": {"en": "Curd rice & pickle", "ta": "தயிர் சாதம், ஊறுகாய்", "desc": {"en": "With pomegranate and mango pickle", "ta": "மாதுளை, மாங்காய் ஊறுகாயுடன்"}, "energy": 40},
   "fried_rice": {"en": "Veg fried rice", "ta": "வெஜ் ஃபிரைட் ரைஸ்", "desc": {"en": "Indo-Chinese wok-tossed rice", "ta": "இந்தோ-சைனீஸ் ஃபிரைட் ரைஸ்"}, "energy": 55},
+  "noodles": {"en": "Veg hakka noodles", "ta": "வெஜ் நூடுல்ஸ்", "desc": {"en": "Indo-Chinese, wok-tossed with vegetables", "ta": "இந்தோ-சைனீஸ் நூடுல்ஸ்"}, "energy": 55},
+  "burger": {"en": "Club burger and fries", "ta": "பர்கர், ஃப்ரைஸ்", "desc": {"en": "A grilled vegetable patty, cheese, fries on the side", "ta": "காய்கறி பர்கர், உருளைக்கிழங்கு ஃப்ரைஸ்"}, "energy": 70},
+  "pizza": {"en": "Margherita pizza", "ta": "மார்கரிட்டா பீட்சா", "desc": {"en": "Wood-fired, tomato and mozzarella", "ta": "தக்காளி, சீஸ் பீட்சா"}, "energy": 70},
+  "ice_cream": {"en": "Ice cream sundae", "ta": "ஐஸ்கிரீம்", "desc": {"en": "Two scoops: vanilla and strawberry", "ta": "வெனிலா, ஸ்ட்ராபெர்ரி"}, "energy": 25},
   "payasam": {"en": "Payasam", "ta": "பாயசம்", "desc": {"en": "Vermicelli in sweet milk with cashews", "ta": "சேமியா பாயசம்"}, "energy": 20},
   "tea": {"en": "Tea", "ta": "டீ", "desc": {"en": "Strong milk tea", "ta": "பால் டீ"}, "energy": 5},
   "filter_coffee": {"en": "Filter coffee", "ta": "ஃபில்டர் காபி", "desc": {"en": "In a steel tumbler and davara", "ta": "டம்ளர், டபராவில்"}, "energy": 5},
@@ -87,18 +91,21 @@
     {"cat": "meals", "items": [["meals", 130]]},
     {"cat": "tiffin", "items": [["parotta", 80], ["masala_dosa", 70]]},
     {"cat": "nonveg", "items": [["chicken_curry", 160]]},
+    {"cat": "chinese", "items": [["noodles", 120], ["fried_rice", 130]]},
     {"cat": "drinks", "items": [["tea", 15]]}]},
   "grand_hotel": {"kind": {"en": "Five-star · The Courtyard restaurant", "ta": "ஐந்து நட்சத்திர உணவகம்"},
    "menu": [
     {"cat": "mains", "items": [["thali", 1150], ["exec_lunch", 1450], ["malabar_chicken", 950]]},
     {"cat": "tiffin", "items": [["dosa_coffee", 650]]},
     {"cat": "rice", "items": [["curd_pickle", 550]]},
-    {"cat": "desserts", "items": [["payasam", 350]]},
+    {"cat": "snacks", "items": [["burger", 650], ["pizza", 750]]},
+    {"cat": "desserts", "items": [["payasam", 350], ["ice_cream", 380]]},
     {"cat": "drinks", "items": [["fresh_lime", 250], ["filter_coffee", 220]]}]}
  },
  "categories": {
   "meals": {"en": "Meals", "ta": "சாப்பாடு"}, "tiffin": {"en": "Tiffin", "ta": "டிஃபன்"}, "rice": {"en": "Rice varieties", "ta": "சாத வகைகள்"},
   "evening": {"en": "Evening", "ta": "மாலை"}, "nonveg": {"en": "Non-vegetarian", "ta": "அசைவம்"}, "mains": {"en": "Mains", "ta": "முக்கிய உணவு"},
-  "desserts": {"en": "Desserts", "ta": "இனிப்பு"}, "drinks": {"en": "Beverages", "ta": "பானங்கள்"}
+  "desserts": {"en": "Desserts", "ta": "இனிப்பு"}, "drinks": {"en": "Beverages", "ta": "பானங்கள்"},
+  "chinese": {"en": "Chinese", "ta": "சைனீஸ்"}, "snacks": {"en": "All-day snacks", "ta": "சிற்றுண்டி"}
  }
 }

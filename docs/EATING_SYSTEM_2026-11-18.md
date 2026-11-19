@@ -1,4 +1,4 @@
-# Eating at the table: audit and plan (18 November 2026)
+# Eating at the table: the universal eating and drinking system (18–19 November 2026)
 
 The universal eating brief's first step: the game's real food inventory, where it's eaten, and the character rig.
 Nothing in the "tested" column is claimed until it has been seen in the running game.
@@ -61,3 +61,84 @@ hold would be new).
    hand.
 3. The eateries (`order_screen.gd`) on the same system.
 4. Roll out to every dish; the coverage table filled in with what was tested and seen.
+
+## 6. The system as built (19 November)
+
+One controller for every table; what's eaten decides how, never the mission.
+
+| Brief's name | Here | What it does |
+|---|---|---|
+| FoodInteractionManager / EatingStateMachine / EatingAnimationController / FoodConsumptionManager | `scripts/story/eater.gd` | picks what to eat next, builds each bite from the part's profile, runs the states, takes food off the table at the right moments, the face (mouth, chewing, swallow, lids), the left hand, the look |
+| FoodInteractionProfile | `scripts/story/eat_profiles.gd` | eleven methods as data (hand, grip, grip size, piece, size, dip, mix, left hand, utensil, tilt, chew, pace); a part's method from the part itself, the dish's `eat` in food.json, or its kind |
+| HandPoseController / FoodAttachmentController / UtensilInteractionController / DrinkInteractionController | `scripts/story/eat_ik.gd` | the arms (elbow on its own hinge, forearm turn split from the wrist, wrist range limits, no flips), five grips (pinch, scoop, spoon, wrap, hold), the left hand's grip, the hand socket (food, spoon, slice, burger, tumbler placed inside the solve, aimed by its working point: a spoon's bowl, a rim, a tip at the lips) |
+| Dishes, utensils, drinks | `scripts/story/food_kit.gd` | every dish's parts; tumblers and glasses (the drink a column that a sip shortens), spoon, fork laid by the dish |
+| Places | `dine3d.gd` (home), `order_screen.gd` (eateries, the five-star) | only the place: the table, the camera, the words, the card, the bill. Both use eater.gd |
+| Test bench | `tests/eat_test.gd`, `tests/eat_coverage.gd` | any dish at a table, its states printed, filmed from front, side, close, hand; every dish's resolved method |
+
+States (each bite uses the ones its profile needs): IDLE, LOOK_AT_FOOD, REACH, GRIP, PREPARE_BITE, PICK_UP,
+DIP_OR_SCOOP, BRING_TO_MOUTH, BITE_OR_SIP, CHEW_OR_SWALLOW (the hand waits, lowered, until he has swallowed), RETURN,
+REST. The meal's count is what came off the table; an eatery's energy is scaled by the share actually eaten.
+
+Methods: tear_dip (poori, dosa, chapati, parotta, appam...), pinch_dip (idli, vada, paniyaram, fries with ketchup),
+mix_scoop (rice with sambar, meals), scoop (rice alone), side_scoop (what's left of a curry), spoon (payasam, kanji,
+fried rice, ice cream), fork (noodles, wound on), hold_one (a pizza slice by its crust), hold_two (a burger in both
+hands), sip_cup (tea glass, coffee tumbler), sip_glass (fresh lime).
+
+Rig findings (19 November): no forearm twist bones (upper arm, lower arm, hand only; the clips key only those);
+the elbow's hinge measured from the Idle clip (lower arm local (0.99, 0, ±0.15)); the palm's normal and the fingers'
+axis measured from the rest pose; the lips measured from the face's mouth-pursing shape (3.5 cm under the head bone,
+10.3 cm before it: the old guess, 9 cm under, was the chin). The candy-wrapper twist and the hand flips came from
+the IK (shortest-arc turns, a free hand, the twist taken the long way round), not the skin weights: fixed in the
+solve (FOREARM_SHARE 0.7 of the turn in the forearm, the wrist's own twist within 26 deg, flexion 70, extension 55,
+radial 20, ulnar 30; the turn kept continuous frame to frame).
+
+New dishes for the brief's test list (food.json and the menus): burger and pizza (the five-star's all-day snacks),
+ice cream (its desserts), noodles (the mess's new Chinese section, with the fried rice that had no menu).
+
+## 7. Contact: hands, table, plate, vessels, food (the collision brief, 19 November)
+
+There are no physics bodies at the table and none are needed: the hands are posed by the IK every frame, so the
+contact is solved in the same pass, against simple shapes, instead of physics queries for every finger.
+
+- Solids: the table's top (a plane), each serving's plate (a thin disc at its real face), each katori, bowl and
+  tumbler (open vessels: the wall and rim are solid, the inside is where fingers dip into sambar), the food still on
+  the plate (soft domes). food_kit.gd declares each dish's solids; eater.gd puts them in the world every frame (a
+  lifted tumbler's goes with it; what the hand is holding is skipped: the fingers wrap it).
+- After the grip, about 25 points per hand (every finger's middle and end joints, the fingertips, the hand's root,
+  the knuckles) are checked. A digit that's in is turned out at its root along the push, up to four small steps (the
+  finger opens, the thumb lifts alongside), so the hand adapts instead of freezing; if it still can't come out, or the
+  palm or a knuckle is in, the whole hand is moved out by the depth, built up over a few frames and let back down
+  slowly (it settles on the surface, no buzzing). The fingertips may touch food (they pick it up); the palm and the
+  knuckles may not go into it.
+- Root causes fixed with it: the resting hands were posed tipped down at the table (now nearly flat, the fingertips
+  just touching it); the relaxed thumb hung under a flat palm into the table; the left hand's rest spot lay on a
+  meals leaf's katori (now the first spot clear of every vessel); a tumbler was grasped so low the little finger's
+  knuckle went under the table (now round its middle); a fork lying flat was taken from the side (now from above).
+- Measured (tests/eat_test.gd's EATCONTACT line: the deepest any hand point went into a solid after the pass, after
+  the first second; and how many frames had any point more than 3 mm in): see the table below.
+
+## 8. Coverage
+
+Every dish in story/food.json resolves to a method (tests/eat_coverage.gd). "Bench" = run on the test bench
+(tests/eat_test.gd: two or three bites, filmed, food taken off the table, no script errors). "In game" = played in
+the story at its real place.
+
+| Method | Dishes | Bench | In game |
+|---|---|---|---|
+| tear_dip | poori, dosa, masala dosa, dosa & coffee, chapati, parotta, appam, idiyappam, chicken curry & malabar chicken (parotta) | poori, dosa, masala dosa, dosa & coffee, chapati, parotta, appam, idiyappam | poori (home breakfast) |
+| pinch_dip | idli, idli & vada, vada, paniyaram, burger's fries | all five | |
+| mix_scoop | meals, mini meals, home meals, thali, executive lunch, jail meals, pongal, upma, puttu, lemon/tomato/curd/veg/kuzhambu rice, curd & pickle | meals, pongal, upma, puttu, lemon rice, curd rice | |
+| spoon | payasam, kanji, fried rice, ice cream | all four | |
+| fork | noodles | noodles | noodles (the mess) |
+| hold_one | pizza | pizza | |
+| hold_two | burger | burger | burger (the five-star) |
+| sip_cup | tea, filter coffee, dosa & coffee's coffee | tea, filter coffee | tea (the mess) |
+| sip_glass | fresh lime | fresh lime | fresh lime (the five-star) |
+| side_scoop | what's left of any curry, chutney, masala, pickle | (in the meals, idli, poori runs) | |
+
+Not run on their own: mini meals, home meals, thali, executive lunch, jail meals (the meals build), tomato, veg and
+kuzhambu rice, curd & pickle (the rice build), chicken curry and malabar chicken (the parotta build): the same build
+and method as dishes that were. Not in the game at all (no dish in food.json, so no profile yet): roti, naan,
+paratha, dal, paneer, chole bhature, samosa, puffs, sandwiches, pakoda, bajji, momos, pasta, soup, manchurian,
+cake, sweets, water, juice, milkshakes. Their methods exist (tear_dip, pinch_dip, spoon, hold_one, sip_glass); each
+needs its food_kit.gd build and a food.json entry.

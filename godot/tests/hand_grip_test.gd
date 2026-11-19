@@ -10,7 +10,7 @@ extends SceneTree
 const EatIK := preload("res://scripts/story/eat_ik.gd")
 const Kit := preload("res://scripts/story/food_kit.gd")
 const Face := preload("res://scripts/story/face.gd")
-const Dine := preload("res://scripts/story/dine3d.gd")
+const Dine := preload("res://scripts/story/eater.gd")
 
 var out := ""
 var world: Node3D
@@ -112,7 +112,7 @@ func _process(dt: float) -> bool:
 	var edge := pc - fwd * 0.04 + Vector3.UP * 0.018
 	var mouth := _mouth()
 	var level := (Vector3.DOWN * 0.45 + fwd * 0.85).normalized()
-	var to_mouth := (-fwd * 0.9 + Vector3.UP * 0.08 - right * 0.3).normalized()
+	var to_mouth := (-fwd * 0.6 + Vector3.UP * 0.55 - right * 0.35).normalized()
 	# the keys: [time, fingertip point, fingers' way, grip]
 	var keys := [[0.0, rest, level, 0.0], [1.0, edge + Vector3.UP * 0.03, level, 0.0], [1.5, edge, level, 0.0],
 		[1.75, edge, level, 1.0], [2.2, edge - fwd * 0.03 + Vector3.UP * 0.015, level, 1.0],
@@ -132,7 +132,7 @@ func _process(dt: float) -> bool:
 	ik.r_knuckles = right
 	ik.pinch = at[3]
 	var to_face := smoothstep(3.0, 3.35, t) * (1.0 - smoothstep(3.9, 4.4, t))
-	ik.r_thumb = (-right).lerp((Vector3.UP * 0.7 - right * 0.3).normalized(), to_face).normalized()
+	ik.r_palm = (Vector3.DOWN - right * 0.35).normalized().slerp((-right * 0.85 + Vector3.UP * 0.35).normalized(), to_face)
 	ik.l_at = plate.global_position - right * 0.22 + Vector3.UP * 0.022
 	ik.l_fingers = (fwd * 0.9 + Vector3.DOWN * 0.12 + right * 0.2).normalized()
 	ik.l_knuckles = right

@@ -5,7 +5,9 @@ extends Control
 ##              itself, rendered from food_kit.gd, its name, a line about it, the price, Add or − n +); the order
 ##              on the right (each line, the total); Place order (not past the wallet), Leave restaurant (Esc)
 ##   preparing  a moment while the kitchen makes it
-##   eating     the order on his table (food_kit.gd at his seat), Karthik eating it (his SitEat), the plate going down
+##   eating     the order on his table (food_kit.gd at his seat: the dish on its plate, a drink beside it), Karthik
+##              eating it bite by bite (eater.gd: the same eating as at home, each dish its own way), the plate going
+##              down; the bill when it's eaten, or asked for sooner (what he gets from it is what he ate)
 ##   bill       what he had and the total; Pay: the money goes (tasks.gd's result "paid"), and the meal's in him
 ## Keyboard: Tab / ← → the category, ↑ ↓ the dish, + − Enter (place the order, pay), Esc leave.
 
@@ -13,6 +15,7 @@ signal finished(result: Dictionary)
 
 const Food := preload("res://scripts/story/food.gd")
 const Kit := preload("res://scripts/story/food_kit.gd")
+const Eater := preload("res://scripts/story/eater.gd")
 const Style := preload("res://scripts/ui/hud_style.gd")
 const IVORY := Color("#F4F0E6")
 const PANEL := Color("#FFFDF7")
@@ -41,7 +44,11 @@ var _msg_bad := false
 var _t := 0.0
 var _rects := {}
 var _plate: Node3D
-var _bites := 0
+var _servings: Array = []                              # what's on his table (the plate first; a second dish, drinks)
+var _eater                                             # eater.gd on the seated Karthik
+var _pause := 0.8
+var _film_t := 0.0
+var _film_n := 0
 
 
 func L(en: String, ta: String) -> String:
@@ -72,9 +79,17 @@ func begin(s: Dictionary) -> void:
 	if skip:                                             # (testing: two of the first dish and one more, as you'd order)
 		await get_tree().create_timer(1.6).timeout
 		var its := _items()
-		_press("add:" + str(its[0][0]))
-		if its.size() > 1:
-			_press("add:" + str(its[1][0]))
+		var want := ""
+		for a in OS.get_cmdline_user_args():              # (testing: --orderdishes=burger,tea orders those)
+			if a.begins_with("--orderdishes="):
+				want = a.get_slice("=", 1)
+		if want != "":
+			for d in want.split(","):
+				cart[d] = int(cart.get(d, 0)) + 1
+		else:
+			_press("add:" + str(its[0][0]))
+			if its.size() > 1:
+				_press("add:" + str(its[1][0]))
 		_press("tab:%d" % (menu.size() - 1))
 		await get_tree().create_timer(0.5).timeout
 		_shot("order_tab_" + eatery)
@@ -257,7 +272,7 @@ func _place() -> void:
 
 func _main_dish() -> String:                           # what goes on his plate: the first thing that isn't a drink
 	for d in cart:
-		if not d in ["tea", "filter_coffee", "fresh_lime"]:
+		if not d in Kit.DRINKS:
 			return d
 	return cart.keys()[0]
 
@@ -275,10 +290,29 @@ func _serve() -> void:
 		var fwd := m.global_basis.z.normalized()
 		var right := -m.global_basis.x.normalized()
 		var seat: Node3D = guy
-		_plate = Kit.build(_main_dish())
-		story.room.add_child(_plate)
-		_plate.global_transform = Transform3D(Basis(right, Vector3.UP, -fwd), seat.global_position + fwd * 0.42 + right * 0.1 + Vector3(0, 0.79, 0))
-		guy.play("SitEat")
+		# the plate where his hand goes; a second dish to its left, drinks to its right (each as many as ordered,
+		# up to two on the table at once)
+		var spots := [fwd * 0.42 + right * 0.1, fwd * 0.44 - right * 0.24, fwd * 0.36 + right * 0.32, fwd * 0.28 + right * 0.36]
+		var order: Array = [_main_dish()]
+		for d in cart:
+			if d != order[0] and not d in Kit.DRINKS:
+				order.append(d)
+		for d in cart:
+			if d in Kit.DRINKS:
+				order.append(d)
+		_servings.clear()
+		for i in mini(order.size(), spots.size()):
+			var sv := Kit.build(str(order[i]))
+			story.room.add_child(sv)
+			var at: Vector3 = spots[i]
+			sv.global_transform = Transform3D(Basis(right, Vector3.UP, -fwd), seat.global_position + at + Vector3(0, 0.79, 0))
+			_servings.append(sv)
+		_plate = _servings[0]
+		guy.play("Sit")
+		_eater = Eater.new()
+		story.room.add_child(_eater)
+		_eater.setup(guy.model, fwd, _servings)
+		_eater.all_eaten.connect(_to_bill)
 	queue_redraw()
 	await get_tree().create_timer(0.8).timeout
 	_shot("order_served_" + eatery)
@@ -288,17 +322,21 @@ func _process(dt: float) -> void:
 	if not visible:
 		return
 	_t += dt
-	if state == "eating" and _plate:                    # a bite every cycle of his hand
-		var parts: Array = _plate.get_meta("parts")
-		var n := int(_t / 2.67)
-		while _bites < n and _bites < parts.size() * 2:
-			for p in parts:
-				if int(p["left"]) > 0:
-					Kit.bite(p)
-					break
-			_bites += 1
-		if _t > (3.0 if skip else 8.0):
-			_to_bill()
+	if state == "eating" and _eater and shots != "":    # (testing: a picture every half second of the meal)
+		_film_t += dt
+		if _film_t >= 0.5:
+			_film_t = 0.0
+			_film_n += 1
+			_shot("order_eat_%03d" % _film_n)
+	if state == "eating" and _eater:                    # he eats: the next bite after a pause once he's swallowed
+		if not _eater.busy():
+			_pause -= dt
+			if _pause <= 0.0:
+				_pause = randf_range(0.5, 1.6)
+				if not _eater.bite(-1):
+					_to_bill()
+		if skip and _eater.eaten >= int(ceil(_eater.total * 0.6)) + 1 and not _eater.busy():
+			_to_bill()                                  # (testing: most of it eaten, then the bill)
 	if state in ["preparing", "eating"]:
 		queue_redraw()
 
@@ -307,6 +345,8 @@ func _to_bill() -> void:
 	if state != "eating":
 		return
 	state = "bill"
+	if _eater and is_instance_valid(_eater):
+		_eater.release()                                # (the food left as it is, his hands his own)
 	var guy = story.cast.get("karthik") if story else null
 	if guy:
 		guy.play("Sit")
@@ -321,13 +361,22 @@ func _pay() -> void:
 	var energy := 0.0
 	for d in cart:
 		energy += float(Food.dish(d).get("energy", 40)) * int(cart[d])
-	_finish({"paid": _total(), "ate": true, "meal": "", "minutes": int(spec.get("minutes", 20)), "energy": minf(energy, 80.0),
-		"order": cart.duplicate()})
+	# what he gets is what he ate: the share of the table's bites that came off it (a bill asked for early, less)
+	var share := float(_eater.eaten) / maxf(float(_eater.total), 1.0) if _eater else 1.0
+	energy *= clampf(share + 0.15, 0.25, 1.0)
+	_finish({"paid": _total(), "ate": share > 0.0, "meal": "", "minutes": int(spec.get("minutes", 20)), "energy": minf(energy, 80.0),
+		"order": cart.duplicate(), "eaten_share": snappedf(share, 0.01)})
 
 
 func _finish(res: Dictionary) -> void:
-	if is_instance_valid(_plate):
-		_plate.queue_free()
+	if _eater and is_instance_valid(_eater):
+		_eater.release()
+		_eater.queue_free()
+	_eater = null
+	for sv in _servings:
+		if is_instance_valid(sv):
+			sv.queue_free()
+	_servings.clear()
 	visible = false
 	state = "done"
 	finished.emit(res)

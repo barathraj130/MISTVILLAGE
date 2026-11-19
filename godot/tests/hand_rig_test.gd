@@ -85,7 +85,7 @@ func _process(dt: float) -> bool:
 	ik.r_at = hold
 	ik.r_fingers = (Basis(right, 0.25 * turn) * fingers).normalized()
 	ik.r_knuckles = knuckles
-	ik.r_thumb = Basis(fingers, turn) * (Vector3.UP * 0.4 - right * 0.6).normalized()
+	ik.r_palm = Basis(fingers, turn) * (Vector3.DOWN * 0.6 - right * 0.8).normalized()
 	ik.pinch = grip
 	ik.l_at = Vector3(0.25, 0.95, 0.25)
 	ik.l_fingers = Vector3.DOWN
