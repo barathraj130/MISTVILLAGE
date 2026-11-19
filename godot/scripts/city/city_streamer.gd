@@ -38,6 +38,11 @@ var surface_mats := {}
 var tile := 256.0
 var classes: Array = []
 var loaded := {}                           # Vector2i → Node3D
+# The ground beyond the loaded tiles: one plane to the horizon under the whole map (the city's ground shader on it),
+# kept just under the lowest loaded tile, so past the streamed city there's open ground in the haze, not the sky's
+# grey underside (the "void"). --nofarground: without it.
+var far_ground: MeshInstance3D
+var tile_hmin := {}                        # Vector2i → the tile's lowest ground
 var pending := {}                          # Vector2i → task id
 var queued := {}                           # Vector2i → requested and not yet added (pending or waiting in ready_q)
 var ready_q: Array = []                    # [key, resources] made on a worker, waiting for the main thread
@@ -61,6 +66,20 @@ var kit_near := KIT_NEAR                   # (--kitnear=N overrides, for compari
 var kit_far_meshes: Array = []             # variant index → its far version (tools/kit_far.py) or null
 var kit_boxes: Array = []                  # variant index → AABB of the design (far stand-in and collision)
 var tree_meshes: Array = []                # [near Mesh, far LOD Mesh] per tree kind
+# The forest pockets (assets/city/forest_pockets.json, tools/citygen/forest_pockets.py): real green areas planted as
+# layered woodland: canopy trees by species (banyan, tamarind, neem, rain tree, gulmohar, bamboo clumps, palms) and
+# an under-storey of shrubs, inside their outlines with the roads, paths and buildings cut out.
+var forest_pockets: Array = []             # [{id, polys: [[outer PackedVector2Array, [holes]]], bbox Rect2, mix}]
+var forest_kinds: Dictionary = {}          # species → [index into forest_meshes]
+var forest_meshes: Array = []              # [near Mesh, far Mesh, crown card Mesh]
+var under_meshes: Array = []               # [near Mesh, far Mesh]: the under-storey (shrubs)
+const FOREST_GRID := 8.0                   # canopy trees on a jittered world grid (no seams where tiles meet)
+const UNDER_GRID := 3.5
+const FOREST_CELL := 32.0                  # their MultiMeshes by 32 m cells: the near versions drawn only close by
+const FOREST_NEAR := 28.0                  # full trees within this of their cell (the light version beyond, to FOREST_FAR)
+const FOREST_MID := 110.0                  # the far version to here, the crown cards (~300-800 triangles) beyond
+const FOREST_FAR := 900.0
+const UNDER_FAR := 70.0                    # the shrubs: near only
 var bike_meshes: Array = []                # parked scooters and motorcycles
 var bike_boxes: Array = []                 # their AABBs (read once here: workers mustn't touch meshes)
 const LIFE_CELL := 64.0
@@ -164,6 +183,7 @@ func _ready() -> void:
 		var far_m: Mesh = _scene_mesh("res://assets/%s.glb" % pair[1]) if pair[1].begins_with("city_props") else _gltf_mesh("res://assets/%s.glb" % pair[1])
 		if near_m:
 			tree_meshes.append([near_m, far_m if far_m else near_m])
+	_forest_setup()
 	# street life (tools/citygen/life.py): one mesh per kind
 	for kname in index.get("life_kinds", []):
 		var path := ""
@@ -312,6 +332,7 @@ func _process_timed(_dt: float) -> void:
 	_budget_from = Time.get_ticks_usec()
 	if target == null:
 		return
+	_far_ground_follow()
 	var c := Vector2i(floori(target.global_position.x / tile), floori(target.global_position.z / tile))
 	var want: Array = []
 	for dz in range(-radius, radius + 1):
@@ -448,6 +469,7 @@ func _build(k: Vector2i) -> void:
 	_junctions(juncs, out)
 	_props(props, out)
 	_yards(yards, out, [k, hn, h, float(index["hstep"]), tile])
+	_forest(k, hn, h, out)
 	_life(life, out, roads)
 	_potholes(roads, out)
 	_wires(wires, out)
@@ -486,6 +508,9 @@ func _ground(k: Vector2i, n: int, h: PackedFloat32Array, out: Dictionary) -> voi
 	arr[Mesh.ARRAY_VERTEX] = v
 	arr[Mesh.ARRAY_NORMAL] = nm
 	arr[Mesh.ARRAY_INDEX] = idx
+	var floor_c := _forest_floor(x0, z0, n, step)          # (inside a forest pocket: leaf litter, city_ground.gdshader)
+	if not floor_c.is_empty():
+		arr[Mesh.ARRAY_COLOR] = floor_c
 	var gm := ArrayMesh.new()
 	gm.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arr)
 	out["ground_mesh"] = gm
@@ -494,6 +519,10 @@ func _ground(k: Vector2i, n: int, h: PackedFloat32Array, out: Dictionary) -> voi
 	hs.map_depth = n
 	hs.map_data = h
 	out["ground_shape"] = hs
+	var hm := INF
+	for hv in h:
+		hm = minf(hm, hv)
+	out["hmin"] = hm
 
 
 func _roads(roads: Array, out: Dictionary, k := Vector2i.ZERO) -> void:
@@ -1631,11 +1660,12 @@ func _lens(c: Color, which: int) -> ShaderMaterial:
 
 ## leaf material name → painted atlas (tools/leaf_atlas.py, copied by tools/export_life.py)
 const LEAVES := {"Neem Leaf": "neem", "Rain Tree Leaf": "rain", "Gulmohar Leaf": "gulmohar", "Bush Leaf": "bush",
-	"Prosopis Leaf": "rain"}
+	"Prosopis Leaf": "rain", "Banyan Leaf": "banyan", "Tamarind Leaf": "tamarind", "Bamboo Leaf": "bamboo"}
 static var _leaf_mats := {}
 static var _grass: ShaderMaterial
 static var _leaf_shader: Shader
 static var _bark: StandardMaterial3D
+static var _culm: StandardMaterial3D
 
 
 ## Every mesh of a glTF scene merged into one ArrayMesh (one surface per source surface, transforms baked):
@@ -1698,7 +1728,7 @@ uniform sampler2D atlas : source_color, filter_linear_mipmap, repeat_disable;
 void fragment() {
 	vec4 t = texture(atlas, UV);
 	if (t.a < 0.5) discard;
-	vec3 c = t.rgb * mix(0.5, 1.35, COLOR.r) * mix(vec3(1.0), vec3(1.2, 1.08, 0.6), COLOR.g * 0.45);
+	vec3 c = t.rgb * mix(0.62, 1.35, COLOR.r) * mix(vec3(1.0), vec3(1.2, 1.08, 0.6), COLOR.g * 0.45);
 	ALBEDO = c;
 	ROUGHNESS = 0.55;
 	BACKLIGHT = c * 0.7;
@@ -1724,6 +1754,13 @@ void fragment() {
 			_grass = ShaderMaterial.new()
 			_grass.shader = sh
 		return _grass
+	if nm.begins_with("Bamboo Culm"):                    # (the bark's grain, green going yellow)
+		if _culm == null:
+			_culm = StandardMaterial3D.new()
+			_culm.albedo_texture = load("res://assets/city_props/leaves/bark.png")
+			_culm.albedo_color = Color(0.62, 0.72, 0.32)
+			_culm.roughness = 0.5
+		return _culm
 	if nm.begins_with("Bark"):
 		if _bark == null:
 			_bark = StandardMaterial3D.new()
@@ -2460,6 +2497,8 @@ func _instance(k: Vector2i, d: Dictionary) -> void:
 	gmi.mesh = d["ground_mesh"]
 	gmi.material_override = ground_mat
 	node.add_child(gmi)
+	if d.has("hmin"):
+		tile_hmin[k] = float(d["hmin"])
 	var step: float = float(index["hstep"])
 	var cs := CollisionShape3D.new()
 	cs.shape = d["ground_shape"]
@@ -2561,6 +2600,28 @@ func _instance(k: Vector2i, d: Dictionary) -> void:
 		ycs.shape = d["yard_shape"]
 		_shape(node, ycs, "ground")
 	var skip := OS.get_cmdline_user_args()
+	for tr in ([] if "--notrees" in skip else d.get("forest", [])):   # (the forest pockets: their own, shorter ranges)
+		var fmi := MultiMeshInstance3D.new()
+		fmi.multimesh = _real(tr[0])
+		var cr := FOREST_CELL * 0.71
+		if tr[2]:
+			fmi.visibility_range_end = UNDER_FAR + cr
+			fmi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		elif tr[1] == 0:
+			fmi.visibility_range_end = FOREST_NEAR + cr
+			fmi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		elif tr[1] == 2:
+			fmi.visibility_range_end = FOREST_NEAR + cr
+			fmi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_SHADOWS_ONLY
+		elif tr[1] == 1:
+			fmi.visibility_range_begin = FOREST_NEAR + cr - 4.0
+			fmi.visibility_range_end = FOREST_MID
+			fmi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		else:
+			fmi.visibility_range_begin = FOREST_MID - 6.0
+			fmi.visibility_range_end = FOREST_FAR
+			fmi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		node.add_child(fmi)
 	for tr in ([] if "--notrees" in skip else d.get("trees", [])):
 		if await _due(node):
 			queued.erase(k)
@@ -2801,6 +2862,220 @@ func _level(x0: float, z0: float, n: int, step: float, h: PackedFloat32Array) ->
 				var t := smoothstep(0.0, 1.0, d / LEVEL_EASE)
 				out[i * n + j] = lerpf(float(lm["y"]) - 0.05, out[i * n + j], t)
 	return out
+
+
+func _forest_setup() -> void:
+	var path := DIR + "forest_pockets.json"
+	if "--noforest" in OS.get_cmdline_user_args() or not FileAccess.file_exists(path):
+		return
+	var data = JSON.parse_string(FileAccess.get_file_as_string(path))
+	if not data is Dictionary:
+		return
+	for pk in data.get("pockets", []):
+		var polys: Array = []
+		for pp in pk["polys"]:
+			var outer := PackedVector2Array()
+			for v in pp["outer"]:
+				outer.append(Vector2(v[0], v[1]))
+			var holes: Array = []
+			for hh in pp["holes"]:
+				var hp := PackedVector2Array()
+				for v in hh:
+					hp.append(Vector2(v[0], v[1]))
+				holes.append(hp)
+			polys.append([outer, holes])
+		var b: Array = pk["bbox"]
+		forest_pockets.append({"id": pk["id"], "polys": polys, "mix": pk["mix"],
+			"bbox": Rect2(b[0], b[1], b[2] - b[0], b[3] - b[1])})
+	# the species: our own trees (tools/vegetation.py → tools/export_life.py), near and far versions; neem, rain tree,
+	# gulmohar and the palms are the street trees' own
+	var own := {"banyan": ["banyan1", "banyan2"], "tamarind": ["tamarind1", "tamarind2"], "bamboo": ["bamboo1", "bamboo2"]}
+	for sp in own:
+		forest_kinds[sp] = []
+		for nm in own[sp]:
+			var nm_mesh := _scene_mesh("res://assets/city_props/veg_%s.glb" % nm)
+			var fm_mesh := _scene_mesh("res://assets/city_props/veg_%s_far.glb" % nm)
+			var cm_mesh := _scene_mesh("res://assets/city_props/veg_%s_card.glb" % nm)
+			if nm_mesh:
+				forest_kinds[sp].append(forest_meshes.size())
+				fm_mesh = fm_mesh if fm_mesh else nm_mesh
+				forest_meshes.append([nm_mesh, fm_mesh, cm_mesh if cm_mesh else fm_mesh])
+	var street := {"neem": [0, 1], "rain": [2], "gul": [3], "palm": [4, 5]}
+	var cards := {0: "neem1", 1: "neem2", 2: "rain1", 3: "gul1"}
+	for sp in street:
+		forest_kinds[sp] = []
+		for ti in street[sp]:
+			if ti < tree_meshes.size():
+				forest_kinds[sp].append(forest_meshes.size())
+				var cm: Mesh = _scene_mesh("res://assets/city_props/veg_%s_card.glb" % cards[ti]) if cards.has(ti) else null
+				forest_meshes.append([tree_meshes[ti][0], tree_meshes[ti][1], cm if cm else tree_meshes[ti][1]])
+	for nm in ["bush1", "bush2", "bush3"]:
+		var bn := _scene_mesh("res://assets/city_props/veg_%s.glb" % nm)
+		var bf := _scene_mesh("res://assets/city_props/veg_%s_far.glb" % nm)
+		if bn:
+			under_meshes.append([bn, bf if bf else bn])
+	print("FOREST %d pockets, %d tree meshes, %d under-storey" % [forest_pockets.size(), forest_meshes.size(), under_meshes.size()])
+
+
+## The ground's vertex colours in a tile a forest pocket touches: red 0 inside a pocket (the forest floor), 1 outside;
+## empty (no colours: the shader reads white) where no pocket is near. The same world point gets the same colour in
+## both tiles at an edge, so the floor runs on across them.
+func _forest_floor(x0: float, z0: float, n: int, step: float) -> PackedColorArray:
+	var out := PackedColorArray()
+	var rect := Rect2(x0 - 4.0, z0 - 4.0, tile + 8.0, tile + 8.0)
+	var mine: Array = []
+	for pk in forest_pockets:
+		if (pk["bbox"] as Rect2).intersects(rect):
+			mine.append(pk)
+	if mine.is_empty():
+		return out
+	out.resize(n * n)
+	for i in n:
+		for j in n:
+			var p := Vector2(x0 + j * step, z0 + i * step)
+			var inside := false
+			for pk in mine:
+				if (pk["bbox"] as Rect2).has_point(p) and _in_pocket(p, pk):
+					inside = true
+					break
+			out[i * n + j] = Color(0.0 if inside else 1.0, 1.0, 1.0, 1.0)
+	return out
+
+
+static func _in_pocket(p: Vector2, pk: Dictionary) -> bool:
+	for pp in pk["polys"]:
+		if Geometry2D.is_point_in_polygon(p, pp[0]):
+			for hole in pp[1]:
+				if Geometry2D.is_point_in_polygon(p, hole):
+					return false
+			return true
+	return false
+
+
+static func _hash2(x: float, z: float, salt: float) -> float:
+	return fposmod(sin(x * 12.9898 + z * 78.233 + salt * 37.719) * 43758.5453, 1.0)
+
+
+## The pockets in tile k planted (in the worker thread): canopy trees on a jittered world grid, each kept if inside
+## a pocket's outline (roads, paths, buildings already cut out), its species by the pocket's mix, in drifts (a
+## low-frequency pattern, so bamboo stands in clumps and the big trees in groves, not evenly salted), its height and
+## turn varied; an under-storey of shrubs on a finer grid. One MultiMesh a species a 64 m cell, near / far / shadow,
+## as the street trees are.
+func _forest(k: Vector2i, n: int, h: PackedFloat32Array, out: Dictionary) -> void:
+	if forest_pockets.is_empty() or forest_meshes.is_empty():
+		return
+	var x0 := k.x * tile
+	var z0 := k.y * tile
+	var rect := Rect2(x0, z0, tile, tile)
+	var mine: Array = []
+	for pk in forest_pockets:
+		if (pk["bbox"] as Rect2).intersects(rect):
+			mine.append(pk)
+	if mine.is_empty():
+		return
+	var step: float = float(index["hstep"])
+	var hl := _level(x0, z0, n, step, h)
+	var gh := func(x: float, z: float) -> float:        # (the tile's own levelled ground, as its mesh is drawn)
+		var fx := clampf((x - x0) / step, 0.0, n - 1.001)
+		var fz := clampf((z - z0) / step, 0.0, n - 1.001)
+		var j := int(fx)
+		var i := int(fz)
+		var tx := fx - j
+		var tz := fz - i
+		var a: float = lerpf(hl[i * n + j], hl[i * n + j + 1], tx)
+		var b: float = lerpf(hl[(i + 1) * n + j], hl[(i + 1) * n + j + 1], tx)
+		return lerpf(a, b, tz)
+	var groups := {}
+	var placed := 0
+	for layer in [["canopy", FOREST_GRID], ["under", UNDER_GRID]]:
+		var g: float = layer[1]
+		var gx0 := floori(x0 / g)
+		var gz0 := floori(z0 / g)
+		for gi in range(gx0, floori((x0 + tile) / g) + 1):
+			for gj in range(gz0, floori((z0 + tile) / g) + 1):
+				var px := (gi + 0.15 + 0.7 * _hash2(gi, gj, 1.0)) * g
+				var pz := (gj + 0.15 + 0.7 * _hash2(gi, gj, 2.0)) * g
+				if px < x0 or px >= x0 + tile or pz < z0 or pz >= z0 + tile:
+					continue                             # (each world point in one tile only)
+				var p2 := Vector2(px, pz)
+				var pk: Dictionary = {}
+				for c in mine:
+					if (c["bbox"] as Rect2).has_point(p2) and _in_pocket(p2, c):
+						pk = c
+						break
+				if pk.is_empty():
+					continue
+				var mix: Dictionary = pk["mix"]
+				var dens: float = float(mix["canopy" if layer[0] == "canopy" else "under"]) * g * g / 100.0
+				if _hash2(gi, gj, 3.0) > dens:
+					continue
+				var mi := -1
+				var sc := 1.0
+				if layer[0] == "canopy":
+					var drift := 0.5 + 0.5 * sin(px * 0.031 + pz * 0.017) * cos(px * 0.013 - pz * 0.027)   # (groves)
+					var r := fposmod(_hash2(gi, gj, 4.0) * 0.6 + drift * 0.4, 1.0)
+					var acc := 0.0
+					var sp := ""
+					for name in mix["species"]:
+						acc += float(mix["species"][name])
+						if r <= acc:
+							sp = name
+							break
+					if sp == "" or not forest_kinds.has(sp) or (forest_kinds[sp] as Array).is_empty():
+						continue
+					var ks: Array = forest_kinds[sp]
+					mi = ks[int(_hash2(gi, gj, 5.0) * ks.size()) % ks.size()]
+					sc = 0.8 + 0.45 * _hash2(gi, gj, 6.0)
+				else:
+					if under_meshes.is_empty():
+						continue
+					mi = forest_meshes.size() + int(_hash2(gi, gj, 5.0) * under_meshes.size()) % under_meshes.size()
+					sc = 0.7 + 0.7 * _hash2(gi, gj, 6.0)
+				var y: float = gh.call(px, pz) - 0.1
+				var key := Vector3i(mi, floori(px / FOREST_CELL), floori(pz / FOREST_CELL))
+				if not groups.has(key):
+					groups[key] = []
+				groups[key].append(Transform3D(Basis(Vector3.UP, _hash2(gi, gj, 7.0) * TAU).scaled(Vector3(sc, sc * (0.9 + 0.2 * _hash2(gi, gj, 8.0)), sc)), Vector3(px, y, pz)))
+				placed += 1
+	var fm := []
+	for key in groups:
+		var shrub: bool = key.x >= forest_meshes.size()
+		var pair: Array = forest_meshes[key.x] if not shrub else under_meshes[key.x - forest_meshes.size()]
+		for lod in 4:                                   # 0 near, 1 far, 2 the near set's shadow from the far mesh, 3 card
+			if shrub and lod > 0:
+				continue                                 # (shrubs: near only, no shadow of their own)
+			var mm := _MM.new()
+			mm.transform_format = MultiMesh.TRANSFORM_3D
+			mm.mesh = pair[2] if lod == 3 else pair[mini(lod, 1)]
+			mm.instance_count = groups[key].size()
+			for i in groups[key].size():
+				mm.set_instance_transform(i, groups[key][i])
+			fm.append([mm, lod, shrub])
+	out["forest"] = fm
+	out["forest_n"] = placed
+
+
+func _far_ground_follow() -> void:
+	if "--nofarground" in OS.get_cmdline_user_args() or ground_mat == null:
+		return
+	if far_ground == null:
+		var pm := PlaneMesh.new()
+		pm.size = Vector2(26000, 26000)
+		far_ground = MeshInstance3D.new()
+		far_ground.name = "FarGround"
+		far_ground.mesh = pm
+		far_ground.material_override = ground_mat
+		far_ground.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		add_child(far_ground)
+	var lo := INF
+	for k in tile_hmin:
+		if loaded.has(k):
+			lo = minf(lo, float(tile_hmin[k]))
+	if lo == INF:
+		far_ground.visible = false
+		return
+	far_ground.visible = true
+	far_ground.global_position = Vector3(target.global_position.x, lo - 2.5, target.global_position.z)
 
 
 ## A model's baked copy if there is one (tools/bake/bake_ao.py: NAME_ao.glb beside it, its corners' and eaves'

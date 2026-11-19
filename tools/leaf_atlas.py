@@ -8,6 +8,11 @@ bottom centre (the twig end). Written to art/leaves/*.png, used by the Blender t
   gulmohar  fine fern-like bipinnate fronds (0-2) and a cluster of scarlet flowers   (cell 3)
   bush      hibiscus leaves (0-1), croton leaves green-yellow-red (2), ixora cluster (3)
   bark      1024 x 1024 tileable bark: vertical fissures, plates, lichen spots
+  banyan    big leathery oval leaves, alternate on a stout twig, glossy dark green     (cells 0-3)
+  tamarind  long pinnate leaves of many tiny paired leaflets, fine and dark            (cells 0-3)
+  bamboo    narrow pointed blades fanning from a node, yellow-green                    (cells 0-3)
+
+    Blender -b --factory-startup --python tools/leaf_atlas.py [-- --only banyan,tamarind,bamboo]
 
     Blender -b --factory-startup --python tools/leaf_atlas.py
 """
@@ -228,6 +233,52 @@ def bush_atlas():
     cv.save("bush")
 
 
+def banyan_atlas():
+    rng = random.Random(15)
+    cv = Canvas()
+    for k in range(4):                                   # Ficus benghalensis: broad ovate leaves, 10-20 cm, thick
+        ox, oy = cv.cell_origin(k)
+        cx = ox + CELL / 2 + rng.uniform(-20, 20)
+        cv.stalk([(cx, oy + 12), (cx + rng.uniform(-25, 25), oy + CELL * 0.8)], 3.2, (0.24, 0.22, 0.12))
+        n = rng.randint(4, 5)
+        for j in range(n):                               # (each on its own stalk, held out to the side)
+            f = 0.15 + 0.55 * j / max(n - 1, 1)
+            s = 1 if (j + k) % 2 else -1
+            a = math.pi / 2 + s * rng.uniform(0.85, 1.3)
+            px, py = cx + 6 * f * s, oy + CELL * f
+            qx, qy = px + math.cos(a) * CELL * 0.07, py + math.sin(a) * CELL * 0.07
+            cv.stalk([(px, py), (qx, qy)], 1.8, (0.3, 0.3, 0.14))
+            cv.blade(qx, qy, a, CELL * rng.uniform(0.24, 0.3), CELL * rng.uniform(0.13, 0.16),
+                     _green(rng, (0.07, 0.19, 0.04), 0.12), serr=0.0, tip=0.55, base=0.4, vein=0.35)
+        cv.blade(cx, oy + CELL * 0.78, math.pi / 2 + rng.uniform(-0.2, 0.2), CELL * 0.24, CELL * 0.13,
+                 _green(rng, (0.09, 0.22, 0.05)), serr=0.0, tip=0.55, base=0.4, vein=0.35)
+    cv.save("banyan")
+
+
+def tamarind_atlas():
+    rng = random.Random(16)
+    cv = Canvas()
+    for k in range(4):                                   # 10-18 pairs of tiny oblong leaflets on a long stalk
+        pinnate(cv, k, rng, rng.randint(11, 15), CELL * 0.085, CELL * 0.03, (0.08, 0.21, 0.04), serr=0.0, curl=0.1,
+                stalk_col=(0.2, 0.22, 0.09), bend=0.3, droop=0.25)
+    cv.save("tamarind")
+
+
+def bamboo_atlas():
+    rng = random.Random(17)
+    cv = Canvas()
+    for k in range(4):                                   # lance-shaped blades on short stalks, fanning and drooping
+        ox, oy = cv.cell_origin(k)
+        cx, cy = ox + CELL / 2 + rng.uniform(-30, 30), oy + 20
+        cv.stalk([(cx, cy), (cx + rng.uniform(-40, 40), oy + CELL * 0.55)], 2.0, (0.35, 0.4, 0.12))
+        for j in range(rng.randint(6, 9)):
+            f = rng.uniform(0.1, 0.55)
+            a = math.pi / 2 + rng.uniform(-1.1, 1.1)
+            cv.blade(cx + rng.uniform(-30, 30) * f, cy + CELL * f, a, CELL * rng.uniform(0.38, 0.5), CELL * 0.05,
+                     _green(rng, (0.2, 0.34, 0.07), 0.2), serr=0.0, tip=0.9, base=0.35, vein=0.4, curl=rng.uniform(-0.2, 0.2))
+    cv.save("bamboo")
+
+
 def bark():
     rng = np.random.default_rng(5)
     n = 1024
@@ -272,11 +323,13 @@ def bark():
 
 
 def main():
-    neem_atlas()
-    rain_atlas()
-    gulmohar_atlas()
-    bush_atlas()
-    bark()
+    import sys
+    args = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else []
+    only = args[args.index("--only") + 1].split(",") if "--only" in args else None
+    for name, fn in (("neem", neem_atlas), ("rain", rain_atlas), ("gulmohar", gulmohar_atlas), ("bush", bush_atlas),
+                     ("bark", bark), ("banyan", banyan_atlas), ("tamarind", tamarind_atlas), ("bamboo", bamboo_atlas)):
+        if only is None or name in only:
+            fn()
 
 
 if __name__ == "__main__":

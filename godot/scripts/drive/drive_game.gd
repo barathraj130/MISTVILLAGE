@@ -640,6 +640,10 @@ func _start() -> void:
 		_validate_roads()
 	if "--debug" in args:
 		_set_debug(true)
+	if " ".join(args).contains("--ghatshots"):   # (testing: fixed cameras on the ghat, ghat_shots.gd)
+		var gs = load("res://scripts/drive/ghat_shots.gd").new()
+		gs.game = self
+		add_child(gs)
 	ready_to_drive = true
 
 
@@ -952,7 +956,8 @@ func _interactions() -> void:
 func _self_test() -> bool:
 	var all := " " + " ".join(args)
 	for f in ["--shoptest", "--finale", "--autodrive", "--snap", "--swaptest", "--enter", "--onfoot", "--bench", "--gps",
-			"--shots", "--validate", "--checkcol", "--timescale", "--start=", "--trace", "--walk", "--time", "--weather"]:
+			"--shots", "--validate", "--checkcol", "--timescale", "--start=", "--trace", "--walk", "--time", "--weather",
+			"--ghatshots"]:
 		if all.contains(" " + f):
 			return true
 	return false
@@ -1618,6 +1623,14 @@ func _update_mist(delta: float) -> void:
 		env.volumetric_fog_ambient_inject = 0.0
 		env.volumetric_fog_sky_affect = 0.0
 	env.ambient_light_energy = lerpf(0.05, lerpf(0.3, 0.55, cloud), day)
+	# after dark a faint cool moonlit floor (not black: the road's edges, the tree line against the sky), blended in as
+	# the sky goes dark; at dawn and dusk the haze catches the low sun (its glow through the canopy edges)
+	var tw_d := 1.0 if "--oldnight" in args else smoothstep(-0.16, 0.1, sd.y)   # (--oldnight: as it was, to compare)
+	env.ambient_light_color = Color(0.2, 0.24, 0.34)
+	env.ambient_light_sky_contribution = smoothstep(0.0, 0.35, maxf(day, tw_d))
+	env.ambient_light_energy = maxf(env.ambient_light_energy, lerpf(0.4, 0.0, smoothstep(0.0, 0.35, maxf(day, tw_d))))
+	var low_sun := (1.0 - smoothstep(0.04, 0.35, sd.y)) * smoothstep(-0.12, 0.0, sd.y)
+	env.fog_sun_scatter = lerpf(0.3, 0.75, low_sun)
 	# sun by day, a faint blue moon opposite it by night
 	var up := sd.y > -0.04
 	var light_dir: Vector3 = sd if up else Vector3(-sd.x, maxf(-sd.y, 0.25), sd.z).normalized()
@@ -1628,7 +1641,7 @@ func _update_mist(delta: float) -> void:
 		sun.light_energy = 3.0 * smoothstep(-0.04, 0.15, sd.y) * (1.0 - 0.75 * cloud) * lerpf(1.0, 0.35, f)
 	else:
 		sun.light_color = Color(0.55, 0.65, 1.0)
-		sun.light_energy = 0.07 * (1.0 - 0.8 * cloud)
+		sun.light_energy = (0.07 if "--oldnight" in args else 0.16) * (1.0 - 0.8 * cloud)   # (a moon you can see by, still night)
 	sun.shadow_enabled = sun.light_energy > 0.2
 	if interiors and not interiors.inside.is_empty():
 		env.fog_density = 0.0              # indoors: no outdoor haze, lit by the room's own lamps
@@ -1645,7 +1658,7 @@ func _update_mist(delta: float) -> void:
 		_sky_t = 2.0
 		sky_mat.set_shader_parameter("sun_dir", sd)
 		sky_mat.set_shader_parameter("night_mix", 1.0 - day)
-		sky_mat.set_shader_parameter("night_strength", lerpf(1.0, 0.18, 1.0 - day))   # a dark night sky
+		sky_mat.set_shader_parameter("night_strength", lerpf(1.0, 0.18 if "--oldnight" in args else 0.3, 1.0 - day))   # a dark night sky (the tree line against it)
 		for mm in _mist_mats:
 			(mm as ShaderMaterial).set_shader_parameter("light", lerpf(0.035, 1.0, day))
 		sky_mat.set_shader_parameter("noon_mix", smoothstep(0.2, 0.55, sd.y))

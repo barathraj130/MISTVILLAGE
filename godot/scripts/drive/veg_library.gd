@@ -19,6 +19,12 @@ func _init() -> void:
 	if typeof(parsed) == TYPE_DICTIONARY:
 		assets = parsed.get("vegetation", {}).get("assets", {})
 		hints = parsed.get("materials", {})
+	# our own forest trees (tools/vegetation.py → city_props), shared with the city's forest pockets
+	for nm in ["bamboo1", "bamboo2", "banyan1", "banyan2", "tamarind1", "tamarind2"]:
+		if ResourceLoader.exists("res://assets/city_props/veg_%s.glb" % nm):
+			assets["own_" + nm] = {"model": "city_props/veg_%s.glb" % nm, "lod_model": "city_props/veg_%s_far.glb" % nm}
+			if ResourceLoader.exists("res://assets/city_props/veg_%s_card.glb" % nm):   # (its crown card, the far distance)
+				assets["own_" + nm + "_card"] = {"model": "city_props/veg_%s_card.glb" % nm}
 
 
 func has(key: String) -> bool:
@@ -39,7 +45,11 @@ func mesh(key: String, lod := false) -> Mesh:
 	var found := node.find_children("*", "MeshInstance3D", true, false)
 	var m: Mesh = (found[0] as MeshInstance3D).mesh if not found.is_empty() else null
 	node.free()
-	if m:
+	if m and key.begins_with("own_"):                    # (our own trees: the city's leaf, bark and culm materials,
+		var CS = load("res://scripts/city/city_streamer.gd")   #  which read the crown shading in the vertex colour)
+		for s in m.get_surface_count():
+			m.surface_set_material(s, CS._game_material(m.surface_get_material(s)))
+	elif m:
 		for s in m.get_surface_count():
 			var src := m.surface_get_material(s) as BaseMaterial3D
 			if src and hints.get(src.resource_name, {}).get("kind", "") == "leaf":
@@ -54,17 +64,23 @@ func mesh(key: String, lod := false) -> Mesh:
 
 
 ## Adds MultiMesh chunks (128 m cells) for `xfs`, with LOD switching when available.
-func place(parent: Node, key: String, xfs: Array, shadows := true, max_range := 0.0, cell := CELL) -> void:
+func place(parent: Node, key: String, xfs: Array, shadows := true, max_range := 0.0, cell := CELL, lod_at := LOD_DISTANCE,
+		card_at := 250.0) -> void:
 	var full := mesh(key)
 	if full == null or xfs.is_empty():
 		return
 	var lod: Mesh = mesh(key, true) if assets[key].has("lod_model") else null
+	var card: Mesh = mesh(key + "_card") if assets.has(key + "_card") else null   # (our own trees: a crown card far off)
 	for c in _cells(xfs, cell).values():
-		parent.add_child(multimesh(full, c, 0.0, LOD_DISTANCE if lod else max_range, shadows))
+		parent.add_child(multimesh(full, c, 0.0, lod_at if lod else max_range, shadows))
 	if lod:
 		# the far copies are cheap, so they go in big cells: a hairpin ghat sees dozens of cells at once
+		var lod_end: float = card_at if card else (max_range if max_range > 0.0 else MAX_DRAW)
 		for c in _cells(xfs, LOD_CELL).values():
-			parent.add_child(multimesh(lod, c, LOD_DISTANCE, max_range if max_range > 0.0 else MAX_DRAW, false))
+			parent.add_child(multimesh(lod, c, lod_at, lod_end, false))
+		if card:
+			for c in _cells(xfs, LOD_CELL).values():
+				parent.add_child(multimesh(card, c, card_at, max_range if max_range > 0.0 else MAX_DRAW, false))
 
 
 static func _cells(xfs: Array, cell: float) -> Dictionary:

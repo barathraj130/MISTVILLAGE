@@ -304,7 +304,8 @@ func _trunk_collider(p: Vector3, r: float, h: float) -> void:
 
 # ----------------------------------------------------------------------------- forest
 func _scatter(d0: float, d1: float, keys: Array, per_step: int, off0: float, off1: float, lists: Dictionary,
-		step := 5, scale := Vector2(0.75, 1.25), collide := true) -> void:
+		step := 5, scale := Vector2(0.75, 1.25), collide := true, collide_within := 26.0, keep_valley := false,
+		groves := false) -> void:
 	for i in range(route.index_at(d0), route.index_at(d1), step):
 		for side in [1.0, -1.0]:
 			for k in per_step:
@@ -316,11 +317,18 @@ func _scatter(d0: float, d1: float, keys: Array, per_step: int, off0: float, off
 				if not veg.has(key):
 					continue
 				var y: float = terrain.height_at(p.x, p.z)
+				if keep_valley and off < 45.0 and y < route.pts[i].y - 4.0:
+					continue                             # (the downhill side kept open near the road: the valley views)
+				if groves:                               # (closed canopy in groves, natural clearings between them)
+					var gn := 0.5 + 0.25 * sin(p.x * 0.021 + p.z * 0.013) + 0.25 * sin(p.x * 0.0073 - p.z * 0.017 + 1.3)
+					if gn < 0.3 or rng.randf() > smoothstep(0.3, 0.55, gn):
+						continue
 				var s := rng.randf_range(scale.x, scale.y)
 				if not lists.has(key):
 					lists[key] = []
-				lists[key].append(Transform3D(Basis(Vector3.UP, rng.randf() * TAU).scaled(Vector3.ONE * s), Vector3(p.x, y - 0.15, p.z)))
-				if collide and off < 26.0:
+				var hs := s * (rng.randf_range(0.8, 1.3) if groves else 1.0)   # (heights varied: no two alike)
+				lists[key].append(Transform3D(Basis(Vector3.UP, rng.randf() * TAU).scaled(Vector3(s, hs, s)), Vector3(p.x, y - 0.15, p.z)))
+				if collide and off < collide_within:
 					_trunk_collider(Vector3(p.x, y, p.z), 0.35 * s, 5.0 * s)
 
 
@@ -338,6 +346,17 @@ func _forest() -> void:
 	_scatter(kot["start"], kot["end"], ["cypress_0", "cypress_1", "cypress_2", "eucalyptus_1"], 1, 24.0, 120.0, trees, 8)
 	_scatter(foot["start"], ghat["end"], ["shrub_0", "shrub_1", "shrub_2", "fern_0", "fern_1", "fern_2"], 2, 7.0, 30.0,
 		under, 4, Vector2(0.7, 1.3), false)
+	if not "--noghatforest" in OS.get_cmdline_user_args():
+		var dtrees := {}
+		var dunder := {}
+		_deep_forest(ghat["start"], minf(ghat["start"] + 1850.0, ghat["end"]), dtrees, dunder)
+		var dnode := Node3D.new()
+		dnode.name = "DeepForest"
+		add_child(dnode)
+		for key in dtrees:                               # (full trees only within 70 m: denser, within the budget)
+			veg.place(dnode, key, dtrees[key], true, 0.0, 128.0, 110.0)
+		for key in dunder:
+			veg.place(dnode, key, dunder[key], false, 110.0, 128.0, 60.0)
 	var node := Node3D.new()
 	node.name = "Forest"
 	add_child(node)
@@ -359,10 +378,48 @@ func _forest() -> void:
 			continue
 		var b := Basis(Vector3.UP, rng.randf() * TAU).scaled(Vector3.ONE * rng.randf_range(0.8, 1.5))
 		far.append(Transform3D(b, Vector3(p.x, terrain.height_at(p.x, p.z) - 0.3, p.z)))
+	if not "--noghatforest" in OS.get_cmdline_user_args():   # (the deep-forest stretch: its slopes covered too)
+		var extra := 0
+		tries = 0
+		while extra < 2500 and tries < 30000:
+			tries += 1
+			var f: Transform3D = route.frame_at(rng.randf_range(ghat["start"] - 400.0, ghat["start"] + 2300.0))
+			var off := rng.randf_range(200.0, 1300.0) * (1.0 if rng.randf() < 0.5 else -1.0)
+			var p: Vector3 = f.origin + f.basis.x * off + f.basis.z * rng.randf_range(-60.0, 60.0)
+			if terrain.near_road(p.x, p.z) > 0.0:
+				continue
+			far.append(Transform3D(Basis(Vector3.UP, rng.randf() * TAU).scaled(Vector3.ONE * rng.randf_range(0.8, 1.5)),
+				Vector3(p.x, terrain.height_at(p.x, p.z) - 0.3, p.z)))
+			extra += 1
 	var keys := ["far_canopy_0", "far_canopy_1", "far_canopy_2"]
 	var third := far.size() / 3
 	for k in 3:
 		veg.place(node, keys[k], far.slice(k * third, (k + 1) * third), false, 0.0, 768.0)
+
+
+## The ghat's first stretch as deep shola forest (docs/FOREST_AND_GHAT_PLAN_2026-11-18.md, stage 1: the first three
+## hairpins): a dense canopy belt beside the road (shola evergreens, silver oaks, tree ferns, bamboo clumps), a deeper
+## canopy up the slopes, an under-storey of shrubs, ferns and grass, boulders on the verges, and more far canopy on the
+## slopes beyond. Never on the road (terrain.near_road), the downhill side kept open near the road (the valley seen
+## from the parapets), trunks solid only right beside the road.
+func _deep_forest(d0: float, d1: float, trees: Dictionary, under: Dictionary) -> void:
+	var sm := terrain.material as ShaderMaterial          # (its ground the forest floor: terrain_drive.gdshader deep_pts)
+	if sm:
+		var pts: Array[Vector3] = []
+		var dd := d0
+		while dd <= d1 and pts.size() < 24:
+			var o: Vector3 = route.frame_at(dd).origin
+			pts.append(Vector3(o.x, o.z, 300.0))
+			dd += (d1 - d0) / 23.0
+		sm.set_shader_parameter("deep_pts", pts)
+		sm.set_shader_parameter("deep_n", pts.size())
+	var canopy := ["shola_evergreen_0", "shola_evergreen_1", "shola_evergreen_2", "shola_evergreen_3", "silver_oak_0",
+		"silver_oak_1", "eucalyptus_0", "tree_fern_0", "tree_fern_1", "own_bamboo1", "own_bamboo2"]
+	_scatter(d0, d1, canopy, 5, 6.5, 40.0, trees, 2, Vector2(0.75, 1.25), true, 12.0, true)       # (the belt: dense)
+	_scatter(d0, d1, canopy.slice(0, 7), 7, 40.0, 260.0, trees, 2, Vector2(0.8, 1.35), false, 26.0, false, true)   # (groves, clearings)
+	_scatter(d0, d1, ["shrub_0", "shrub_1", "shrub_2", "fern_0", "fern_1", "fern_2", "grass_clump_0", "grass_clump_1",
+		"tree_fern_0", "fern_0", "fern_1", "hedgerow_bush_0", "wild_flowers"], 7, 5.0, 38.0, under, 2, Vector2(0.6, 1.5), false, 0.0, true)
+	_scatter(d0, d1, ["boulder_0", "boulder_1", "boulder_2"], 1, 6.0, 24.0, under, 6, Vector2(0.6, 1.3), false, 0.0, true)
 
 
 # ----------------------------------------------------------------------------- tea gardens

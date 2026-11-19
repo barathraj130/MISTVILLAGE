@@ -7,6 +7,10 @@ gulmohar flowers, hibiscus, croton, ixora) on folded cards; leaves deep in the c
   raintree   a short trunk splitting low into long spreading limbs, a wide flat umbrella canopy
   gulmohar   a spreading crown with red-orange flower clusters among feathery leaves
   palm       coconut palm (tools/trees_tn.py)
+  banyan     a massive buttressed trunk, long near-level limbs, aerial roots dropping from them (some grown thick
+             into pillar roots), a broad dome of big leathery leaves
+  tamarind   a stout trunk, a dense dark rounded crown of fine pinnate leaves
+  bamboo     a clump of tall culms arching outward, blades fanning from their upper halves
   bush       a leafy mound: hibiscus, croton (green-yellow-red) or ixora with red flower heads
   grass      a tuft of curved blades, for scattering over open ground
 
@@ -24,7 +28,8 @@ from mathutils import Matrix, Vector
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 _M = {}
-DETAIL = 1.0          # < 1: the far version for the game (fewer, larger leaf sprays, no twigs)
+DETAIL = 1.0          # < 1: the far version for the game (fewer, larger leaf sprays, no twigs); <= 0.05: the crown
+                      # card for the far distance (~28 big sprays on the main limbs, ~100-300 triangles)
 
 
 ATLAS = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "art", "leaves")
@@ -120,6 +125,19 @@ def bark_mat():
     nt.links.new(bm.outputs["Normal"], p.inputs["Normal"])
     p.inputs["Roughness"].default_value = 0.95
     _M["bark"] = m
+    return m
+
+
+def bamboo_mat():
+    """Bamboo culms: smooth, green going yellow, a little sheen."""
+    if "bamboo" in _M:
+        return _M["bamboo"]
+    m = bpy.data.materials.new("Bamboo Culm")
+    m.use_nodes = True
+    p = m.node_tree.nodes["Principled BSDF"]
+    p.inputs["Base Color"].default_value = (0.36, 0.42, 0.12, 1)
+    p.inputs["Roughness"].default_value = 0.42
+    _M["bamboo"] = m
     return m
 
 
@@ -246,15 +264,19 @@ def _crown(m, rng, tips, per_tip, size, cells=(0, 1, 2, 3), flower_cell=None, fl
     the ones deep inside dark (r), a few yellow-green (g)."""
     if not tips:
         return
+    if DETAIL <= 0.05 and len(tips) > 28:                # (the card: a few big sprays spread over the same crown)
+        size *= (len(tips) / 28.0) ** 0.5 * 0.85
+        tips = rng.sample(tips, 28)
+        per_tip = 1
     pts = [t[0] for t in tips]
     lo = Vector((min(p.x for p in pts), min(p.y for p in pts), min(p.z for p in pts)))
     hi = Vector((max(p.x for p in pts), max(p.y for p in pts), max(p.z for p in pts)))
     centre = (lo + hi) / 2
     half = Vector((max(hi.x - lo.x, 0.5), max(hi.y - lo.y, 0.5), max(hi.z - lo.z, 0.5))) / 2 + Vector((size, size, size))
-    if DETAIL < 1.0:
+    if 0.05 < DETAIL < 1.0:
         size = size / DETAIL ** 0.5
     for tip, d in tips:
-        for _k in range(max(1, round(per_tip * DETAIL)) if DETAIL < 1.0 else per_tip):
+        for _k in range(1 if DETAIL <= 0.05 else (max(1, round(per_tip * DETAIL)) if DETAIL < 1.0 else per_tip)):
             out = (tip - centre)
             out = Vector((out.x / half.x, out.y / half.y, out.z / half.z))
             r = min(out.length, 1.2)
@@ -319,6 +341,77 @@ def gulmohar(seed=1):
         _branches(m, rng, top, d, rng.uniform(2.6, 3.2), 0.15, 4, 0.62, tips, droop=0.03, nodes=nodes, node_depth=1)
     _crown(m, rng, tips + nodes[::2], 6, 0.85, cells=(0, 1, 2), flower_cell=3, flower_rate=0.35, droop=0.2, lit=0.3)
     return m.finish("gulmohar_%d" % seed, [bark_mat(), leaf_mat("Gulmohar Leaf", "gulmohar")])
+
+
+def banyan(seed=1):
+    """Ficus benghalensis: wider than tall, its limbs held out level on a short fat trunk, roots hanging from them."""
+    rng = random.Random(seed)
+    m = Mesh()
+    tips = []
+    nodes = []
+    h = rng.uniform(2.6, 3.2)
+    top = _trunk(m, rng, h, 0.85, lean=0.04, segs=16)
+    nl = rng.randint(8, 10)
+    for k in range(nl):                                  # (all round, evenly: the dome is round, not lopsided)
+        a = k / nl * math.tau + rng.uniform(-0.15, 0.15)
+        d = Vector((math.cos(a), math.sin(a), rng.uniform(0.3, 0.5)))
+        _branches(m, rng, top - Vector((0, 0, rng.uniform(0.0, 0.6))), d, rng.uniform(6.5, 7.8), 0.36, 3, 0.55, tips,
+                  droop=-0.02, splits=(2, 3), nodes=nodes, node_depth=3)     # (three levels: fewer twig tubes)
+    hang = [n for n in nodes if n[0].z > 2.2 and Vector((n[0].x, n[0].y)).length > 2.5]
+    for p, _d in rng.sample(hang, min(len(hang), rng.randint(22, 32))):     # aerial roots, a few grown into pillars
+        thick = rng.random() < 0.35
+        if (not thick and DETAIL < 1.0) or DETAIL <= 0.05:
+            continue
+        r = rng.uniform(0.1, 0.16) if thick else rng.uniform(0.02, 0.035)
+        mid = p + Vector((rng.uniform(-0.12, 0.12), rng.uniform(-0.12, 0.12), -p.z * 0.5))
+        foot = Vector((p.x + rng.uniform(-0.2, 0.2), p.y + rng.uniform(-0.2, 0.2), -0.25 if thick else rng.uniform(0.2, 1.4)))
+        m.tube([p, mid, foot], [r * 0.6, r, r * (1.5 if thick else 0.6)], segs=6 if thick else 3)
+    outer = [n for n in nodes if Vector((n[0].x, n[0].y)).length > 3.0 and n[0].z > 2.6]
+    _crown(m, rng, tips + outer[::2], 4, 1.75, cells=(0, 1, 2, 3), droop=0.15, lit=0.25)   # (fewer, larger sprays)
+    return m.finish("banyan_%d" % seed, [bark_mat(), leaf_mat("Banyan Leaf", "banyan")])
+
+
+def tamarind(seed=1):
+    """Tamarindus indica: a tall stout trunk and a dense, dark, rounded crown."""
+    rng = random.Random(seed)
+    m = Mesh()
+    tips = []
+    nodes = []
+    h = rng.uniform(3.2, 4.2)
+    top = _trunk(m, rng, h, 0.4, lean=0.1, segs=12)
+    for k in range(rng.randint(5, 7)):
+        a = k / 6 * math.tau + rng.uniform(-0.3, 0.3)
+        d = Vector((math.cos(a) * 0.8, math.sin(a) * 0.8, rng.uniform(0.75, 1.05)))
+        _branches(m, rng, top - Vector((0, 0, rng.uniform(0, 1.0))), d, rng.uniform(3.6, 4.4), 0.19, 3, 0.66, tips,
+                  droop=0.05, nodes=nodes, node_depth=2)
+    _crown(m, rng, tips + nodes, 3, 1.7, cells=(0, 1, 2, 3), droop=0.3, lit=0.18)
+    return m.finish("tamarind_%d" % seed, [bark_mat(), leaf_mat("Tamarind Leaf", "tamarind")])
+
+
+def bamboo(seed=1):
+    """A clump of bamboo: 14-22 culms from a tight root mass, arching outward as they rise."""
+    rng = random.Random(seed)
+    m = Mesh()
+    tips = []
+    for k in range(rng.randint(26, 36) if DETAIL >= 1.0 else (14 if DETAIL > 0.05 else 6)):
+        a = rng.uniform(0, math.tau)
+        r0 = rng.uniform(0.1, 0.8)
+        base = Vector((math.cos(a) * r0, math.sin(a) * r0, -0.2))
+        out = Vector((math.cos(a), math.sin(a), 0))
+        H = rng.uniform(8.0, 12.0)
+        arch = rng.uniform(1.5, 3.8)
+        rad = rng.uniform(0.06, 0.09)
+        pts, radii = [], []
+        for i in range(9):
+            f = i / 8
+            pts.append(base + out * arch * f ** 2 + Vector((0, 0, H * f * (1 - 0.18 * f))))
+            radii.append(rad * (1 - 0.55 * f))
+        m.tube(pts, radii, segs=6 if DETAIL >= 1.0 else 4)
+        for i in range(3, 9):                            # leafy side shoots from the upper culm
+            d = (out * rng.uniform(0.6, 1.0) + Vector((rng.uniform(-0.5, 0.5), rng.uniform(-0.5, 0.5), -0.15))).normalized()
+            tips.append((pts[i], d))
+    _crown(m, rng, tips, 5, 1.0, cells=(0, 1, 2, 3), droop=0.55, lit=0.35)
+    return m.finish("bamboo_%d" % seed, [bamboo_mat(), leaf_mat("Bamboo Leaf", "bamboo")])
 
 
 def bush(seed=1):
@@ -393,7 +486,8 @@ def palm(seed=1):
     return [o for o in bpy.data.objects if o not in before]
 
 
-KINDS = {"neem": neem, "raintree": raintree, "gulmohar": gulmohar, "bush": bush, "grass": grass_tuft}
+KINDS = {"neem": neem, "raintree": raintree, "gulmohar": gulmohar, "bush": bush, "grass": grass_tuft,
+         "banyan": banyan, "tamarind": tamarind, "bamboo": bamboo}
 
 
 def preview(out):
@@ -401,7 +495,7 @@ def preview(out):
     _M.clear()
     sc = bpy.context.scene
     sc.render.engine = 'CYCLES'
-    sc.cycles.samples = 96
+    sc.cycles.samples = 24 if os.environ.get("VEG_FAST") else 96
     sc.cycles.use_denoising = True
     try:
         prefs = bpy.context.preferences.addons["cycles"].preferences
@@ -412,7 +506,7 @@ def preview(out):
         sc.cycles.device = 'GPU'
     except Exception:
         pass
-    sc.render.resolution_x, sc.render.resolution_y = 1600, 900
+    sc.render.resolution_x, sc.render.resolution_y = (960, 540) if os.environ.get("VEG_FAST") else (1600, 900)
     sc.view_settings.view_transform = 'AgX'
     sc.view_settings.exposure = -0.8
     sc.world = bpy.data.worlds.new("Sky")
@@ -433,7 +527,10 @@ def preview(out):
     gm.use_nodes = True
     gm.node_tree.nodes["Principled BSDF"].inputs["Base Color"].default_value = (0.2, 0.13, 0.08, 1)
     g.data.materials.append(gm)
-    for fn, loc in ((raintree, (-9, 6, 0)), (neem, (2, 3, 0)), (gulmohar, (10, 7, 0))):
+    forest = "--forest" in sys.argv
+    trio = ((banyan, (-12, 12, 0)), (tamarind, (3, 7, 0)), (bamboo, (12, 8, 0))) if forest else \
+        ((raintree, (-9, 6, 0)), (neem, (2, 3, 0)), (gulmohar, (10, 7, 0)))
+    for fn, loc in trio:
         o = fn(3)
         o.location = loc
         print("TRIS", o.name, sum(len(p.vertices) - 2 for p in o.data.polygons), flush=True)
@@ -461,9 +558,14 @@ def preview(out):
     cam.data.lens = 26
     cam.rotation_euler = (Vector((1, 4, 3.6)) - cam.location).to_track_quat('-Z', 'Y').to_euler()
     sc.camera = cam
+    if forest:                                           # (the big forest trees: from further back)
+        cam.location = (0, -38, 5.5)
+        cam.rotation_euler = (Vector((0, 9, 5.5)) - cam.location).to_track_quat('-Z', 'Y').to_euler()
     sc.render.filepath = out
     bpy.ops.render.render(write_still=True)
     print("PREVIEW", out, flush=True)
+    if os.environ.get("VEG_FAST"):
+        return
     # close: under the neem and the bushes, as a walker sees them
     cam.location = (-3.5, -9.5, 1.6)
     cam.data.lens = 30

@@ -32,7 +32,10 @@ PROPS = {
 }
 VEG = {"neem1": lambda: VG.neem(1), "neem2": lambda: VG.neem(2), "rain1": lambda: VG.raintree(1),
        "gul1": lambda: VG.gulmohar(1), "bush1": lambda: VG.bush(1), "bush2": lambda: VG.bush(2), "bush3": lambda: VG.bush(3),
-       "grass": lambda: VG.grass_tuft(1)}
+       "grass": lambda: VG.grass_tuft(1),
+       # the forest pockets and the ghat (docs/FOREST_AND_GHAT_PLAN_2026-11-18.md)
+       "banyan1": lambda: VG.banyan(1), "banyan2": lambda: VG.banyan(2), "tamarind1": lambda: VG.tamarind(1),
+       "tamarind2": lambda: VG.tamarind(2), "bamboo1": lambda: VG.bamboo(1), "bamboo2": lambda: VG.bamboo(2)}
 
 
 def export_objects(objs, path):
@@ -97,18 +100,23 @@ def main():
     # the painted leaf atlases and bark (tools/leaf_atlas.py) go with the trees
     leaves = os.path.join(OUT, "leaves")
     os.makedirs(leaves, exist_ok=True)
-    for f in ("neem", "rain", "gulmohar", "bush", "bark"):
+    only = sys.argv[sys.argv.index("--only") + 1].split(",") if "--only" in sys.argv else None
+    for f in ("neem", "rain", "gulmohar", "bush", "bark", "banyan", "tamarind", "bamboo"):
         shutil.copy(os.path.join(HERE, "..", "art", "leaves", f + ".png"), os.path.join(leaves, f + ".png"))
-    for name, fn in PROPS.items():
+    for name, fn in (PROPS.items() if only is None else []):
         bpy.ops.wm.read_factory_settings(use_empty=True)
         coll = fn()
         bpy.context.scene.collection.children.link(coll)
         export_objects(list(coll.all_objects), os.path.join(OUT, "life_%s.glb" % name))
         print("LIFE", name, flush=True)
     for name, fn in VEG.items():
-        for suffix, detail in (("", 1.0), ("_far", 0.18)):
+        if only is not None and name not in only:
+            continue
+        for suffix, detail in (("", 1.0), ("_far", 0.18), ("_card", 0.04)):
             if suffix and name in ("grass",):
                 continue
+            if suffix == "_card" and not name.rstrip("12") in ("banyan", "tamarind", "bamboo", "neem", "rain", "gul"):
+                continue                                    # (the crown cards: the forest pockets' far distance)
             bpy.ops.wm.read_factory_settings(use_empty=True)
             VG._M.clear()                                   # the material cache dies with each fresh scene
             VG.DETAIL = detail

@@ -10,9 +10,11 @@ uniform float tile = 6.0;
 uniform float wet = 0.0;                    // after rain: darker soil and grass, a little sheen
 
 varying vec3 wpos;
+varying float forest;                       // 1 inside a forest pocket (the ground's vertex colour red 0, city_streamer.gd)
 
 void vertex() {
 	wpos = (MODEL_MATRIX * vec4(VERTEX, 1.0)).xyz;
+	forest = 1.0 - COLOR.r;
 }
 
 void fragment() {
@@ -26,6 +28,10 @@ void fragment() {
 	vec3 col = mix(dry, green, smoothstep(0.52, 0.68, n1 + (n3 - 0.5) * 0.15));
 	col = mix(col, soil, smoothstep(0.55, 0.72, n2 + (n3 - 0.5) * 0.2));
 	col *= 0.9 + 0.2 * n3;
+	// the forest floor: leaf litter over dark soil, mottled, a little moss in the damp patches
+	vec3 litter = mix(soil * vec3(0.55, 0.42, 0.3), vec3(0.2, 0.15, 0.08), n3 * 0.6);
+	litter = mix(litter, green * vec3(0.45, 0.6, 0.35), smoothstep(0.6, 0.8, n2) * 0.5);
+	col = mix(col, litter, smoothstep(0.1, 0.9, forest));
 	ALBEDO = col * mix(1.0, 0.62, wet);
 	ROUGHNESS = mix(0.95, 0.6, wet);
 }

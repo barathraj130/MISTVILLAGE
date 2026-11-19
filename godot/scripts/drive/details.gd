@@ -301,7 +301,7 @@ func _chevrons() -> void:
 			var mb = _mb(dd)
 			var c := Vector3(f.origin.x, y + 1.35, f.origin.z)
 			mb.box(Transform3D(face, Vector3(f.origin.x, y + 0.55, f.origin.z)), Vector3(0.07, 1.1, 0.07), Color(0.3, 0.3, 0.3))
-			mb.box(Transform3D(face, c), Vector3(0.6, 0.72, 0.04), YELLOW)
+			(mb if "--oldnight" in OS.get_cmdline_user_args() else _glow_mb(dd)).box(Transform3D(face, c), Vector3(0.6, 0.72, 0.04), YELLOW)   # (retroreflective, as real boards are)
 			# two black chevrons pointing in the turn's direction (+X of `face` is the driver's right)
 			var dir := -s
 			for j in 2:

@@ -17,8 +17,11 @@ h, w = ims[0].shape[:2]
 rows = (len(ims) + cols - 1) // cols
 M = np.ones((rows * h, cols * w, 4))
 for i, a in enumerate(ims):
-    if a.shape[:2] != (h, w):
-        continue
+    if a.shape[:2] != (h, w):                     # (a pixel off in size: cropped or padded to fit, not dropped)
+        b = np.ones((h, w, 4))
+        hh, ww = min(h, a.shape[0]), min(w, a.shape[1])
+        b[h - hh:, :ww] = a[a.shape[0] - hh:, :ww]
+        a = b
     r = rows - 1 - i // cols
     c = i % cols
     M[r * h:(r + 1) * h, c * w:(c + 1) * w] = a

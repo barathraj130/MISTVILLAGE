@@ -1751,7 +1751,7 @@ func _build_lights() -> void:
 		s.light_color = Color(0.95, 0.97, 1.0)                 # LED projectors
 		s.light_energy = 18.0
 		s.spot_range = 110.0
-		s.spot_angle = 30.0
+		s.spot_angle = 30.0 if "--oldnight" in OS.get_cmdline_user_args() else 36.0   # (wide enough to light a bend's edges)
 		s.spot_attenuation = 1.1
 		s.spot_angle_attenuation = 1.6                     # bright centre, soft edge to the beam
 		s.light_volumetric_fog_energy = 3.0                # the beam shows in night mist
@@ -1759,6 +1759,23 @@ func _build_lights() -> void:
 		s.visible = false
 		add_child(s)
 		_headlights.append(s)
+	# the low beam's spread: a short, wide fill under the main beams, lighting the road's edges, the kerb stones and the
+	# inside of a bend close ahead (no shadow: cheap)
+	var fill := SpotLight3D.new()
+	var fp: Vector3 = SPECS[vehicle].get("lamp", Vector3(0.72, 0.98, 2.3))
+	fill.position = Vector3(0.0, fp.y, fp.z + 0.35)
+	fill.rotation = Vector3(deg_to_rad(-12.0), PI, 0.0)
+	fill.light_color = Color(0.95, 0.97, 1.0)
+	fill.light_energy = 5.0
+	fill.spot_range = 32.0
+	fill.spot_angle = 62.0
+	fill.spot_attenuation = 1.4
+	fill.spot_angle_attenuation = 2.0
+	fill.shadow_enabled = false
+	fill.visible = false
+	if not "--oldnight" in OS.get_cmdline_user_args():
+		add_child(fill)
+		_headlights.append(fill)
 
 
 func _build_audio() -> void:
