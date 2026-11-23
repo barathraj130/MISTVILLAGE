@@ -213,7 +213,7 @@ func _process_timed(_dt: float) -> void:
 	_amma_at_home()
 	if _bike_due and city.walker != null:            # (gone while he was away from it: Bala's old bike there instead)
 		_bike_due = false
-		city.car.configure("bike" if seized else "karthik_scooter")
+		city.car.configure("bike" if seized else (city.story.my_scooter() if city.get("story") != null and city.story else "karthik_scooter"))
 		if seized:
 			city.phone.message({"en": "Bala", "ta": "பாலா"}, {"en": "Heard about the scooter. Take my old bike, da. It pulls left a bit. Don't argue.",
 				"ta": "ஸ்கூட்டர் பத்தி கேள்விப்பட்டேன். என் பழைய பைக்க எடுத்துக்கோ டா. கொஞ்சம் இடது பக்கம் இழுக்கும். சண்டை போடாத."})

@@ -561,6 +561,8 @@ func _ready() -> void:
 			story = Story.new()
 			story.name = "Story"
 			var chapter := "res://story/slice.json"
+			if Engine.has_meta("story") and not Engine.has_meta("story_continue"):
+				chapter = "res://story/prologue.json"   # (a new game: the prologue's three days first, then the slice)
 			for a2 in args:                         # (testing: --storychapter=res://story/prologue.json)
 				if a2.begins_with("--storychapter="):
 					chapter = a2.get_slice("=", 1)

@@ -2263,10 +2263,72 @@ def cash_bag():
     return c
 
 
+def roadside_mechanic():
+    """Senthil Two Wheeler Works (a made-up name), the prologue's roadside mechanic near Gandhipuram: a two-wheeler
+    repairer on the pavement, as they are on every main road here. A blue tarpaulin on four steel poles, the board
+    on its own stand (SENTHIL TWO WHEELER WORKS · puncture · service · spares), a steel table of tools and parts, the
+    puncture basin (a tube in water), a stack of old tyres, the compressor, oil cans, a jerry can, his stool, a
+    scooter wheel leaning on the pole. Nothing in it belongs to the investigation."""
+    c = new_coll("roadside_mechanic")
+    W, D, H = 3.6, 2.8, 2.4
+    steel = M["steel"]
+    tarp = mat("mk_tarp_blue", (0.08, 0.28, 0.62), 0.8)
+    for x in (-W / 2, W / 2):                                              # the poles and the tarpaulin over them
+        for y in (-D / 2, D / 2):
+            cyl(c, (x, y, H / 2), 0.025, H, M["iron"], verts=8)
+    box(c, (0, 0, H + 0.02), (W + 0.3, D + 0.3, 0.02), tarp, rot=(0.06, 0, 0))
+    oil = mat("mk_oil_floor", (0.22, 0.21, 0.2), 0.25)
+    for k in range(4):                                                     # the pavement under it, oil-stained
+        cyl(c, (R.uniform(-1.4, 1.4), R.uniform(-1.0, 1.0), 0.005), R.uniform(0.2, 0.5), 0.002, oil, verts=16, smooth=False).scale = (1, R.uniform(0.5, 1), 1)
+    # the board on its stand, facing the road (-Y)
+    board = mat("mk_board_yellow", (0.95, 0.78, 0.15), 0.55)
+    ink = mat("mk_letters_black", (0.04, 0.04, 0.05), 0.5)
+    red = mat("mk_letters_red", (0.75, 0.08, 0.06), 0.5)
+    for x in (-0.75, 0.75):
+        cyl(c, (x - 2.7, -D / 2 - 0.3, 0.7), 0.02, 1.4, M["iron"], verts=6)
+    box(c, (-2.7, -D / 2 - 0.3, 1.25), (1.7, 0.03, 0.6), board)
+    text(c, "SENTHIL", (-2.7, -D / 2 - 0.32, 1.38), 0.16, red)
+    text(c, "TWO WHEELER WORKS", (-2.7, -D / 2 - 0.32, 1.2), 0.11, ink)
+    text(c, "PUNCTURE · SERVICE · SPARES", (-2.7, -D / 2 - 0.32, 1.04), 0.07, ink)
+    # the steel table: spanners, a hammer, a can of grease, parts in a tray
+    box(c, (0.6, D / 2 - 0.5, 0.78), (1.4, 0.6, 0.04), steel)
+    for x in (-0.05, 1.25):
+        for y in (D / 2 - 0.75, D / 2 - 0.25):
+            cyl(c, (x, y, 0.39), 0.02, 0.78, M["iron"], verts=6)
+    for k in range(7):
+        box(c, (0.05 + k * 0.12, D / 2 - 0.55, 0.81), (0.03, 0.18 + k * 0.012, 0.012), steel, rot=(0, 0, 0.2 * (k % 3 - 1)))
+    box(c, (1.0, D / 2 - 0.4, 0.83), (0.3, 0.2, 0.05), mat("mk_tray", (0.55, 0.15, 0.1), 0.6))
+    cyl(c, (1.15, D / 2 - 0.62, 0.86), 0.06, 0.12, mat("mk_grease", (0.85, 0.7, 0.1), 0.4), verts=12)
+    # the puncture basin: a tube in water
+    cyl(c, (-0.6, 0.2, 0.12), 0.38, 0.24, mat("mk_basin", (0.15, 0.4, 0.75), 0.4), verts=24)
+    cyl(c, (-0.6, 0.2, 0.2), 0.34, 0.01, mat("mk_water", (0.25, 0.3, 0.3), 0.08), verts=24)
+    rubber = mat("mk_tyre", (0.05, 0.05, 0.05), 0.85)
+    bpy.ops.mesh.primitive_torus_add(major_radius=0.22, minor_radius=0.025, location=(-0.6, 0.2, 0.22), major_segments=20, minor_segments=6)
+    _put(bpy.context.object, rubber, c)
+    for k in range(4):                                                     # old tyres, stacked by the pole
+        bpy.ops.mesh.primitive_torus_add(major_radius=0.24, minor_radius=0.07, location=(W / 2 - 0.3, D / 2 - 0.3, 0.07 + k * 0.14),
+                                         major_segments=20, minor_segments=8)
+        _put(bpy.context.object, rubber, c)
+    bpy.ops.mesh.primitive_torus_add(major_radius=0.24, minor_radius=0.06, location=(-W / 2 + 0.12, -D / 2 + 0.2, 0.3), rotation=(math.pi / 2, 0.25, 0),
+                                     major_segments=20, minor_segments=8)                 # a scooter wheel against the pole
+    _put(bpy.context.object, rubber, c)
+    cyl(c, (-W / 2 + 0.12, -D / 2 + 0.2, 0.3), 0.15, 0.08, steel, rot=(math.pi / 2, 0, 0.25), verts=16)
+    cyl(c, (-1.3, D / 2 - 0.4, 0.3), 0.18, 0.55, mat("mk_compressor", (0.7, 0.12, 0.08), 0.5), rot=(0, math.pi / 2, 0), verts=16)
+    box(c, (-1.3, D / 2 - 0.4, 0.6), (0.25, 0.2, 0.16), M["iron"])
+    for k in range(3):
+        box(c, (0.2 + k * 0.15, -0.6, 0.11), (0.11, 0.07, 0.2), mat("mk_can_%d" % (k % 2), ((0.75, 0.65, 0.1), (0.15, 0.35, 0.15))[k % 2], 0.4))
+    box(c, (1.4, -0.5, 0.2), (0.25, 0.15, 0.38), mat("mk_jerrycan", (0.7, 0.1, 0.06), 0.5))
+    box(c, (0.2, 0.4, 0.28), (0.3, 0.3, 0.04), M["wood"])                  # his stool
+    for dx in (-0.12, 0.12):
+        for dy in (-0.12, 0.12):
+            cyl(c, (0.2 + dx, 0.4 + dy, 0.14), 0.015, 0.28, M["iron"], verts=6)
+    return c
+
+
 BUILD = {"market_vegcart": vegcart, "market_groundstall": groundstall, "market_banana": banana, "market_crates": crates,
          "market_teakadai": teakadai, "bala_workshop": workshop, "bala_workshop_closed": workshop_closed,
          "pudhur_site": pudhur_site, "agri_fair": agri_fair, "townhall_pavement": townhall_pavement, "rsp_shoprow": rsp_shoprow,
-         "cash_bag": cash_bag}
+         "cash_bag": cash_bag, "roadside_mechanic": roadside_mechanic}
 
 
 def join(coll, name):
@@ -2300,7 +2362,8 @@ def preview(out_dir, obs):
     sc.view_settings.view_transform = 'Standard'          # (the colours as they are, as Godot shows them)
     at = {"market_vegcart": -4.6, "market_groundstall": -1.2, "market_banana": 1.9, "market_crates": 4.4, "market_teakadai": 9.0,
           "bala_workshop": 16.0, "bala_workshop_closed": 16.0, "pudhur_site": 40.0, "agri_fair": 70.0,
-          "townhall_pavement": 110.0, "rsp_shoprow": 140.0, "cash_bag": 170.0}
+          "townhall_pavement": 110.0, "rsp_shoprow": 140.0, "cash_bag": 170.0,
+          "roadside_mechanic": 180.0}
     for ob in obs:
         ob.location = (at[ob.name], 0, 0)
     built = [ob.name for ob in obs]
@@ -2318,7 +2381,7 @@ def preview(out_dir, obs):
     cam = bpy.data.objects.new("Cam", bpy.data.cameras.new("Cam"))
     sc.collection.objects.link(cam)
     sc.camera = cam
-    for name, loc, look in (("market_props", (0, -12.5, 4.6), (0, 0, 0.8)), ("market_cart_close", (-4.6, -2.3, 2.0), (-4.6, 0, 0.9)),
+    for name, loc, look in (("roadside_mechanic", (177.5, -5.5, 2.2), (180.0, 0, 1.0)), ("market_props", (0, -12.5, 4.6), (0, 0, 0.8)), ("market_cart_close", (-4.6, -2.3, 2.0), (-4.6, 0, 0.9)),
                             ("market_ground_close", (-1.2, -2.6, 1.6), (-1.2, 0.1, 0.2)),
                             ("market_teakadai", (10.2, -5.6, 2.1), (9.0, 0.0, 1.35)),
                             ("bala_workshop", (17.2, -8.5, 2.2), (16.0, 0.5, 1.6)),

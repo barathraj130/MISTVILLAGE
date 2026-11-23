@@ -229,6 +229,8 @@ func load_chapter(path := CHAPTER) -> bool:
 
 ## Another chapter now, from its first step (bail cancelled: the jail, story/jail.json); its last step is free play.
 var _chapters := 0
+var _bd := {}                       # (the breakdown's state: metres ridden, phase, the engine as it was)
+var _chained := false               # (the prologue went on into slice.json: its first step isn't a new game's)
 var chapter_path := CHAPTER
 ## A detour (bail cancelled in the middle of Part 1): the jail chapter plays at the next safe moment (a drive, a wait,
 ## free play: nothing half done, no scene in a room) and, at its last step, the story goes back to the step it left.
@@ -358,6 +360,10 @@ func _process_timed(dt: float) -> void:
 			_choose()
 		"learn":
 			_learn(dt)
+		"breakdown":
+			_breakdown(dt)
+		"find_map":
+			_find_map()
 		"dealer":
 			_dealer_step()
 		"finance_desk":
@@ -486,7 +492,7 @@ func _next() -> void:
 	_sync_lang()
 	if acting:                                           # (the talk is over: everyone back to what they were doing)
 		acting.stop()
-	if step < 0 and _chapters == 0:
+	if step < 0 and _chapters == 0 and not _chained:
 		for a in OS.get_cmdline_user_args():          # (testing: --storyclock=HH:MM, the time it starts at)
 			if a.begins_with("--storyclock=") and fines:
 				var hm0: PackedStringArray = a.get_slice("=", 1).split(":")
@@ -511,8 +517,11 @@ func _next() -> void:
 	if step >= data["steps"].size():
 		return
 	for a in OS.get_cmdline_user_args():                # (testing: --storystop=N quits on reaching step N)
-		if a.begins_with("--storystop=") and step >= int(a.get_slice("=", 1)):
-			get_tree().quit()
+		if a.begins_with("--storystop="):                 # (N, or chapter:N: "slice.json:4", after the prologue)
+			var sv := a.get_slice("=", 1)
+			if (not sv.contains(":") and step >= int(sv)) or (sv.contains(":") and chapter_path.get_file() == sv.get_slice(":", 0) \
+					and step >= int(sv.get_slice(":", 1))):
+				get_tree().quit()
 	_settle()
 	cur = data["steps"][step]
 	while (cur.has("when") and not flags.get(cur["when"], false)) or (cur.has("unless") and flags.get(cur["unless"], false)) \
@@ -523,6 +532,9 @@ func _next() -> void:
 		if step >= data["steps"].size():
 			return
 		cur = data["steps"][step]
+	if _skip and fines:                                 # (testing: the run's trace, a line a step)
+		print("STORY step %d %s day %d %02d:%02d %s" % [step, str(cur.get("do", "")), fines.sim.day, int(fines.sim.minute) / 60 % 24,
+			int(fines.sim.minute) % 60, chapter_path.get_file()])
 	if str(cur.get("do", "")) == "free" and not _back.is_empty():   # the detour's over: back where the story left off
 		load_chapter(str(_back["path"]))
 		step = int(_back["step"]) - 1
@@ -538,8 +550,10 @@ func _next() -> void:
 	if cur.has("clock") and fines:
 		var hm: PackedStringArray = str(cur["clock"]).split(":")
 		var to := float(hm[0]) * 60.0 + float(hm[1])
-		if not cur.get("clock_forward", false) or _since_noon(to) > _since_noon(fines.sim.minute):
+		if not cur.get("clock_forward", false) or _since_dawn(to) > _since_dawn(fines.sim.minute):
 			fines.sim.minute = to                        # ("clock_forward": only ever later, e.g. after a long shift)
+	if cur.has("day") and fines:                        # (the prologue's days, before the story's Day 1: never shown)
+		fines.sim.day = int(cur["day"])
 	if cur.has("add_days") and fines:                   # days that pass off screen (bail, a week in jail)
 		fines.sim.day += int(cur["add_days"])
 	var life = city.life if "life" in city else null
@@ -575,7 +589,11 @@ func _next() -> void:
 		if cast.has(k):
 			cast[k].visible = false
 	if cur.has("vehicle"):                              # (the night delivery is on his scooter; taken: Bala's bike)
-		var want := "bike" if str(cur["vehicle"]) == "karthik_scooter" and city.money and city.money.seized else str(cur["vehicle"])
+		var want := str(cur["vehicle"])
+		if want == "karthik_scooter":                   # (his scooter: the new one if the old was traded in; Bala's
+			want = my_scooter()                         #  bike once it's been taken)
+			if city.money and city.money.seized:
+				want = "bike"
 		if car.vehicle != want:
 			car.configure(want, _owned_paint(want))
 			if not cur.get("delivery", false) and str(cur["do"]) != "learn":   # (onto the scooter: a delivery shift, or not?)
@@ -620,6 +638,18 @@ func _next() -> void:
 			_refresh()
 			_hide.start(cur, place_pos(str(cur.get("at", data["spawn"]))))
 			return
+		"chapter":                                       # the prologue's end: on into the story's own first day
+			var path := str(cur["path"])
+			var into_day := int(cur.get("day", 1))
+			_clear_cast()
+			if load_chapter(path):
+				_chained = true
+				step = -1
+				if fines:
+					fines.sim.day = into_day
+				print("STORY chapter %s (day %d)" % [path, into_day])
+				_next()
+			return
 		"message":                                       # a text arrives (from, en/ta)
 			city.phone.message(cur["from"], cur["text"], str(cur.get("time", "")))
 			_next()
@@ -633,11 +663,29 @@ func _next() -> void:
 			_next()
 			return
 		"money":                                         # the account frozen ("freeze": bank, "wallet"), bills due ("bills")
+			if cur.has("pay") and fines:                 # (paid on the spot: the mechanic; "receipt" on his phone)
+				fines.sim.money -= int(cur["pay"])
+				if cur.has("receipt"):
+					city.phone.message(cur.get("to", {"en": "Payment", "ta": "பணம்"}), cur["receipt"])
+			if cur.has("earn") and city.money:           # (pay in: the month's salary)
+				city.money.earn(int(cur["earn"]), cur.get("to", {"en": "Bank", "ta": "வங்கி"}))
+				if cur.has("receipt"):
+					city.phone.message(cur.get("to", {"en": "Bank", "ta": "வங்கி"}), cur["receipt"])
+			if cur.has("vehicle_state") and city.get("garage") != null:   # (a repair: its condition, its engine)
+				var vs: Dictionary = cur["vehicle_state"]
+				var vv: Dictionary = city.garage.vehicle(str(vs["id"]))
+				if not vv.is_empty():
+					for vk in vs:
+						if vk != "id":
+							vv[vk] = vs[vk]
+					city.garage.save()
 			if city.money:
 				if cur.has("freeze"):
 					city.money.freeze(int(cur["freeze"]), int(cur.get("wallet", -1)))
 				for b in cur.get("bills", []):
-					city.money.add_bill(b)
+					if str(b.get("id", "")) == "emi" and flags.get("trade_in", false):
+						continue                        # (the old scooter's instalment: traded in, its loan's gone; the
+					city.money.add_bill(b)                  #  new scooter's EMIs come from its own loan, garage.gd)
 			_next()
 			return
 		"bail":                                          # bail begins: the evenings at the station (city/bail.gd)
@@ -762,8 +810,17 @@ func _next() -> void:
 			print("STORY finale: to the ghat (%s)" % _clock12())
 			Engine.set_meta("finale", {"lang": lang, "minute": 6.0 * 60.0 + 5.0})   # (the climb is at dawn, as written)
 			get_tree().change_scene_to_file.call_deferred("res://scenes/drive.tscn")
+		"breakdown":                                     # the old scooter dying in traffic (the prologue's first morning)
+			var bp := place_pos(str(cur["toward"]))
+			map.pin = Vector2(bp.x, bp.z)
+			_bd = {"m": 0.0, "phase": 0, "t": 0.0, "torque": float(car.torque_mul)}
+		"find_map":                                      # a place found on his phone's Map (a mechanic near)
+			city.phone.pin(str(cur["place"]), cur.get("label", data["places"].get(cur["place"], {})))
+			_bd["seen_t"] = 0.0
 		"drive":
 			_tail_end()
+			if cur.has("limp"):                          # (the old scooter, patched or dying: what its engine gives)
+				_engine(float(cur["limp"]))
 			if cur.has("tail"):
 				_tail_start(cur["tail"])
 			var p := place_pos(cur["to"])
@@ -2073,6 +2130,69 @@ var _lesson := -1
 var _learn_home := Transform3D()
 var _l := {}                                # the lesson now: its state (start heading, the camera then, the box)
 var _l_props: Array = []
+
+
+## The old scooter's engine, as the story has it now (garage.gd engine_k: 0 dead, 0.8 patched, 1 well): through
+## the garage when it's his own vehicle, else on the car itself.
+func _engine(k: float) -> void:
+	var g = city.garage if city.get("garage") != null else null
+	if g and str(g.current) != "":
+		var v: Dictionary = g.vehicle(str(g.current))
+		v["engine_k"] = k
+	else:
+		car.torque_mul = float(_bd.get("torque", car.torque_mul)) * k
+
+
+## The breakdown: ridden on towards "toward" until "after_m" metres; then the engine coughs ("cough", said), fades
+## over four seconds and dies; the step is done when he has it stopped with the hazards on (the kerb's his to find).
+func _breakdown(dt: float) -> void:
+	_tick_clock(dt)
+	if _skip and t_step > 2.0:                           # (testing: as a player who did it)
+		_engine(0.0)
+		car.indicator = 2
+		car.linear_velocity = Vector3.ZERO
+		_next()
+		return
+	match int(_bd.get("phase", 0)):
+		0:
+			_bd["m"] = float(_bd["m"]) + absf(float(car.speed)) * dt
+			goal.text = tr_(cur.get("goal", {}))
+			if float(_bd["m"]) >= float(cur.get("after_m", 500.0)):
+				_bd["phase"] = 1
+				_bd["t"] = 0.0
+				if cur.has("cough"):
+					_say(cur["cough"], false)
+		1:
+			_bd["t"] = float(_bd["t"]) + dt
+			var t: float = _bd["t"]
+			_engine(clampf(1.0 - t / 4.0, 0.0, 1.0) * (0.25 + 0.75 * absf(sin(t * 7.0))))
+			goal.text = tr_(cur.get("goal_cough", cur.get("goal", {})))
+			if t > 4.0:
+				_engine(0.0)
+				_bd["phase"] = 2
+		2:
+			goal.text = tr_(cur.get("goal_dead", {}))
+			if absf(float(car.speed)) < 0.8 and int(car.indicator) == 2:
+				print("STORY breakdown: stopped with the hazards on after %.0f m" % float(_bd["m"]))
+				_next()
+
+
+## Find it on the phone: done once his phone's Map has been open a moment (the place is pinned there).
+func _find_map() -> void:
+	goal.text = tr_(cur.get("goal", {}))
+	if _skip and t_step > 1.5:
+		_next()
+		return
+	if city.phone.is_open and str(city.phone.app) == "map":
+		_bd["seen_t"] = float(_bd.get("seen_t", 0.0)) + get_process_delta_time()
+		if float(_bd["seen_t"]) > 1.2:
+			_next()
+
+
+## Karthik's own scooter in the story's scenes: the old one ("karthik_scooter"), or, traded in at the dealership,
+## the new one he bought in its place ("scooter").
+func my_scooter() -> String:
+	return "scooter" if flags.get("trade_in", false) else "karthik_scooter"
 
 
 func _owned_paint(kind: String) -> Color:
@@ -3674,7 +3794,8 @@ func _story_save() -> void:
 		"goods": city.fines._save_data.get("goods", {}), "hurt": city.life.hurt if city.life else 0.0,
 		"contacts": city.phone.contacts, "pins": city.phone.pins, "notes": city.phone.notes,
 		"items": strip.call(city.hands.items), "wall": strip.call(wall.pool), "wall_pins": pins, "threads": wall.state["threads"],
-		"standing": standing.save(), "moved": moved, "version": 2}
+		"standing": standing.save(), "moved": moved, "version": 3,
+		"chapter": chapter_path, "garage": city.fines._save_data.get("garage", {})}
 	var f := FileAccess.open(SAVE, FileAccess.WRITE)
 	if f:
 		f.store_string(JSON.stringify(d))
@@ -3706,6 +3827,9 @@ func _story_load() -> void:
 	var d = JSON.parse_string(FileAccess.get_file_as_string(SAVE))
 	if not d is Dictionary:
 		return
+	var ch := str(d.get("chapter", CHAPTER))             # (version 3: the chapter it was in; older saves: the slice)
+	if ch != chapter_path and FileAccess.file_exists(ch):
+		load_chapter(ch)
 	step = _find_step(int(d["step"]), str(d.get("step_sig", ""))) - 1
 	fines.sim.day = int(d.get("day", 1))
 	fines.sim.minute = float(d.get("minute", 420.0))
@@ -3716,6 +3840,11 @@ func _story_load() -> void:
 	moved = d.get("moved", {})
 	if city.money:
 		city.money.load_state(d.get("accounts", {}))
+	if d.get("garage") is Dictionary and not (d["garage"] as Dictionary).is_empty() and city.get("garage") != null:
+		city.fines._save_data["garage"] = d["garage"]       # (what he owns and owes, as it was: the dealership's branch)
+		city.garage.load_state(d["garage"])
+		print("STORY continued: garage %s" % str(city.garage.vehicles.map(func(v): return "%s %s cond %.0f engine %.1f" % [v["id"], v["kind"],
+			float(v.get("condition", 100.0)), float(v.get("engine_k", 1.0))])))
 	if city.bail:
 		city.bail.load_state(d.get("bail", {}))
 	if city.life:
@@ -4044,6 +4173,12 @@ func claims_e(p: Vector3) -> bool:
 ## Minutes since noon (so 11 PM is before 12:30 AM): comparing night times across midnight.
 func _since_noon(m: float) -> float:
 	return fmod(m - 720.0 + 2880.0, 1440.0)
+
+
+## Minutes since 04:00: a day's order for "clock_forward" (the morning before the evening, after midnight later
+## still). Since noon, a morning looked later than the evening it was moving to, and the clock stayed put.
+func _since_dawn(m: float) -> float:
+	return fmod(m - 240.0 + 2880.0, 1440.0)
 
 
 ## A delivery shift on the rider app: an order is offered (a restaurant to pick up from, a neighbourhood to drop
@@ -4608,8 +4743,8 @@ func _refresh() -> void:
 	big.visible = kind in ["card", "jump"]
 	small.visible = kind in ["card", "jump"]
 	box.visible = false
-	goal.visible = kind in ["drive", "free", "meet", "home", "eat_out", "gigs", "climb", "covert", "keypad", "ask", "spot", "provoke", "act"]
-	clock.visible = kind in ["drive", "free", "talk", "comfort_verdict", "deliver_verdict", "task", "lapse", "meet", "home", "eat_out", "gigs", "climb", "choose"]
+	goal.visible = kind in ["drive", "free", "meet", "home", "eat_out", "gigs", "climb", "covert", "keypad", "ask", "spot", "provoke", "act", "breakdown", "find_map"]
+	clock.visible = kind in ["drive", "free", "talk", "comfort_verdict", "deliver_verdict", "task", "lapse", "meet", "home", "eat_out", "gigs", "climb", "choose", "breakdown", "find_map"]
 	if step < 0:
 		big.visible = false                          # (no title shown: the story's name would give it away)
 		small.visible = true

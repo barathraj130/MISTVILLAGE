@@ -127,7 +127,8 @@ func _physics_process(dt: float) -> void:
 	v["condition"] = maxf(float(v["condition"]) - km * 0.01, 0.0)          # (a point every 100 km)
 	car.fuel_frac = float(v["fuel_l"]) / float(v["tank_l"])
 	car.out_of_fuel = float(v["fuel_l"]) <= 0.0
-	car.torque_mul = _base_torque * (0.7 + 0.3 * clampf(float(v["condition"]) / 60.0, 0.0, 1.0))
+	car.torque_mul = _base_torque * (0.7 + 0.3 * clampf(float(v["condition"]) / 60.0, 0.0, 1.0)) * float(v.get("engine_k", 1.0))
+	#  (engine_k: a fault of its own, the story's: the old scooter dying in traffic 0, patched and coughing 0.8)
 	if _log:
 		_log_t += dt
 		if _log_t > 2.0:

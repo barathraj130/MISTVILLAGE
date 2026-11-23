@@ -78,6 +78,15 @@ func can(spec: Dictionary) -> bool:
 
 func begin(spec: Dictionary) -> void:
 	_spec = spec
+	_done = false                                       # (one node for every meal: the last one's state cleared;
+	_eaten = 0                                          #  with _done left set a second meal never ended)
+	_total = 0
+	_cam_t = 0.0
+	_t = 0.0
+	_auto_t = 0.0
+	_hover = -1
+	_chew = 0.0
+	_props.clear()
 	room = story.room
 	walker = city.walker
 	model = walker.model

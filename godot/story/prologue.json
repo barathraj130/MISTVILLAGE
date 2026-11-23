@@ -1,6 +1,6 @@
 {
- "note": "The prologue (docs/PROLOGUE_PLAN_2026-11-17.md): three ordinary days before story/slice.json's first day. No day numbers on screen. Built in stages; this is the dealership (the second day, the afternoon).",
- "spawn": "dealer",
+ "note": "The prologue (docs/PROLOGUE_PLAN_2026-11-17.md; the user's timing, 18 Nov): three ordinary days before story/slice.json's first day, at story days -2, -1 and 0 (no day numbers on screen). Day 1: the old scooter dies in traffic, the mechanic's job card, late to Raghavan sir's, his SUV all day, the salary, Amma. Day 2: the dealership (keep the old scooter and overhaul it, the new one Divya's; or trade it in). Day 3: the overhaul paid on the keep path, the first delivery shift; then the story's Day 1. Tamil lines: for a native speaker's review.",
+ "spawn": "home",
  "places": {
   "home": {
    "x": 686.4,
@@ -19,6 +19,172 @@
    "z": -512.0,
    "en": "Kongu Two-Wheelers, Avinashi Road",
    "ta": "கொங்கு டூ-வீலர்ஸ், அவிநாசி ரோடு"
+  },
+  "office": {
+   "lat": 11.0162,
+   "lon": 76.9626,
+   "x": -566.8,
+   "z": 236.1,
+   "en": "Raghavan Developers, Gandhipuram",
+   "ta": "ராகவன் டெவலப்பர்ஸ், காந்திபுரம்"
+  },
+  "hotel": {
+   "lat": 11.0176,
+   "lon": 76.9652,
+   "x": -283.7,
+   "z": 79.3,
+   "en": "Hotel Anna Mess, Gandhipuram",
+   "ta": "ஹோட்டல் அண்ணா மெஸ், காந்திபுரம்"
+  },
+  "lunch_murugan": {
+   "x": -646.5,
+   "z": -33.2,
+   "lat": 11.0186,
+   "lon": 76.96188,
+   "en": "Sri Murugan Mess, Gandhipuram",
+   "ta": "ஸ்ரீ முருகன் மெஸ், காந்திபுரம்"
+  },
+  "lunch_gowri": {
+   "x": -272.0,
+   "z": 203.6,
+   "lat": 11.01646,
+   "lon": 76.96531,
+   "en": "Gowri Meals Hall, Gandhipuram",
+   "ta": "கௌரி சாப்பாட்டு ஹால், காந்திபுரம்"
+  },
+  "lunch_kovai": {
+   "x": -232.8,
+   "z": 111.1,
+   "lat": 11.0173,
+   "lon": 76.96567,
+   "en": "Kovai Tiffin Centre, Gandhipuram",
+   "ta": "கோவை டிஃபன் சென்டர், காந்திபுரம்"
+  },
+  "grand_hotel": {
+   "lat": 11.02181,
+   "lon": 76.99471,
+   "x": 2933.3,
+   "z": -388.7,
+   "en": "The Siruvani Grand, Avinashi Road",
+   "ta": "தி சிறுவாணி கிராண்ட், அவிநாசி ரோடு"
+  },
+  "drop_rs_puram": {
+   "lat": 11.0089,
+   "lon": 76.953,
+   "x": -1625.0,
+   "z": 1050.2,
+   "en": "R.S. Puram, Coimbatore",
+   "ta": "ஆர்.எஸ். புரம்"
+  },
+  "drop_peelamedu": {
+   "lat": 11.0262,
+   "lon": 77.0105,
+   "x": 4646.1,
+   "z": -903.1,
+   "en": "Peelamedu, Coimbatore",
+   "ta": "பீளமேடு"
+  },
+  "drop_ramanathapuram": {
+   "lat": 10.9989,
+   "lon": 76.9973,
+   "x": 3208.7,
+   "z": 2128.4,
+   "en": "Ramanathapuram, Coimbatore",
+   "ta": "ராமநாதபுரம்"
+  },
+  "drop_saibaba_colony": {
+   "lat": 11.0247,
+   "lon": 76.9425,
+   "x": -2769.4,
+   "z": -676.9,
+   "en": "Saibaba Colony, Coimbatore",
+   "ta": "சாய்பாபா காலனி"
+  },
+  "drop_singanallur": {
+   "lat": 11.0007,
+   "lon": 77.0289,
+   "x": 6688.8,
+   "z": 1902.0,
+   "en": "Singanallur, Coimbatore",
+   "ta": "சிங்காநல்லூர்"
+  },
+  "drop_town_hall": {
+   "lat": 10.9947,
+   "lon": 76.9615,
+   "x": -664.9,
+   "z": 2640.2,
+   "en": "Town Hall, Coimbatore",
+   "ta": "டவுன் ஹால்"
+  },
+  "drop_vadavalli": {
+   "lat": 11.0237,
+   "lon": 76.9035,
+   "x": -7037.0,
+   "z": -551.7,
+   "en": "Vadavalli, Coimbatore",
+   "ta": "வடவள்ளி"
+  },
+  "drop_hope_college": {
+   "lat": 11.027,
+   "lon": 77.023,
+   "x": 6016.2,
+   "z": -1027.8,
+   "en": "Hope College, Coimbatore",
+   "ta": "ஹோப் காலேஜ்"
+  },
+  "drop_kuniyamuthur": {
+   "lat": 10.9645,
+   "lon": 76.9567,
+   "x": -1152.8,
+   "z": 5962.3,
+   "en": "Kuniyamuthur, Coimbatore",
+   "ta": "குனியமுத்தூர்"
+  },
+  "drop_kavundampalayam": {
+   "lat": 11.041,
+   "lon": 76.945,
+   "x": -2502.1,
+   "z": -2502.6,
+   "en": "Kavundampalayam, Coimbatore",
+   "ta": "கவுண்டம்பாளையம்"
+  },
+  "drop_ganapathy": {
+   "lat": 11.039,
+   "lon": 76.975,
+   "x": 766.6,
+   "z": -2294.4,
+   "en": "Ganapathy, Coimbatore",
+   "ta": "கணபதி"
+  },
+  "drop_thudiyalur": {
+   "lat": 11.08,
+   "lon": 76.94,
+   "x": -3139.4,
+   "z": -6890.6,
+   "en": "Thudiyalur, Coimbatore",
+   "ta": "துடியலூர்"
+  },
+  "drop_race_course": {
+   "lat": 11.0003,
+   "lon": 76.9762,
+   "x": 962.2,
+   "z": 1987.5,
+   "en": "Race Course, Coimbatore",
+   "ta": "ரேஸ் கோர்ஸ்"
+  },
+  "drop_sitra": {
+   "lat": 11.035,
+   "lon": 77.0395,
+   "x": 7805.5,
+   "z": -1897.9,
+   "en": "Sitra, Coimbatore",
+   "ta": "சித்ரா"
+  },
+  "mechanic": {
+   "x": -233.0,
+   "z": 111.0,
+   "en": "Senthil Two Wheeler Works, Gandhipuram",
+   "ta": "செந்தில் டூ வீலர் வொர்க்ஸ், காந்திபுரம்"
   }
  },
  "people": {
@@ -44,15 +210,736 @@
    "colour": "#c8e0ff",
    "model": "story_selvi",
    "hair": "#0e0b09"
+  },
+  "amma": {
+   "en": "Amma",
+   "ta": "அம்மா",
+   "colour": "#ffb37f",
+   "model": "story_amma",
+   "hair": "#5a554f"
+  },
+  "divya": {
+   "en": "Divya",
+   "ta": "திவ்யா",
+   "colour": "#ff8fc8",
+   "model": "story_divya",
+   "hair": "#0e0b09"
+  },
+  "raghavan": {
+   "en": "Raghavan sir",
+   "ta": "ராகவன் சார்",
+   "colour": "#ffe07f",
+   "model": "story_raghavan",
+   "hair": "#9a958c"
+  },
+  "mechanic": {
+   "en": "Senthil, mechanic",
+   "ta": "செந்தில், மெக்கானிக்",
+   "colour": "#9fe0a0",
+   "model": "crowd_m3",
+   "hair": "#0f0c0a",
+   "top": "#3a4a6a",
+   "pants": "#2a2622"
   }
  },
  "steps": [
+  {
+   "do": "home",
+   "room": "home",
+   "at": "home",
+   "start": "karthik_room",
+   "clock": "06:40",
+   "day": -2,
+   "weather": "clear",
+   "life": {
+    "energy": 60.0,
+    "tiredness": 5.0,
+    "stress": 30.0
+   },
+   "cast": {
+    "amma": {
+     "mark": "amma_kitchen"
+    },
+    "divya": {
+     "mark": "divya"
+    }
+   },
+   "visits": [
+    {
+     "to": "bathroom",
+     "task": "ready",
+     "chores": [
+      "brush",
+      "bath"
+     ],
+     "goal": {
+      "en": "Brush and bathe",
+      "ta": "பல் தேய்ச்சு குளிங்க"
+     },
+     "prompt": {
+      "en": "brush and bathe",
+      "ta": "பல் தேய்ச்சு குளிங்க"
+     }
+    },
+    {
+     "to": "wardrobe",
+     "task": "ready",
+     "chores": [
+      "dress"
+     ],
+     "goal": {
+      "en": "Get dressed",
+      "ta": "டிரஸ் பண்ணுங்க"
+     },
+     "prompt": {
+      "en": "pick a shirt",
+      "ta": "சட்டை எடுங்க"
+     }
+    }
+   ],
+   "keep": true
+  },
+  {
+   "do": "talk",
+   "cast": {
+    "amma": {
+     "mark": "amma",
+     "anim": "Sit"
+    },
+    "divya": {
+     "mark": "divya",
+     "anim": "Idle"
+    }
+   },
+   "lines": [
+    {
+     "who": "divya",
+     "en": "Anna, your scooter made that noise again last night. Like a goat with a cold.",
+     "ta": "அண்ணா, ராத்திரி உன் ஸ்கூட்டர் மறுபடியும் அந்த சத்தம் போட்டுச்சு. சளி பிடிச்ச ஆடு மாதிரி.",
+     "emotion": "happy",
+     "intensity": "low",
+     "to": "karthik"
+    },
+    {
+     "who": "karthik",
+     "en": "It's old, that's all. It'll go.",
+     "ta": "வயசாச்சு, அவ்வளவுதான். போகும்.",
+     "emotion": "relaxed",
+     "intensity": "low",
+     "to": "divya"
+    },
+    {
+     "who": "amma",
+     "en": "Today is the first, no? Salary day. Come home early, we'll sit and do the accounts.",
+     "ta": "இன்னைக்கு ஒண்ணாம் தேதி இல்ல? சம்பள நாள். சீக்கிரம் வா, உக்காந்து கணக்கு பாக்கலாம்.",
+     "emotion": "relaxed",
+     "intensity": "low",
+     "to": "karthik"
+    }
+   ]
+  },
+  {
+   "do": "home",
+   "room": "home",
+   "at": "home",
+   "start": "here",
+   "cast": {
+    "amma": {
+     "mark": "amma_kitchen"
+    }
+   },
+   "visits": [
+    {
+     "to": "kitchen",
+     "task": "meal",
+     "home": true,
+     "home_meal": true,
+     "food": "idli",
+     "slot": "breakfast",
+     "minutes": 12,
+     "title": {
+      "en": "Breakfast: Amma's idli",
+      "ta": "காலை சாப்பாடு: அம்மாவின் இட்லி"
+     },
+     "goal": {
+      "en": "Breakfast: Amma is in the kitchen",
+      "ta": "காலை சாப்பாடு: அம்மா கிச்சன்ல இருக்காங்க"
+     },
+     "prompt": {
+      "en": "eat breakfast",
+      "ta": "சாப்பிடுங்க"
+     }
+    },
+    {
+     "to": "door_shelf",
+     "task": "ready",
+     "chores": [
+      "pocket"
+     ],
+     "goal": {
+      "en": "Your wallet, phone and keys: the shelf by the door",
+      "ta": "பர்ஸ், ஃபோன், சாவி: கதவு பக்கத்து ஷெல்ஃப்"
+     },
+     "prompt": {
+      "en": "take your things",
+      "ta": "எடுத்துக்கோங்க"
+     }
+    }
+   ]
+  },
+  {
+   "do": "breakdown",
+   "vehicle": "karthik_scooter",
+   "toward": "raghavan_house",
+   "after_m": 1500,
+   "goal": {
+    "en": "To Raghavan sir's house at Race Course, on the old scooter",
+    "ta": "பழைய ஸ்கூட்டர்ல ரேஸ் கோர்ஸ், ராகவன் சார் வீட்டுக்கு"
+   },
+   "cough": {
+    "who": "karthik",
+    "en": "No, no, no... not now. Not in this traffic!",
+    "ta": "இல்ல, இல்ல... இப்ப வேணாம். இந்த டிராஃபிக்ல வேணாம்!",
+    "emotion": "anxious",
+    "intensity": "high"
+   },
+   "goal_cough": {
+    "en": "The engine's coughing and losing power",
+    "ta": "எஞ்சின் இருமுது, இழுக்க மாட்டேங்குது"
+   },
+   "goal_dead": {
+    "en": "It's died. Coast to the kerb, out of the traffic, and put the hazards on ( / )",
+    "ta": "நின்னுடுச்சு. டிராஃபிக்க விட்டு ஓரமா கொண்டு போய், ஹசார்ட் லைட் போடுங்க ( / )"
+   }
+  },
+  {
+   "do": "talk",
+   "lines": [
+    {
+     "who": "karthik",
+     "en": "(The kick-start. Again. Nothing.) Seven-thirty. Sir wants me there by eight.",
+     "ta": "(கிக் ஸ்டார்ட். மறுபடியும். ஒண்ணுமில்ல.) ஏழரை ஆச்சு. சார் எட்டு மணிக்கு வரச் சொன்னாரு.",
+     "emotion": "frustrated",
+     "intensity": "medium"
+    },
+    {
+     "who": "karthik",
+     "en": "There's always a mechanic near Gandhipuram. The phone.",
+     "ta": "காந்திபுரம் பக்கம் எப்பவும் ஒரு மெக்கானிக் இருப்பாங்க. ஃபோன்ல பாக்கலாம்.",
+     "emotion": "thoughtful",
+     "intensity": "low"
+    }
+   ]
+  },
+  {
+   "do": "find_map",
+   "place": "mechanic",
+   "label": {
+    "en": "Senthil Two Wheeler Works, Gandhipuram (open from 7)",
+    "ta": "செந்தில் டூ வீலர் வொர்க்ஸ், காந்திபுரம் (காலை 7 முதல்)"
+   },
+   "goal": {
+    "en": "Find a mechanic: your phone (P), then its Map",
+    "ta": "மெக்கானிக் தேடுங்க: ஃபோன் (P), அப்புறம் மேப்"
+   }
+  },
+  {
+   "do": "drive",
+   "to": "mechanic",
+   "radius": 30,
+   "vehicle": "karthik_scooter",
+   "limp": 0.35,
+   "goal": {
+    "en": "It starts, just. Nurse it to Senthil Two Wheeler Works",
+    "ta": "கஷ்டப்பட்டு ஸ்டார்ட் ஆகுது. மெதுவா செந்தில் வொர்க்ஸுக்கு கொண்டு போங்க"
+   }
+  },
+  {
+   "do": "meet",
+   "who": "mechanic",
+   "cast": {
+    "mechanic": {
+     "pos": [
+      -2.8,
+      1.2
+     ],
+     "look": [
+      0,
+      0
+     ],
+     "anim": "Idle"
+    }
+   },
+   "props": [
+    {
+     "scene": "res://assets/city_props/roadside_mechanic.glb",
+     "pos": [
+      -5.4,
+      3.6
+     ],
+     "look": [
+      0,
+      3.6
+     ]
+    }
+   ],
+   "goal": {
+    "en": "The mechanic, under the blue tarpaulin",
+    "ta": "நீல தார்ப்பாய் கீழ மெக்கானிக்"
+   }
+  },
+  {
+   "do": "talk",
+   "lines": [
+    {
+     "who": "mechanic",
+     "en": "Morning, sir. Let it cool a minute. (He opens the side panel and listens to it turn over.)",
+     "ta": "வணக்கம் சார். கொஞ்சம் ஆறட்டும். (பக்க பேனலை திறந்து, எஞ்சின் சத்தத்தை கேக்கறாரு.)",
+     "emotion": "relaxed",
+     "intensity": "low"
+    },
+    {
+     "who": "mechanic",
+     "en": "Plug's black, the carburettor's choked. And hear that knock? That's the engine itself.",
+     "ta": "பிளக் கருப்பா இருக்கு, கார்புரேட்டர் அடைச்சிருக்கு. அந்த டக் டக் சத்தம் கேக்குதா? அது எஞ்சினே.",
+     "emotion": "thoughtful",
+     "intensity": "medium"
+    },
+    {
+     "who": "karthik",
+     "en": "How long, anna? I have to be at Race Course by eight.",
+     "ta": "எவ்வளவு நேரம் அண்ணா? எட்டு மணிக்கு ரேஸ் கோர்ஸ்ல இருக்கணும்.",
+     "emotion": "anxious",
+     "intensity": "medium"
+    },
+    {
+     "who": "mechanic",
+     "en": "Two ways. I clean the plug and the carburettor now: twenty minutes, six hundred and fifty. It'll get you through the day. Maybe the week.",
+     "ta": "ரெண்டு வழி. இப்போ பிளக்கும் கார்புரேட்டரும் சுத்தம் பண்றேன்: இருபது நிமிஷம், அறுநூத்தி அம்பது. இன்னைக்கு ஓடும். இந்த வாரம் கூட இருக்கலாம்.",
+     "emotion": "confident",
+     "intensity": "low"
+    },
+    {
+     "who": "mechanic",
+     "en": "Or the full overhaul: rings, piston, bearings. Seven and a half thousand, two days. For a ten-year-old scooter, sir, that's more than it's worth.",
+     "ta": "இல்லன்னா முழு ஓவர்ஹால்: ரிங், பிஸ்டன், பேரிங். ஏழாயிரத்து ஐநூறு, ரெண்டு நாள். பத்து வருஷ ஸ்கூட்டருக்கு சார், அது அதோட மதிப்பை விட அதிகம்.",
+     "emotion": "thoughtful",
+     "intensity": "medium"
+    },
+    {
+     "who": "karthik",
+     "en": "Do the quick one now. I'll think about the rest.",
+     "ta": "இப்போ சின்னதா பண்ணுங்க. மீதிய யோசிக்கறேன்.",
+     "emotion": "frustrated",
+     "intensity": "low"
+    }
+   ]
+  },
+  {
+   "do": "give",
+   "item": {
+    "id": "jobcard_senthil",
+    "kind": "paper",
+    "title": {
+     "en": "Senthil Two Wheeler Works, job card #2207",
+     "ta": "செந்தில் டூ வீலர் வொர்க்ஸ், ஜாப் கார்டு #2207"
+    },
+    "from": {
+     "en": "Gandhipuram",
+     "ta": "காந்திபுரம்"
+    },
+    "body": {
+     "en": "Vehicle: scooter, TN 38 R 4471. Odometer 61,240 km.\nComplaint: stops in traffic, won't restart.\nFound: spark plug fouled; carburettor choked; engine knocking (worn rings and bearing).\n\nA. Done today: plug and carburettor cleaned, idle set. ₹650. Paid.\nB. Advised: engine overhaul (rings, piston, bearings, gaskets). ₹7,500, two days.\n\nNote: the overhaul costs more than the vehicle is worth.\n– Senthil",
+     "ta": "வாகனம்: ஸ்கூட்டர், TN 38 R 4471. ஓடோமீட்டர் 61,240 கி.மீ.\nபுகார்: டிராஃபிக்ல நிக்குது, மறுபடி ஸ்டார்ட் ஆகல.\nகண்டது: ஸ்பார்க் பிளக் அழுக்கு; கார்புரேட்டர் அடைப்பு; எஞ்சின் தட்டுது (ரிங், பேரிங் தேய்மானம்).\n\nஅ. இன்று செய்தது: பிளக், கார்புரேட்டர் சுத்தம், ஐடில் செட். ₹650. கட்டியாச்சு.\nஆ. பரிந்துரை: எஞ்சின் ஓவர்ஹால் (ரிங், பிஸ்டன், பேரிங், கேஸ்கெட்). ₹7,500, ரெண்டு நாள்.\n\nகுறிப்பு: ஓவர்ஹால் செலவு வண்டியோட மதிப்பை விட அதிகம்.\n– செந்தில்"
+    }
+   }
+  },
+  {
+   "do": "money",
+   "pay": 650,
+   "to": {
+    "en": "Senthil Two Wheeler Works",
+    "ta": "செந்தில் டூ வீலர் வொர்க்ஸ்"
+   },
+   "receipt": {
+    "en": "Paid ₹650 to SENTHIL TWO WHEELER WORKS. Job card #2207.",
+    "ta": "செந்தில் டூ வீலர் வொர்க்ஸுக்கு ₹650 செலுத்தப்பட்டது. ஜாப் கார்டு #2207."
+   },
+   "vehicle_state": {
+    "id": "old_scooter",
+    "engine_k": 0.8,
+    "condition": 40.0
+   },
+   "add_minutes": 20
+  },
+  {
+   "do": "drive",
+   "to": "raghavan_house",
+   "radius": 45,
+   "vehicle": "karthik_scooter",
+   "by": "08:00",
+   "late_flag": "prologue_late",
+   "goal": {
+    "en": "Race Course: Raghavan sir's house. You're late",
+    "ta": "ரேஸ் கோர்ஸ்: ராகவன் சார் வீடு. லேட் ஆயிடுச்சு"
+   }
+  },
+  {
+   "do": "meet",
+   "who": "raghavan",
+   "cast": {
+    "raghavan": {
+     "pos": [
+      -3.25,
+      2.5
+     ],
+     "look": [
+      0,
+      0
+     ],
+     "anim": "Idle"
+    }
+   },
+   "goal": {
+    "en": "Sir is at his gate",
+    "ta": "சார் கேட்ல இருக்காரு"
+   }
+  },
+  {
+   "do": "talk",
+   "lines": [
+    {
+     "who": "raghavan",
+     "en": "Thambi. The bank opens at ten, and I wanted to be early for once.",
+     "ta": "தம்பி. பேங்க் பத்து மணிக்கு திறக்கும், ஒரு தடவையாவது சீக்கிரம் போகணும்னு நினைச்சேன்.",
+     "emotion": "frustrated",
+     "intensity": "low"
+    },
+    {
+     "who": "karthik",
+     "en": "Sorry, sir. The scooter died at Gandhipuram. The mechanic says the engine is finished.",
+     "ta": "சாரி சார். ஸ்கூட்டர் காந்திபுரத்துல நின்னுடுச்சு. எஞ்சின் போச்சுன்னு மெக்கானிக் சொல்றாரு.",
+     "emotion": "embarrassed",
+     "intensity": "medium"
+    },
+    {
+     "who": "raghavan",
+     "en": "That old thing. Today's the first, your salary goes in tonight. Buy something that starts in the morning.",
+     "ta": "அந்த பழைய வண்டி. இன்னைக்கு ஒண்ணாம் தேதி, ராத்திரி சம்பளம் போடுவாங்க. காலையில ஸ்டார்ட் ஆகற ஒண்ணு வாங்கு.",
+     "emotion": "relaxed",
+     "intensity": "low"
+    },
+    {
+     "who": "raghavan",
+     "en": "Come. The office, then the bank, then the site.",
+     "ta": "வா. ஆஃபீஸ், அப்புறம் பேங்க், அப்புறம் சைட்.",
+     "emotion": "confident",
+     "intensity": "low"
+    }
+   ]
+  },
+  {
+   "do": "drive",
+   "to": "office",
+   "radius": 50,
+   "comfort": true,
+   "vehicle": "luxury_suv",
+   "hide": [
+    "raghavan"
+   ],
+   "goal": {
+    "en": "Drive Raghavan sir to the office in Gandhipuram, smoothly",
+    "ta": "ராகவன் சாரை காந்திபுரம் ஆஃபீஸுக்கு மெதுவா கூட்டிட்டு போங்க"
+   }
+  },
+  {
+   "do": "comfort_verdict",
+   "lines": {
+    "5": {
+     "who": "raghavan",
+     "en": "Like a train on rails, thambi. Wait for me here.",
+     "ta": "தண்டவாளத்துல ரயில் மாதிரி தம்பி. இங்க காத்திரு."
+    },
+    "3": {
+     "who": "raghavan",
+     "en": "Fine, fine. Wait for me here.",
+     "ta": "சரி, சரி. இங்க காத்திரு."
+    },
+    "1": {
+     "who": "raghavan",
+     "en": "My tea is on my shirt, Karthik. Gently, next time. Wait here.",
+     "ta": "என் டீ என் சட்டையில இருக்கு கார்த்திக். அடுத்த தடவை மெதுவா. இங்க காத்திரு."
+    }
+   }
+  },
+  {
+   "do": "card",
+   "big": {
+    "en": "The working day",
+    "ta": "வேலை நாள்"
+   },
+   "small": {
+    "en": "The bank, the site at Pudhur Vayal, the office again",
+    "ta": "பேங்க், புதூர் வயல் சைட், மறுபடியும் ஆஃபீஸ்"
+   },
+   "clock": "19:10",
+   "clock_forward": true
+  },
+  {
+   "do": "drive",
+   "to": "raghavan_house",
+   "radius": 45,
+   "comfort": true,
+   "vehicle": "luxury_suv",
+   "hide": [
+    "raghavan"
+   ],
+   "goal": {
+    "en": "Drive Raghavan sir home to Race Course",
+    "ta": "ராகவன் சாரை ரேஸ் கோர்ஸ் வீட்டுக்கு கூட்டிட்டு போங்க"
+   }
+  },
+  {
+   "do": "comfort_verdict",
+   "lines": {
+    "5": {
+     "who": "raghavan",
+     "en": "Good night, thambi. Sort out that scooter.",
+     "ta": "குட் நைட் தம்பி. அந்த ஸ்கூட்டர் விஷயத்த முடிச்சிடு."
+    },
+    "3": {
+     "who": "raghavan",
+     "en": "Good night, thambi. Sort out that scooter.",
+     "ta": "குட் நைட் தம்பி. அந்த ஸ்கூட்டர் விஷயத்த முடிச்சிடு."
+    },
+    "1": {
+     "who": "raghavan",
+     "en": "Go home and rest, Karthik. And sort out that scooter.",
+     "ta": "வீட்டுக்கு போய் ஓய்வெடு கார்த்திக். அந்த ஸ்கூட்டர் விஷயத்த முடிச்சிடு."
+    }
+   }
+  },
+  {
+   "do": "money",
+   "earn": 18000,
+   "to": {
+    "en": "Kovai Nagar Cooperative Bank",
+    "ta": "கோவை நகர் கூட்டுறவு வங்கி"
+   },
+   "receipt": {
+    "en": "A/c XX4417 credited ₹18,000.00: SALARY, RAGHAVAN DEVELOPERS.",
+    "ta": "கணக்கு XX4417-ல் ₹18,000.00 வரவு: சம்பளம், ராகவன் டெவலப்பர்ஸ்."
+   }
+  },
+  {
+   "do": "drive",
+   "to": "home",
+   "radius": 45,
+   "vehicle": "karthik_scooter",
+   "goal": {
+    "en": "Home, on the patched scooter. It coughs at every signal",
+    "ta": "ஒட்டுப்போட்ட ஸ்கூட்டர்ல வீட்டுக்கு. ஒவ்வொரு சிக்னல்லயும் இருமுது"
+   }
+  },
+  {
+   "do": "home",
+   "room": "home",
+   "at": "home",
+   "start": "door",
+   "cast": {
+    "amma": {
+     "mark": "amma_dinner",
+     "anim": "Sit"
+    },
+    "divya": {
+     "mark": "divya"
+    }
+   },
+   "visits": [
+    {
+     "to": "kitchen",
+     "task": "meal",
+     "home": true,
+     "home_meal": true,
+     "food": "dosa",
+     "slot": "dinner",
+     "minutes": 15,
+     "goal": {
+      "en": "Dinner, with Amma",
+      "ta": "அம்மாவோட இரவு சாப்பாடு"
+     },
+     "prompt": {
+      "en": "eat dinner",
+      "ta": "சாப்பிடுங்க"
+     }
+    }
+   ],
+   "keep": true
+  },
+  {
+   "do": "talk",
+   "cast": {
+    "amma": {
+     "mark": "amma",
+     "anim": "Sit"
+    },
+    "divya": {
+     "mark": "divya",
+     "anim": "Idle"
+    }
+   },
+   "lines": [
+    {
+     "who": "amma",
+     "en": "So. Eighteen thousand. Rent nine and a half, the power bill, Divya's fees on Friday.",
+     "ta": "சரி. பதினெட்டாயிரம். வாடகை ஒன்பதரை, கரண்ட் பில், வெள்ளிக்கிழமை திவ்யா ஃபீஸ்.",
+     "emotion": "thoughtful",
+     "intensity": "medium",
+     "to": "karthik"
+    },
+    {
+     "who": "karthik",
+     "en": "And the scooter, Amma. Seven and a half thousand to overhaul an engine that's done sixty thousand kilometres.",
+     "ta": "ஸ்கூட்டரும் அம்மா. அறுபதாயிரம் கி.மீ. ஓடின எஞ்சினுக்கு ஏழரை ஆயிரம் ஓவர்ஹால்.",
+     "emotion": "frustrated",
+     "intensity": "medium",
+     "to": "amma"
+    },
+    {
+     "who": "divya",
+     "en": "Anna, the college bus takes an hour and a half. If there was a scooter...",
+     "ta": "அண்ணா, காலேஜ் பஸ் ஒன்றரை மணி நேரம் ஆகுது. ஒரு ஸ்கூட்டர் இருந்தா...",
+     "emotion": "nervous",
+     "intensity": "low",
+     "to": "karthik"
+    },
+    {
+     "who": "karthik",
+     "en": "A new one on finance. The salary for the down payment, and I'll do deliveries in the evenings for the EMI.",
+     "ta": "ஃபைனான்ஸ்ல புதுசு. சம்பளத்துல டவுன் பேமென்ட், EMI-க்கு சாயங்காலம் டெலிவரி பண்றேன்.",
+     "emotion": "thoughtful",
+     "intensity": "medium",
+     "to": "amma"
+    },
+    {
+     "who": "amma",
+     "en": "Loans, loans. Your father never... (She stops.) All right. But you'll sleep, you'll eat. Promise me.",
+     "ta": "கடன், கடன். உங்கப்பா என்னைக்கும்... (நிறுத்திக்கறாங்க.) சரி. ஆனா நீ தூங்கணும், சாப்பிடணும். சத்தியம் பண்ணு.",
+     "emotion": "sad",
+     "intensity": "medium",
+     "to": "karthik"
+    },
+    {
+     "who": "karthik",
+     "en": "Promise. Tomorrow the showroom. Keep the old one or trade it in: I'll see what they offer.",
+     "ta": "சத்தியம். நாளைக்கு ஷோரூம். பழசை வெச்சுக்கறதா, மாத்தறதா: என்ன சொல்றாங்கன்னு பாக்கறேன்.",
+     "emotion": "confident",
+     "intensity": "low",
+     "to": "amma"
+    }
+   ]
+  },
+  {
+   "do": "home",
+   "room": "home",
+   "at": "home",
+   "start": "here",
+   "visits": [
+    {
+     "to": "karthik_room",
+     "sleep_until": "07:00",
+     "goal": {
+      "en": "Go to bed",
+      "ta": "தூங்க போங்க"
+     },
+     "prompt": {
+      "en": "sleep",
+      "ta": "தூங்குங்க"
+     }
+    }
+   ],
+   "keep": true
+  },
+  {
+   "do": "talk",
+   "cast": {
+    "amma": {
+     "mark": "amma",
+     "anim": "Sit"
+    }
+   },
+   "lines": [
+    {
+     "who": "amma",
+     "en": "Raghavan sir called. He said take the day, he's at the site with Suresh. Go and see your scooters.",
+     "ta": "ராகவன் சார் கூப்பிட்டாரு. இன்னைக்கு லீவு எடுத்துக்கோ, சுரேஷோட சைட்ல இருக்காராம். போய் ஸ்கூட்டர் பாரு.",
+     "emotion": "relaxed",
+     "intensity": "low",
+     "to": "karthik"
+    }
+   ]
+  },
+  {
+   "do": "home",
+   "room": "home",
+   "at": "home",
+   "start": "here",
+   "cast": {
+    "amma": {
+     "mark": "amma_kitchen"
+    }
+   },
+   "visits": [
+    {
+     "to": "kitchen",
+     "task": "meal",
+     "home": true,
+     "home_meal": true,
+     "food": "idli",
+     "slot": "breakfast",
+     "minutes": 12,
+     "goal": {
+      "en": "Breakfast",
+      "ta": "காலை சாப்பாடு"
+     },
+     "prompt": {
+      "en": "eat breakfast",
+      "ta": "சாப்பிடுங்க"
+     }
+    },
+    {
+     "to": "door_shelf",
+     "task": "ready",
+     "chores": [
+      "pocket"
+     ],
+     "goal": {
+      "en": "Your wallet, phone and keys",
+      "ta": "பர்ஸ், ஃபோன், சாவி"
+     },
+     "prompt": {
+      "en": "take your things",
+      "ta": "எடுத்துக்கோங்க"
+     }
+    }
+   ]
+  },
+  {
+   "do": "drive",
+   "to": "dealer",
+   "radius": 45,
+   "vehicle": "karthik_scooter",
+   "goal": {
+    "en": "To Kongu Two-Wheelers, on the coughing scooter",
+    "ta": "இருமுற ஸ்கூட்டர்ல கொங்கு டூ-வீலர்ஸுக்கு"
+   }
+  },
   {
    "do": "dealer",
    "room": "showroom",
    "at": "dealer",
    "start": "door",
-   "clock": "13:10",
+   "clock": "10:30",
    "cast": {
     "salesman": {
      "mark": "sales",
@@ -64,13 +951,12 @@
     }
    },
    "need": [
-    "bike",
     "scooter"
    ],
    "desk": "karthik_sales",
    "goal": {
-    "en": "Look round the motorcycles and the scooters. Choose one of each.",
-    "ta": "மோட்டார் சைக்கிள்களையும் ஸ்கூட்டர்களையும் பாருங்க. ஒவ்வொண்ணுலயும் ஒண்ணு தேர்வு செய்யுங்க."
+    "en": "Look round the showroom. Choose a scooter.",
+    "ta": "ஷோரூமை சுத்திப் பாருங்க. ஒரு ஸ்கூட்டர் தேர்வு செய்யுங்க."
    },
    "goal_done": {
     "en": "Talk to Prakash at the sales desk.",
@@ -167,7 +1053,8 @@
      "ex_showroom": 84900,
      "rto": 7640,
      "insurance": 5860,
-     "accessories": 1500
+     "accessories": 1500,
+     "display_only": true
     },
     {
      "id": "ooty_classic",
@@ -578,7 +1465,8 @@
      "insurance": 5240,
      "accessories": 1200
     }
-   ]
+   ],
+   "clock_forward": true
   },
   {
    "do": "talk",
@@ -586,7 +1474,7 @@
     {
      "who": "salesman",
      "to": "karthik",
-     "en": "Good choices. Cash or finance, sir?",
+     "en": "Good choice. Cash or finance, sir?",
      "ta": "நல்ல தேர்வு. கேஷா, ஃபைனான்ஸா சார்?"
     },
     {
@@ -806,29 +1694,29 @@
     {
      "who": "salesman",
      "to": "karthik",
-     "en": "Keys, sir. Come, I'll show you the bike in the yard.",
-     "ta": "சாவி சார். வாங்க, யார்டுல பைக்க காட்டறேன்."
+     "en": "Keys, sir. Come, I'll show you the scooter in the yard.",
+     "ta": "சாவி சார். வாங்க, யார்டுல ஸ்கூட்டரை காட்டறேன்."
     }
    ]
   },
   {
    "do": "learn",
-   "vehicle": "bike",
+   "vehicle": "scooter",
    "unless": "finance_declined",
    "lessons": [
     {
      "id": "mount",
      "goal": {
-      "en": "Your new motorcycle, at the kerb. Get on it.",
-      "ta": "உங்க புது பைக், ஓரத்துல. ஏறுங்க."
+      "en": "The new scooter, at the kerb. Get on it.",
+      "ta": "புது ஸ்கூட்டர், ஓரத்துல. ஏறுங்க."
      },
      "key": {
       "en": "F: get on",
       "ta": "F: ஏறுங்க"
      },
      "say": {
-      "en": "Sit, sir. Self start: it's already running. Feel the clutch, it's light.",
-      "ta": "உக்காருங்க சார். செல்ஃப் ஸ்டார்ட்: ஓடுது. கிளட்ச் லேசா இருக்கும்."
+      "en": "Sit, sir. Self start: it's already running. No gears on this one: twist and go.",
+      "ta": "உக்காருங்க சார். செல்ஃப் ஸ்டார்ட்: ஓடுது. இதுல கியர் இல்ல: முறுக்கினா போகும்."
      }
     },
     {
@@ -946,11 +1834,393 @@
    ]
   },
   {
-   "do": "free",
-   "goal": {
-    "en": "(the ride home comes next)",
-    "ta": "(அடுத்து வீட்டுக்கு)"
+   "do": "message",
+   "when": "keep_old",
+   "from": {
+    "en": "Senthil Two Wheeler Works",
+    "ta": "செந்தில் டூ வீலர் வொர்க்ஸ்"
+   },
+   "text": {
+    "en": "Sir, the showroom boy dropped your scooter here. Overhaul started. Ready tomorrow morning, I'll send it home. ₹7,500. – Senthil",
+    "ta": "சார், ஷோரூம் பையன் உங்க ஸ்கூட்டர இங்க விட்டுட்டு போனான். ஓவர்ஹால் ஆரம்பிச்சாச்சு. நாளைக்கு காலையில ரெடி, வீட்டுக்கு அனுப்பறேன். ₹7,500. – செந்தில்"
    }
+  },
+  {
+   "do": "drive",
+   "clock": "18:20",
+   "clock_forward": true,
+   "to": "home",
+   "radius": 45,
+   "vehicle": "scooter",
+   "goal": {
+    "en": "Home, on the new scooter",
+    "ta": "புது ஸ்கூட்டர்ல வீட்டுக்கு"
+   }
+  },
+  {
+   "do": "home",
+   "clock": "20:00",
+   "clock_forward": true,
+   "room": "home",
+   "at": "home",
+   "start": "door",
+   "cast": {
+    "amma": {
+     "mark": "amma_dinner",
+     "anim": "Sit"
+    },
+    "divya": {
+     "mark": "divya"
+    }
+   },
+   "visits": [
+    {
+     "to": "kitchen",
+     "task": "meal",
+     "home": true,
+     "home_meal": true,
+     "food": "dosa",
+     "slot": "dinner",
+     "minutes": 15,
+     "goal": {
+      "en": "Dinner",
+      "ta": "இரவு சாப்பாடு"
+     },
+     "prompt": {
+      "en": "eat dinner",
+      "ta": "சாப்பிடுங்க"
+     }
+    }
+   ],
+   "keep": true
+  },
+  {
+   "do": "talk",
+   "when": "keep_old",
+   "cast": {
+    "divya": {
+     "mark": "divya",
+     "anim": "Idle"
+    },
+    "amma": {
+     "mark": "amma",
+     "anim": "Sit"
+    }
+   },
+   "lines": [
+    {
+     "who": "divya",
+     "en": "Mine? Really mine? Anna!",
+     "ta": "எனக்கா? நிஜமா எனக்கா? அண்ணா!",
+     "emotion": "happy",
+     "intensity": "high",
+     "to": "karthik"
+    },
+    {
+     "who": "karthik",
+     "en": "Licence first. Then college. And no racing with your friends.",
+     "ta": "முதல்ல லைசென்ஸ். அப்புறம் காலேஜ். ஃப்ரெண்ட்ஸோட ரேஸ் கூடாது.",
+     "emotion": "happy",
+     "intensity": "low",
+     "to": "divya"
+    },
+    {
+     "who": "amma",
+     "en": "And the old one?",
+     "ta": "பழசு?",
+     "emotion": "thoughtful",
+     "intensity": "low",
+     "to": "karthik"
+    },
+    {
+     "who": "karthik",
+     "en": "At Senthil's. New engine parts. It'll be back tomorrow, and it's mine for the deliveries.",
+     "ta": "செந்தில் கடையில. புது எஞ்சின் பார்ட்ஸ். நாளைக்கு வந்துடும், டெலிவரிக்கு அது எனக்கு.",
+     "emotion": "confident",
+     "intensity": "low",
+     "to": "amma"
+    }
+   ]
+  },
+  {
+   "do": "talk",
+   "when": "trade_in",
+   "cast": {
+    "divya": {
+     "mark": "divya",
+     "anim": "Idle"
+    },
+    "amma": {
+     "mark": "amma",
+     "anim": "Sit"
+    }
+   },
+   "lines": [
+    {
+     "who": "divya",
+     "en": "It's so quiet! The old one, everyone on the street knew you were coming.",
+     "ta": "எவ்வளவு அமைதியா இருக்கு! பழசுல, நீ வர்றது தெரு முழுக்க தெரியும்.",
+     "emotion": "happy",
+     "intensity": "medium",
+     "to": "karthik"
+    },
+    {
+     "who": "karthik",
+     "en": "Six thousand they gave for it. It earned its rest.",
+     "ta": "அதுக்கு ஆறாயிரம் குடுத்தாங்க. அது ஓய்வுக்கு தகுதியானது.",
+     "emotion": "relaxed",
+     "intensity": "low",
+     "to": "divya"
+    },
+    {
+     "who": "amma",
+     "en": "Sunday, you'll take Divya to college on it and show her the road.",
+     "ta": "ஞாயிற்றுக்கிழமை, திவ்யாவ இதுல காலேஜுக்கு கூட்டிட்டு போய் ரோடு காட்டு.",
+     "emotion": "relaxed",
+     "intensity": "low",
+     "to": "karthik"
+    }
+   ]
+  },
+  {
+   "do": "home",
+   "room": "home",
+   "at": "home",
+   "start": "here",
+   "visits": [
+    {
+     "to": "karthik_room",
+     "sleep_until": "07:00",
+     "goal": {
+      "en": "Go to bed",
+      "ta": "தூங்க போங்க"
+     },
+     "prompt": {
+      "en": "sleep",
+      "ta": "தூங்குங்க"
+     }
+    }
+   ],
+   "keep": true
+  },
+  {
+   "do": "message",
+   "when": "keep_old",
+   "from": {
+    "en": "Senthil Two Wheeler Works",
+    "ta": "செந்தில் டூ வீலர் வொர்க்ஸ்"
+   },
+   "text": {
+    "en": "Sir, scooter outside your gate. Rings, piston, bearings new. Runs like a young one. ₹7,500.",
+    "ta": "சார், ஸ்கூட்டர் உங்க கேட் வெளியே. ரிங், பிஸ்டன், பேரிங் புதுசு. இளசு மாதிரி ஓடுது. ₹7,500."
+   }
+  },
+  {
+   "do": "money",
+   "when": "keep_old",
+   "pay": 7500,
+   "to": {
+    "en": "Senthil Two Wheeler Works",
+    "ta": "செந்தில் டூ வீலர் வொர்க்ஸ்"
+   },
+   "receipt": {
+    "en": "Paid ₹7,500 to SENTHIL TWO WHEELER WORKS: engine overhaul, TN 38 R 4471.",
+    "ta": "செந்தில் டூ வீலர் வொர்க்ஸுக்கு ₹7,500: எஞ்சின் ஓவர்ஹால், TN 38 R 4471."
+   },
+   "vehicle_state": {
+    "id": "old_scooter",
+    "engine_k": 1.0,
+    "condition": 85.0
+   }
+  },
+  {
+   "do": "home",
+   "room": "home",
+   "at": "home",
+   "start": "here",
+   "cast": {
+    "amma": {
+     "mark": "amma_kitchen"
+    }
+   },
+   "visits": [
+    {
+     "to": "kitchen",
+     "task": "meal",
+     "home": true,
+     "home_meal": true,
+     "food": "idli",
+     "slot": "breakfast",
+     "minutes": 12,
+     "goal": {
+      "en": "Breakfast",
+      "ta": "காலை சாப்பாடு"
+     },
+     "prompt": {
+      "en": "eat breakfast",
+      "ta": "சாப்பிடுங்க"
+     }
+    },
+    {
+     "to": "door_shelf",
+     "task": "ready",
+     "chores": [
+      "pocket"
+     ],
+     "goal": {
+      "en": "Your wallet, phone and keys",
+      "ta": "பர்ஸ், ஃபோன், சாவி"
+     },
+     "prompt": {
+      "en": "take your things",
+      "ta": "எடுத்துக்கோங்க"
+     }
+    }
+   ]
+  },
+  {
+   "do": "gigs",
+   "vehicle": "karthik_scooter",
+   "realtime": true,
+   "until": "14:00",
+   "speed_kmh": 25,
+   "app": {
+    "en": "QuickBite Rider",
+    "ta": "குவிக்பைட் ரைடர்"
+   },
+   "pickups": [
+    "hotel",
+    "lunch_murugan",
+    "lunch_gowri",
+    "lunch_kovai",
+    "grand_hotel"
+   ],
+   "drops": [
+    "drop_ganapathy",
+    "drop_hope_college",
+    "drop_kavundampalayam",
+    "drop_kuniyamuthur",
+    "drop_peelamedu",
+    "drop_race_course",
+    "drop_ramanathapuram",
+    "drop_rs_puram",
+    "drop_saibaba_colony",
+    "drop_singanallur",
+    "drop_sitra",
+    "drop_thudiyalur",
+    "drop_town_hall",
+    "drop_vadavalli"
+   ],
+   "delivery": true,
+   "goal": {
+    "en": "Your first delivery shift: take orders on the rider app (P)",
+    "ta": "முதல் டெலிவரி ஷிஃப்ட்: ரைடர் ஆப்ல ஆர்டர் எடுங்க (P)"
+   }
+  },
+  {
+   "do": "drive",
+   "to": "home",
+   "radius": 45,
+   "vehicle": "karthik_scooter",
+   "goal": {
+    "en": "Home",
+    "ta": "வீடு"
+   }
+  },
+  {
+   "do": "home",
+   "clock": "20:00",
+   "clock_forward": true,
+   "room": "home",
+   "at": "home",
+   "start": "door",
+   "cast": {
+    "amma": {
+     "mark": "amma_dinner",
+     "anim": "Sit"
+    }
+   },
+   "visits": [
+    {
+     "to": "kitchen",
+     "task": "meal",
+     "home": true,
+     "home_meal": true,
+     "food": "dosa",
+     "slot": "dinner",
+     "minutes": 15,
+     "goal": {
+      "en": "Dinner",
+      "ta": "இரவு சாப்பாடு"
+     },
+     "prompt": {
+      "en": "eat dinner",
+      "ta": "சாப்பிடுங்க"
+     }
+    }
+   ],
+   "keep": true
+  },
+  {
+   "do": "talk",
+   "cast": {
+    "amma": {
+     "mark": "amma",
+     "anim": "Sit"
+    }
+   },
+   "lines": [
+    {
+     "who": "amma",
+     "en": "Tired?",
+     "ta": "களைப்பா?",
+     "emotion": "relaxed",
+     "intensity": "low",
+     "to": "karthik"
+    },
+    {
+     "who": "karthik",
+     "en": "Tired. But it's working, Amma. The EMI will come out of the deliveries.",
+     "ta": "களைப்புதான். ஆனா சரியா போகுது அம்மா. EMI டெலிவரியிலேயே வந்துடும்.",
+     "emotion": "happy",
+     "intensity": "low",
+     "to": "amma"
+    },
+    {
+     "who": "amma",
+     "en": "Sleep. Sir wants you early tomorrow, he said. Something about the bank.",
+     "ta": "தூங்கு. நாளைக்கு சீக்கிரம் வரச்சொன்னாரு சார். பேங்க் விஷயமாம்.",
+     "emotion": "relaxed",
+     "intensity": "low",
+     "to": "karthik"
+    }
+   ]
+  },
+  {
+   "do": "home",
+   "room": "home",
+   "at": "home",
+   "start": "here",
+   "visits": [
+    {
+     "to": "karthik_room",
+     "sleep_until": "06:30",
+     "goal": {
+      "en": "Go to bed",
+      "ta": "தூங்க போங்க"
+     },
+     "prompt": {
+      "en": "sleep",
+      "ta": "தூங்குங்க"
+     }
+    }
+   ],
+   "keep": true
+  },
+  {
+   "do": "chapter",
+   "path": "res://story/slice.json",
+   "day": 1
   }
  ]
 }
