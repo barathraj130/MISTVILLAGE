@@ -251,8 +251,17 @@ func set_materials(road: Material, ground: Material, buildings: Material, walk: 
 	building_mat = buildings
 	walk_mat = walk
 	kerb_mat = kerb
+	if walk is StandardMaterial3D:                        # the footpaths: the same pavers, with contact shading at
+		var sw := walk as StandardMaterial3D               #  both edges (footpath.gdshader)
+		var fm := ShaderMaterial.new()
+		fm.shader = preload("res://shaders/footpath.gdshader")
+		fm.set_shader_parameter("albedo_tex", sw.albedo_texture)
+		fm.set_shader_parameter("normal_tex", sw.normal_texture)
+		fm.set_shader_parameter("rough_tex", sw.roughness_texture)
+		fm.set_shader_parameter("tint", Color(sw.albedo_color.r, sw.albedo_color.g, sw.albedo_color.b))
+		walk_mat = fm
 	if "--noshaderao" in OS.get_cmdline_user_args():     # (testing: the shaders' contact shading off, to compare)
-		for m in [road, buildings, kit.material if kit else null]:
+		for m in [road, buildings, kit.material if kit else null, walk_mat]:
 			if m is ShaderMaterial:
 				(m as ShaderMaterial).set_shader_parameter("ao_k", 0.0)
 
@@ -1329,7 +1338,7 @@ func _walks(walks: Array, out: Dictionary, g: Array) -> void:
 					seps.append(Transform3D(Basis(Vector3.UP, along).scaled(Vector3.ONE * 0.28), (a + b) * 0.5 - Vector3(0, 0.08, 0)))
 			else:
 				_quad(top, ai, bi, bo, ao, Vector3.UP, Color.WHITE, Vector2(hw, along) / 2.0, Vector2(hw, along + L) / 2.0,
-					Vector2(-hw, along + L) / 2.0, Vector2(-hw, along) / 2.0, Vector2.ZERO)
+					Vector2(-hw, along + L) / 2.0, Vector2(-hw, along) / 2.0, Vector2(hw, 0.0))   # (UV2.x: its half width, footpath.gdshader)
 			faces.append_array([ai, bi, bo, ai, bo, ao])
 			if sep:
 				_quad(kb, ao, bo, _down(g, bo), _down(g, ao), -rw, col, Vector2.ZERO, Vector2.ZERO,

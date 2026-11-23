@@ -63,7 +63,32 @@ step, not the bake).
 Delete the `_ao` files (`godot/assets/landmarks/hospital_ao*`, `hotel_grand_ao*`, `godot/assets/world/fuel_bunk_ao*`,
 `godot/assets/interiors/room_showroom_ao*`) or run with `--noao`; `--noshaderao` (or `ao_k` 0) for the shader part.
 
-## Next (waiting for approval)
+## Expansion (approved; 23 November 2026)
 
-Bake the remaining landmarks (16 more in `landmarks.json`, the rooms in `assets/interiors/`) the same way, and give
-the footpaths the shader treatment.
+Baked the same way, the 14 other landmarks in `landmarks.json`: the railway station, the central and town bus
+stands, both malls (Avinashi Road, Sathy Road), the Collectorate, the clock tower, the church, the stadium, the
+temple, CODISSIA, PSG Tech, the private hospital and the airport (each 0.2–5.4 MB, originals untouched). Now all 17
+landmark models and the showroom room have `_ao` copies. The footpaths got the shader treatment too:
+`footpath.gdshader` (the same pavers, contact shading along both edges; the strip's half width rides in UV2.x),
+built from the paver material by `city_streamer.gd`; `--noshaderao` turns it off with the rest.
+
+Checked: each landmark at 13:00 from a fixed camera (`--gfxlm=name[:metres]`), off and on: no dark patches, seams or
+wrong shadows on any of them (`landmarks_1_of_2_1300.jpg`, `landmarks_2_of_2_1300.jpg`; the airport and CODISSIA
+from farther off, `airport_codissia_far.jpg`); the footpaths keep their pavers and colour, a little darker at the
+edges (`footpaths_police_street.jpg`).
+
+Measured again (the same four places and hours, two runs each; everything now baked or shaded). This round ran slower
+overall than the first (other changes in the city since), and the medians swing more than any effect:
+
+| Place | fps off → on | CPU ms off → on | Draw calls | Video memory (MB, peak) | RAM (MB) |
+|---|---|---|---|---|---|
+| Hospital | 8.6 → 13.6 | 111 → 66 | 2168 → 2296 | 2251 → 2133 | 345 → 349 |
+| Siruvani Grand | 11.3 → 18.4 | 79 → 53 | 2789 → 2877 | 2217 → 2096 | 331 → 331 |
+| Kongu Fuels | 10.2 → 15.6 | 98 → 57 | 2538 → 2611 | 2245 → 2223 | 352 → 353 |
+| Police station street | 8.9 → 12.9 | 97 → 74 | 1730 → 1788 | 2273 → 2274 | 371 → 377 |
+
+The "on" runs happened to be faster here (the first test had them within ±1 fps): neither is an effect of the
+shading, which costs a texture read on landmark surfaces and a few instructions in the shaders. At the 14 landmarks
+(one run each) fps moved between −4 and +2, draw calls by under 5 %, video memory by under 4 MB.
+
+Rollback: as above (the `_ao` files, `--noao`, `--noshaderao`).

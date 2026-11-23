@@ -45,7 +45,19 @@ func _run() -> void:
 	await tree.create_timer(6.0).timeout
 	print("GFX adapter %s · %s · window %s · preset %s" % [RenderingServer.get_video_adapter_name(), RenderingServer.get_video_adapter_api_version(),
 		str(DisplayServer.window_get_size()), str(load("res://scripts/graphics.gd").preset())])
-	for p in PLACES:
+	var places: Array = PLACES.duplicate()
+	for a in OS.get_cmdline_user_args():               # --gfxlm=name,name: a fixed camera before each landmark named
+		if a.begins_with("--gfxlm="):                  #  (landmarks.json), 60 m off its door side, 25 m up
+			for entry in a.get_slice("=", 1).split(","):
+				var nm := entry.get_slice(":", 0)            # (name:metres for a big one: the camera farther off)
+				var dd := float(entry.get_slice(":", 1)) if entry.contains(":") else 60.0
+				for lm in city.streamer.landmarks:
+					if str(lm.get("name", "")) == nm:
+						var fx := float(lm["x"]) + sin(float(lm["yaw"])) * dd
+						var fz := float(lm["z"]) + cos(float(lm["yaw"])) * dd
+						places.append({"id": "lm_" + nm, "en": nm, "x": fx, "z": fz, "lm": nm, "dist": dd, "up": 25.0 + dd * 0.25, "cam": true})
+						only.append("lm_" + nm)
+	for p in places:
 		if (not only.is_empty() and not str(p["id"]) in only) or (only.is_empty() and p.has("cam")):
 			continue
 		var car = city.car
