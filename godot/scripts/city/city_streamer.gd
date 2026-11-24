@@ -1092,7 +1092,7 @@ func _buildings(blds: Array, out: Dictionary) -> void:
 			poly.append(Vector2(xz[i * 2], xz[i * 2 + 1]))
 			centre += poly[i]
 		centre /= n
-		if _landmark_lot(centre):
+		if _landmark_lot(centre) or _in_clear(poly):
 			continue                                     # a landmark of its own stands here (_landmarks)
 		var designed := variant >= 0 and variant < kit_meshes.size() and kit_meshes[variant] != null
 		var t: Array = far if designed else near
@@ -1850,7 +1850,7 @@ func _life(life: Array, out: Dictionary, roads: Array = []) -> void:
 		by[key].append(Transform3D(bs, Vector3(v[0], v[1], v[2])))
 		var lnm: String = names0[kind] if kind < names0.size() else ""
 		if lnm.begins_with("street_") or lnm.begins_with("sf_"):     # (someone standing about: a body's width)
-			solids.append([Vector3(v[0], v[1], v[2]), 0.26, 1.7])
+			solids.append([Vector3(v[0], v[1], v[2]), 0.26, 1.7, true])   # (true: a person, not furniture)
 		elif SOLID_CYL.has(lnm):
 			var cy: Array = SOLID_CYL[lnm]
 			solids.append([Vector3(v[0], v[1], v[2]), float(cy[0]) * v[4], float(cy[1]) * v[4]])
@@ -2096,6 +2096,11 @@ func _yards(yards: Array, out: Dictionary, g: Array = []) -> void:
 		var kind: int = yd[0]
 		var p: PackedFloat32Array = yd[1]
 		var n := p.size() / 3
+		var yp := PackedVector2Array()                   # (a yard or a wall in a landmark's clear outline: it goes
+		for i in n:                                      #  with the buildings there, the landmark has its own)
+			yp.append(Vector2(p[i * 3], p[i * 3 + 2]))
+		if _in_clear(yp):
+			continue
 		if kind == 1 or kind == 2 or kind == 6:
 			var t: Array = con if kind == 2 else pav
 			for i in range(0, n - 2, 3):
@@ -2731,28 +2736,39 @@ func _instance(k: Vector2i, d: Dictionary) -> void:
 				PhysicsServer3D.free_rid(sh))
 	var solid_list: Array = [] if no_parked or "--nosolids" in OS.get_cmdline_user_args() else d.get("solids", [])
 	if not solid_list.is_empty():
+		# two bodies: the furniture (poles, trees, signs, bollards, bins, stalls, benches...) solid to vehicles too
+		# (layer 1, what a car collides with: before, a car drove through a bin or a lamp pole), and the people standing
+		# about solid only to people on foot (a car meets them through the pedestrian system, not as a wall)
 		var srid := PhysicsServer3D.body_create()
 		PhysicsServer3D.body_set_mode(srid, PhysicsServer3D.BODY_MODE_STATIC)
 		PhysicsServer3D.body_set_space(srid, get_world_3d().space)
-		PhysicsServer3D.body_set_collision_layer(srid, FOOT_LAYER)
+		PhysicsServer3D.body_set_collision_layer(srid, FOOT_LAYER | (0 if "--ghostfurniture" in OS.get_cmdline_user_args() else 1))
 		PhysicsServer3D.body_set_collision_mask(srid, 0)
 		PhysicsServer3D.body_attach_object_instance_id(srid, street_body.get_instance_id())
+		var hrid := PhysicsServer3D.body_create()
+		PhysicsServer3D.body_set_mode(hrid, PhysicsServer3D.BODY_MODE_STATIC)
+		PhysicsServer3D.body_set_space(hrid, get_world_3d().space)
+		PhysicsServer3D.body_set_collision_layer(hrid, FOOT_LAYER)
+		PhysicsServer3D.body_set_collision_mask(hrid, 0)
+		PhysicsServer3D.body_attach_object_instance_id(hrid, street_body.get_instance_id())
 		var sshapes: Array = []
 		for so in solid_list:
+			var on := hrid if so.size() > 3 and so[3] == true else srid
 			var sh2: RID
 			if so[0] is Transform3D:
 				var sx: Transform3D = so[0]
 				var sb: AABB = so[1]
 				sh2 = PhysicsServer3D.box_shape_create()
 				PhysicsServer3D.shape_set_data(sh2, sb.size * sx.basis.get_scale() * 0.5 * Vector3(0.95, 1.0, 0.95))
-				PhysicsServer3D.body_add_shape(srid, sh2, Transform3D(sx.basis.orthonormalized(), sx * sb.get_center()))
+				PhysicsServer3D.body_add_shape(on, sh2, Transform3D(sx.basis.orthonormalized(), sx * sb.get_center()))
 			else:
 				sh2 = PhysicsServer3D.cylinder_shape_create()
 				PhysicsServer3D.shape_set_data(sh2, {"radius": float(so[1]), "height": float(so[2])})
-				PhysicsServer3D.body_add_shape(srid, sh2, Transform3D(Basis(), (so[0] as Vector3) + Vector3.UP * float(so[2]) * 0.5))
+				PhysicsServer3D.body_add_shape(on, sh2, Transform3D(Basis(), (so[0] as Vector3) + Vector3.UP * float(so[2]) * 0.5))
 			sshapes.append(sh2)
 		node.tree_exiting.connect(func() -> void:
 			PhysicsServer3D.free_rid(srid)
+			PhysicsServer3D.free_rid(hrid)
 			for sh3 in sshapes:
 				PhysicsServer3D.free_rid(sh3))
 	for lm in ([] if "--nolife" in OS.get_cmdline_user_args() else d.get("life", [])):
@@ -2845,6 +2861,37 @@ func _instance(k: Vector2i, d: Dictionary) -> void:
 	stats["loaded"] = loaded.size()
 	stats["buildings"] += int(d.get("n_blds", 0))
 	stats["designed"] += int(d.get("n_kit", 0))
+
+
+## The landmarks' clear outlines (everything in them goes), as polygons, once.
+var _clear_polys: Array = []
+var _clear_built := false
+
+
+func _clears() -> Array:
+	if not _clear_built:
+		_clear_built = true
+		for lm in landmarks:
+			if lm.has("clear"):
+				var cp := PackedVector2Array()
+				for q in lm["clear"]:
+					cp.append(Vector2(q[0], q[1]))
+				_clear_polys.append(cp)
+	return _clear_polys
+
+
+## Does a footprint (or a yard, a wall) overlap a landmark's clear outline at all? Its centre alone wasn't enough: a
+## building half over a petrol bunk's lot stayed and stood through its canopy, and a compound wall across its front.
+func _in_clear(poly: PackedVector2Array) -> bool:
+	if poly.size() < 2:
+		return false
+	for cp in _clears():
+		for q in poly:
+			if Geometry2D.is_point_in_polygon(q, cp):
+				return true
+		if poly.size() >= 3 and not Geometry2D.intersect_polygons(poly, cp).is_empty():
+			return true
+	return false
 
 
 ## Is a footprint centred here the lot of a landmark (whose own design replaces it)?

@@ -381,7 +381,273 @@ func _pick_driver() -> String:
 	return "normal"
 
 
+# ---- the petrol bunks: the city's own cars, autos and taxis fill up (fuel_bunks.gd) ----
+## Passing a bunk on the forecourt's side of the road, going the way its entry faces, one now and then turns in:
+## indicating and slowing, off the road at the way in, along the forecourt to a free pump, stopped there (brake
+## lamps) while the attendant fills it (he turns to it; the pump's screen counts up), then out at the way out and
+## back into its lane, the road it was on. Buses and lorries don't (they fill at depots). The lot's frame
+## (tools/cars/build_bunk.py): +X along the road, the road on +Z; the way in at x −7.2, out at +7.2, the pumps' bays at
+## x ±3.2. A visit is a dense path of points it rolls along at forecourt speed, easing to its stop and away.
+const BUNK_CHANCE := 0.14                   # (of the cars passing the way in, going its way, with a pump free)
+const BUNK_FILL := Vector2(18.0, 35.0)      # (seconds at the pump)
+var bunk_chance := BUNK_CHANCE              # (testing: --npcbunktest makes it 1)
+var bunk_log := false                       # (testing: each visit's stages printed, "NPCBUNK ...")
+
+
+func _maybe_bunk(v: Dictionary) -> void:
+	var city = get_parent()
+	if v["kind"] in ["bus", "lorry"] or city == null or not ("bunks" in city) or city.bunks == null:
+		return
+	var bk = city.bunks
+	var pos: Vector3 = v["pos"]
+	for id in bk.placed:
+		var rec: Dictionary = bk.placed[id]
+		var xf: Transform3D = rec["xf"]
+		if Vector2(pos.x - xf.origin.x, pos.z - xf.origin.z).length() > 40.0:
+			continue
+		var lp := xf.affine_inverse() * pos
+		var lf := xf.basis.inverse() * (v["fwd"] as Vector3)
+		# (coming either way: along +X it turns in at the near opening; the other way, across the road, at the far
+		#  one, the same path mirrored: m = −1)
+		var m := 1.0 if lf.x > 0.0 else -1.0
+		if absf(lf.x) < 0.75 or lp.x * m < -28.0 or lp.x * m > -13.0 or lp.z < 6.0 or lp.z > 24.0:
+			continue
+		if str(v.get("bunk_seen", "")) == str(id):           # (decided once as it passes)
+			return
+		v["bunk_seen"] = str(id)
+		if _rng.randf() > bunk_chance:
+			return
+		var bay: int = bk.free_bay(str(id), m)
+		if bay < 0:
+			return
+		_start_visit(v, str(id), rec, bay, m)
+		return
+
+
+func _start_visit(v: Dictionary, id: String, rec: Dictionary, bay: int, m := 1.0) -> void:
+	var city = get_parent()
+	var xf: Transform3D = rec["xf"]
+	var bx: float = (xf.affine_inverse() * (rec["bays"][bay] as Vector3)).x
+	var pos: Vector3 = v["pos"]
+	var lp := xf.affine_inverse() * pos
+	# (in past the price board's totem and out past the air stand, a car's width and a margin from each: the lot's
+	#  solids, fuel_bunks.gd SOLIDS; the pump's bay 0.6 m out from its island)
+	# (alongside the island to the pump and on forward to the way out: never doubling back, whichever pump)
+	# (worked out against the solids for a hatchback, a sedan and an auto from every lane, either way in, offline:
+	#  the car stops 2.3 m out from the island's middle, rolls straight along it at that distance, and turns only past
+	#  its ends; evenly spaced points, or the smoothed curve sagged toward the island)
+	var ub := bx * m                                        # (in the mirrored frame: the pump's place along the way)
+	var bz := 2.3
+	var cin: Array = [[lp.x * m, lp.z], [-14.0, lp.z], [-8.2, 6.8], [-6.6, 4.2], [minf(ub - 2.4, -5.6), bz], [ub - 1.2, bz], [ub, bz]]
+	var ctl_in: Array = []
+	for c in cin:
+		ctl_in.append(Vector3(float(c[0]) * m, 0, float(c[1])))
+	var out_z := lp.z                                       # (back to the lane it came in on)
+	var lane_end := _lane_point(v, xf * Vector3(18.0 * m, 0, out_z))   # (where it takes its road back: in its lane)
+	var le := xf.affine_inverse() * lane_end if lane_end != Vector3.INF else Vector3(18.0 * m, 0, out_z)
+	var cout: Array = [[ub, bz], [ub + 1.2, bz], [maxf(ub + 2.4, 5.8), bz], [6.8, 4.2], [8.0, 6.8], [13.0, le.z], [le.x * m, le.z]]
+	var ctl_out: Array = []
+	for c in cout:
+		ctl_out.append(Vector3(float(c[0]) * m, 0, float(c[1])))
+	var clear_ok := _clear_of_solids(v, xf, ctl_in + ctl_out)
+	if not clear_ok:
+		return                                              # (no room for it this time: it drives on)
+	v["visit"] = {"id": id, "bay": bay, "xf": xf, "phase": "in", "path": _smooth(ctl_in, xf), "out": _smooth(ctl_out, xf), "s": 0.0,
+		"wait": _rng.randf_range(BUNK_FILL.x, BUNK_FILL.y), "t": 0.0, "litres": 0.0, "y": pos.y, "side": signf(-(lp.z - 4.0))}
+	v["turn"] = -1.0 if lp.z > 4.0 else 1.0                 # (indicating toward the forecourt: it's on his left here)
+	(city.bunks).take_bay(id, bay, v)
+	if bunk_log:
+		print("NPCBUNK %s %s turning in to bay %d at %s" % [v["kind"], str(v["body"].get_instance_id()), bay, id])
+
+
+## Does a car on this path (its points in the lot's frame, smoothed) keep clear of the forecourt's solids? Its body
+## a box (half its width and length: DIMS) round each point, turned along the path; the solids' boxes from fuel_bunks.gd.
+## Logged when it doesn't (bunk_log), with the nearest thing and how far in.
+func _clear_of_solids(v: Dictionary, xf: Transform3D, ctl: Array) -> bool:
+	var dims: Vector3 = DIMS.get(v["kind"], Vector3(1.7, 1.5, 4.0))
+	var hw := dims.x * 0.5 + 0.25
+	var hl := dims.z * 0.5 + 0.2
+	var pts := _smooth(ctl, Transform3D.IDENTITY)
+	var solids: Array = (load("res://scripts/city/fuel_bunks.gd") as Script).get_script_constant_map()["SOLIDS"]
+	for i in range(0, pts.size() - 1, 2):
+		var a := pts[i]
+		var b := pts[mini(i + 1, pts.size() - 1)]
+		var fw := Vector2(b.x - a.x, b.z - a.z).normalized()
+		if fw.length() < 0.01:
+			continue
+		var sd := Vector2(-fw.y, fw.x)
+		for so in solids:
+			var c := Vector2(float(so[0]), float(so[1]))
+			var rel := c - Vector2(a.x, a.z)
+			# (separating axes, a turned box against an upright one: the car's own two, then the solid's two)
+			var hx := float(so[2])
+			var hz := float(so[3])
+			var sep := false
+			for ax in [fw, sd, Vector2(1, 0), Vector2(0, 1)]:
+				var r_car: float = (hl if ax == fw else (hw if ax == sd else absf(ax.dot(fw)) * hl + absf(ax.dot(sd)) * hw))
+				var r_sol: float = absf(ax.x) * hx + absf(ax.y) * hz
+				if absf(rel.dot(ax)) > r_car + r_sol:
+					sep = true
+					break
+			if not sep:
+				if bunk_log:
+					print("NPCBUNK path for a %s too near the solid at (%.1f, %.1f): not going in" % [v["kind"], c.x, c.y])
+				return false
+	return true
+
+
+## Points `ctl` (the lot's frame) as a dense smooth path in the world (Catmull-Rom, a point every ~0.4 m).
+func _smooth(ctl: Array, xf: Transform3D) -> PackedVector3Array:
+	var out := PackedVector3Array()
+	var n := ctl.size()
+	for i in n - 1:
+		var p0: Vector3 = ctl[maxi(i - 1, 0)]
+		var p1: Vector3 = ctl[i]
+		var p2: Vector3 = ctl[i + 1]
+		var p3: Vector3 = ctl[mini(i + 2, n - 1)]
+		var steps := maxi(2, int(p1.distance_to(p2) / 0.4))
+		for k in steps:
+			var t := float(k) / float(steps)
+			var t2 := t * t
+			var t3 := t2 * t
+			var q := 0.5 * ((2.0 * p1) + (-p0 + p2) * t + (2.0 * p0 - 5.0 * p1 + 4.0 * p2 - p3) * t2 + (-p0 + 3.0 * p1 - 3.0 * p2 + p3) * t3)
+			out.append(xf * Vector3(q.x, 0.0, q.z))
+	out.append(xf * Vector3((ctl[n - 1] as Vector3).x, 0.0, (ctl[n - 1] as Vector3).z))
+	return out
+
+
+func _visit(v: Dictionary, delta: float) -> void:
+	var city = get_parent()
+	var vis: Dictionary = v["visit"]
+	var bk = city.bunks if city and "bunks" in city else null
+	if vis["phase"] == "fill":                              # at the pump: stood, the attendant filling it
+		v["speed"] = 0.0
+		v["target"] = 0.0
+		v["turn"] = 0.0
+		vis["t"] = float(vis["t"]) + delta
+		vis["litres"] = float(vis["litres"]) + delta * (0.32 if v["kind"] == "auto" else 0.45)
+		if bk:
+			bk.npc_serve(str(vis["id"]), int(vis["bay"]), float(vis["litres"]), (v["pos"] as Vector3) - (vis["xf"] as Transform3D).basis.z * 0.9)
+		if float(vis["t"]) >= float(vis["wait"]):
+			if bunk_log:
+				print("NPCBUNK %s %s filled %.1f L (₹%d) in %.0f s, pulling out" % [v["kind"], str(v["body"].get_instance_id()), float(vis["litres"]), int(float(vis["litres"]) * 102.0), float(vis["t"])])
+			vis["phase"] = "out"
+			vis["path"] = vis["out"]
+			vis["s"] = 0.0
+			v["turn"] = 1.0 if float(vis["side"]) < 0.0 else -1.0   # (indicating out, toward the road)
+			if bk:
+				bk.leave_bay(str(vis["id"]), int(vis["bay"]))
+		return
+	var path: PackedVector3Array = vis["path"]
+	var total := 0.4 * float(path.size() - 1)
+	var s := float(vis["s"])
+	# forecourt speed: 4 m/s, easing to the stop at the pump (going in) and from it (going out); slower off the road
+	var left := total - s
+	var want := 4.0
+	if vis["phase"] == "in":
+		want = minf(want, 0.6 + left * 0.55)
+	else:
+		want = minf(want, 1.2 + s * 0.6)
+		if left < 6.0:
+			want = 6.0
+	# someone in the way on the forecourt (another visitor, him): wait
+	var here: Vector3 = v["pos"]
+	var ahead := path[mini(int(s / 0.4) + 6, path.size() - 1)]
+	for o in _near(_veh_grid, here):
+		if o != v and (o["pos"] as Vector3).distance_to(ahead) < 2.4:
+			want = 0.0
+	if player and player.global_position.distance_to(ahead) < 2.6:
+		want = 0.0
+	var spd := move_toward(float(v["speed"]), want, delta * 2.5)
+	v["speed"] = spd
+	v["target"] = want
+	s = minf(s + spd * delta, total)
+	vis["s"] = s
+	var f := s / 0.4
+	var i := mini(int(f), path.size() - 2)
+	var a := path[i]
+	var b := path[i + 1]
+	var at := a.lerp(b, clampf(f - float(i), 0.0, 1.0))
+	at.y = float(vis["y"])
+	var dir := Vector3(b.x - a.x, 0, b.z - a.z).normalized()
+	if dir.length() < 0.01:
+		dir = v["fwd"]
+	v["pos"] = at
+	v["fwd"] = dir
+	var body: AnimatableBody3D = v["body"]
+	body.global_transform = Transform3D(Basis.looking_at(-dir, Vector3.UP), at)
+	if s >= total - 0.01:
+		if vis["phase"] == "in":
+			vis["phase"] = "fill"
+			vis["t"] = 0.0
+			v["turn"] = 0.0
+			if bunk_log:
+				print("NPCBUNK %s %s stopped at the pump" % [v["kind"], str(v["body"].get_instance_id())])
+		else:
+			_rejoin(v)
+
+
+## The point in its lane on its road nearest `at` (where _place would put it there), or INF if its road isn't near.
+func _lane_point(v: Dictionary, at: Vector3) -> Vector3:
+	var r: Dictionary = v["road"]
+	var p: PackedFloat32Array = r["p"]
+	var n := p.size() / 3
+	var best := INF
+	var out := Vector3.INF
+	for i in n - 1:
+		var a := _pt(p, i)
+		var b := _pt(p, i + 1)
+		var ab := Vector3(b.x - a.x, 0, b.z - a.z)
+		var t := clampf(Vector3(at.x - a.x, 0, at.z - a.z).dot(ab) / maxf(ab.length_squared(), 0.001), 0.0, 1.0)
+		var q := Vector3(a.x + ab.x * t, 0, a.z + ab.z * t)
+		var d := Vector3(q.x - at.x, 0, q.z - at.z).length()
+		if d < best:
+			best = d
+			var flat := (ab if int(v["dir"]) > 0 else -ab).normalized()
+			var left := Vector3(flat.z, 0, -flat.x)
+			out = q + left * _lane(r)
+	return out if best < 14.0 else Vector3.INF
+
+
+## Back on its road: the point of its road piece nearest where it came out (ahead of where it left), in its lane.
+func _rejoin(v: Dictionary) -> void:
+	var at: Vector3 = v["pos"]
+	var r: Dictionary = v["road"]
+	var p: PackedFloat32Array = r["p"]
+	var n := p.size() / 3
+	var best := INF
+	var bi := -1
+	var bt := 0.0
+	for i in n - 1:
+		var a := _pt(p, i)
+		var b := _pt(p, i + 1)
+		var ab := Vector3(b.x - a.x, 0, b.z - a.z)
+		var t := clampf(Vector3(at.x - a.x, 0, at.z - a.z).dot(ab) / maxf(ab.length_squared(), 0.001), 0.0, 1.0)
+		var d := Vector3(a.x + ab.x * t - at.x, 0, a.z + ab.z * t - at.z).length()
+		if d < best:
+			best = d
+			bi = i
+			bt = t
+	v.erase("visit")
+	v["turn"] = 0.0
+	if bi < 0 or best > 12.0:                               # (no road near: it goes the way of any far vehicle)
+		v["pos"] = Vector3(1e6, 0, 1e6)
+		return
+	if int(v["dir"]) > 0:
+		v["i"] = bi
+		v["t"] = bt
+	else:
+		v["i"] = bi + 1
+		v["t"] = 1.0 - bt
+	_place(v)
+	if bunk_log:                                          # (how far it moved taking its road back: a jump if not ~0)
+		print("NPCBUNK %s %s back on the road (moved %.2f m taking it back)" % [v["kind"], str(v["body"].get_instance_id()), Vector2(at.x - (v["pos"] as Vector3).x, at.z - (v["pos"] as Vector3).z).length()])
+
+
 func _remove(v: Dictionary) -> void:
+	var city = get_parent()
+	if v.has("visit") and city and "bunks" in city and city.bunks:   # (gone mid-visit: its pump free again)
+		city.bunks.leave_bay(str(v["visit"]["id"]), int(v["visit"]["bay"]))
 	if is_instance_valid(v["body"]):
 		v["body"].queue_free()
 	if v.has("out") and is_instance_valid(v["out"]):
@@ -586,6 +852,11 @@ func _knocked(v: Dictionary, delta: float) -> bool:
 func _drive(v: Dictionary, delta: float, me: Vector3, think := true) -> void:
 	if _knocked(v, delta):
 		return
+	if v.has("visit"):                                    # (at the petrol bunk: off the road, its own path)
+		_visit(v, delta)
+		return
+	if think:
+		_maybe_bunk(v)
 	if not think:
 		var i0: int = v["i"]
 		if i0 != (int((v["road"]["p"] as PackedFloat32Array).size() / 3) - 1 if int(v["dir"]) > 0 else 0):
