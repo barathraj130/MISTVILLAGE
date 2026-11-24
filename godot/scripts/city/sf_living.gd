@@ -88,7 +88,10 @@ static func retexture(model: Node, tex: Texture2D) -> void:
 		var m3 := mi as MeshInstance3D
 		for i in m3.mesh.get_surface_count():
 			var mat := m3.get_active_material(i)
-			if mat is BaseMaterial3D and (mat as BaseMaterial3D).albedo_texture != null:
+			var at: Texture2D = (mat as BaseMaterial3D).albedo_texture if mat is BaseMaterial3D else null
+			# (only the saree's own texture: the colour picture is made from it, the same size; a model with many
+			#  textures, her skin and hair, keeps the rest)
+			if at != null and at.get_width() == tex.get_width() and at.get_height() == tex.get_height():
 				var dup := (mat as BaseMaterial3D).duplicate() as BaseMaterial3D
 				dup.albedo_texture = tex
 				m3.set_surface_override_material(i, dup)
