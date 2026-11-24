@@ -8,6 +8,7 @@ uniform sampler2D soil_tex : source_color, filter_linear_mipmap_anisotropic, rep
 uniform sampler2D noise_tex : filter_linear_mipmap, repeat_enable;
 uniform float tile = 6.0;
 uniform float wet = 0.0;                    // after rain: darker soil and grass, a little sheen
+uniform float far_forest = 0.0;             // 1 on the far ground beyond the streamed city: forest canopy seen from afar
 
 varying vec3 wpos;
 varying float forest;                       // 1 inside a forest pocket (the ground's vertex colour red 0, city_streamer.gd)
@@ -32,6 +33,13 @@ void fragment() {
 	vec3 litter = mix(soil * vec3(0.55, 0.42, 0.3), vec3(0.2, 0.15, 0.08), n3 * 0.6);
 	litter = mix(litter, green * vec3(0.45, 0.6, 0.35), smoothstep(0.6, 0.8, n2) * 0.5);
 	col = mix(col, litter, smoothstep(0.1, 0.9, forest));
+	if (far_forest > 0.5) {                  // the far ground: the canopy of a forest seen from far off, in drifts of
+		float c1 = texture(noise_tex, wpos.xz / 260.0).r;   //  darker and lighter crowns, a few clearings
+		float c2 = texture(noise_tex, wpos.xz / 31.0 + 0.5).r;
+		vec3 canopy = mix(vec3(0.05, 0.085, 0.035), vec3(0.11, 0.16, 0.06), c2);
+		canopy = mix(canopy, vec3(0.16, 0.19, 0.08), smoothstep(0.62, 0.8, c1) * 0.6);
+		col = mix(canopy, col * 0.8, smoothstep(0.78, 0.9, c1) * 0.7);
+	}
 	ALBEDO = col * mix(1.0, 0.62, wet);
 	ROUGHNESS = mix(0.95, 0.6, wet);
 }

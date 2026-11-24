@@ -30,6 +30,19 @@ POCKETS = [
         "canopy": 1.25, "under": 4.0,
         "species": {"banyan": 0.12, "tamarind": 0.22, "neem": 0.2, "rain": 0.16, "gul": 0.08, "bamboo": 0.12, "palm": 0.1}}),
 ]
+# every other green area of the city in OSM, by its kind: woods and forest dense, scrub a lower thorny mix, parks,
+# gardens, meadows and grassland a lighter canopy (the user: the empty land filled with deep-forest structure)
+MIXES = {
+    "dense": {"canopy": 1.3, "under": 4.5,
+              "species": {"banyan": 0.14, "tamarind": 0.22, "neem": 0.22, "rain": 0.14, "bamboo": 0.18, "gul": 0.04, "palm": 0.06}},
+    "scrub": {"canopy": 1.0, "under": 5.0,
+              "species": {"tamarind": 0.3, "neem": 0.34, "bamboo": 0.16, "banyan": 0.08, "palm": 0.12}},
+    "park": {"canopy": 0.85, "under": 2.5,
+             "species": {"rain": 0.24, "neem": 0.2, "gul": 0.16, "banyan": 0.12, "tamarind": 0.12, "palm": 0.16}},
+}
+KIND_MIX = {"forest": "dense", "wood": "dense", "nature_reserve": "dense", "scrub": "scrub", "park": "park",
+            "garden": "park", "meadow": "park", "grass": "park"}
+MIN_AREA = 3000.0
 ROAD_CLEAR = {"footway": 1.6, "path": 1.6, "pedestrian": 2.5, "steps": 1.5, "cycleway": 2.0, "track": 2.5, "service": 3.5}
 
 
@@ -42,14 +55,33 @@ def main():
     roads = gpd.read_file(GPKG, layer="roads").to_crs(crs)
     blds = gpd.read_file(GPKG, layer="buildings").to_crs(crs)
     out = []
+    todo = []                                            # (id, geometry in UTM, mix)
     for pid, find, mix in POCKETS:
-        if only and pid not in only:
-            continue
         sel = lu[lu["name"] == find["name"]] if "name" in find else lu
         if sel.empty:
             print("POCKET %s: not found" % pid)
             continue
-        poly = shapely.union_all(list(sel.geometry))
+        todo.append((pid, shapely.union_all(list(sel.geometry)), mix))
+    named = shapely.union_all([t[1] for t in todo]) if todo else None
+    b = idx["bounds"]                                    # (the city's tiles: only green land the game has)
+    tile = float(idx["tile"])
+    x0, z0, x1, z1 = b[0] * tile, b[1] * tile, (b[2] + 1) * tile, (b[3] + 1) * tile
+    n_kind = {}
+    for kind, g in zip(lu["kind"], lu.geometry):
+        if kind not in KIND_MIX or g is None or g.geom_type not in ("Polygon", "MultiPolygon") or g.area < MIN_AREA:
+            continue
+        if named is not None and g.intersects(named):
+            continue
+        c = g.representative_point()
+        gx, gz = c.x - e0, -(c.y - n0)
+        if not (x0 <= gx <= x1 and z0 <= gz <= z1):
+            continue
+        n_kind[kind] = n_kind.get(kind, 0) + 1
+        todo.append(("%s_%d" % (kind, n_kind[kind]), g, MIXES[KIND_MIX[kind]]))
+    for pid, poly, mix in todo:
+        if only and pid not in only and not any(pid.startswith(o + "_") for o in only):
+            continue
+        find = {"name": pid}
         # cut out roads and paths (buffered by half their width and a clearance) and buildings (+1.5 m)
         near_r = roads[roads.intersects(poly.buffer(10))]
         cuts = []

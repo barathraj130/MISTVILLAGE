@@ -13,6 +13,12 @@ const VIEWS := {
 	"forest_edge": {"d": 12200.0, "side": 4.5, "up": 1.7, "look": 6.0, "lside": 40.0, "lup": 4.0},  # into the forest uphill
 	"hp2_road": {"d": 12330.0, "side": 1.2, "up": 1.6, "look": 45.0, "lside": 0.0, "lup": 1.4},     # into hairpin 2
 	"hp3_valley": {"d": 13081.0, "side": 6.0, "up": 1.7, "look": 10.0, "lside": 120.0, "lup": -30.0, "valley": true},  # the valley from hairpin 3
+	# further up the climb (the deep forest over the whole ghat): hairpin 5 on the road, hairpin 6 from above, the
+	# valley from the upper ghat, the slopes in the mist
+	"hp5_road": {"d": 15780.0, "side": 1.2, "up": 1.6, "look": 45.0, "lside": 0.0, "lup": 1.4},
+	"hp6_above": {"d": 16919.0, "side": -30.0, "up": 26.0, "look": 0.0, "lside": 0.0, "lup": 0.0},
+	"upper_valley": {"d": 18200.0, "side": 6.0, "up": 1.7, "look": 10.0, "lside": 160.0, "lup": -50.0, "valley": true},
+	"high_slopes": {"d": 18800.0, "side": 3.0, "up": 12.0, "look": 300.0, "lside": 0.0, "lup": 0.0},
 	# driving at night as the player sees it: the jeep on its lane, headlights on, the camera where the chase camera
 	# sits (behind and above it), looking along the road: into the bend before hairpin 1, and a straight in the forest
 	"drive_bend": {"d": 11600.0, "jeep": true},

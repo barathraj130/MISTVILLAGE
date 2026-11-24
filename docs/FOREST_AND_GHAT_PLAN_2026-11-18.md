@@ -146,3 +146,55 @@ stream with the city tiles; the ghat forest is built once with the drive.
 - Reflective parapets and guardrails.
 - The western hills on the city horizon.
 - The rest of the route (stage 2).
+
+## 6. The city's open ground filled (24 November; the mountain and ghat left as they were)
+
+The user asked for the empty ground inside the city to be thick tree cover: "not in mountain, it should be in city".
+
+**Pockets.** `tools/citygen/forest_pockets.py` now plants every OpenStreetMap green area in the city's bounds, 3 000 m²
+or larger: 66 pockets, made up of woods, forest, scrub, parks, gardens, meadows and grassland. Woods and forest get
+dense canopy, scrub a lower thorny mix, and parks a lighter canopy.
+
+**The fill.** `city_streamer.gd` `_fill_mask` builds a keep-clear map of each tile at 2 m resolution, in the loading
+worker. Everything not on the map is planted with a dense mix (banyan, tamarind, neem, rain tree, bamboo, a few
+gulmohar and palms) over shrubs and a leaf-litter floor. The keep-clear map holds:
+- roads (width + 3 m, flyovers included);
+- footpaths (+1.5 m) and junctions (+3 m);
+- buildings (+4 m: fronts, doors, steps);
+- paved yards and parking, and compound walls (+1.5 m);
+- street props (+3 m), and parked vehicles, stalls, carts, bus stops and street people (+4 m);
+- landmark pads (+6 m) and landmarks' clear outlines, such as a bunk's lot and its forecourt (+8 m);
+- 103 tanks and lakes (+8 m of shore);
+- 63 story places from `slice.json` and `prologue.json` (25 m).
+
+The city's forest has no trunk colliders, so nothing can block a walker, a car or traffic. `--nocityfill`,
+`--filldebug` (per-tile free ground and trees planted) and `--fillprobe=x,z` (which rule keeps a point clear) are
+the switches for testing.
+
+- **Kept clear on purpose:** the two open lots first chosen as test views, at Ganapathy (23 m from Karthik's home)
+  and Gandhipuram (9 m from Raghavan's office), lie inside story places' clear zones.
+- **How much is planted:** typical tiles have 3–29 % of their ground free after the rules and get about 90–860 trees.
+
+**The far ground.** Beyond the streamed tiles it is now painted as forest canopy, with a ring of about 4 800 cheap
+canopy cards (96 triangles each) out to 2.6 km on a fixed world grid (`--nofarforest`).
+
+**Measured** on the M1, Low preset, from fixed cameras, before (`--noforest --nocityfill --nofarforest`) and after
+(`docs/shots/forest/city_fill_before_after.jpg`):
+
+| View | Draw calls | Triangles | Static memory |
+|---|---|---|---|
+| Fill tile A, aerial | 1 760 → 3 390 | 1.5 → 3.4 M | 348 → 430 MB |
+| Fill tile B, aerial | 1 660 → 2 830 | 2.3 → 4.6 M | 317 → 385 MB |
+| Fill tile C, aerial | 2 040 → 2 570 | 2.1 → 3.2 M | 372 → 412 MB |
+| Wood near the centre | 1 260 → 3 070 | 2.0 → 5.9 M | 329 → 416 MB |
+| West edge, 140 m up | 850 → 2 330 | 1.0 → 3.0 M | 321 → 414 MB |
+
+The "after" figures are with 64 m forest cells. 32 m cells had cost 4 000–5 500 draws.
+
+Frame rates were measured with other sessions loading the machine (CPU frame times of 50–200 ms either way), so they
+aren't reliable; the counts above are. Video memory rose by 40–50 MB.
+
+**Still to do:**
+- bring the draw calls down further (merging species into one mesh per cell, or fewer shrub kinds);
+- a clean frame-rate pass on an idle machine;
+- open ground the map doesn't record (lots inside compounds) stays as it is.

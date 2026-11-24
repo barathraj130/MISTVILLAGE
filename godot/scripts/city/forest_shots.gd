@@ -14,6 +14,21 @@ const VIEWS := {
 	# and at a person's height on an open road looking along it to the horizon
 	"edge_high": {"at": Vector2(-3700.0, 600.0), "look": Vector2(-7000.0, 600.0), "up": 140.0},
 	"edge_ground": {"at": Vector2(-3790.0, 160.0), "look": Vector2(-3790.0, -2000.0), "up": 1.7},
+	# a wood near the centre (OSM, 8 ha) from above, and the city's east edge looking out east
+	"wood_centre_high": {"at": Vector2(-380.0, 1330.0), "look": Vector2(-490.0, 1500.0), "up": 45.0},
+	"edge_east_high": {"at": Vector2(3000.0, -200.0), "look": Vector2(7000.0, -200.0), "up": 140.0},
+	# the city's empty ground (the fill): the open lot at Ganapathy and the one at Gandhipuram (both seen bare in the
+	# graphics audit), at a person's height and from above
+	"ganapathy_lot": {"at": Vector2(700.0, -1990.0), "look": Vector2(700.0, -2070.0), "up": 1.7},
+	"ganapathy_high": {"at": Vector2(640.0, -1910.0), "look": Vector2(710.0, -2010.0), "up": 45.0},
+	"gandhipuram_lot": {"at": Vector2(-560.0, 250.0), "look": Vector2(-560.0, 170.0), "up": 1.7},
+	"gandhipuram_high": {"at": Vector2(-490.0, 330.0), "look": Vector2(-560.0, 240.0), "up": 45.0},
+	# the city fill where there's most open ground (the fill's own log: tiles 27–29% free), from above and at a person's
+	# height
+	"fill_a_high": {"at": Vector2(290.0, 290.0), "look": Vector2(400.0, 400.0), "up": 45.0},
+	"fill_a_eye": {"at": Vector2(330.0, 330.0), "look": Vector2(430.0, 420.0), "up": 1.7},
+	"fill_b_high": {"at": Vector2(290.0, -2340.0), "look": Vector2(400.0, -2450.0), "up": 45.0},
+	"fill_c_high": {"at": Vector2(550.0, -1570.0), "look": Vector2(650.0, -1680.0), "up": 45.0},
 }
 
 var city

@@ -43,6 +43,15 @@ var loaded := {}                           # Vector2i → Node3D
 # grey underside (the "void"). --nofarground: without it.
 var far_ground: MeshInstance3D
 var tile_hmin := {}                        # Vector2i → the tile's lowest ground
+# ...and on it, forest (the user: the empty land filled with deep-forest structure): the far ground painted as canopy
+# (city_ground.gdshader far_forest) and a ring of cheap canopy cards (the drive's 96-triangle far canopies) from just
+# past the streamed tiles to FAR_FOREST_R, on a fixed world grid (they don't slide as you move), never on a loaded
+# tile. --nofarforest: the plain far ground.
+var far_cards: Array = []                  # MultiMeshInstance3D per card model
+var _far_cards_at := Vector2(INF, INF)
+var _far_cards_n := -1
+const FAR_FOREST_R := 2600.0
+const FAR_CARD_CELL := 64.0
 var pending := {}                          # Vector2i → task id
 var queued := {}                           # Vector2i → requested and not yet added (pending or waiting in ready_q)
 var ready_q: Array = []                    # [key, resources] made on a worker, waiting for the main thread
@@ -75,11 +84,20 @@ var forest_meshes: Array = []              # [near Mesh, far Mesh, crown card Me
 var under_meshes: Array = []               # [near Mesh, far Mesh]: the under-storey (shrubs)
 const FOREST_GRID := 8.0                   # canopy trees on a jittered world grid (no seams where tiles meet)
 const UNDER_GRID := 3.5
-const FOREST_CELL := 32.0                  # their MultiMeshes by 32 m cells: the near versions drawn only close by
-const FOREST_NEAR := 28.0                  # full trees within this of their cell (the light version beyond, to FOREST_FAR)
+const FOREST_CELL := 64.0                  # their MultiMeshes by 64 m cells (fewer draw calls), the near versions only close by
+const FOREST_NEAR := 12.0                  # full trees within this of their cell (the light version beyond, to FOREST_FAR)
 const FOREST_MID := 110.0                  # the far version to here, the crown cards (~300-800 triangles) beyond
 const FOREST_FAR := 900.0
 const UNDER_FAR := 70.0                    # the shrubs: near only
+# The city's open ground filled as thick tree cover (the user: the empty land in the city, not the mountain): every
+# point of a tile not on or near a road, footpath, junction, building (and its front and doors), yard, wall, parking,
+# street prop, parked vehicle, stall, bus stop, landmark lot or water. A keep-clear map at FILL_CELL per tile, built
+# in the worker. No trunk colliders in the city's forest: it never blocks a walker or a car. --nocityfill: without.
+const FILL_CELL := 2.0
+const FILL_MIX := {"canopy": 1.1, "under": 3.5,
+	"species": {"banyan": 0.12, "tamarind": 0.24, "neem": 0.22, "rain": 0.12, "bamboo": 0.18, "gul": 0.04, "palm": 0.08}}
+var water_polys: Array = []                # [PackedVector2Array, Rect2]: tanks and lakes (assets/city/water.bin)
+var story_spots: Array = []                # Vector2: the story's places (slice.json, prologue.json "places"): kept clear
 var bike_meshes: Array = []                # parked scooters and motorcycles
 var bike_boxes: Array = []                 # their AABBs (read once here: workers mustn't touch meshes)
 const LIFE_CELL := 64.0
@@ -470,7 +488,8 @@ func _build(k: Vector2i) -> void:
 			wires.append([wk2, f.get_buffer(wn2 * 12).to_float32_array()])
 	_raise_flyovers(roads)
 	var out := {}
-	_ground(k, hn, h, out)
+	var fill := _fill_mask(k, roads, blds, walks, juncs, props, yards, life)   # (the city fill's keep-clear map)
+	_ground(k, hn, h, out, fill)
 	_roads(roads, out, k)
 	_buildings(blds, out)
 	_walks(walks, out, [k, hn, h, float(index["hstep"]), tile])
@@ -478,7 +497,7 @@ func _build(k: Vector2i) -> void:
 	_junctions(juncs, out)
 	_props(props, out)
 	_yards(yards, out, [k, hn, h, float(index["hstep"]), tile])
-	_forest(k, hn, h, out)
+	_forest(k, hn, h, out, fill)
 	_life(life, out, roads)
 	_potholes(roads, out)
 	_wires(wires, out)
@@ -488,7 +507,7 @@ func _build(k: Vector2i) -> void:
 	_mutex.unlock()
 
 
-func _ground(k: Vector2i, n: int, h: PackedFloat32Array, out: Dictionary) -> void:
+func _ground(k: Vector2i, n: int, h: PackedFloat32Array, out: Dictionary, fill := PackedByteArray()) -> void:
 	var step: float = float(index["hstep"])
 	var x0 := k.x * tile
 	var z0 := k.y * tile
@@ -517,7 +536,7 @@ func _ground(k: Vector2i, n: int, h: PackedFloat32Array, out: Dictionary) -> voi
 	arr[Mesh.ARRAY_VERTEX] = v
 	arr[Mesh.ARRAY_NORMAL] = nm
 	arr[Mesh.ARRAY_INDEX] = idx
-	var floor_c := _forest_floor(x0, z0, n, step)          # (inside a forest pocket: leaf litter, city_ground.gdshader)
+	var floor_c := _forest_floor(x0, z0, n, step, fill)    # (inside a forest pocket or the fill: leaf litter, city_ground.gdshader)
 	if not floor_c.is_empty():
 		arr[Mesh.ARRAY_COLOR] = floor_c
 	var gm := ArrayMesh.new()
@@ -2923,20 +2942,48 @@ func _forest_setup() -> void:
 		var bf := _scene_mesh("res://assets/city_props/veg_%s_far.glb" % nm)
 		if bn:
 			under_meshes.append([bn, bf if bf else bn])
-	print("FOREST %d pockets, %d tree meshes, %d under-storey" % [forest_pockets.size(), forest_meshes.size(), under_meshes.size()])
+	for sp_path in ["res://story/slice.json", "res://story/prologue.json"]:   # (the story's places: 25 m kept clear)
+		if FileAccess.file_exists(sp_path):
+			var sd = JSON.parse_string(FileAccess.get_file_as_string(sp_path))
+			if sd is Dictionary:
+				for pl in (sd.get("places", {}) as Dictionary).values():
+					if pl is Dictionary and pl.has("x") and pl.has("z"):
+						story_spots.append(Vector2(float(pl["x"]), float(pl["z"])))
+	var wf := FileAccess.open("res://assets/city/water.bin", FileAccess.READ)   # (the tanks and lakes: kept clear)
+	if wf and wf.get_buffer(4).get_string_from_ascii() == "CWAT":
+		for _i in wf.get_32():
+			wf.get_8()
+			wf.get_float()
+			wf.get_float()
+			for _r in 5:
+				wf.get_float()
+			var np := wf.get_16()
+			var poly := PackedVector2Array()
+			var lo := Vector2(INF, INF)
+			var hi := Vector2(-INF, -INF)
+			for _k in np:
+				var pp := Vector2(wf.get_float(), wf.get_float())
+				poly.append(pp)
+				lo = lo.min(pp)
+				hi = hi.max(pp)
+			for _k in np:
+				wf.get_float()
+			wf.get_buffer(wf.get_16())
+			water_polys.append([poly, Rect2(lo, hi - lo)])
+	print("FOREST %d pockets, %d tree meshes, %d under-storey, %d water bodies kept clear" % [forest_pockets.size(), forest_meshes.size(), under_meshes.size(), water_polys.size()])
 
 
 ## The ground's vertex colours in a tile a forest pocket touches: red 0 inside a pocket (the forest floor), 1 outside;
 ## empty (no colours: the shader reads white) where no pocket is near. The same world point gets the same colour in
 ## both tiles at an edge, so the floor runs on across them.
-func _forest_floor(x0: float, z0: float, n: int, step: float) -> PackedColorArray:
+func _forest_floor(x0: float, z0: float, n: int, step: float, fill := PackedByteArray()) -> PackedColorArray:
 	var out := PackedColorArray()
 	var rect := Rect2(x0 - 4.0, z0 - 4.0, tile + 8.0, tile + 8.0)
 	var mine: Array = []
 	for pk in forest_pockets:
 		if (pk["bbox"] as Rect2).intersects(rect):
 			mine.append(pk)
-	if mine.is_empty():
+	if mine.is_empty() and fill.is_empty():
 		return out
 	out.resize(n * n)
 	for i in n:
@@ -2947,8 +2994,175 @@ func _forest_floor(x0: float, z0: float, n: int, step: float) -> PackedColorArra
 				if (pk["bbox"] as Rect2).has_point(p) and _in_pocket(p, pk):
 					inside = true
 					break
+			if not inside and not fill.is_empty():
+				inside = _fill_free(fill, x0, z0, p.x, p.y)
 			out[i * n + j] = Color(0.0 if inside else 1.0, 1.0, 1.0, 1.0)
 	return out
+
+
+## (testing) --fillprobe=x,z: which keep-clear rule first marks that point (printed once per tile).
+var _probed := {}
+func _probe(m: PackedByteArray, nn: int, x0: float, z0: float, rule: String) -> void:
+	for arg in OS.get_cmdline_user_args():
+		if not arg.begins_with("--fillprobe="):
+			continue
+		var xz := arg.get_slice("=", 1).split(",")
+		var px := float(xz[0])
+		var pz := float(xz[1])
+		var i := floori((px - x0) / FILL_CELL)
+		var j := floori((pz - z0) / FILL_CELL)
+		if i < 0 or j < 0 or i >= nn or j >= nn:
+			return
+		var key := "%d,%d" % [x0, z0]
+		if m[j * nn + i] == 1 and not _probed.has(key):
+			_probed[key] = true
+			print("FILLPROBE %.0f,%.0f is kept clear by: %s" % [px, pz, rule])
+		elif rule == "water" and m[j * nn + i] == 0:
+			print("FILLPROBE %.0f,%.0f is free" % [px, pz])
+
+
+## Is (x, z) free for the city fill (inside this tile's keep-clear map and nothing near it)?
+func _fill_free(m: PackedByteArray, x0: float, z0: float, x: float, z: float) -> bool:
+	var nn := int(tile / FILL_CELL)
+	var i := floori((x - x0) / FILL_CELL)
+	var j := floori((z - z0) / FILL_CELL)
+	if i < 0 or j < 0 or i >= nn or j >= nn:
+		return false
+	return m[j * nn + i] == 0
+
+
+static func _mk_seg(m: PackedByteArray, nn: int, x0: float, z0: float, a: Vector2, b: Vector2, r: float) -> void:
+	var lo := a.min(b) - Vector2(r, r)
+	var hi := a.max(b) + Vector2(r, r)
+	var i0 := maxi(0, floori((lo.x - x0) / FILL_CELL))
+	var i1 := mini(nn - 1, floori((hi.x - x0) / FILL_CELL))
+	var j0 := maxi(0, floori((lo.y - z0) / FILL_CELL))
+	var j1 := mini(nn - 1, floori((hi.y - z0) / FILL_CELL))
+	for j in range(j0, j1 + 1):
+		for i in range(i0, i1 + 1):
+			var p := Vector2(x0 + (i + 0.5) * FILL_CELL, z0 + (j + 0.5) * FILL_CELL)
+			if Geometry2D.get_closest_point_to_segment(p, a, b).distance_to(p) <= r:
+				m[j * nn + i] = 1
+
+
+static func _mk_poly(m: PackedByteArray, nn: int, x0: float, z0: float, poly: PackedVector2Array, r: float) -> void:
+	if poly.size() < 3:
+		return
+	var lo := Vector2(INF, INF)
+	var hi := Vector2(-INF, -INF)
+	for v in poly:
+		lo = lo.min(v)
+		hi = hi.max(v)
+	var i0 := maxi(0, floori((lo.x - x0) / FILL_CELL))
+	var i1 := mini(nn - 1, floori((hi.x - x0) / FILL_CELL))
+	var j0 := maxi(0, floori((lo.y - z0) / FILL_CELL))
+	var j1 := mini(nn - 1, floori((hi.y - z0) / FILL_CELL))
+	for j in range(j0, j1 + 1):
+		for i in range(i0, i1 + 1):
+			if Geometry2D.is_point_in_polygon(Vector2(x0 + (i + 0.5) * FILL_CELL, z0 + (j + 0.5) * FILL_CELL), poly):
+				m[j * nn + i] = 1
+	if r > 0.0:
+		for q in poly.size():
+			_mk_seg(m, nn, x0, z0, poly[q], poly[(q + 1) % poly.size()], r)
+
+
+## The tile's keep-clear map for the city fill: 1 where nothing may grow (see FILL_CELL's note). Empty when the fill
+## is off or there's nothing to plant with.
+func _fill_mask(k: Vector2i, roads: Array, blds: Array, walks: Array, juncs: Array, props: Array, yards: Array,
+		life: Array) -> PackedByteArray:
+	var m := PackedByteArray()
+	if "--nocityfill" in OS.get_cmdline_user_args() or forest_meshes.is_empty():
+		return m
+	var nn := int(tile / FILL_CELL)
+	m.resize(nn * nn)
+	m.fill(0)
+	var x0 := k.x * tile
+	var z0 := k.y * tile
+	for r in roads:                                      # roads (flyovers too: nothing under a deck), width + 3 m
+		var p: PackedFloat32Array = r["p"]
+		var hw := float(r["w"]) * 0.5 + 3.0
+		for q in p.size() / 3 - 1:
+			_mk_seg(m, nn, x0, z0, Vector2(p[q * 3], p[q * 3 + 2]), Vector2(p[q * 3 + 3], p[q * 3 + 5]), hw)
+	_probe(m, nn, x0, z0, "roads")
+	for w in walks:                                      # footpaths, width + 1.5 m
+		var p: PackedFloat32Array = w[2]
+		var hw := float(w[1]) * 0.5 + 1.5
+		for q in p.size() / 3 - 1:
+			_mk_seg(m, nn, x0, z0, Vector2(p[q * 3], p[q * 3 + 2]), Vector2(p[q * 3 + 3], p[q * 3 + 5]), hw)
+	_probe(m, nn, x0, z0, "walks")
+	for jv in juncs:                                     # junction surfaces + 3 m
+		var p: PackedFloat32Array = jv
+		var poly := PackedVector2Array()
+		for q in p.size() / 3:
+			poly.append(Vector2(p[q * 3], p[q * 3 + 2]))
+		_mk_poly(m, nn, x0, z0, poly, 3.0)
+	_probe(m, nn, x0, z0, "junctions")
+	for b in blds:                                       # buildings + 4 m: their fronts, doors, steps
+		var xz: PackedFloat32Array = b[7]
+		var poly := PackedVector2Array()
+		for q in xz.size() / 2:
+			poly.append(Vector2(xz[q * 2], xz[q * 2 + 1]))
+		_mk_poly(m, nn, x0, z0, poly, 4.0)
+	_probe(m, nn, x0, z0, "buildings")
+	for yd in yards:                                     # paved yards and parking (triangles), walls + 1.5 m
+		var yk: int = yd[0]
+		var p: PackedFloat32Array = yd[1]
+		var cnt := p.size() / 3
+		if yk == 1 or yk == 2 or yk == 6:
+			for q in range(0, cnt - 2, 3):
+				_mk_poly(m, nn, x0, z0, PackedVector2Array([Vector2(p[q * 3], p[q * 3 + 2]), Vector2(p[q * 3 + 3], p[q * 3 + 5]),
+					Vector2(p[q * 3 + 6], p[q * 3 + 8])]), 1.0)
+		elif yk == 3 or yk == 5:
+			for q in cnt - 1:
+				_mk_seg(m, nn, x0, z0, Vector2(p[q * 3], p[q * 3 + 2]), Vector2(p[q * 3 + 3], p[q * 3 + 5]), 1.5)
+	_probe(m, nn, x0, z0, "yards")
+	for pr in props:                                     # street props: poles, signals, shelters, humps + 3 m
+		var pv: PackedFloat32Array = pr[1]
+		_mk_seg(m, nn, x0, z0, Vector2(pv[0], pv[2]), Vector2(pv[0], pv[2]), 3.0)
+	_probe(m, nn, x0, z0, "props")
+	for lf in life:                                      # parked vehicles, stalls, carts, people + 4 m
+		var v: PackedFloat32Array = lf[1]
+		_mk_seg(m, nn, x0, z0, Vector2(v[0], v[2]), Vector2(v[0], v[2]), 4.0)
+	_probe(m, nn, x0, z0, "life")
+	for lm in landmarks:                                 # landmark lots: their pads + 6 m
+		if not lm.has("pad"):
+			continue
+		var pad: Array = lm["pad"]
+		var c := cos(float(lm["yaw"]))
+		var sn := sin(float(lm["yaw"]))
+		var cx := float(lm["x"])
+		var cz := float(lm["z"])
+		if absf(cx - (x0 + tile * 0.5)) > tile + 80.0 or absf(cz - (z0 + tile * 0.5)) > tile + 80.0:
+			continue
+		var poly := PackedVector2Array()
+		for corner in [[pad[0], pad[2]], [pad[1], pad[2]], [pad[1], pad[3]], [pad[0], pad[3]]]:
+			var lx: float = corner[0]
+			var lz: float = corner[1]
+			poly.append(Vector2(cx + lx * c + lz * sn, cz - lx * sn + lz * c))
+		_mk_poly(m, nn, x0, z0, poly, 6.0)
+	_probe(m, nn, x0, z0, "landmark pads")
+	for lmc in landmarks:                                # landmarks' clear outlines (a bunk's lot and its forecourt to
+		if not lmc.has("clear"):                         #  the road, where cars drive in and out) + 8 m
+			continue
+		var cp := PackedVector2Array()
+		for q in lmc["clear"]:
+			cp.append(Vector2(q[0], q[1]))
+		var lo := Vector2(INF, INF)
+		for v in cp:
+			lo = lo.min(v)
+		if absf(lo.x - (x0 + tile * 0.5)) < tile + 120.0 and absf(lo.y - (z0 + tile * 0.5)) < tile + 120.0:
+			_mk_poly(m, nn, x0, z0, cp, 8.0)
+	_probe(m, nn, x0, z0, "clear outlines")
+	for sp in story_spots:
+		if absf(sp.x - (x0 + tile * 0.5)) < tile * 0.5 + 30.0 and absf(sp.y - (z0 + tile * 0.5)) < tile * 0.5 + 30.0:
+			_mk_seg(m, nn, x0, z0, sp, sp, 25.0)
+	_probe(m, nn, x0, z0, "story places")
+	var rect := Rect2(x0, z0, tile, tile)
+	for wp in water_polys:                               # tanks and lakes + 8 m of shore
+		if (wp[1] as Rect2).grow(10.0).intersects(rect):
+			_mk_poly(m, nn, x0, z0, wp[0], 8.0)
+	_probe(m, nn, x0, z0, "water")
+	return m
 
 
 static func _in_pocket(p: Vector2, pk: Dictionary) -> bool:
@@ -2970,7 +3184,7 @@ static func _hash2(x: float, z: float, salt: float) -> float:
 ## low-frequency pattern, so bamboo stands in clumps and the big trees in groves, not evenly salted), its height and
 ## turn varied; an under-storey of shrubs on a finer grid. One MultiMesh a species a 64 m cell, near / far / shadow,
 ## as the street trees are.
-func _forest(k: Vector2i, n: int, h: PackedFloat32Array, out: Dictionary) -> void:
+func _forest(k: Vector2i, n: int, h: PackedFloat32Array, out: Dictionary, fill := PackedByteArray()) -> void:
 	if forest_pockets.is_empty() or forest_meshes.is_empty():
 		return
 	var x0 := k.x * tile
@@ -2980,7 +3194,7 @@ func _forest(k: Vector2i, n: int, h: PackedFloat32Array, out: Dictionary) -> voi
 	for pk in forest_pockets:
 		if (pk["bbox"] as Rect2).intersects(rect):
 			mine.append(pk)
-	if mine.is_empty():
+	if mine.is_empty() and fill.is_empty():
 		return
 	var step: float = float(index["hstep"])
 	var hl := _level(x0, z0, n, step, h)
@@ -3013,7 +3227,9 @@ func _forest(k: Vector2i, n: int, h: PackedFloat32Array, out: Dictionary) -> voi
 						pk = c
 						break
 				if pk.is_empty():
-					continue
+					if fill.is_empty() or not _fill_free(fill, x0, z0, px, pz):
+						continue
+					pk = {"mix": FILL_MIX}                 # (the city's open ground: thick tree cover)
 				var mix: Dictionary = pk["mix"]
 				var dens: float = float(mix["canopy" if layer[0] == "canopy" else "under"]) * g * g / 100.0
 				if _hash2(gi, gj, 3.0) > dens:
@@ -3062,6 +3278,12 @@ func _forest(k: Vector2i, n: int, h: PackedFloat32Array, out: Dictionary) -> voi
 			fm.append([mm, lod, shrub])
 	out["forest"] = fm
 	out["forest_n"] = placed
+	if "--filldebug" in OS.get_cmdline_user_args():
+		var free := 0
+		for c in fill:
+			if c == 0:
+				free += 1
+		print("FILL tile %s: %d of %d cells free (%.0f%%), %d planted, pockets %d" % [str(k), free, fill.size(), 100.0 * free / maxi(fill.size(), 1), placed, mine.size()])
 
 
 func _far_ground_follow() -> void:
@@ -3074,6 +3296,10 @@ func _far_ground_follow() -> void:
 		far_ground.name = "FarGround"
 		far_ground.mesh = pm
 		far_ground.material_override = ground_mat
+		if not "--nofarforest" in OS.get_cmdline_user_args() and ground_mat is ShaderMaterial:
+			var fm := (ground_mat as ShaderMaterial).duplicate() as ShaderMaterial
+			fm.set_shader_parameter("far_forest", 1.0)
+			far_ground.material_override = fm
 		far_ground.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 		add_child(far_ground)
 	var lo := INF
@@ -3085,6 +3311,60 @@ func _far_ground_follow() -> void:
 		return
 	far_ground.visible = true
 	far_ground.global_position = Vector3(target.global_position.x, lo - 2.5, target.global_position.z)
+	_far_cards_follow(lo - 2.5)
+
+
+func _far_cards_follow(y: float) -> void:
+	if "--nofarforest" in OS.get_cmdline_user_args():
+		return
+	var at := Vector2(target.global_position.x, target.global_position.z)
+	if at.distance_to(_far_cards_at) < 96.0 and loaded.size() == _far_cards_n:
+		return                                    # (rebuilt when you've moved on, or tiles came and went)
+	_far_cards_at = at
+	_far_cards_n = loaded.size()
+	if far_cards.is_empty():
+		for i in 3:
+			var m := _scene_mesh("res://assets/models/veg_far_canopy_%d.gltf" % i)
+			if m == null:
+				continue
+			var mmi := MultiMeshInstance3D.new()
+			mmi.name = "FarForest%d" % i
+			mmi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+			var mm := MultiMesh.new()
+			mm.transform_format = MultiMesh.TRANSFORM_3D
+			mm.mesh = m
+			mmi.multimesh = mm
+			add_child(mmi)
+			far_cards.append(mmi)
+		if far_cards.is_empty():
+			return
+	var lists: Array = []
+	for i in far_cards.size():
+		lists.append([])
+	var r0 := (radius + 0.6) * tile
+	var c := FAR_CARD_CELL
+	var n := int(FAR_FOREST_R / c)
+	var cx := floori(at.x / c)
+	var cz := floori(at.y / c)
+	for gi in range(cx - n, cx + n + 1):
+		for gj in range(cz - n, cz + n + 1):
+			var px := (gi + 0.2 + 0.6 * _hash2(gi, gj, 11.0)) * c
+			var pz := (gj + 0.2 + 0.6 * _hash2(gi, gj, 12.0)) * c
+			var dd := Vector2(px, pz).distance_to(at)
+			if dd < r0 or dd > FAR_FOREST_R:
+				continue
+			if loaded.has(Vector2i(floori(px / tile), floori(pz / tile))):
+				continue                                 # (the city's own tile there: its own ground and buildings)
+			if _hash2(gi, gj, 13.0) < 0.12:
+				continue                                 # (a clearing)
+			var k := int(_hash2(gi, gj, 14.0) * lists.size()) % lists.size()
+			var s := 1.2 + 0.9 * _hash2(gi, gj, 15.0)
+			lists[k].append(Transform3D(Basis(Vector3.UP, _hash2(gi, gj, 16.0) * TAU).scaled(Vector3(s * 1.4, s, s * 1.4)), Vector3(px, y, pz)))
+	for i in far_cards.size():
+		var mm: MultiMesh = far_cards[i].multimesh
+		mm.instance_count = lists[i].size()
+		for j in lists[i].size():
+			mm.set_instance_transform(j, lists[i][j])
 
 
 ## A model's baked copy if there is one (tools/bake/bake_ao.py: NAME_ao.glb beside it, its corners' and eaves'
