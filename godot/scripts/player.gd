@@ -50,6 +50,11 @@ var auto_run := false
 var auto_pace := ""                 # (testing: slow, walk, fast, jog, sprint as if from the keys: gait.gd)
 var debug_label: Label              # (development: --movedebug shows how he moves)
 const AVATAR := "res://assets/people/person_man_shirt.glb"
+## (opt-in, --customanims) the editable man in a shirt: the inherited scene of AVATAR with its "custom" library
+## (scripts/people/person_custom_build.gd): Custom_Idle, Custom_Walk, Custom_Run played for Idle, Walk, Run. Off by
+## default: nothing else changes until it's approved as the default.
+const CUSTOM_AVATAR := "res://assets/people/person_man_shirt_custom.tscn"
+static var custom_clips := "--customanims" in OS.get_cmdline_user_args()
 static var avatar := ""            # who you are on foot, when not the default (the story: Karthik himself)
 var avatar_run_stride := false     # a story cast model: its Run covers ~3.9 m/s at speed 1
 var scripted := false              # a scene moves him (brush3d.gd): his clips and facing are its, not the walk's
@@ -110,12 +115,16 @@ func _init() -> void:
 	camera.far = 40000.0
 	camera.fov = 70.0
 	arm.add_child(camera)
-	var who := avatar if avatar != "" else AVATAR
+	var who := avatar if avatar != "" else (CUSTOM_AVATAR if custom_clips and ResourceLoader.exists(CUSTOM_AVATAR) else AVATAR)
 	avatar_run_stride = who.contains("/story_")          # the story cast's own Run (tools/humans/story_cast.py)
 	if ResourceLoader.exists(who):
 		model = (load(who) as PackedScene).instantiate() as Node3D
 		add_child(model)
 		anim = model.find_children("*", "AnimationPlayer", true, false)[0] as AnimationPlayer
+		var cap := model.get_node_or_null("CustomAnimationPlayer") as AnimationPlayer
+		if cap and cap.has_animation_library("custom") and not anim.has_animation_library("custom"):
+			anim.add_animation_library("custom", cap.get_animation_library("custom"))   # (one player drives the
+			cap.active = false                                                           #  skeleton: no two at once)
 		for a in ["Idle", "Walk", "Run"]:
 			if anim.has_animation(a):
 				anim.get_animation(a).loop_mode = Animation.LOOP_LINEAR
@@ -383,8 +392,14 @@ func _animate(delta: float) -> void:
 		a = "Run"
 	elif sp > 0.3:
 		a = "Walk"
-	if anim.current_animation != a:
-		anim.play(a, 0.35 if a == "Idle" or anim.current_animation == "Idle" else 0.25)
+	var clip := a
+	if custom_clips and anim.has_animation("custom/Custom_" + a):   # (the custom set, when it's switched on)
+		clip = "custom/Custom_" + a
+	if anim.current_animation != clip:
+		anim.play(clip, 0.35 if a == "Idle" or anim.current_animation.ends_with("Idle") else 0.25)
+		if custom_clips and clip.begins_with("custom/") and not has_meta("said_" + clip.get_file()):
+			set_meta("said_" + clip.get_file(), true)
+			print("CUSTOMANIMS playing %s (model %s)" % [clip, model.scene_file_path])
 	# each cycle covers a stride: the cast's Walk 1.18 m/s, its Run 3.9 m/s at speed 1 (measured on the clips:
 	# story_cast.py --walkstrip); the resort figure's walk 1.5, run 5.5
 	var stride := (1.18 if avatar_run_stride else 1.5) if a == "Walk" else (3.9 if avatar_run_stride else 5.5)
